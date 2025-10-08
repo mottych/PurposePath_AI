@@ -1,0 +1,169 @@
+version: 0.2
+
+# AWS CodeBuild buildspec for PurposePath API deployment
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+      nodejs: 18
+    commands:
+      - echo "Installing AWS SAM CLI..."
+      - pip install --upgrade pip
+      - pip install aws-sam-cli
+      - echo "SAM CLI version:"
+      - sam --version
+      - echo "Python version:"
+      - python --version
+      - echo "Node.js version:"
+      - node --version
+
+  pre_build:
+    commands:
+      - echo "Pre-build phase started on `date`"
+      - echo "Current directory:"
+      - pwd
+      - echo "Listing files:"
+      - ls -la
+
+      # Create JWT secret if not exists (for new deployments)
+      - |
+        if [ "$CREATE_JWT_SECRET" = "true" ]; then
+          echo "Creating JWT secret in AWS Secrets Manager..."
+          aws secretsmanager create-secret \
+            --name "purposepath/jwt-secret/${STAGE}" \
+            --secret-string "{\"secret\":\"$(openssl rand -base64 64)\"}" \
+            --region ${AWS_REGION} || true
+        fi
+
+      # Validate SAM templates
+      - echo "Validating root template..."
+      - sam validate --template template.yaml --lint
+      - echo "Validating account service template..."
+      - sam validate --template account/template-fixed.yaml --lint
+      - echo "Validating coaching service template..."
+      - sam validate --template coaching/template-fixed.yaml --lint
+
+      # Run tests
+      - echo "Running account service tests..."
+      - cd account
+      - pip install -r requirements.txt
+      - python -m pytest tests/ --tb=short || true
+      - cd ..
+
+      - echo "Running coaching service tests..."
+      - cd coaching
+      - pip install -r requirements.txt
+      - python -m pytest tests/ --tb=short || true
+      - cd ..
+
+  build:
+    commands:
+      - echo "Build phase started on `date`"
+      - echo "Building SAM application..."
+      - sam build --template template.yaml --parallel --cached
+
+      # Package the application
+      - echo "Packaging SAM application..."
+      - |
+        sam package \
+          --s3-bucket ${ARTIFACTS_BUCKET} \
+          --s3-prefix purposepath-api-${STAGE} \
+          --output-template-file packaged.yaml \
+          --region ${AWS_REGION}
+
+      - echo "Build completed on `date`"
+
+  post_build:
+    commands:
+      - echo "Post-build phase started on `date`"
+
+      # Deploy the application
+      - echo "Deploying SAM application to stage: ${STAGE}"
+      - |
+        sam deploy \
+          --template-file packaged.yaml \
+          --stack-name purposepath-api-${STAGE} \
+          --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
+          --region ${AWS_REGION} \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --parameter-overrides \
+            Stage=${STAGE} \
+            LogLevel=${LOG_LEVEL} \
+            EmailFrom=${EMAIL_FROM} \
+            BedrockModelId=${BEDROCK_MODEL_ID} \
+            RedisNodeType=${REDIS_NODE_TYPE} \
+          --tags \
+            Environment=${STAGE} \
+            Application=PurposePath \
+            ManagedBy=CodeBuild \
+            BuildNumber=${CODEBUILD_BUILD_NUMBER}
+
+      # Get stack outputs
+      - echo "Getting stack outputs..."
+      - |
+        aws cloudformation describe-stacks \
+          --stack-name purposepath-api-${STAGE} \
+          --query 'Stacks[0].Outputs' \
+          --region ${AWS_REGION}
+      - |
+        if [ -d "coaching/prompts" ]; then
+          echo "Uploading prompt templates to S3..."
+          PROMPTS_BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name purposepath-api-${STAGE} \
+            --query 'Stacks[0].Outputs[?OutputKey==`PromptsBucketName`].OutputValue' \
+            --output text \
+            --region ${AWS_REGION})
+
+          if [ ! -z "$PROMPTS_BUCKET" ]; then
+            aws s3 sync coaching/prompts/ s3://${PROMPTS_BUCKET}/ \
+              --delete \
+              --region ${AWS_REGION}
+          fi
+        fi
+
+      # Run smoke tests
+      - echo "Running smoke tests..."
+      - |
+        API_ENDPOINT=$(aws cloudformation describe-stacks \
+          --stack-name purposepath-api-${STAGE} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+          --output text \
+          --region ${AWS_REGION})
+
+        echo "API Endpoint: ${API_ENDPOINT}"
+
+        # Test account health endpoint
+        curl -f ${API_ENDPOINT}/api/v1/auth/health || echo "Account health check failed"
+
+        # Test coaching health endpoint
+        curl -f ${API_ENDPOINT}/api/v1/health || echo "Coaching health check failed"
+
+      - echo "Deployment completed on `date`"
+
+artifacts:
+  files:
+    - packaged.yaml
+    - template.yaml
+    - samconfig.toml
+    - account/template-fixed.yaml
+    - coaching/template-fixed.yaml
+  name: purposepath-api-artifacts
+
+cache:
+  paths:
+    - /root/.cache/pip/**/*
+    - .aws-sam/**/*
+
+environment:
+  variables:
+    # These should be set in CodeBuild environment
+    STAGE: dev
+    AWS_REGION: us-east-1
+    LOG_LEVEL: INFO
+    EMAIL_FROM: noreply@purposepath.ai
+    BEDROCK_MODEL_ID: anthropic.claude-3-sonnet-20240229-v1:0
+    REDIS_NODE_TYPE: cache.t3.micro
+    CREATE_JWT_SECRET: false
+    # ARTIFACTS_BUCKET should be set in CodeBuild project configuration

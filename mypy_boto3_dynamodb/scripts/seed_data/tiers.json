@@ -1,0 +1,95 @@
+{
+  "tiers": [
+    {
+      "tier": "trial",
+      "display_name": "Trial",
+      "description": "Free trial with limited usage",
+      "trial_days": 14,
+      "features": [
+        "goalCreate",
+        "attachments"
+      ],
+      "limits": {
+        "goals": 3,
+        "kpis_per_goal": 2,
+        "attachments_per_goal": 3,
+        "reports": 0,
+        "activity_per_goal": 50
+      },
+      "pricing": {
+        "monthly_cents": 0,
+        "yearly_cents": 0
+      }
+    },
+    {
+      "tier": "starter",
+      "display_name": "Starter",
+      "description": "Starter plan for small teams",
+      "features": [
+        "goalCreate",
+        "attachments",
+        "reports"
+      ],
+      "limits": {
+        "goals": 10,
+        "kpis_per_goal": 5,
+        "attachments_per_goal": 10,
+        "reports": 2,
+        "activity_per_goal": 100
+      },
+      "pricing": {
+        "monthly_cents": 2900,
+        "yearly_cents": 29000
+      }
+    },
+    {
+      "tier": "professional",
+      "display_name": "Professional",
+      "description": "Advanced features for growing orgs",
+      "features": [
+        "goalCreate",
+        "attachments",
+        "reports",
+        "realtime",
+        "bulkPlanner"
+      ],
+      "limits": {
+        "goals": 50,
+        "kpis_per_goal": 10,
+        "attachments_per_goal": 25,
+        "reports": 10,
+        "activity_per_goal": 500
+      },
+      "pricing": {
+        "monthly_cents": 9900,
+        "yearly_cents": 99000
+      }
+    },
+    {
+      "tier": "enterprise",
+      "display_name": "Enterprise",
+      "description": "Full capabilities and support",
+      "features": [
+        "goalCreate",
+        "attachments",
+        "reports",
+        "realtime",
+        "bulkPlanner",
+        "strategyCompare"
+      ],
+      "limits": {
+        "goals": -1,
+        "kpis_per_goal": -1,
+        "attachments_per_goal": -1,
+        "reports": -1,
+        "activity_per_goal": -1
+      },
+      "pricing": {
+        "monthly_cents": 24900,
+        "yearly_cents": 249000
+      }
+    }
+  ],
+  "tenant_overrides": []
+}
+

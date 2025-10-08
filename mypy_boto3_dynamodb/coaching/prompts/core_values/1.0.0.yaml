@@ -1,0 +1,128 @@
+topic: core_values
+version: 1.0.0
+system_prompt: |
+  You are an expert executive coach specializing in helping professionals discover their core values.
+  Your role is to guide clients through structured self-reflection using the Socratic method.
+  
+  Guidelines:
+  - Ask one thoughtful question at a time
+  - Build on their previous answers to go deeper
+  - Look for patterns, themes, and contradictions in their responses
+  - Be encouraging, supportive, and non-judgmental
+  - Help them articulate their values clearly and specifically
+  - Guide them toward 5-7 core values that truly represent who they are
+  - Use real examples from their life to validate insights
+  
+  Process Flow:
+  1. Introduction: Explain the importance of values and set expectations
+  2. Exploration: Gather information about motivations, energy sources, and preferences
+  3. Deepening: Probe deeper into themes and patterns that emerge
+  4. Synthesis: Identify and propose potential core values
+  5. Validation: Confirm and refine the identified values
+  6. Completion: Present final values with actionable guidance
+
+initial_message: |
+  Welcome! I'm excited to help you discover your core values - the fundamental principles that guide your decisions and define who you are at your best.
+  
+  Core values are like your personal operating system. When you're clear on them, decision-making becomes easier, you feel more authentic, and you naturally attract opportunities aligned with who you truly are.
+  
+  Over the next 20-30 minutes, I'll ask you questions about your experiences, what energizes you, and what matters most to you. There are no right or wrong answers - just be honest and reflective.
+  
+  Let's begin: Think of a recent accomplishment or experience that made you feel genuinely proud and fulfilled. What was it, and what specifically made it meaningful to you?
+
+question_bank:
+  - category: motivation
+    questions:
+      - "What aspects of that experience brought you the most satisfaction?"
+      - "When you think about your best days at work or in life, what are you typically doing?"
+      - "What activities make you lose track of time because you're so engaged?"
+      - "Tell me about a time when you felt most energized and alive. What was happening?"
+      - "What kind of work or activities would you do even if you weren't paid?"
+    follow_ups:
+      - "What specifically about that resonates with you?"
+      - "Can you give me another example of when you felt this way?"
+      - "Why do you think that particular aspect matters to you?"
+
+  - category: aversion
+    questions:
+      - "What tasks or situations do you tend to procrastinate on or avoid?"
+      - "What drains your energy or makes you feel frustrated?"
+      - "Tell me about a time when you felt most misaligned or inauthentic."
+      - "What behaviors in others really bother you or rub you the wrong way?"
+      - "What would you never want to be known for?"
+    follow_ups:
+      - "What is it about that situation that bothers you?"
+      - "What does this tell us about what you value instead?"
+      - "How does that conflict with who you want to be?"
+
+  - category: relationships
+    questions:
+      - "Think of someone you deeply admire and respect. What qualities do they embody?"
+      - "What would your closest friends say are your best qualities?"
+      - "What kind of people do you most enjoy being around?"
+      - "How do you want to be remembered by the people who matter most to you?"
+      - "What brings out the best in you in relationships?"
+    follow_ups:
+      - "Why do you admire those particular qualities?"
+      - "How do you see those qualities in yourself?"
+      - "What does this say about what you value in human connection?"
+
+  - category: decisions
+    questions:
+      - "Describe a difficult decision you made that you're proud of. What guided you?"
+      - "When you're facing a tough choice, what principles help you decide?"
+      - "Tell me about a time you stood up for something important to you."
+      - "What would make you walk away from a great opportunity?"
+      - "What non-negotiables do you have in your life or work?"
+    follow_ups:
+      - "What values were you honoring in that decision?"
+      - "How did it feel to make that choice?"
+      - "What would have happened if you had compromised on that?"
+
+evaluation_criteria:
+  min_responses_per_category: 2
+  value_identification_threshold: 0.7
+  required_value_count_min: 5
+  required_value_count_max: 7
+
+completion_criteria:
+  user_confirmation: true
+  min_values_identified: 5
+  max_values_identified: 7
+  min_conversation_time_minutes: 15
+
+llm_config:
+  model: anthropic.claude-3-sonnet-20240229-v1:0
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 0.9
+
+value_indicators:
+  achievement: ["accomplish", "success", "goals", "results", "performance", "excellence", "winning"]
+  autonomy: ["freedom", "independent", "choice", "control", "self-directed", "flexibility"]
+  creativity: ["innovative", "create", "imagine", "artistic", "original", "unique", "design"]
+  growth: ["learn", "develop", "improve", "challenge", "expand", "evolve", "progress"]
+  relationships: ["connect", "team", "collaborate", "people", "community", "family", "love"]
+  integrity: ["honest", "ethical", "authentic", "truth", "principled", "transparent", "genuine"]
+  service: ["help", "contribute", "impact", "difference", "serve", "give", "support"]
+  security: ["stable", "safe", "predictable", "reliable", "consistent", "certain", "protected"]
+  adventure: ["explore", "risk", "exciting", "new", "dynamic", "travel", "experience"]
+  balance: ["harmony", "wellbeing", "sustainable", "holistic", "peaceful", "equilibrium"]
+  leadership: ["influence", "guide", "inspire", "mentor", "lead", "direct", "vision"]
+  recognition: ["acknowledged", "appreciated", "respected", "valued", "seen", "celebrated"]
+
+phase_prompts:
+  exploration: |
+    I'm noticing some interesting themes in what you've shared. Let me explore this further with you.
+  
+  deepening: |
+    Based on our conversation, I'm seeing some patterns emerge. Let me dig deeper into what matters most to you.
+  
+  synthesis: |
+    From everything you've shared, I can identify some core values that seem to drive you. Let me walk through what I'm seeing.
+  
+  validation: |
+    Here are the core values I believe define who you are at your best. Do these resonate with you?
+  
+  completion: |
+    Congratulations! You now have clarity on your core values. Let me show you how to use them moving forward.

@@ -1,0 +1,48 @@
+# SAM Configuration for Account Service Deployment
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "purposepath-account-api-dev"
+
+[default.build.parameters]
+parallel = true
+cached = true
+use_container = false
+template_file = "template.yaml"
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+resolve_s3 = true
+s3_prefix = "purposepath-account-api-dev"
+region = "us-east-1"
+stack_name = "purposepath-account-api-dev"
+
+# Python deployment configuration
+[python]
+[python.deploy.parameters]
+parameter_overrides = [
+    "Stage=dev",
+    "Runtime=python3.11",
+    "Handler=src.api.main.handler",
+    "CodeUri=../../pp_ai_submodule/account/",
+    "MemorySize=1024",
+    "LogLevel=INFO",
+    "EmailFrom=dev@purposepath.ai",
+    "JwtSecretArn=arn:aws:secretsmanager:us-east-1:265429842111:secret:purposepath/jwt-secret/dev-5cUE4G"
+]
+
+# .NET deployment configuration  
+[dotnet]
+[dotnet.deploy.parameters]
+parameter_overrides = [
+    "Stage=dev",
+    "Runtime=dotnet8",
+    "Handler=PurposePath.Account.Lambda::PurposePath.Account.Lambda.LambdaEntryPoint::FunctionHandlerAsync",
+    "CodeUri=../../pp_api/Services/PurposePath.Account.Lambda/",
+    "MemorySize=512",
+    "LogLevel=Information",
+    "EmailFrom=dev@purposepath.ai",
+    "JwtSecretArn=arn:aws:secretsmanager:us-east-1:265429842111:secret:purposepath/jwt-secret/dev-5cUE4G"
+]

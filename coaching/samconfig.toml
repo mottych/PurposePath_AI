@@ -1,0 +1,26 @@
+# SAM CLI configuration file for PurposePath Coaching Service
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "purposepath-coaching"
+
+[default.build.parameters]
+parallel = true
+cached = true
+use_container = false
+template_file = "template-fixed.yaml"
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+resolve_s3 = true
+s3_prefix = "purposepath-coaching"
+region = "us-east-1"
+stack_name = "purposepath-coaching"
+parameter_overrides = [
+    "Stage=dev",
+    "LogLevel=INFO",
+    "BedrockModelId=anthropic.claude-3-sonnet-20240229-v1:0",
+    "RedisNodeType=cache.t3.micro"
+]

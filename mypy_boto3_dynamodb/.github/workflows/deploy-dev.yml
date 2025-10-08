@@ -1,0 +1,61 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_DEV_ROLE_ARN }}
+          role-session-name: purposepath-dev-deploy
+
+      - name: Build (no container)
+        run: |
+          sam build --template account/template-standalone.yaml --parallel --cached
+          sam build --template coaching/template-standalone.yaml --parallel --cached
+
+      - name: Resolve Dev JWT Secret ARN
+        id: secret
+        run: |
+          ARN=$(aws secretsmanager list-secrets --query "SecretList[?Name=='purposepath/jwt-secret/dev'].ARN | [0]" --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy Account (dev)
+        run: |
+          sam deploy \
+            --template-file account/template-standalone.yaml \
+            --stack-name purposepath-account-api-dev \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides Stage=dev LogLevel=DEBUG EmailFrom=dev@purposepath.ai JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
+            --region us-east-1 --resolve-s3 --no-confirm-changeset
+
+      - name: Deploy Coaching (dev)
+        run: |
+          sam deploy \
+            --template-file coaching/template-standalone.yaml \
+            --stack-name purposepath-coaching-api-dev \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides Stage=dev LogLevel=DEBUG JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
+            --region us-east-1 --resolve-s3 --no-confirm-changeset
+

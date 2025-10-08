@@ -1,0 +1,575 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'PurposePath Account Service - .NET Lambda Function'
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    Description: Deployment stage
+  
+  LogLevel:
+    Type: String
+    Default: Information
+    Description: Logging level for the application
+
+Globals:
+  Function:
+    Runtime: dotnet8
+    Timeout: 30
+    MemorySize: 512
+    Tracing: Active
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+        APPLICATION_NAME: PurposePath
+
+Resources:
+  # ==========================================
+  # API Gateway
+  # ==========================================
+  
+  AccountHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub purposepath-account-api-${Stage}
+      Description: !Sub PurposePath Account API (.NET)
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Amz-Date
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        MaxAge: 600
+        AllowCredentials: false
+      Tags:
+        Application: PurposePath
+        Service: Account
+        Stage: !Ref Stage
+        Runtime: dotnet8
+
+  # ==========================================
+  # Lambda Function
+  # ==========================================
+  
+  AccountApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub purposepath-account-api-${Stage}
+      Handler: PurposePath.Account.Lambda::PurposePath.Account.Lambda.LambdaEntryPoint::FunctionHandlerAsync
+      CodeUri: ../../pp_api/Services/PurposePath.Account.Lambda/
+      Description: PurposePath Account API (.NET)
+      Environment:
+        Variables:
+          # Use existing shared exports where available
+          JWT_SECRET_ARN: 
+            Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+          REDIS_ENDPOINT: 
+            Fn::ImportValue: !Sub purposepath-redis-endpoint-${Stage}
+          VPC_ID: 
+            Fn::ImportValue: !Sub purposepath-vpc-id-${Stage}
+          
+          # Use local tables (will be created in this stack)
+          USERS_TABLE: !Ref UsersTable
+          REFRESH_TOKENS_TABLE: !Ref RefreshTokensTable
+          PASSWORD_RESETS_TABLE: !Ref PasswordResetsTable
+          VERIFICATION_TOKENS_TABLE: !Ref VerificationTokensTable
+          TENANTS_TABLE: !Ref TenantsTable
+          SUBSCRIPTIONS_TABLE: !Ref SubscriptionsTable
+          INVITATIONS_TABLE: !Ref InvitationsTable
+          USER_PREFERENCES_TABLE: !Ref UserPreferencesTable
+          TIERS_TABLE: !Ref TiersTable
+          TENANT_OVERRIDES_TABLE: !Ref TenantOverridesTable
+          
+          # Configuration
+          EMAIL_FROM: "noreply@purposepath.ai"
+          JWT_ACCESS_TOKEN_EXPIRES_MINUTES: 60
+          JWT_REFRESH_TOKEN_EXPIRES_DAYS: 30
+          PASSWORD_RESET_TOKEN_EXPIRES_HOURS: 24
+          VERIFICATION_TOKEN_EXPIRES_DAYS: 7
+          API_PREFIX: /api/v1
+          CORS_ORIGINS: '["*"]'
+      Policies:
+        # DynamoDB Permissions for local tables
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt UsersTable.Arn
+                - !GetAtt RefreshTokensTable.Arn
+                - !GetAtt PasswordResetsTable.Arn
+                - !GetAtt VerificationTokensTable.Arn
+                - !GetAtt TenantsTable.Arn
+                - !GetAtt SubscriptionsTable.Arn
+                - !GetAtt InvitationsTable.Arn
+                - !GetAtt UserPreferencesTable.Arn
+                - !GetAtt TiersTable.Arn
+                - !GetAtt TenantOverridesTable.Arn
+                - !Sub "${UsersTable.Arn}/index/*"
+                - !Sub "${RefreshTokensTable.Arn}/index/*"
+                - !Sub "${PasswordResetsTable.Arn}/index/*"
+                - !Sub "${VerificationTokensTable.Arn}/index/*"
+                - !Sub "${TenantsTable.Arn}/index/*"
+                - !Sub "${SubscriptionsTable.Arn}/index/*"
+                - !Sub "${InvitationsTable.Arn}/index/*"
+                - !Sub "${UserPreferencesTable.Arn}/index/*"
+                - !Sub "${TiersTable.Arn}/index/*"
+                - !Sub "${TenantOverridesTable.Arn}/index/*"
+        # Secrets Manager Permissions
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: 
+                Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+        # SES Permissions for Email
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+                - ses:SendTemplatedEmail
+              Resource: '*'
+        # CloudWatch Logs
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+        # X-Ray Tracing
+        - Statement:
+            - Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: '*'
+      Events:
+        # Authentication endpoints
+        Register:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/register
+            Method: POST
+        Login:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/login
+            Method: POST
+        RefreshToken:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/refresh
+            Method: POST
+        Logout:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/logout
+            Method: POST
+        # Email verification
+        VerifyEmail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/verify
+            Method: POST
+        ResendVerification:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/verify/resend
+            Method: POST
+        # Password reset
+        RequestPasswordReset:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/password/reset
+            Method: POST
+        ConfirmPasswordReset:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/password/confirm
+            Method: POST
+        # User profile
+        GetProfile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/profile
+            Method: GET
+        UpdateProfile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/profile
+            Method: PUT
+        DeleteAccount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/account
+            Method: DELETE
+        # Health check
+        HealthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/health
+            Method: GET
+        # Additional endpoints (.NET specific)
+        UpdatePreferences:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/preferences
+            Method: PUT
+        GetTenants:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/tenants
+            Method: GET
+        CreateTenant:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/tenants
+            Method: POST
+      Tags:
+        Application: PurposePath
+        Service: Account
+        Stage: !Ref Stage
+        Runtime: dotnet8
+
+  # ==========================================
+  # Custom Domain Mapping (if using shared domain)
+  # ==========================================
+  
+  # AccountDomainMapping:
+  #   Type: AWS::ApiGatewayV2::ApiMapping
+  #   Properties:
+  #     DomainName: 
+  #       Fn::ImportValue: !Sub purposepath-domain-name-${Stage}
+  #     ApiId: !Ref AccountHttpApi
+  #     Stage: '$default'
+  #     ApiMappingKey: account
+
+  # ==========================================
+  # DynamoDB Tables
+  # ==========================================
+  
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-users-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: tenant-id-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Application
+          Value: PurposePath
+        - Key: Service
+          Value: Account
+        - Key: Stage
+          Value: !Ref Stage
+
+  RefreshTokensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-refresh-tokens-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: jti
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: jti
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: PurposePath
+        - Key: Service
+          Value: Account
+
+  PasswordResetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-password-resets-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: token_hash
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: token_hash
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  VerificationTokensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-verification-tokens-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: token_hash
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: token_hash
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  TenantsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-tenants-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: domain
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: domain-index
+          KeySchema:
+            - AttributeName: domain
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  SubscriptionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-subscriptions-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: subscription_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: subscription_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: tenant_id-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  InvitationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-invitations-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: invitation_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: invitation_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: tenant_id-status-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+            - AttributeName: status
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: email-status-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+            - AttributeName: status
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  UserPreferencesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-user-preferences-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: tenant_id-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  TiersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-tiers-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tier_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tier_id
+          KeyType: HASH
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+  TenantOverridesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-tenant-overrides-${Stage}-dotnet
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: feature
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: feature
+          KeyType: RANGE
+      Tags:
+        - Key: Application
+          Value: PurposePath
+
+Outputs:
+  AccountHttpApiId:
+    Description: Account HTTP API Gateway ID
+    Value: !Ref AccountHttpApi
+    Export:
+      Name: !Sub purposepath-account-api-id-dotnet-${Stage}
+  
+  AccountHttpApiEndpoint:
+    Description: Account HTTP API Gateway Endpoint
+    Value: !Sub "https://${AccountHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub purposepath-account-api-endpoint-dotnet-${Stage}
+  
+  AccountFunctionArn:
+    Description: Account Lambda function ARN
+    Value: !GetAtt AccountApiFunction.Arn
+    Export:
+      Name: !Sub purposepath-account-function-arn-dotnet-${Stage}
+  
+  Runtime:
+    Description: Deployed runtime
+    Value: dotnet8
+    Export:
+      Name: !Sub purposepath-account-runtime-dotnet-${Stage}

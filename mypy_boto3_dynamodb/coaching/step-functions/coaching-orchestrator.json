@@ -1,0 +1,213 @@
+{
+  "Comment": "PurposePath Coaching with Business Data Orchestration",
+  "StartAt": "ValidateInput",
+  "States": {
+    "ValidateInput": {
+      "Type": "Pass",
+      "Comment": "Validate and prepare input parameters",
+      "Parameters": {
+        "user_id.$": "$.user_id",
+        "tenant_id.$": "$.tenant_id", 
+        "message.$": "$.message",
+        "conversation_id.$": "$.conversation_id",
+        "session_id.$": "$.session_id",
+        "topic.$": "$.topic",
+        "data_scope.$": "$.data_scope"
+      },
+      "Next": "GetBusinessData"
+    },
+    
+    "GetBusinessData": {
+      "Type": "Task",
+      "Comment": "Fetch business context from .NET API",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${DotNetBusinessDataFunction}",
+        "Payload": {
+          "httpMethod": "GET",
+          "path": "/api/v1/business-context",
+          "queryStringParameters": {
+            "userId.$": "$.user_id",
+            "tenantId.$": "$.tenant_id",
+            "scope.$": "$.data_scope"
+          }
+        }
+      },
+      "ResultPath": "$.business_data_response",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleBusinessDataError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "ProcessBusinessData"
+    },
+    
+    "ProcessBusinessData": {
+      "Type": "Pass",
+      "Comment": "Extract business data from API response",
+      "Parameters": {
+        "user_id.$": "$.user_id",
+        "tenant_id.$": "$.tenant_id",
+        "message.$": "$.message", 
+        "conversation_id.$": "$.conversation_id",
+        "session_id.$": "$.session_id",
+        "topic.$": "$.topic",
+        "business_context.$": "$.business_data_response.Payload.body",
+        "source": "orchestrated"
+      },
+      "Next": "InvokeCoaching"
+    },
+    
+    "InvokeCoaching": {
+      "Type": "Task",
+      "Comment": "Call Python coaching service with enriched business context",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CoachingFunction}",
+        "Payload": {
+          "httpMethod": "POST",
+          "path": "/api/v1/coaching/chat",
+          "body": {
+            "message.$": "$.message",
+            "conversation_id.$": "$.conversation_id", 
+            "session_id.$": "$.session_id",
+            "topic.$": "$.topic",
+            "business_context.$": "$.business_context",
+            "source.$": "$.source"
+          }
+        }
+      },
+      "ResultPath": "$.coaching_response",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleCoachingError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "FormatResponse"
+    },
+    
+    "FormatResponse": {
+      "Type": "Pass",
+      "Comment": "Format final response",
+      "Parameters": {
+        "statusCode": 200,
+        "body": {
+          "message.$": "$.coaching_response.Payload.body.message",
+          "conversation_id.$": "$.coaching_response.Payload.body.conversation_id",
+          "session_id.$": "$.coaching_response.Payload.body.session_id",
+          "business_context_used": true,
+          "follow_up_suggestions.$": "$.coaching_response.Payload.body.follow_up_suggestions",
+          "orchestration_metadata": {
+            "execution_arn.$": "$$.Execution.Name",
+            "data_scope.$": "$.data_scope",
+            "timestamp.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    },
+    
+    "HandleBusinessDataError": {
+      "Type": "Pass",
+      "Comment": "Handle business data fetch errors - proceed with limited coaching",
+      "Parameters": {
+        "user_id.$": "$.user_id",
+        "message.$": "$.message",
+        "conversation_id.$": "$.conversation_id",
+        "session_id.$": "$.session_id", 
+        "topic.$": "$.topic",
+        "business_context": null,
+        "source": "orchestrated_fallback",
+        "error_info": {
+          "business_data_error.$": "$.error.Cause",
+          "fallback_mode": true
+        }
+      },
+      "Next": "InvokeCoachingFallback"
+    },
+    
+    "InvokeCoachingFallback": {
+      "Type": "Task",
+      "Comment": "Call coaching service without business context",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CoachingFunction}",
+        "Payload": {
+          "httpMethod": "POST",
+          "path": "/api/v1/coaching/chat",
+          "body": {
+            "message.$": "$.message",
+            "conversation_id.$": "$.conversation_id",
+            "session_id.$": "$.session_id", 
+            "topic.$": "$.topic",
+            "business_context.$": "$.business_context",
+            "source.$": "$.source"
+          }
+        }
+      },
+      "ResultPath": "$.coaching_response",
+      "Next": "FormatFallbackResponse"
+    },
+    
+    "FormatFallbackResponse": {
+      "Type": "Pass",
+      "Comment": "Format fallback response",
+      "Parameters": {
+        "statusCode": 200,
+        "body": {
+          "message.$": "$.coaching_response.Payload.body.message",
+          "conversation_id.$": "$.coaching_response.Payload.body.conversation_id",
+          "session_id.$": "$.coaching_response.Payload.body.session_id",
+          "business_context_used": false,
+          "follow_up_suggestions.$": "$.coaching_response.Payload.body.follow_up_suggestions",
+          "orchestration_metadata": {
+            "execution_arn.$": "$$.Execution.Name",
+            "fallback_mode": true,
+            "business_data_error.$": "$.error_info.business_data_error",
+            "timestamp.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    },
+    
+    "HandleCoachingError": {
+      "Type": "Pass",
+      "Comment": "Handle coaching service errors",
+      "Parameters": {
+        "statusCode": 500,
+        "body": {
+          "error": "Coaching service unavailable",
+          "message": "Unable to process coaching request at this time",
+          "conversation_id.$": "$.conversation_id",
+          "orchestration_metadata": {
+            "execution_arn.$": "$$.Execution.Name",
+            "coaching_error.$": "$.error.Cause",
+            "timestamp.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

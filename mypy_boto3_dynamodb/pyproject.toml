@@ -1,0 +1,75 @@
+[project]
+name = "purposepath-ai-coaching"
+version = "1.0.0"
+description = "PurposePath AI Coaching Service - Serverless AI-powered coaching platform"
+authors = [{ name = "PurposePath Team", email = "dev@purposepath.ai" }]
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Workspace-level configuration for multi-service monorepo
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+# Multi-service module resolution - use only root directory
+mypy_path = ["."]
+
+# Explicit package bases to handle multiple services
+explicit_package_bases = true
+
+# Service-specific modules to ignore external imports
+[[tool.mypy.overrides]]
+module = ["shared.*", "coaching.*"]
+ignore_missing_imports = false
+
+# External dependencies to ignore
+[[tool.mypy.overrides]]
+module = [
+    "mangum.*",
+    "boto3.*",
+    "botocore.*",
+    "mypy_boto3_dynamodb.*",
+    "structlog.*",
+    "fastapi.*",
+    "uvicorn.*",
+    "pydantic.*",
+    "jose.*",
+    "passlib.*",
+    "redis.*",
+    "langchain.*",
+    "tiktoken.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+# Include coaching and shared directories  
+extend-include = ["coaching/src/**/*.py", "shared/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "ARG", "SIM", "RUF"]
+ignore = [
+    "E501",
+    "B008",
+] # B008: FastAPI Depends() in defaults is standard pattern
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*" = ["B011", "ARG001", "S101"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+# Include Python files in coaching and shared directories
+include = '/(coaching|shared)/.*\.pyi?$'
+
+[tool.pytest.ini_options]
+testpaths = ["coaching/tests", "tests"]
+pythonpath = ["coaching", "shared", "."]
+asyncio_mode = "auto"

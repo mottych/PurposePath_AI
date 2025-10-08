@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an idea or enhancement
+labels: [enhancement]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please align with docs/frontend-integraion-guide.md and update docs if changing the contract.
+  - type: input
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user problem does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Brief design, scope, and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacted services/modules
+      description: Account, Coaching, Traction, Shared, Infra, etc.

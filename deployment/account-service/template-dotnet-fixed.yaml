@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'PurposePath Account Service - .NET Lambda'
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+  LogLevel:
+    Type: String
+    Default: Information
+
+Globals:
+  Function:
+    Runtime: dotnet8
+    Timeout: 30
+    MemorySize: 512
+    Tracing: Active
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+
+Resources:
+  AccountHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub purposepath-account-api-dotnet-${Stage}
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: ['*']
+
+  AccountApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub purposepath-account-api-dotnet-${Stage}
+      Handler: PurposePath.Account.Lambda::PurposePath.Account.Lambda.LambdaEntryPoint::FunctionHandlerAsync
+      CodeUri: ../../pp_api/Services/PurposePath.Account.Lambda/
+      Environment:
+        Variables:
+          # Import existing shared resources
+          JWT_SECRET_ARN: 
+            Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+          REDIS_ENDPOINT: 
+            Fn::ImportValue: !Sub purposepath-redis-endpoint-${Stage}
+          
+          # Use existing tables
+          USERS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-users-table-${Stage}
+          TENANTS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-tenants-table-${Stage}
+          SUBSCRIPTIONS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-subscriptions-table-${Stage}
+          
+          # Create only missing tables
+          REFRESH_TOKENS_TABLE: !Ref RefreshTokensTable
+          PASSWORD_RESETS_TABLE: !Ref PasswordResetsTable
+          VERIFICATION_TOKENS_TABLE: !Ref VerificationTokensTable
+          USER_PREFERENCES_TABLE: !Ref UserPreferencesTable
+          TIERS_TABLE: !Ref TiersTable
+          TENANT_OVERRIDES_TABLE: !Ref TenantOverridesTable
+          
+          API_PREFIX: /api/v1
+          EMAIL_FROM: noreply@purposepath.ai
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:*]
+              Resource: 
+                - !GetAtt RefreshTokensTable.Arn
+                - !GetAtt PasswordResetsTable.Arn
+                - !GetAtt VerificationTokensTable.Arn
+                - !GetAtt UserPreferencesTable.Arn
+                - !GetAtt TiersTable.Arn
+                - !GetAtt TenantOverridesTable.Arn
+                - !Sub "${RefreshTokensTable.Arn}/index/*"
+                - !Sub "${PasswordResetsTable.Arn}/index/*"
+                - !Sub "${VerificationTokensTable.Arn}/index/*"
+                - !Sub "${UserPreferencesTable.Arn}/index/*"
+                - !Sub "${TiersTable.Arn}/index/*"
+                - !Sub "${TenantOverridesTable.Arn}/index/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: 
+                Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+            - Effect: Allow
+              Action: [ses:SendEmail, ses:SendRawEmail]
+              Resource: '*'
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/{proxy+}
+            Method: ANY
+
+  # Only create missing tables
+  RefreshTokensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-refresh-tokens-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: jti
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: jti
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  PasswordResetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-password-resets-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: token_hash
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: token_hash
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  VerificationTokensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-verification-tokens-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: token_hash
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: token_hash
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  UserPreferencesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-user-preferences-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+
+  TiersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-tiers-${Stage}-v2
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tier_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tier_id
+          KeyType: HASH
+
+  TenantOverridesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-tenant-overrides-${Stage}-v2
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: feature
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: feature
+          KeyType: RANGE
+
+Outputs:
+  AccountHttpApiId:
+    Value: !Ref AccountHttpApi
+  AccountHttpApiEndpoint:
+    Value: !Sub "https://${AccountHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  AccountFunctionArn:
+    Value: !GetAtt AccountApiFunction.Arn

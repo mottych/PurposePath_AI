@@ -1,0 +1,333 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'PurposePath Account Service - Python Lambda Function'
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    Description: Deployment stage
+  
+  LogLevel:
+    Type: String
+    Default: INFO
+    Description: Logging level for the application
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: 1024
+    Tracing: Active
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+        APPLICATION_NAME: PurposePath
+
+Resources:
+  # ==========================================
+  # API Gateway
+  # ==========================================
+  
+  AccountHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub purposepath-account-api-${Stage}
+      Description: !Sub PurposePath Account API (Python)
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Amz-Date
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        MaxAge: 600
+        AllowCredentials: false
+      Tags:
+        Application: PurposePath
+        Service: Account
+        Stage: !Ref Stage
+        Runtime: python3.11
+
+  # ==========================================
+  # Lambda Function
+  # ==========================================
+  
+  AccountApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub purposepath-account-api-${Stage}
+      Handler: src.api.main.handler
+      CodeUri: ../../pp_ai_submodule/account/
+      Description: PurposePath Account API (Python)
+      Environment:
+        Variables:
+          # Import shared resources
+          USERS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-users-table-${Stage}
+          REFRESH_TOKENS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-refresh-tokens-table-${Stage}
+          PASSWORD_RESETS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-password-resets-table-${Stage}
+          VERIFICATION_TOKENS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-verification-tokens-table-${Stage}
+          TENANTS_TABLE:
+            Fn::ImportValue: !Sub purposepath-tenants-table-${Stage}
+          SUBSCRIPTIONS_TABLE:
+            Fn::ImportValue: !Sub purposepath-subscriptions-table-${Stage}
+          USER_PREFERENCES_TABLE:
+            Fn::ImportValue: !Sub purposepath-user-preferences-table-${Stage}
+          EMAIL_FROM: 
+            Fn::ImportValue: !Sub purposepath-email-from-${Stage}
+          JWT_SECRET_ARN: 
+            Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+          JWT_ACCESS_TOKEN_EXPIRES_MINUTES: 60
+          JWT_REFRESH_TOKEN_EXPIRES_DAYS: 30
+          PASSWORD_RESET_TOKEN_EXPIRES_HOURS: 24
+          VERIFICATION_TOKEN_EXPIRES_DAYS: 7
+          API_PREFIX: /api/v1
+          CORS_ORIGINS: '["*"]'
+      Policies:
+        # DynamoDB Permissions for imported tables
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - Fn::ImportValue: !Sub purposepath-users-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-refresh-tokens-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-password-resets-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-verification-tokens-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-tenants-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-subscriptions-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-user-preferences-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-users-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-refresh-tokens-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-password-resets-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-verification-tokens-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-tenants-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-subscriptions-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-user-preferences-table-arn-${Stage}
+        # Secrets Manager Permissions
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: 
+                Fn::ImportValue: !Sub purposepath-jwt-secret-arn-${Stage}
+        # SES Permissions for Email
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+                - ses:SendTemplatedEmail
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  'ses:FromAddress': 
+                    Fn::ImportValue: !Sub purposepath-email-from-${Stage}
+        # S3 Permissions (for application bucket)
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource: 
+                - !Sub 
+                  - "${BucketArn}/*"
+                  - BucketArn: 
+                      Fn::ImportValue: !Sub purposepath-app-bucket-${Stage}
+        # CloudWatch Logs
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+        # X-Ray Tracing
+        - Statement:
+            - Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: '*'
+      Events:
+        # Authentication endpoints
+        Register:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/register
+            Method: POST
+        Login:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/login
+            Method: POST
+        RefreshToken:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/refresh
+            Method: POST
+        Logout:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/logout
+            Method: POST
+        # Email verification
+        VerifyEmail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/verify
+            Method: POST
+        ResendVerification:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/verify/resend
+            Method: POST
+        # Password reset
+        RequestPasswordReset:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/password/reset
+            Method: POST
+        ConfirmPasswordReset:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/password/confirm
+            Method: POST
+        # User profile
+        GetProfile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/profile
+            Method: GET
+        UpdateProfile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/profile
+            Method: PUT
+        DeleteAccount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/account
+            Method: DELETE
+        # Health check
+        HealthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/health
+            Method: GET
+        # Additional endpoints (Python specific)
+        UpdatePreferences:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/auth/preferences
+            Method: PUT
+        GetTenants:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/tenants
+            Method: GET
+        CreateTenant:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/tenants
+            Method: POST
+      Tags:
+        Application: PurposePath
+        Service: Account
+        Stage: !Ref Stage
+        Runtime: python3.11
+
+  # ==========================================
+  # Custom Domain Mapping (if using shared domain)
+  # ==========================================
+  
+  AccountDomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Properties:
+      DomainName: 
+        Fn::ImportValue: !Sub purposepath-domain-name-${Stage}
+      ApiId: !Ref AccountHttpApi
+      Stage: '$default'
+      ApiMappingKey: account
+
+Outputs:
+  AccountHttpApiId:
+    Description: Account HTTP API Gateway ID
+    Value: !Ref AccountHttpApi
+    Export:
+      Name: !Sub purposepath-account-api-id-${Stage}
+  
+  AccountHttpApiEndpoint:
+    Description: Account HTTP API Gateway Endpoint
+    Value: !Sub "https://${AccountHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub purposepath-account-api-endpoint-${Stage}
+  
+  AccountFunctionArn:
+    Description: Account Lambda function ARN
+    Value: !GetAtt AccountApiFunction.Arn
+    Export:
+      Name: !Sub purposepath-account-function-arn-${Stage}
+  
+  Runtime:
+    Description: Deployed runtime
+    Value: python3.11
+    Export:
+      Name: !Sub purposepath-account-runtime-${Stage}

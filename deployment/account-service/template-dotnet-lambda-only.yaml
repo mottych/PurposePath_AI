@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'PurposePath .NET Account Lambda - Uses Existing Shared Resources'
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+  JwtSecretArn:
+    Type: String
+    Description: ARN of existing JWT Secret
+
+Globals:
+  Function:
+    Runtime: dotnet8
+    Timeout: 30
+    MemorySize: 512
+    Tracing: Active
+
+Resources:
+  # New API Gateway for .NET service
+  AccountHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub purposepath-account-dotnet-api-${Stage}
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: ['*']
+
+  # .NET Lambda Function
+  AccountApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub purposepath-account-dotnet-api-${Stage}
+      Handler: PurposePath.Account.Lambda::PurposePath.Account.Lambda.LambdaEntryPoint::FunctionHandlerAsync
+      CodeUri: ../../pp_api/Services/PurposePath.Account.Lambda/
+      Environment:
+        Variables:
+          # Use existing shared resources
+          JWT_SECRET_ARN: !Ref JwtSecretArn
+          USERS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-users-table-${Stage}
+          TENANTS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-tenants-table-${Stage}
+          SUBSCRIPTIONS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-subscriptions-table-${Stage}
+          REFRESH_TOKENS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-refresh-tokens-table-${Stage}
+          PASSWORD_RESETS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-password-resets-table-${Stage}
+          VERIFICATION_TOKENS_TABLE: 
+            Fn::ImportValue: !Sub purposepath-verification-tokens-table-${Stage}
+          USER_PREFERENCES_TABLE: 
+            Fn::ImportValue: !Sub purposepath-user-preferences-table-${Stage}
+          
+          API_PREFIX: /api/v1
+          EMAIL_FROM: noreply@purposepath.ai
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:*]
+              Resource: 
+                - Fn::ImportValue: !Sub purposepath-users-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-tenants-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-subscriptions-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-refresh-tokens-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-password-resets-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-verification-tokens-table-arn-${Stage}
+                - Fn::ImportValue: !Sub purposepath-user-preferences-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-users-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-tenants-table-arn-${Stage}
+                - !Sub 
+                  - "${TableArn}/index/*"
+                  - TableArn: 
+                      Fn::ImportValue: !Sub purposepath-subscriptions-table-arn-${Stage}
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Ref JwtSecretArn
+            - Effect: Allow
+              Action: [ses:SendEmail, ses:SendRawEmail]
+              Resource: '*'
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AccountHttpApi
+            Path: /api/v1/{proxy+}
+            Method: ANY
+
+Outputs:
+  AccountHttpApiId:
+    Value: !Ref AccountHttpApi
+  AccountHttpApiEndpoint:
+    Value: !Sub "https://${AccountHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  AccountFunctionArn:
+    Value: !GetAtt AccountApiFunction.Arn

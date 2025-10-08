@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: PurposePath AI Coaching API Domain (production)
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: ai-coaching.purposepath.app
+  HostedZoneId:
+    Type: String
+    Description: Route53 Hosted Zone ID for purposepath.app
+  
+Resources:
+  DomainCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+
+  ApiDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref DomainCertificate
+          SecurityPolicy: TLS_1_2
+
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiDomain.RegionalHostedZoneId
+
+Outputs:
+  DomainName:
+    Value: !Ref DomainName
+  CertificateArn:
+    Value: !Ref DomainCertificate
+  RegionalDomainName:
+    Value: !GetAtt ApiDomain.RegionalDomainName

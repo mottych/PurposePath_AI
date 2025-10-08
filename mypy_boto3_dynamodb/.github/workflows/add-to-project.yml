@@ -1,0 +1,17 @@
+name: Add items to GitHub Project
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add to project
+        uses: actions/add-to-project@v0.6.0
+        with:
+          project-url: ${{ vars.GH_PROJECT_URL }}
+          github-token: ${{ secrets.GH_PROJECTS_TOKEN }}

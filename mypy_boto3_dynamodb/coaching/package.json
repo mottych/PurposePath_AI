@@ -1,0 +1,19 @@
+{
+  "name": "truenorth-coaching",
+  "version": "1.0.0",
+  "description": "TrueNorth AI Coaching Module - Serverless Dependencies",
+  "scripts": {
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:staging": "serverless deploy --stage staging",
+    "deploy:prod": "serverless deploy --stage prod",
+    "offline": "serverless offline start --stage dev",
+    "logs": "serverless logs -f api --stage dev -t",
+    "remove": "serverless remove --stage dev"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.3.0",
+    "serverless-python-requirements": "^6.0.0",
+    "serverless-dotenv-plugin": "^6.0.0"
+  }
+}

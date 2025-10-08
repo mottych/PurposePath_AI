@@ -1,0 +1,295 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PurposePath Coaching API - Standalone (dev) stack with HTTP API and
+  required tables
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues:
+      - dev
+    Default: dev
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARNING
+      - ERROR
+  JwtSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional ARN of an existing JWT secret in Secrets Manager
+  NameSuffix:
+    Type: String
+    Default: '-v2'
+    Description: Suffix to append to resource names to align with account stack
+  EnableCustomDomain:
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+  CustomDomainName:
+    Type: String
+    Default: ''
+  ApiMappingKey:
+    Type: String
+    Default: coaching
+  SubnetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Comma-separated list of private subnet IDs for Lambda VPC access
+  LambdaSecurityGroupIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Comma-separated list of security group IDs for Lambda
+  RedisClusterEndpoint:
+    Type: String
+    Default: ''
+    Description: Optional Redis cluster endpoint host:port (dev)
+  RedisSSL:
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+  RedisPassword:
+    Type: String
+    Default: ''
+    Description: Optional Redis AUTH password
+Conditions:
+  CreateJwtSecret: !Equals
+    - !Ref JwtSecretArn
+    - ''
+  UseCustomDomain: !Equals
+    - !Ref EnableCustomDomain
+    - 'true'
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Tracing: Active
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+        APPLICATION_NAME: PurposePath
+Resources:
+  CoachingHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub purposepath-coaching-api-${Stage}
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - '*'
+  ApiDomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: UseCustomDomain
+    DependsOn:
+      - CoachingHttpApiApiGatewayDefaultStage
+    Properties:
+      ApiId: !Ref CoachingHttpApi
+      DomainName: !Ref CustomDomainName
+      Stage: $default
+      ApiMappingKey: !Ref ApiMappingKey
+  ConversationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-conversations-${Stage}${NameSuffix}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: conversation_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: conversation_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: tenant_id-user_id-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+            - AttributeName: user_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: user_id-created_at-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+  CoachingSessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-coaching-sessions-${Stage}${NameSuffix}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: topic
+          AttributeType: S
+        - AttributeName: started_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: tenant_id-user_id-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+            - AttributeName: user_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: user_id-topic-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: topic
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: tenant_id-started_at-index
+          KeySchema:
+            - AttributeName: tenant_id
+              KeyType: HASH
+            - AttributeName: started_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+  JwtSecret:
+    Type: AWS::SecretsManager::Secret
+    Condition: CreateJwtSecret
+    Properties:
+      Name: !Sub purposepath/jwt-secret/${Stage}
+      Description: JWT signing secret for PurposePath authentication
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: secret
+        PasswordLength: 64
+        ExcludeCharacters: '"@/\'
+  CoachingApiFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerContext: C:\Projects\XBS\PurposePath\PurposePath_Api\coaching
+      DockerTag: dev
+      Dockerfile: Dockerfile
+      SamResourceId: CoachingApiFunction
+    Properties:
+      PackageType: Image
+      Description: PurposePath coaching API (standalone)
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds: !Ref LambdaSecurityGroupIds
+      Environment:
+        Variables:
+          CONVERSATIONS_TABLE: !Ref ConversationsTable
+          COACHING_SESSIONS_TABLE: !Ref CoachingSessionsTable
+          BUSINESS_DATA_TABLE: !Sub purposepath-business-data-${Stage}${NameSuffix}
+          USER_PREFERENCES_TABLE: !Sub purposepath-user-preferences-${Stage}${NameSuffix}
+          JWT_SECRET_ARN: !If
+            - CreateJwtSecret
+            - !Ref JwtSecret
+            - !Ref JwtSecretArn
+          API_PREFIX: /api/v1
+          REDIS_CLUSTER_ENDPOINT: !Ref RedisClusterEndpoint
+          REDIS_SSL: !Ref RedisSSL
+          REDIS_PASSWORD: !Ref RedisPassword
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CoachingSessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Sub purposepath-business-data-${Stage}${NameSuffix}
+        - DynamoDBCrudPolicy:
+            TableName: !Sub purposepath-user-preferences-${Stage}${NameSuffix}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !If
+                - CreateJwtSecret
+                - !Ref JwtSecret
+                - !Ref JwtSecretArn
+            - Effect: Allow
+              Action:
+                - s3:HeadBucket
+                - s3:ListBucket
+                - s3:GetBucketLocation
+                - s3:GetObject
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::purposepath-coaching-prompts-${Stage}
+                - !Sub arn:aws:s3:::purposepath-coaching-prompts-${Stage}/*
+      ImageUri: coachingapifunction:dev
+  CoachingApiFunctionS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CoachingS3PromptsAccess
+      Roles:
+        - !Ref CoachingApiFunctionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:HeadBucket
+              - s3:ListBucket
+              - s3:GetBucketLocation
+              - s3:GetObject
+              - s3:PutObject
+            Resource:
+              - !Sub arn:aws:s3:::purposepath-coaching-prompts-${Stage}
+              - !Sub arn:aws:s3:::purposepath-coaching-prompts-${Stage}/*
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/health/{proxy+}
+        HealthRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/health
+        Conversations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/conversations/{proxy+}
+        Suggestions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/suggestions/{proxy+}
+Outputs:
+  ApiEndpoint:
+    Description: Coaching API endpoint URL
+    Value: !Sub https://${CoachingHttpApi}.execute-api.${AWS::Region}.amazonaws.com

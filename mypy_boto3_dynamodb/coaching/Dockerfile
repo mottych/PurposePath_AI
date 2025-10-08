@@ -1,0 +1,14 @@
+FROM public.ecr.aws/lambda/python:3.11
+
+# Install system deps if needed
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app code
+COPY src ./src
+COPY shared ./shared
+
+# Set the Lambda handler
+CMD ["src.api.main.handler"]
+

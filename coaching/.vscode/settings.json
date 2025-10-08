@@ -1,0 +1,56 @@
+{
+  // Coaching Service specific Python settings
+  "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  
+  // Testing configuration for coaching service
+  "python.testing.pytestArgs": [
+    "tests/",
+    "--tb=short",
+    "-v"
+  ],
+  "python.testing.cwd": "${workspaceFolder}",
+  
+  // Python path configuration
+  "python.analysis.extraPaths": [
+    "./src"
+  ],
+  "python.envFile": "${workspaceFolder}/.env",
+  
+  // Terminal settings
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}/src",
+    "STAGE": "dev",
+    "REDIS_HOST": "localhost",
+    "REDIS_PORT": "6379"
+  },
+  
+  // Specific to coaching service structure
+  "python.linting.ruffArgs": [
+    "--line-length=100",
+    "--target-version=py311"
+  ],
+  
+  "python.formatting.blackArgs": [
+    "--line-length=100",
+    "--target-version=py311"
+  ],
+  
+  // Coaching service specific file patterns
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/coverage": true,
+    "**/.coverage": true,
+    "**/.ipynb_checkpoints": true
+  },
+  
+  // Jupyter notebook support
+  "jupyter.defaultKernel": "python3",
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "left"
+  }
+}
