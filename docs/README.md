@@ -9,10 +9,9 @@ PurposePath AI is a Python-based AI coaching microservices platform that provide
 This documentation is organized into four main categories:
 
 ### 📖 Guides (`/docs/Guides/`)
-General development guides and standards that apply across the entire project:
+General directions and instructions that are always applicable across the project:
 
 - **[Branching Strategy](./Guides/BRANCHING_STRATEGY.md)** - Three-tier branching workflow (master/staging/dev)
-- **[Branching Implementation](./Guides/BRANCHING_IMPLEMENTATION.md)** - Setup summary and quick reference
 - **[Development Guide](./Guides/DEVELOPMENT_GUIDE.md)** - Development workflow and best practices
 - **[Development Standards](./Guides/DEVELOPMENT_STANDARDS.md)** - Coding standards and conventions
 - **[Engineering Guide](./Guides/ENGINEERING_GUIDE.md)** - Technical architecture and patterns
@@ -20,7 +19,7 @@ General development guides and standards that apply across the entire project:
 - **[Shared Types Guide](./Guides/shared-types-guide.md)** - Type system and shared type usage
 
 ### 📋 Plans (`/docs/Plans/`)
-Feature specifications and implementation plans:
+Active architecture and plans for development (move to Archive when completed):
 
 - **[AI Coaching Architecture Design](./Plans/AI_COACHING_ARCHITECTURE_DESIGN.md)** - AI coaching system architecture
 - **[AI Coaching Implementation Plan](./Plans/AI_COACHING_IMPLEMENTATION_PLAN.md)** - Implementation roadmap
@@ -30,12 +29,13 @@ Feature specifications and implementation plans:
 - **[Frontend Integration Guide](./Plans/frontend-integration-guide.md)** - Frontend integration patterns
 
 ### 📊 Status (`/docs/Status/`)
-Project status reports and progress tracking:
+Summaries of actions performed and progress tracking:
 
 - **[Implementation Summary](./Status/IMPLEMENTATION_SUMMARY.md)** - Current implementation status
+- **[Branching Implementation](./Status/BRANCHING_IMPLEMENTATION.md)** - Git repository setup and branching strategy implementation
 
 ### 📦 Archive (`/docs/Archive/`)
-Historical documents and deprecated plans preserved for reference
+Completed architecture and plans (moved from Plans when finished)
 
 ## 🚀 Quick Start
 
