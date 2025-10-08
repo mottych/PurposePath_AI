@@ -1,250 +1,215 @@
-# PurposePath API: Typing Cleanup Project
+# PurposePath AI Documentation
 
 ## 🎯 Project Overview
 
-This project addresses the systematic cleanup of ~7,000 Pylance type errors across the PurposePath API codebase, establishing a strongly-typed foundation for accelerated development.
+PurposePath AI is a Python-based AI coaching microservices platform that provides intelligent coaching conversations, business insights, and strategic guidance through advanced LLM integration.
 
-## 📚 Documentation Index
+## 📚 Documentation Structure
 
-### Strategic Documents
+This documentation is organized into four main categories:
 
-- **[Typing Cleanup Strategy](./TYPING_CLEANUP_STRATEGY.md)** - Comprehensive analysis, goals, and technical implementation patterns
-- **[Development Standards](./DEVELOPMENT_STANDARDS.md)** - Future development guidelines, tooling, and best practices  
-- **[Execution Plan](./EXECUTION_PLAN.md)** - Phase-by-phase implementation steps with validation checkpoints
+### 📖 Guides (`/docs/Guides/`)
+General directions and instructions that are always applicable across the project:
 
-### Quick Reference
+- **[Branching Strategy](./Guides/BRANCHING_STRATEGY.md)** - Three-tier branching workflow (master/staging/dev)
+- **[Development Guide](./Guides/DEVELOPMENT_GUIDE.md)** - Development workflow and best practices
+- **[Development Standards](./Guides/DEVELOPMENT_STANDARDS.md)** - Coding standards and conventions
+- **[Engineering Guide](./Guides/ENGINEERING_GUIDE.md)** - Technical architecture and patterns
+- **[Clean Architecture & DDD Guidelines](./Guides/clean-architecture-ddd-guidelines.md)** - Architecture principles
+- **[Shared Types Guide](./Guides/shared-types-guide.md)** - Type system and shared type usage
 
-- **Current State:** ~7,000 Pylance errors across services
-- **Target State:** Zero type errors, 100% function signature typing
-- **Timeline:** 2-3 focused development days
-- **Success Metric:** VS Code Pylance shows zero red squiggles
+### 📋 Plans (`/docs/Plans/`)
+Active architecture and plans for development (move to Archive when completed):
+
+- **[AI Coaching Architecture Design](./Plans/AI_COACHING_ARCHITECTURE_DESIGN.md)** - AI coaching system architecture
+- **[AI Coaching Implementation Plan](./Plans/AI_COACHING_IMPLEMENTATION_PLAN.md)** - Implementation roadmap
+- **[Coaching Service Requirements](./Plans/COACHING_SERVICE_REQUIREMENTS.md)** - Service specifications
+- **[Future Architecture](./Plans/FUTURE_ARCHITECTURE.md)** - Long-term architectural vision
+- **[Coaching Service Endpoints](./Plans/coaching-service-endpoints.md)** - API endpoint specifications
+- **[Frontend Integration Guide](./Plans/frontend-integration-guide.md)** - Frontend integration patterns
+
+### 📊 Status (`/docs/Status/`)
+Summaries of actions performed and progress tracking:
+
+- **[Implementation Summary](./Status/IMPLEMENTATION_SUMMARY.md)** - Current implementation status
+- **[Branching Implementation](./Status/BRANCHING_IMPLEMENTATION.md)** - Git repository setup and branching strategy implementation
+
+### 📦 Archive (`/docs/Archive/`)
+Completed architecture and plans (moved from Plans when finished)
 
 ## 🚀 Quick Start
 
-### 1. Setup GitHub Project Tracking
+### 1. Repository Setup
 
 ```bash
-# Install GitHub CLI if not present
-# https://cli.github.com/
+# Clone the repository
+git clone https://github.com/mottych/PurposePath_AI.git
+cd PurposePath_AI
 
-# Run project setup (creates issues, labels, milestones)
-python setup_github_project.py
+# Checkout development branch
+git checkout dev
 ```
 
-### 2. Configure Development Environment
+### 2. Development Environment
 
 ```bash
-# Install development dependencies
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies (coaching service example)
+cd coaching
 pip install -r requirements-dev.txt
 
-# Install pre-commit hooks
-pre-commit install --install-hooks
-
-# Validate VS Code extensions
-code --list-extensions | grep -E "(pylance|mypy|black)"
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-### 3. Validate Current State
+### 3. Running Services
 
 ```bash
-# Run comprehensive Pylance validation
-python pylance_validation.py account
-python pylance_validation.py coaching
-python pylance_validation.py traction
+# Run coaching service locally
+cd coaching
+python -m uvicorn src.api.main:app --reload --port 8000
 
-# Expected: ~7,000 total errors
+# Run tests
+pytest tests/ -v
+
+# Check code quality
+mypy src/
+black --check src/
 ```
 
-### 4. Begin Phase 1 Implementation
+### 4. Start Development
 
 ```bash
-# Start with shared infrastructure (highest impact)
-git checkout -b feature/typing-cleanup-phase1
+# Create feature branch from dev
+git checkout dev
+git pull origin dev
+git checkout -b feature/your-feature-name
 
-# Follow execution plan for Phase 1 tasks
-# See EXECUTION_PLAN.md for detailed steps
+# Make changes, test, commit
+git add .
+git commit -m "feat(scope): description"
+git push -u origin feature/your-feature-name
 ```
 
-## 📊 Progress Tracking
+## 📊 Repository Information
 
-### Phase Overview
+### Repository Structure
 
-- **Phase 1:** Foundation Setup (Shared infrastructure, type definitions)
-- **Phase 2:** Core Services (Account auth/billing, Coaching LLM/data)  
-- **Phase 3:** Systematic Patterns (Any elimination, FastAPI decorators)
-- **Phase 4:** Testing & Validation (Test typing, final verification)
-
-### Validation Commands
-
-```bash
-# Daily progress check
-python pylance_validation.py all > progress_$(date +%Y%m%d).txt
-
-# Success validation (target: 0 errors)
-python pylance_validation.py all
-echo "Expected output: 🎉 All services pass validation with 0 errors"
 ```
+PurposePath_AI/
+├── coaching/           # AI coaching service (Python/FastAPI)
+├── shared/            # Shared types and utilities
+├── docs/              # Documentation
+│   ├── Guides/       # Development guides
+│   ├── Plans/        # Feature specifications
+│   ├── Status/       # Progress tracking
+│   └── Archive/      # Historical documents
+├── infra/            # Infrastructure as code
+└── deployment/       # Deployment configurations
+```
+
+### Key Services
+
+- **Coaching Service** - AI-powered coaching conversations and insights
+- **Shared Infrastructure** - Common types, models, and utilities
 
 ## 🛠️ Development Tools
 
-### Required VS Code Extensions
+### Recommended VS Code Extensions
 
 ```json
 {
   "recommendations": [
+    "ms-python.python",
     "ms-python.pylance",
     "ms-python.mypy-type-checker",
     "ms-python.black-formatter",
-    "ms-python.isort"
+    "ms-python.isort",
+    "GitHub.copilot"
   ]
 }
 ```
 
-### Pre-commit Hook Validation
+### Code Quality Tools
 
 ```bash
-# Test all hooks
-pre-commit run --all-files
+# Type checking
+mypy src/
 
-# Should pass: black, isort, mypy, flake8
+# Code formatting
+black src/
+isort src/
+
+# Linting
+flake8 src/
+
+# Testing with coverage
+pytest --cov=src --cov-report=html
 ```
 
-## 📋 Issue Templates
+## 🌿 Branching Strategy
 
-### GitHub Issue Labels
+This repository follows a three-tier branching strategy:
 
-- `type-safety` - Type safety and annotation issues
-- `priority-critical` - Critical business logic fixes
-- `service-account` / `service-coaching` / `service-traction` - Service-specific
-- `phase-1` / `phase-2` / `phase-3` / `phase-4` - Implementation phases
+- **`master`** - Production environment (stable releases)
+- **`staging`** - Staging environment (pre-production validation)
+- **`dev`** - Development environment (active development)
 
-### Common Issue Actions
+All feature development should branch from `dev`. See the [Branching Strategy Guide](./Guides/BRANCHING_STRATEGY.md) for complete workflow details.
+
+### Quick Branch Commands
 
 ```bash
-# Assign yourself to an issue
-gh issue edit ISSUE_NUMBER --add-assignee @me
+# Start new feature
+git checkout dev && git pull origin dev
+git checkout -b feature/your-feature-name
 
-# Update issue progress  
-gh issue comment ISSUE_NUMBER --body "✅ Completed shared/types/common.py - 0 errors"
-
-# Close completed issue
-gh issue close ISSUE_NUMBER --comment "Phase 1 foundation complete. Zero Pylance errors in shared infrastructure."
+# Complete and merge feature
+git checkout dev
+git merge feature/your-feature-name --no-ff
+git push origin dev
 ```
-
-## 🎯 Success Criteria Checklist
-
-### Quantitative Targets
-
-- [ ] **Zero Pylance errors** across all services
-- [ ] **100% function signature typing** (no `def func():` without types)
-- [ ] **>90% test coverage** maintained during cleanup
-- [ ] **All CI/CD checks passing** with strict type validation
-
-### Qualitative Improvements  
-
-- [ ] **VS Code autocomplete** works perfectly for business logic
-- [ ] **Refactoring tools** operate reliably without type errors
-- [ ] **Error messages** are clear and actionable
-- [ ] **New developer onboarding** improved with self-documenting code
-
-### Validation Steps
-
-```bash
-# 1. Zero errors validation
-python pylance_validation.py all
-# Expected: "🎉 All services pass validation with 0 errors"
-
-# 2. Full test suite passes
-python -m pytest --cov=src --cov-fail-under=80
-# Expected: All tests pass, >80% coverage
-
-# 3. Strict type checking passes  
-mypy src/ --strict --show-error-codes
-# Expected: Success: no issues found
-
-# 4. CI/CD simulation
-pre-commit run --all-files  
-# Expected: All hooks pass
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**"Too many errors to fix at once"**
-
-```bash
-# Work incrementally, validate frequently
-python pylance_validation.py shared
-# Fix shared infrastructure first (highest impact)
-```
-
-**"Third-party library typing issues"**
-
-```python
-# Use strategic type ignores with justification
-import stripe
-customer = stripe.Customer.create(...)  # type: ignore[misc] 
-# Stripe v12.5.1 has incomplete type stubs
-```
-
-**"Performance concerns with strict typing"**
-
-- Type checking is compile-time only - zero runtime impact
-- If issues arise, profile and optimize business logic
-- Improved IDE support actually increases development velocity
-
-### Getting Help
-
-1. **Check documentation** - All patterns documented in DEVELOPMENT_STANDARDS.md
-2. **Review GitHub issues** - Common solutions in issue comments  
-3. **Validate incrementally** - Use Pylance validation after each fix
-4. **Team consultation** - Complex architectural decisions should be discussed
-
-## 🎉 Completion Recognition
-
-When the project reaches zero Pylance errors:
-
-### Technical Outcomes
-
-- **Developer Experience:** Significantly improved IDE support and debugging
-- **Code Quality:** Self-documenting, maintainable, refactor-safe codebase  
-- **Team Velocity:** Faster onboarding, fewer runtime type errors
-- **Future-Proofing:** Foundation for scalable, typed development
-
-### Celebration Plan
-
-1. **Metrics Demo:** Before/after comparison showing error reduction
-2. **Team Presentation:** Showcase improved developer experience  
-3. **Documentation Update:** Establish new typed development standards
-4. **Knowledge Sharing:** Document patterns and lessons learned
 
 ---
 
 ## 📞 Quick Commands Reference
 
 ```bash
-# Validation & Progress  
-python pylance_validation.py all                    # Check all services
-python pylance_validation.py account                # Check specific service
-python setup_github_project.py                      # Create GitHub tracking
-
 # Development Workflow
-git checkout -b feature/typing-cleanup-phase1       # Start phase work
-pre-commit run --all-files                          # Validate changes  
-python -m pytest tests/ -v                          # Run test suite
-git commit -m "Phase 1: Fix shared infrastructure"  # Commit progress
+git checkout dev                                    # Switch to dev branch
+git pull origin dev                                 # Get latest changes
+git checkout -b feature/name                        # Create feature branch
+pytest tests/ -v                                    # Run tests
+mypy src/                                          # Type check
+git commit -m "feat(scope): description"           # Commit with convention
 
-# GitHub Issue Management  
-gh issue list --label "phase-1"                     # See phase issues
-gh issue edit NUMBER --add-assignee @me             # Assign to self
-gh issue close NUMBER --comment "Completed"         # Close when done
+# Service Operations
+cd coaching && uvicorn src.api.main:app --reload   # Run coaching service
+pytest --cov=src --cov-report=html                 # Test with coverage
+python -m src.api.main                             # Direct Python run
+
+# Code Quality
+black src/                                         # Format code
+isort src/                                         # Sort imports
+flake8 src/                                        # Lint code
+mypy src/ --strict                                 # Strict type checking
 ```
-
-**Ready to begin?** Start with `python setup_github_project.py` and follow the execution plan!
 
 ---
 
-**Project Status:** Ready for execution  
-**Documentation Version:** 1.0  
-**Last Updated:** September 24, 2025
+## 📚 Additional Resources
+
+- **Repository**: https://github.com/mottych/PurposePath_AI
+- **Branching Guide**: [docs/Guides/BRANCHING_STRATEGY.md](./Guides/BRANCHING_STRATEGY.md)
+- **Development Standards**: [docs/Guides/DEVELOPMENT_STANDARDS.md](./Guides/DEVELOPMENT_STANDARDS.md)
+- **Engineering Guide**: [docs/Guides/ENGINEERING_GUIDE.md](./Guides/ENGINEERING_GUIDE.md)
+
+---
+
+**Repository Status:** ✅ Active Development  
+**Documentation Version:** 2.0  
+**Last Updated:** October 8, 2025
