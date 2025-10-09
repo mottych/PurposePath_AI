@@ -331,7 +331,7 @@ class TestAlignmentScore:
             overall_score=75.0,
             component_scores=sample_component_scores,
             foundation_alignment=sample_foundation,
-            explanation="Test",
+            explanation="Test explanation for immutability",
         )
 
         # Act & Assert
@@ -386,7 +386,7 @@ class TestAlignmentScore:
             component_scores=sample_component_scores,
             foundation_alignment=sample_foundation,
             confidence_level=85.0,
-            explanation="Test",
+            explanation="Test confidence level",
         )
 
         # Act & Assert
