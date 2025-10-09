@@ -190,15 +190,17 @@ class PhaseTransitionService:
         self, conversation: Conversation, target_phase: ConversationPhase
     ) -> bool:
         """Check if response count meets requirement."""
-        required = self.MIN_RESPONSES.get(target_phase, 0)
-        return conversation.context.response_count >= required
+        required: int = self.MIN_RESPONSES.get(target_phase, 0)
+        current_count: int = conversation.context.response_count
+        return current_count >= required
 
     def _meets_insight_requirement(
         self, conversation: Conversation, target_phase: ConversationPhase
     ) -> bool:
         """Check if insight count meets requirement."""
-        required = self.MIN_INSIGHTS.get(target_phase, 0)
-        return conversation.context.get_insight_count() >= required
+        required: int = self.MIN_INSIGHTS.get(target_phase, 0)
+        current_count: int = conversation.context.get_insight_count()
+        return current_count >= required
 
 
 __all__ = ["PhaseTransitionService"]
