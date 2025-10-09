@@ -40,6 +40,18 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
+class AnalysisType(str, Enum):
+    """Types of analysis that can be performed."""
+
+    ALIGNMENT = "alignment"
+    STRATEGY = "strategy"
+    KPI = "kpi"
+    SWOT = "swot"
+    ROOT_CAUSE = "root_cause"
+    ACTION_PLAN = "action_plan"
+    GOAL_BREAKDOWN = "goal_breakdown"
+
+
 # Progress weights for each phase
 PHASE_PROGRESS_WEIGHTS = {
     ConversationPhase.INTRODUCTION: 0.1,
