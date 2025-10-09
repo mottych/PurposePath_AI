@@ -151,18 +151,43 @@ async def get_provider_manager() -> ProviderManager:
 
     # Add Bedrock provider with AWS client
     await provider_manager.add_provider(
-        "bedrock", "bedrock", {"client": bedrock_client, "region": settings.bedrock_region}
+        "bedrock",
+        "bedrock",
+        {
+            "client": bedrock_client,
+            "region": settings.bedrock_region,
+            "model_name": settings.bedrock_model_id,
+            "temperature": settings.llm_temperature,
+            "max_tokens": settings.llm_max_tokens,
+            "timeout": settings.llm_timeout_seconds,
+        },
     )
 
     # Add other providers if configured
     if hasattr(settings, "anthropic_api_key") and settings.anthropic_api_key:
         await provider_manager.add_provider(
-            "anthropic", "anthropic", {"api_key": settings.anthropic_api_key}
+            "anthropic",
+            "anthropic",
+            {
+                "api_key": settings.anthropic_api_key,
+                "model_name": "claude-3-5-sonnet-20241022",
+                "temperature": settings.llm_temperature,
+                "max_tokens": settings.llm_max_tokens,
+                "timeout": settings.llm_timeout_seconds,
+            },
         )
 
     if hasattr(settings, "openai_api_key") and settings.openai_api_key:
         await provider_manager.add_provider(
-            "openai", "openai", {"api_key": settings.openai_api_key}
+            "openai",
+            "openai",
+            {
+                "api_key": settings.openai_api_key,
+                "model_name": "gpt-4",
+                "temperature": settings.llm_temperature,
+                "max_tokens": settings.llm_max_tokens,
+                "timeout": settings.llm_timeout_seconds,
+            },
         )
 
     return provider_manager

@@ -5,7 +5,7 @@ Handles lifecycle management, factory creation, and coordination of AI providers
 """
 
 import asyncio
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import structlog
 
@@ -45,6 +45,42 @@ class ProviderManager:
 
         self._initialized = True
         logger.info("Provider manager initialized", provider_count=len(self._providers))
+
+    async def add_provider(
+        self, provider_id: str, provider_type: str, config_dict: Dict[str, Any]
+    ) -> None:
+        """Add a new provider with convenience method (backward compatible).
+
+        Args:
+            provider_id: Unique identifier for the provider
+            provider_type: Type of provider ('bedrock', 'anthropic', 'openai')
+            config_dict: Provider configuration dictionary
+        """
+        # Convert string provider_type to enum
+        try:
+            provider_type_enum = ProviderType(provider_type)
+        except ValueError:
+            raise ValueError(f"Invalid provider type: {provider_type}")
+
+        # Build ProviderConfig from dict
+        config_data = {
+            "provider_type": provider_type_enum,
+            **config_dict,
+        }
+
+        # Map common fields
+        if "client" in config_data:
+            # For Bedrock, client is passed separately but not in config
+            config_data.pop("client")
+
+        if "region" in config_data and "region_name" not in config_data:
+            config_data["region_name"] = config_data.pop("region")
+
+        # Create ProviderConfig object
+        config = ProviderConfig(**config_data)
+
+        # Call register_provider
+        await self.register_provider(provider_id, config)
 
     async def register_provider(self, provider_id: str, config: ProviderConfig) -> None:
         """Register a new provider with the manager.

@@ -131,6 +131,19 @@ class TestLangGraphWorkflowOrchestrator:
 
         # Mock provider manager
         orchestrator.provider_manager = mock_provider_manager
+        
+        # Also register a provider on the global instance that the workflow template uses
+        from coaching.src.llm.providers.manager import provider_manager as global_provider_manager
+        from coaching.src.llm.providers.base import ProviderType, ProviderConfig
+        
+        # Add a mock provider to the global instance
+        mock_config = ProviderConfig(
+            provider_type=ProviderType.BEDROCK,
+            model_name="test-model",
+        )
+        mock_provider = MockProvider()
+        global_provider_manager._providers["test"] = mock_provider
+        global_provider_manager._default_provider = "test"
 
         # Test workflow start
         user_id = "test_user_123"

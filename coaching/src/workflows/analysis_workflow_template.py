@@ -258,6 +258,9 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
                 "content": "I'm sorry, but I wasn't able to complete the analysis. Please try again with different input.",
                 "timestamp": datetime.utcnow().isoformat(),
             }
+            # Safely append to messages list
+            if "messages" not in state:
+                state["messages"] = []
             state["messages"].append(error_message)
             return state
 
@@ -280,6 +283,9 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             },
         }
 
+        # Safely append to messages list
+        if "messages" not in state:
+            state["messages"] = []
         state["messages"].append(response_message)
         state["step_data"]["response_formatting"] = {
             "response_length": len(formatted_response),

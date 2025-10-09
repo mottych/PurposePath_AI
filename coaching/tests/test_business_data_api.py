@@ -155,7 +155,7 @@ class TestBusinessDataEndpoint:
             get_multitenant_conversation_service
         ] = lambda: mock_service
         with patch(
-            "src.api.routes.multitenant_conversations.logger"
+            "coaching.src.api.routes.multitenant_conversations.logger"
         ) as mock_logger:
             response = client.get(
                 "/api/v1/multitenant/conversations/business-data",
