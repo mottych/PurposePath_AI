@@ -1,7 +1,351 @@
 {
-    "folders": [
-        {
-            "path": ".."
-        }
+  "folders": [
+    {
+      "name": "🏠 PurposePath API (Root)",
+      "path": "."
+    },
+    {
+      "name": "👤 Account Service",
+      "path": "./account"
+    },
+    {
+      "name": "🤖 Coaching Service", 
+      "path": "./coaching"
+    }
+  ],
+  "settings": {
+    // Multi-root workspace settings
+    "python.analysis.extraPaths": [
+      "./account/src",
+      "./coaching/src"
+    ],
+    
+    // Global Python settings
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "strict",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    
+    // Code formatting
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    "python.linting.mypyEnabled": true,
+    
+    // Editor
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+      "source.fixAll.ruff": "explicit"
+    },
+    
+    // Terminal configuration
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    
+    // File exclusions
+    "files.watcherExclude": {
+      "**/.venv/**": true,
+      "**/node_modules/**": true,
+      "**/.aws-sam/**": true,
+      "**/build/**": true,
+      "**/dist/**": true,
+      "**/__pycache__/**": true,
+      "**/*.pyc": true,
+      "**/coverage/**": true,
+      "**/.coverage": true,
+      "**/.pytest_cache/**": true,
+      "**/.mypy_cache/**": true,
+      "**/.ruff_cache/**": true
+    },
+    
+    "search.exclude": {
+      "**/.venv": true,
+      "**/node_modules": true,
+      "**/.aws-sam": true,
+      "**/build": true,
+      "**/dist": true,
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/coverage": true,
+      "**/.coverage": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+      "**/.ruff_cache": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.black-formatter", 
+      "ms-python.mypy-type-checker",
+      "charliermarsh.ruff",
+      "ms-python.isort",
+      "ms-vscode.vscode-json",
+      "redhat.vscode-yaml",
+      "tamasfe.even-better-toml",
+      "ms-vscode.powershell",
+      "amazonwebservices.aws-toolkit-vscode",
+      "ms-vscode.test-adapter-converter",
+      "littlefoxteam.vscode-python-test-adapter"
     ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🤖 Coaching API (Dev Server)",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/coaching/.venv/Scripts/uvicorn.exe",
+        "args": [
+          "src.api.main:app",
+          "--reload",
+          "--port",
+          "8000",
+          "--host", 
+          "127.0.0.1"
+        ],
+        "cwd": "${workspaceFolder}/coaching",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/coaching/src",
+          "STAGE": "dev"
+        },
+        "console": "integratedTerminal",
+        "python": "${workspaceFolder}/coaching/.venv/Scripts/python.exe"
+      },
+      {
+        "name": "👤 Account API (Dev Server)",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/account/.venv/Scripts/uvicorn.exe",
+        "args": [
+          "src.api.main:app",
+          "--reload",
+          "--port",
+          "8001",
+          "--host",
+          "127.0.0.1"
+        ],
+        "cwd": "${workspaceFolder}/account",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/account/src",
+          "STAGE": "dev"
+        },
+        "console": "integratedTerminal",
+        "python": "${workspaceFolder}/account/.venv/Scripts/python.exe"
+      },
+      {
+        "name": "🧪 Test: Account Service",
+        "type": "python",
+        "request": "launch",
+        "module": "pytest",
+        "args": [
+          "tests/",
+          "-v",
+          "--tb=short"
+        ],
+        "cwd": "${workspaceFolder}/account",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/account/src"
+        },
+        "console": "integratedTerminal",
+        "python": "${workspaceFolder}/account/.venv/Scripts/python.exe"
+      },
+      {
+        "name": "🧪 Test: Coaching Service",
+        "type": "python",
+        "request": "launch",
+        "module": "pytest",
+        "args": [
+          "tests/",
+          "-v",
+          "--tb=short"
+        ],
+        "cwd": "${workspaceFolder}/coaching",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/coaching/src"
+        },
+        "console": "integratedTerminal",
+        "python": "${workspaceFolder}/coaching/.venv/Scripts/python.exe"
+      },
+      {
+        "name": "🚀 SAM Local API",
+        "type": "node",
+        "request": "launch",
+        "program": "sam",
+        "args": [
+          "local",
+          "start-api",
+          "--port",
+          "3000"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "env": {
+          "AWS_REGION": "us-east-1"
+        }
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🏗️ Setup: Install All Dependencies",
+        "type": "shell",
+        "command": ".\\setup.ps1",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": [],
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "🧪 Test: All Services",
+        "type": "shell", 
+        "command": "uv",
+        "args": ["run", "pytest"],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "dependsOrder": "sequence",
+        "dependsOn": [
+          "🧪 Test: Account Service",
+          "🧪 Test: Coaching Service"
+        ]
+      },
+      {
+        "label": "🧪 Test: Account Service",
+        "type": "shell",
+        "command": "uv",
+        "args": ["run", "pytest", "tests/", "-v"],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}/account"
+        }
+      },
+      {
+        "label": "🧪 Test: Coaching Service",
+        "type": "shell",
+        "command": "uv",
+        "args": ["run", "pytest", "tests/", "-v"],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}/coaching"
+        }
+      },
+      {
+        "label": "🎨 Format: All Code",
+        "type": "shell",
+        "command": "powershell",
+        "args": [
+          "-Command",
+          "cd account; uv run black src/; cd ../coaching; uv run black src/"
+        ],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "🔍 Lint: All Code",
+        "type": "shell",
+        "command": "powershell", 
+        "args": [
+          "-Command",
+          "cd account; uv run ruff check src/ --fix; cd ../coaching; uv run ruff check src/ --fix"
+        ],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "🔧 Type Check: All Code",
+        "type": "shell",
+        "command": "powershell",
+        "args": [
+          "-Command", 
+          "cd account; uv run mypy src/; cd ../coaching; uv run mypy src/"
+        ],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "🚀 Deploy: Development",
+        "type": "shell",
+        "command": ".\\deploy.ps1",
+        "args": ["-Stage", "dev"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "🏥 System Check",
+        "type": "shell",
+        "command": ".\\check-system.ps1",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      }
+    ]
+  }
 }
