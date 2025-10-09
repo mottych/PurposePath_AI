@@ -1,6 +1,7 @@
 """
 Tests for coaching business-data endpoint with ApiResponse envelope.
 """
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -65,9 +66,7 @@ class TestBusinessDataEndpoint:
         mock_service = Mock()
         mock_service.get_business_data_summary.return_value = mock_business_data
         app.dependency_overrides[get_current_context] = lambda: mock_context
-        app.dependency_overrides[
-            get_multitenant_conversation_service
-        ] = lambda: mock_service
+        app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
 
         response = client.get(
             "/api/v1/multitenant/conversations/business-data",
@@ -82,16 +81,10 @@ class TestBusinessDataEndpoint:
         assert response_data["tenant_id"] == "tenant123"
         assert response_data["business_data"] == mock_business_data
 
-    def test_get_business_data_permission_denied(
-        self, mock_context_no_permission, auth_headers
-    ):
+    def test_get_business_data_permission_denied(self, mock_context_no_permission, auth_headers):
         mock_service = Mock()
-        app.dependency_overrides[get_current_context] = (
-            lambda: mock_context_no_permission
-        )
-        app.dependency_overrides[
-            get_multitenant_conversation_service
-        ] = lambda: mock_service
+        app.dependency_overrides[get_current_context] = lambda: mock_context_no_permission
+        app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
         response = client.get(
             "/api/v1/multitenant/conversations/business-data",
             headers=auth_headers,
@@ -105,13 +98,9 @@ class TestBusinessDataEndpoint:
 
     def test_get_business_data_service_error(self, mock_context, auth_headers):
         mock_service = Mock()
-        mock_service.get_business_data_summary.side_effect = Exception(
-            "Database connection failed"
-        )
+        mock_service.get_business_data_summary.side_effect = Exception("Database connection failed")
         app.dependency_overrides[get_current_context] = lambda: mock_context
-        app.dependency_overrides[
-            get_multitenant_conversation_service
-        ] = lambda: mock_service
+        app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
         response = client.get(
             "/api/v1/multitenant/conversations/business-data",
             headers=auth_headers,
@@ -123,16 +112,12 @@ class TestBusinessDataEndpoint:
         assert data.get("success") is False and "error" in data
         assert "Failed to retrieve" in data["error"]
 
-    def test_business_data_response_schema_consistency(
-        self, mock_context, auth_headers
-    ):
+    def test_business_data_response_schema_consistency(self, mock_context, auth_headers):
         test_scenarios = [{}, {"total_users": 0}, {"nested": {"value": 1}}]
         for scenario_data in test_scenarios:
             mock_service = Mock()
             app.dependency_overrides[get_current_context] = lambda: mock_context
-            app.dependency_overrides[
-                get_multitenant_conversation_service
-            ] = lambda: mock_service
+            app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
             mock_service.get_business_data_summary.return_value = scenario_data
             response = client.get(
                 "/api/v1/multitenant/conversations/business-data",
@@ -151,12 +136,8 @@ class TestBusinessDataEndpoint:
         app.dependency_overrides[get_current_context] = lambda: mock_context
         mock_service = Mock()
         mock_service.get_business_data_summary.return_value = {"test": "data"}
-        app.dependency_overrides[
-            get_multitenant_conversation_service
-        ] = lambda: mock_service
-        with patch(
-            "coaching.src.api.routes.multitenant_conversations.logger"
-        ) as mock_logger:
+        app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
+        with patch("coaching.src.api.routes.multitenant_conversations.logger") as mock_logger:
             response = client.get(
                 "/api/v1/multitenant/conversations/business-data",
                 headers=auth_headers,

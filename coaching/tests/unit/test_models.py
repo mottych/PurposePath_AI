@@ -19,11 +19,7 @@ class TestConversationModels:
 
     def test_message_creation(self) -> None:
         """Test Message model creation."""
-        message = Message(
-            role=MessageRole.USER,
-            content="Test message",
-            metadata={"test": "value"}
-        )
+        message = Message(role=MessageRole.USER, content="Test message", metadata={"test": "value"})
 
         assert message.role == MessageRole.USER
         assert message.content == "Test message"
@@ -46,9 +42,7 @@ class TestConversationModels:
     def test_coaching_session_creation(self) -> None:
         """Test Conversation model creation."""
         conversation = Conversation(
-            conversation_id="test-123",
-            user_id="user-456",
-            topic="core_values"
+            conversation_id="test-123", user_id="user-456", topic="core_values"
         )
 
         assert conversation.conversation_id == "test-123"
@@ -61,9 +55,7 @@ class TestConversationModels:
     def test_conversation_add_message(self) -> None:
         """Test adding messages to conversation."""
         conversation = Conversation(
-            conversation_id="test-123",
-            user_id="user-456",
-            topic="core_values"
+            conversation_id="test-123", user_id="user-456", topic="core_values"
         )
 
         # Add user message
@@ -78,9 +70,7 @@ class TestConversationModels:
     def test_conversation_progress_calculation(self) -> None:
         """Test conversation progress calculation."""
         conversation = Conversation(
-            conversation_id="test-123",
-            user_id="user-456",
-            topic="core_values"
+            conversation_id="test-123", user_id="user-456", topic="core_values"
         )
 
         # Initial progress
@@ -97,9 +87,7 @@ class TestConversationModels:
     def test_conversation_status_changes(self) -> None:
         """Test conversation status management."""
         conversation = Conversation(
-            conversation_id="test-123",
-            user_id="user-456",
-            topic="core_values"
+            conversation_id="test-123", user_id="user-456", topic="core_values"
         )
 
         # Initial state
@@ -131,7 +119,7 @@ class TestRequestModels:
             user_id="test-user",
             topic=CoachingTopic.CORE_VALUES,
             context={"preference": "detailed"},
-            language="en"
+            language="en",
         )
 
         assert request.user_id == "test-user"
@@ -143,16 +131,12 @@ class TestRequestModels:
         """Test request validation."""
         # Empty user_id should be rejected
         with pytest.raises(ValueError):
-            InitiateConversationRequest(
-                user_id="   ",
-                topic=CoachingTopic.CORE_VALUES
-            )
+            InitiateConversationRequest(user_id="   ", topic=CoachingTopic.CORE_VALUES)
 
     def test_message_request(self) -> None:
         """Test MessageRequest validation."""
         request = MessageRequest(
-            user_message="I value growth and learning",
-            metadata={"session": "1"}
+            user_message="I value growth and learning", metadata={"session": "1"}
         )
 
         assert request.user_message == "I value growth and learning"
@@ -175,7 +159,7 @@ class TestResponseModels:
             status=ConversationStatus.ACTIVE,
             current_question="What energizes you?",
             progress=0.3,
-            phase=ConversationPhase.EXPLORATION
+            phase=ConversationPhase.EXPLORATION,
         )
 
         assert response.conversation_id == "test-123"
@@ -191,7 +175,7 @@ class TestResponseModels:
             insights=["Shows growth orientation"],
             progress=0.4,
             is_complete=False,
-            phase=ConversationPhase.EXPLORATION
+            phase=ConversationPhase.EXPLORATION,
         )
 
         assert response.ai_response == "That's interesting! Tell me more."

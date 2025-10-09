@@ -324,7 +324,11 @@ class LLMServiceAdapter:
             "provider": provider_name,
             "model_id": model_id,
             "workflow_id": workflow_state.workflow_id,
-            "status": workflow_state.status.value,
+            "status": (
+                workflow_state.status.value
+                if hasattr(workflow_state.status, "value")
+                else workflow_state.status
+            ),
         }
 
     def _format_analysis(self, workflow_state: WorkflowState) -> Dict[str, Any]:
@@ -343,7 +347,11 @@ class LLMServiceAdapter:
             "insights": results.get("insights", []),
             "confidence": results.get("confidence", 0.5),
             "workflow_id": workflow_state.workflow_id,
-            "status": workflow_state.status.value,
+            "status": (
+                workflow_state.status.value
+                if hasattr(workflow_state.status, "value")
+                else workflow_state.status
+            ),
         }
 
     async def get_provider_status(self) -> Dict[str, Any]:

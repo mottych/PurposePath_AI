@@ -179,9 +179,15 @@ class ProviderManager:
             Provider information
         """
         provider = self.get_provider(provider_id)
+        # Handle both enum and string provider_type
+        provider_type_value = (
+            provider.provider_type.value
+            if hasattr(provider.provider_type, "value")
+            else provider.provider_type
+        )
         return {
             "provider_id": provider_id or self._default_provider or "unknown",
-            "provider_type": provider.provider_type.value,
+            "provider_type": provider_type_value,
             "model_name": provider.config.model_name,
             "temperature": str(provider.config.temperature),
             "max_tokens": str(provider.config.max_tokens) if provider.config.max_tokens else "none",

@@ -67,6 +67,17 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
     async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
+        # Handle both direct input (tests) and graph_state (orchestrator)
+        # If "messages" key exists, this is graph_state from orchestrator
+        if "messages" in user_input:
+            # Use existing graph_state structure
+            content = user_input.get("messages", [{}])[0].get("content", "")
+            analysis_type = user_input.get("analysis_type", "general")
+        else:
+            # Direct initial_input from tests
+            content = user_input.get("content", "")
+            analysis_type = user_input.get("analysis_type", "general")
+
         return WorkflowState(
             workflow_id=user_input.get("workflow_id", ""),
             workflow_type=self.workflow_type,
@@ -75,15 +86,15 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             conversation_history=[
                 {
                     "role": "user",
-                    "content": user_input.get("content", ""),
+                    "content": content,
                     "timestamp": datetime.utcnow().isoformat(),
-                    "analysis_type": user_input.get("analysis_type", "general"),
+                    "analysis_type": analysis_type,
                 }
             ],
             current_step="input_validation",
             workflow_context={
                 "provider_id": user_input.get("provider_id"),
-                "analysis_type": user_input.get("analysis_type", "general"),
+                "analysis_type": analysis_type,
                 "analysis_focus": user_input.get("analysis_focus", []),
             },
             created_at=datetime.utcnow().isoformat(),
@@ -106,15 +117,17 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         """Validate and prepare input for analysis."""
         logger.info("Executing input validation", workflow_id=state.get("workflow_id"))
 
-        # Get the input content
-        messages = state.get("messages", [])
+        # Get the input content - check both messages (orchestrator) and conversation_history (workflow template)
+        messages = state.get("messages") or state.get("conversation_history", [])
         if not messages:
             state["status"] = "failed"
             state["step_data"] = {"error": "No input provided for analysis"}
             return state
 
         user_input = messages[0].get("content", "").strip()
-        analysis_type = state.get("analysis_type", "general")
+        analysis_type = state.get("analysis_type") or state.get("workflow_context", {}).get(
+            "analysis_type", "general"
+        )
 
         # Validate input content
         validation_result = {
@@ -165,10 +178,12 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         provider = provider_manager.get_provider(state.get("provider_id"))
 
-        # Get analysis input
-        messages = state.get("messages", [])
-        content_to_analyze = messages[0].get("content", "")
-        analysis_type = state.get("analysis_type", "general")
+        # Get analysis input - check both messages (orchestrator) and conversation_history (workflow template)
+        messages = state.get("messages") or state.get("conversation_history", [])
+        content_to_analyze = messages[0].get("content", "") if messages else ""
+        analysis_type = state.get("analysis_type") or state.get("workflow_context", {}).get(
+            "analysis_type", "general"
+        )
         analysis_focus = state.get("analysis_focus", [])
 
         # Create analysis prompt based on type

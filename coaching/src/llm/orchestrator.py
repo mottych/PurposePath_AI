@@ -168,7 +168,9 @@ class LLMOrchestrator:
         analysis_prompt = self._create_analysis_prompt(topic)
 
         # Analyze response
-        analysis: Dict[str, Any] = await provider.analyze_text(text=user_response, analysis_prompt=analysis_prompt)
+        analysis: Dict[str, Any] = await provider.analyze_text(
+            text=user_response, analysis_prompt=analysis_prompt
+        )
 
         return analysis
 

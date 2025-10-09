@@ -165,7 +165,11 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
             logger.info(
                 "LangGraph workflow started",
                 workflow_id=workflow_id,
-                status=workflow_state.status.value,
+                status=(
+                    workflow_state.status.value
+                    if hasattr(workflow_state.status, "value")
+                    else workflow_state.status
+                ),
             )
             return workflow_state
 
@@ -263,6 +267,9 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
         config: WorkflowConfig,
     ) -> Dict[str, Any]:
         """Create initial GraphState for LangGraph execution."""
+        # Extract analysis type if present (for analysis workflows)
+        analysis_type = initial_input.get("analysis_type")
+
         return {
             "workflow_id": workflow_id,
             "workflow_type": workflow_type.value,
@@ -275,6 +282,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
                     "timestamp": datetime.utcnow().isoformat(),
                 }
             ],
+            "analysis_type": analysis_type,  # Add analysis_type for analysis workflows
             "current_step": "start",
             "step_data": {},
             "provider_id": provider_id,
