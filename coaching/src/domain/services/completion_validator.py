@@ -161,15 +161,18 @@ class CompletionValidator:
 
     def _meets_message_requirements(self, conversation: Conversation) -> bool:
         """Check if message count meets minimum."""
-        return conversation.get_message_count() >= self.MIN_TOTAL_MESSAGES
+        message_count: int = conversation.get_message_count()
+        return message_count >= self.MIN_TOTAL_MESSAGES
 
     def _meets_insight_requirements(self, conversation: Conversation) -> bool:
         """Check if insight count meets minimum."""
-        return conversation.context.get_insight_count() >= self.MIN_INSIGHTS
+        insight_count: int = conversation.context.get_insight_count()
+        return insight_count >= self.MIN_INSIGHTS
 
     def _meets_response_requirements(self, conversation: Conversation) -> bool:
         """Check if user response count meets minimum."""
-        return conversation.get_user_message_count() >= self.MIN_USER_RESPONSES
+        user_count: int = conversation.get_user_message_count()
+        return user_count >= self.MIN_USER_RESPONSES
 
 
 __all__ = ["CompletionValidator"]
