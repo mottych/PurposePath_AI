@@ -1,6 +1,5 @@
 """Integration tests for API endpoints."""
 
-
 from typing import Any, Dict
 
 import pytest
@@ -52,7 +51,7 @@ class TestConversationEndpoints:
             "user_id": "test-user-123",
             "topic": "core_values",
             "context": {},
-            "language": "en"
+            "language": "en",
         }
 
         # This will fail due to missing dependencies (DynamoDB, etc.)

@@ -73,14 +73,22 @@ class MockProviderManager:
 class MockWorkflowOrchestrator:
     """Mock workflow orchestrator for testing."""
 
-    def __init__(self):
+    def __init__(self, provider_manager=None):
         self.workflows = {}
+        self.provider_manager = provider_manager
 
     async def start_workflow(
         self, workflow_type, user_id, initial_input, session_id=None, config=None
     ):
         """Mock workflow start."""
         workflow_id = f"workflow_{len(self.workflows)}"
+
+        # Check if provider should fail
+        provider_name = initial_input.get("provider", "bedrock")
+        if self.provider_manager:
+            provider = await self.provider_manager.get_provider(provider_name)
+            if provider.should_fail:
+                raise Exception(f"{provider_name} provider failed")
 
         # Create mock workflow state
         state = WorkflowState(
@@ -99,7 +107,7 @@ class MockWorkflowOrchestrator:
             metadata={
                 "token_usage": 150,
                 "model_id": initial_input.get("model_id", "test-model"),
-                "provider": initial_input.get("provider", "bedrock"),
+                "provider": provider_name,
             },
         )
 
@@ -137,9 +145,9 @@ class TestLLMServiceAdapter:
         return MockProviderManager()
 
     @pytest.fixture
-    def mock_workflow_orchestrator(self):
+    def mock_workflow_orchestrator(self, mock_provider_manager):
         """Create mock workflow orchestrator."""
-        return MockWorkflowOrchestrator()
+        return MockWorkflowOrchestrator(provider_manager=mock_provider_manager)
 
     @pytest.fixture
     async def adapter(self, mock_provider_manager, mock_workflow_orchestrator):
@@ -160,9 +168,7 @@ class TestLLMServiceAdapter:
         assert adapter.fallback_providers == ["anthropic", "openai"]
 
     @pytest.mark.asyncio
-    async def test_get_response_with_default_provider(
-        self, adapter, mock_provider_manager
-    ):
+    async def test_get_response_with_default_provider(self, adapter, mock_provider_manager):
         """Test response generation with default provider - Acceptance Criteria 2."""
         conversation_id = "test_conv_123"
         topic = "core_values"

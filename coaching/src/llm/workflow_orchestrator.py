@@ -154,8 +154,8 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
             # Execute workflow using LangGraph
             final_state = await workflow.execute(graph_state)
 
-            # Convert to WorkflowState and store
-            workflow_state = self._graph_state_to_workflow_state(final_state)
+            # final_state is already a WorkflowState from workflow.execute()
+            workflow_state = final_state
             self._workflow_states[workflow_id] = workflow_state
 
             # Persist state if configured
@@ -165,7 +165,11 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
             logger.info(
                 "LangGraph workflow started",
                 workflow_id=workflow_id,
-                status=workflow_state.status.value,
+                status=(
+                    workflow_state.status.value
+                    if hasattr(workflow_state.status, "value")
+                    else workflow_state.status
+                ),
             )
             return workflow_state
 
@@ -263,6 +267,9 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
         config: WorkflowConfig,
     ) -> Dict[str, Any]:
         """Create initial GraphState for LangGraph execution."""
+        # Extract analysis type if present (for analysis workflows)
+        analysis_type = initial_input.get("analysis_type")
+
         return {
             "workflow_id": workflow_id,
             "workflow_type": workflow_type.value,
@@ -275,6 +282,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
                     "timestamp": datetime.utcnow().isoformat(),
                 }
             ],
+            "analysis_type": analysis_type,  # Add analysis_type for analysis workflows
             "current_step": "start",
             "step_data": {},
             "provider_id": provider_id,
@@ -536,7 +544,22 @@ class AdvancedStateManager:
         states_to_remove = []
         for workflow_id, state in self._local_state_cache.items():
             if state.completed_at:
-                completed_time = datetime.fromisoformat(state.completed_at).timestamp()
+                # Handle both ISO format strings and timestamp floats
+                try:
+                    # Try parsing as timestamp float first
+                    completed_time = float(state.completed_at)
+                except (ValueError, TypeError):
+                    # Fall back to ISO format parsing
+                    try:
+                        completed_time = datetime.fromisoformat(state.completed_at).timestamp()
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            "Invalid completed_at format",
+                            workflow_id=workflow_id,
+                            completed_at=state.completed_at,
+                        )
+                        continue
+
                 if completed_time < cutoff_time:
                     states_to_remove.append(workflow_id)
 
