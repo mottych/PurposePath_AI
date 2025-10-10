@@ -8,7 +8,7 @@ to be used interchangeably.
 from typing import Protocol
 
 from coaching.src.core.constants import CoachingTopic
-from coaching.src.core.types import PromptTemplateId
+from coaching.src.core.types import TemplateId
 from coaching.src.domain.entities.prompt_template import PromptTemplate
 
 
@@ -43,7 +43,7 @@ class PromptRepositoryPort(Protocol):
         """
         ...
 
-    async def get_by_id(self, template_id: PromptTemplateId) -> PromptTemplate | None:
+    async def get_by_id(self, template_id: TemplateId) -> PromptTemplate | None:
         """
         Retrieve a prompt template by its unique ID.
 
