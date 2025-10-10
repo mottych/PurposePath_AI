@@ -18,22 +18,9 @@ class InitiateConversationRequest(BaseModel):
     """Request to initiate a new coaching conversation.
 
     This model validates and structures the initial conversation request.
+    Note: user_id and tenant_id are extracted from JWT token, not from request body.
     """
 
-    user_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=128,
-        description="Unique identifier for the user",
-        examples=["user_123", "auth0|abc123"],
-    )
-    tenant_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=128,
-        description="Unique identifier for the tenant/organization",
-        examples=["tenant_456", "org_xyz"],
-    )
     topic: CoachingTopic = Field(
         ...,
         description="Coaching topic to focus on",
@@ -50,14 +37,6 @@ class InitiateConversationRequest(BaseModel):
         description="Language code for the conversation",
         examples=["en", "es", "fr"],
     )
-
-    @field_validator("user_id", "tenant_id")
-    @classmethod
-    def validate_id(cls, v: str) -> str:
-        """Validate ID format."""
-        if not v.strip():
-            raise ValueError("ID cannot be empty or whitespace")
-        return v.strip()
 
     @field_validator("language")
     @classmethod

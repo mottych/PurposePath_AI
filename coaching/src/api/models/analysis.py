@@ -18,22 +18,9 @@ class AlignmentAnalysisRequest(BaseModel):
     """Request to analyze alignment between goals and purpose/values.
 
     This model validates alignment analysis requests.
+    Note: user_id and tenant_id are extracted from JWT token.
     """
 
-    user_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=128,
-        description="User identifier",
-        examples=["user_123"],
-    )
-    tenant_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=128,
-        description="Tenant identifier",
-        examples=["tenant_456"],
-    )
     text_to_analyze: str = Field(
         ...,
         min_length=10,
@@ -63,10 +50,9 @@ class StrategyAnalysisRequest(BaseModel):
     """Request to analyze strategy effectiveness and recommendations.
 
     This model validates strategy analysis requests.
+    Note: user_id and tenant_id are extracted from JWT token.
     """
 
-    user_id: str = Field(..., min_length=1, max_length=128, description="User identifier")
-    tenant_id: str = Field(..., min_length=1, max_length=128, description="Tenant identifier")
     current_strategy: str = Field(
         ...,
         min_length=10,
@@ -89,10 +75,9 @@ class KPIAnalysisRequest(BaseModel):
     """Request to analyze KPI effectiveness and recommendations.
 
     This model validates KPI analysis requests.
+    Note: user_id and tenant_id are extracted from JWT token.
     """
 
-    user_id: str = Field(..., min_length=1, max_length=128, description="User identifier")
-    tenant_id: str = Field(..., min_length=1, max_length=128, description="Tenant identifier")
     current_kpis: list[str] = Field(
         ...,
         min_length=1,
@@ -121,10 +106,9 @@ class OperationsAnalysisRequest(BaseModel):
     """Request for operational analysis (SWOT, root cause, action plan).
 
     This model validates operational analysis requests.
+    Note: user_id and tenant_id are extracted from JWT token.
     """
 
-    user_id: str = Field(..., min_length=1, max_length=128, description="User identifier")
-    tenant_id: str = Field(..., min_length=1, max_length=128, description="Tenant identifier")
     analysis_type: str = Field(
         ...,
         description="Type of operational analysis",
