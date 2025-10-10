@@ -1,31 +1,64 @@
-"""
-Conversational coaching workflow implementation.
+"""Conversational coaching workflow implementation.
 
-Implements a multi-step coaching conversation using LangGraph.
+Implements a multi-step coaching conversation using LangGraph,
+integrated with domain entities and application services.
 """
 
-import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
+from coaching.src.application.conversation.conversation_service import (
+    ConversationApplicationService,
+)
+from coaching.src.application.llm.llm_service import LLMApplicationService
+from coaching.src.core.constants import CoachingTopic, MessageRole
+from coaching.src.core.types import ConversationId, TenantId, UserId
+from coaching.src.domain.ports.llm_provider_port import LLMMessage
 from langgraph.graph import StateGraph
-
-# Import compatibility hack
-try:
-    from ..llm.providers import provider_manager
-except ImportError:
-    # Fallback for direct execution
-    sys.path.append("..")
-    from llm.providers import provider_manager
+from pydantic import BaseModel, Field
 
 from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 
 logger = structlog.get_logger(__name__)
 
 
+class CoachingWorkflowInput(BaseModel):
+    """Input model for coaching workflow."""
+
+    workflow_id: str = Field(..., description="Workflow identifier")
+    user_id: str = Field(..., description="User identifier")
+    tenant_id: str = Field(..., description="Tenant identifier")
+    topic: CoachingTopic = Field(..., description="Coaching topic")
+    session_id: str | None = Field(default=None, description="Session identifier")
+    initial_message: str | None = Field(
+        default=None, description="Initial user message (optional)"
+    )
+
+
+class CoachingWorkflowConfig(BaseModel):
+    """Configuration for coaching workflow."""
+
+    conversation_service: ConversationApplicationService
+    llm_service: LLMApplicationService
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: int | None = Field(default=None, gt=0)
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
 class CoachingWorkflow(BaseWorkflow):
-    """Conversational coaching workflow using LangGraph."""
+    """Conversational coaching workflow using LangGraph and domain services."""
+
+    def __init__(self, config: Any, workflow_config: CoachingWorkflowConfig):
+        """Initialize coaching workflow.
+
+        Args:
+            config: Base workflow config
+            workflow_config: Coaching-specific configuration
+        """
+        super().__init__(config)
+        self.workflow_config = workflow_config
 
     @property
     def workflow_type(self) -> WorkflowType:
@@ -33,7 +66,7 @@ class CoachingWorkflow(BaseWorkflow):
         return WorkflowType.CONVERSATIONAL_COACHING
 
     @property
-    def workflow_steps(self) -> List[str]:
+    def workflow_steps(self) -> list[str]:
         """Get list of workflow step names."""
         return [
             "start",
@@ -73,18 +106,52 @@ class CoachingWorkflow(BaseWorkflow):
 
         return graph
 
-    async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
+    async def create_initial_state(self, user_input: dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
+        # Validate and parse input
+        workflow_input = CoachingWorkflowInput(**user_input)
+
+        # Create conversation using domain service
+        initial_greeting = (
+            f"Welcome to your {workflow_input.topic.value} coaching session! "
+            "I'm here to help you explore your thoughts and create actionable insights. "
+            "What would you like to focus on today?"
+        )
+
+        conversation = await self.workflow_config.conversation_service.start_conversation(
+            user_id=UserId(workflow_input.user_id),
+            tenant_id=TenantId(workflow_input.tenant_id),
+            topic=workflow_input.topic,
+            initial_message_content=initial_greeting,
+            metadata={
+                "workflow_id": workflow_input.workflow_id,
+                "session_id": workflow_input.session_id,
+            },
+        )
+
+        # Add initial user message if provided
+        if workflow_input.initial_message:
+            conversation = await self.workflow_config.conversation_service.add_message(
+                conversation_id=conversation.conversation_id,
+                tenant_id=TenantId(workflow_input.tenant_id),
+                role=MessageRole.USER,
+                content=workflow_input.initial_message,
+            )
+
         return WorkflowState(
-            workflow_id=user_input["workflow_id"],
+            workflow_id=workflow_input.workflow_id,
             workflow_type=self.workflow_type,
             status=WorkflowStatus.RUNNING,
-            user_id=user_input["user_id"],
-            session_id=user_input.get("session_id"),
-            conversation_history=[user_input],
+            user_id=workflow_input.user_id,
+            session_id=workflow_input.session_id,
+            conversation_history=[],  # Managed by conversation entity
             current_step="start",
-            created_at=user_input.get("created_at", datetime.utcnow().isoformat()),
+            created_at=datetime.utcnow().isoformat(),
             updated_at=datetime.utcnow().isoformat(),
+            workflow_context={
+                "conversation_id": conversation.conversation_id,
+                "topic": workflow_input.topic.value,
+            },
         )
 
     async def validate_state(self, state: WorkflowState) -> bool:
@@ -97,24 +164,25 @@ class CoachingWorkflow(BaseWorkflow):
         if state.current_step not in self.workflow_steps:
             return False
 
+        # Validate conversation_id exists in context
+        if "conversation_id" not in state.workflow_context:
+            return False
+
         return True
 
-    async def _get_llm_provider(self):
-        """Get the configured LLM provider."""
-        provider_id = self.config.custom_config.get("provider_id")
-        return provider_manager.get_provider(provider_id)
+    def _get_conversation_id(self, state: dict[str, Any]) -> ConversationId:
+        """Extract conversation ID from state."""
+        return ConversationId(state["workflow_context"]["conversation_id"])
+
+    def _get_tenant_id(self, state: dict[str, Any]) -> TenantId:
+        """Extract tenant ID from state."""
+        return TenantId(state.get("tenant_id", state["user_id"]))
 
     async def _start_node(self, state: dict) -> dict:
         """Start node - welcome the user and begin coaching."""
         logger.info("Starting coaching workflow", workflow_id=state["workflow_id"])
 
-        welcome_message = {
-            "role": "assistant",
-            "content": "Welcome to your coaching session! I'm here to help you explore your goals and create actionable plans. What would you like to focus on today?",
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-        state["conversation_history"].append(welcome_message)
+        # Conversation already initialized in create_initial_state
         state["current_step"] = "initial_assessment"
         state["status"] = WorkflowStatus.WAITING_INPUT.value
         state["updated_at"] = datetime.utcnow().isoformat()
@@ -126,47 +194,56 @@ class CoachingWorkflow(BaseWorkflow):
         logger.info("Processing initial assessment", workflow_id=state["workflow_id"])
 
         try:
-            # Get the latest user input
-            user_messages = [
-                msg for msg in state["conversation_history"] if msg.get("role") == "user"
-            ]
+            conversation_id = self._get_conversation_id(state)
+            tenant_id = self._get_tenant_id(state)
+
+            # Retrieve current conversation
+            conversation = await self.workflow_config.conversation_service.get_conversation(
+                conversation_id, tenant_id
+            )
+
+            # Get user messages
+            user_messages = [msg for msg in conversation.messages if msg.is_from_user()]
             if not user_messages:
                 # Still waiting for user input
                 return state
 
-            latest_input = user_messages[-1]["content"]
+            latest_message = user_messages[-1]
 
-            # Generate coaching response using LLM
-            provider = await self._get_llm_provider()
-
-            from langchain_core.messages import HumanMessage, SystemMessage
-
-            system_prompt = """You are an expert life coach. Your role is to help the user explore their situation with thoughtful questions and gentle guidance.
-
-            In this initial assessment phase:
-            1. Acknowledge what the user has shared
-            2. Ask 1-2 clarifying questions to better understand their situation
-            3. Be warm, supportive, and non-judgmental
-            4. Keep your response focused and conversational (2-3 sentences max)
-
-            Do not give advice yet - focus on understanding first."""
-
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=f"User wants to focus on: {latest_input}"),
+            # Build conversation history for LLM
+            llm_messages = [
+                LLMMessage(role=msg.role.value, content=msg.content)
+                for msg in conversation.messages
             ]
 
-            response = await provider.invoke(messages)
+            # Generate coaching response
+            system_prompt = """You are an expert life coach. Your role is to help the user explore their situation with thoughtful questions and gentle guidance.
 
-            coach_message = {
-                "role": "assistant",
-                "content": response,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
+In this initial assessment phase:
+1. Acknowledge what the user has shared
+2. Ask 1-2 clarifying questions to better understand their situation
+3. Be warm, supportive, and non-judgmental
+4. Keep your response focused and conversational (2-3 sentences max)
 
-            state["conversation_history"].append(coach_message)
+Do not give advice yet - focus on understanding first."""
+
+            response = await self.workflow_config.llm_service.generate_coaching_response(
+                conversation_history=llm_messages,
+                system_prompt=system_prompt,
+                temperature=self.workflow_config.temperature,
+                max_tokens=self.workflow_config.max_tokens,
+            )
+
+            # Add response to conversation
+            await self.workflow_config.conversation_service.add_message(
+                conversation_id=conversation_id,
+                tenant_id=tenant_id,
+                role=MessageRole.ASSISTANT,
+                content=response.content,
+            )
+
             state["current_step"] = "goal_exploration"
-            state["step_data"]["initial_focus"] = latest_input
+            state["step_data"]["initial_focus"] = latest_message.content
             state["updated_at"] = datetime.utcnow().isoformat()
 
         except Exception as e:
@@ -214,13 +291,32 @@ class CoachingWorkflow(BaseWorkflow):
         """Completion - wrap up the session."""
         logger.info("Completing coaching workflow", workflow_id=state["workflow_id"])
 
-        completion_message = {
-            "role": "assistant",
-            "content": "Thank you for this coaching session! I hope you found it valuable. Remember, you can always come back when you're ready to explore further or check in on your progress.",
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+        try:
+            conversation_id = self._get_conversation_id(state)
+            tenant_id = self._get_tenant_id(state)
 
-        state["conversation_history"].append(completion_message)
+            # Add completion message
+            completion_content = (
+                "Thank you for this coaching session! I hope you found it valuable. "
+                "Remember, you can always come back when you're ready to explore further "
+                "or check in on your progress."
+            )
+
+            await self.workflow_config.conversation_service.add_message(
+                conversation_id=conversation_id,
+                tenant_id=tenant_id,
+                role=MessageRole.ASSISTANT,
+                content=completion_content,
+            )
+
+            # Complete the conversation
+            await self.workflow_config.conversation_service.complete_conversation(
+                conversation_id=conversation_id, tenant_id=tenant_id
+            )
+
+        except Exception as e:
+            logger.error("Error completing workflow", error=str(e))
+
         state["status"] = WorkflowStatus.COMPLETED.value
         state["completed_at"] = datetime.utcnow().isoformat()
         state["updated_at"] = datetime.utcnow().isoformat()

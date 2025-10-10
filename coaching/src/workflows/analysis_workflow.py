@@ -1,31 +1,58 @@
 """
 Single-shot analysis workflow implementation.
 
-Implements a single-step analysis using LangGraph.
+Implements a single-step analysis using LangGraph,
+integrated with analysis services and domain models.
 """
 
-import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
+from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
+from coaching.src.core.constants import AnalysisType
 from langgraph.graph import StateGraph
-
-# Import compatibility hack
-try:
-    from ..llm.providers import provider_manager
-except ImportError:
-    # Fallback for direct execution
-    sys.path.append("..")
-    from llm.providers import provider_manager
+from pydantic import BaseModel, Field
 
 from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 
 logger = structlog.get_logger(__name__)
 
 
+class AnalysisWorkflowInput(BaseModel):
+    """Input model for analysis workflow."""
+
+    workflow_id: str = Field(..., description="Workflow identifier")
+    user_id: str = Field(..., description="User identifier")
+    tenant_id: str = Field(..., description="Tenant identifier")
+    analysis_type: AnalysisType = Field(..., description="Type of analysis")
+    session_id: str | None = Field(default=None, description="Session identifier")
+    text_to_analyze: str = Field(..., description="Text/content to analyze")
+    context: dict[str, Any] = Field(
+        default_factory=dict, description="Additional context for analysis"
+    )
+
+
+class AnalysisWorkflowConfig(BaseModel):
+    """Configuration for analysis workflow."""
+
+    analysis_service: BaseAnalysisService
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
 class AnalysisWorkflow(BaseWorkflow):
-    """Single-shot analysis workflow using LangGraph."""
+    """Single-shot analysis workflow using LangGraph and analysis services."""
+
+    def __init__(self, config: Any, workflow_config: AnalysisWorkflowConfig):
+        """Initialize analysis workflow.
+
+        Args:
+            config: Base workflow config
+            workflow_config: Analysis-specific configuration
+        """
+        super().__init__(config)
+        self.workflow_config = workflow_config
 
     @property
     def workflow_type(self) -> WorkflowType:
@@ -33,7 +60,7 @@ class AnalysisWorkflow(BaseWorkflow):
         return WorkflowType.SINGLE_SHOT_ANALYSIS
 
     @property
-    def workflow_steps(self) -> List[str]:
+    def workflow_steps(self) -> list[str]:
         """Get list of workflow step names."""
         return ["start", "analysis", "completion"]
 
@@ -57,18 +84,26 @@ class AnalysisWorkflow(BaseWorkflow):
 
         return graph
 
-    async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
+    async def create_initial_state(self, user_input: dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
+        # Validate and parse input
+        workflow_input = AnalysisWorkflowInput(**user_input)
+
         return WorkflowState(
-            workflow_id=user_input["workflow_id"],
+            workflow_id=workflow_input.workflow_id,
             workflow_type=self.workflow_type,
             status=WorkflowStatus.RUNNING,
-            user_id=user_input["user_id"],
-            session_id=user_input.get("session_id"),
-            conversation_history=[user_input],
+            user_id=workflow_input.user_id,
+            session_id=workflow_input.session_id,
+            conversation_history=[],
             current_step="start",
-            created_at=user_input.get("created_at", datetime.utcnow().isoformat()),
+            created_at=datetime.utcnow().isoformat(),
             updated_at=datetime.utcnow().isoformat(),
+            workflow_context={
+                "analysis_type": workflow_input.analysis_type.value,
+                "text_to_analyze": workflow_input.text_to_analyze,
+                "context": workflow_input.context,
+            },
         )
 
     async def validate_state(self, state: WorkflowState) -> bool:
@@ -81,12 +116,13 @@ class AnalysisWorkflow(BaseWorkflow):
         if state.current_step not in self.workflow_steps:
             return False
 
-        return True
+        # Validate required context fields
+        required_context = ["analysis_type", "text_to_analyze"]
+        for field in required_context:
+            if field not in state.workflow_context:
+                return False
 
-    async def _get_llm_provider(self):
-        """Get the configured LLM provider."""
-        provider_id = self.config.custom_config.get("provider_id")
-        return provider_manager.get_provider(provider_id)
+        return True
 
     async def _start_node(self, state: dict) -> dict:
         """Start node - begin analysis."""
@@ -98,49 +134,39 @@ class AnalysisWorkflow(BaseWorkflow):
         return state
 
     async def _analysis_node(self, state: dict) -> dict:
-        """Analysis node - perform the analysis."""
+        """Analysis node - perform the analysis using analysis service."""
         logger.info("Processing analysis", workflow_id=state["workflow_id"])
 
         try:
-            # Get the user's request
-            user_request = state.get("text_to_analyze", "")
-            analysis_type = state.get("analysis_type", "general")
+            # Get analysis context from workflow state
+            text_to_analyze = state["workflow_context"]["text_to_analyze"]
+            analysis_context = state["workflow_context"].get("context", {})
 
-            if not user_request:
+            if not text_to_analyze:
                 raise ValueError("No text provided for analysis")
 
-            # Generate analysis using LLM
-            provider = await self._get_llm_provider()
+            # Add text to analysis context
+            analysis_context["current_actions"] = text_to_analyze
 
-            from langchain_core.messages import HumanMessage, SystemMessage
-
-            system_prompt = f"""You are an expert analyst. Provide a thorough {analysis_type} analysis of the provided text.
-
-            Your analysis should be:
-            1. Structured and comprehensive
-            2. Include key insights and patterns
-            3. Provide actionable recommendations where appropriate
-            4. Be clear and easy to understand
-
-            Format your response in a professional, analytical style."""
-
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=f"Please analyze this text:\n\n{user_request}"),
-            ]
-
-            response = await provider.invoke(messages)
+            # Perform analysis using the configured analysis service
+            result = await self.workflow_config.analysis_service.analyze(analysis_context)
 
             # Store results
             state["results"] = {
-                "analysis": response,
-                "analysis_type": analysis_type,
-                "input_text": user_request,
+                "analysis": result,
+                "analysis_type": state["workflow_context"]["analysis_type"],
+                "input_text": text_to_analyze,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
             state["current_step"] = "completion"
             state["updated_at"] = datetime.utcnow().isoformat()
+
+            logger.info(
+                "Analysis completed",
+                workflow_id=state["workflow_id"],
+                analysis_type=state["workflow_context"]["analysis_type"],
+            )
 
         except Exception as e:
             logger.error("Error in analysis", error=str(e), workflow_id=state["workflow_id"])
