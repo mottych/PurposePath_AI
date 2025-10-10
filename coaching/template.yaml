@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: PurposePath Coaching API - Standalone (dev) stack with HTTP API and required tables
+Description: |
+  PurposePath Coaching API - Standalone (dev) stack with HTTP API and required tables
+  Phase 7 Architecture: New routes, middleware, auth-based context extraction
 
 Parameters:
   Stage:
@@ -220,6 +222,7 @@ Resources:
                 - bedrock:InvokeModelWithResponseStream
               Resource: '*'
       Events:
+        # Health endpoints
         Health:
           Type: HttpApi
           Properties:
@@ -232,18 +235,50 @@ Resources:
             ApiId: !Ref CoachingHttpApi
             Method: ANY
             Path: /api/v1/health
+        
+        # Conversation endpoints (Phase 7 - conversations_v2.py)
         Conversations:
           Type: HttpApi
           Properties:
             ApiId: !Ref CoachingHttpApi
             Method: ANY
             Path: /api/v1/conversations/{proxy+}
+        ConversationsRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/conversations
+        
+        # Analysis endpoints (Phase 7 - analysis.py)
+        Analysis:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/analysis/{proxy+}
+        AnalysisRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/analysis
+        
+        # Legacy endpoints (for backward compatibility)
         Suggestions:
           Type: HttpApi
           Properties:
             ApiId: !Ref CoachingHttpApi
             Method: ANY
             Path: /api/v1/suggestions/{proxy+}
+        
+        # Root endpoint
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: GET
+            Path: /
 
 
 Outputs:
