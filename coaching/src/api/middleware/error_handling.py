@@ -75,31 +75,19 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        except EntityNotFoundError as e:
+        except DomainException as e:
             logger.warning(
-                "Entity not found",
-                entity_type=e.__class__.__name__,
-                path=request.url.path,
-            )
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "error": "entity_not_found",
-                    "message": str(e),
-                },
-            )
-
-        except DomainValidationError as e:
-            logger.warning(
-                "Domain validation error",
+                "Domain exception",
+                error_code=e.code,
                 error=str(e),
                 path=request.url.path,
             )
             return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "error": "domain_validation_error",
-                    "message": str(e),
+                    "error": e.code.lower(),
+                    "message": e.message,
+                    "context": e.context,
                 },
             )
 
