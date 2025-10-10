@@ -4,6 +4,19 @@ This module provides Pydantic models for API layer, separate from domain models.
 These models handle serialization, validation, and API contracts.
 """
 
+from coaching.src.api.models.analysis import (
+    AlignmentAnalysisRequest,
+    AlignmentAnalysisResponse,
+    AlignmentScore,
+    KPIAnalysisRequest,
+    KPIAnalysisResponse,
+    KPIRecommendation,
+    OperationsAnalysisRequest,
+    OperationsAnalysisResponse,
+    StrategyAnalysisRequest,
+    StrategyAnalysisResponse,
+    StrategyRecommendation,
+)
 from coaching.src.api.models.conversations import (
     CompleteConversationRequest,
     ConversationDetailResponse,
@@ -25,4 +38,16 @@ __all__ = [
     "MessageResponse",
     "ConversationDetailResponse",
     "ConversationListResponse",
+    # Analysis models
+    "AlignmentAnalysisRequest",
+    "AlignmentAnalysisResponse",
+    "AlignmentScore",
+    "StrategyAnalysisRequest",
+    "StrategyAnalysisResponse",
+    "StrategyRecommendation",
+    "KPIAnalysisRequest",
+    "KPIAnalysisResponse",
+    "KPIRecommendation",
+    "OperationsAnalysisRequest",
+    "OperationsAnalysisResponse",
 ]
