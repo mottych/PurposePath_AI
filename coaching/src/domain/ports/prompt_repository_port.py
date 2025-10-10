@@ -23,7 +23,7 @@ class PromptRepositoryPort(Protocol):
         - Async-first: All operations are async
         - Versioned: Templates have versions for controlled rollouts
         - Cacheable: Templates can be cached for performance
-        - Immutable: Templates are read-only after creation
+        - CRUD support: Full create, read, update, delete operations for admin UI
     """
 
     async def get_by_topic(
@@ -83,6 +83,76 @@ class PromptRepositoryPort(Protocol):
             True if template exists, False otherwise
 
         Business Rule: "latest" version should resolve before checking existence
+        """
+        ...
+
+    async def save(self, template: PromptTemplate, version: str) -> None:
+        """
+        Save a prompt template with a specific version.
+
+        Args:
+            template: The prompt template entity to save
+            version: Version identifier for this template
+
+        Raises:
+            ValueError: If version format is invalid
+            RepositoryError: If save operation fails
+
+        Business Rule: Saving creates a new immutable version
+        Business Rule: Existing versions cannot be overwritten
+        """
+        ...
+
+    async def delete(self, topic: CoachingTopic, version: str) -> bool:
+        """
+        Delete a specific version of a prompt template.
+
+        Args:
+            topic: The coaching topic
+            version: Version identifier to delete
+
+        Returns:
+            True if deleted, False if version not found
+
+        Business Rule: Cannot delete the "latest" marked version without reassignment
+        Business Rule: Deletion is permanent (no soft delete)
+        """
+        ...
+
+    async def set_latest(self, topic: CoachingTopic, version: str) -> None:
+        """
+        Mark a specific version as the "latest" for a topic.
+
+        Args:
+            topic: The coaching topic
+            version: Version identifier to mark as latest
+
+        Raises:
+            ValueError: If version does not exist
+
+        Business Rule: Only one version can be "latest" at a time
+        Business Rule: Latest version is used when version="latest" in queries
+        """
+        ...
+
+    async def create_new_version(
+        self, topic: CoachingTopic, source_version: str, new_version: str
+    ) -> PromptTemplate:
+        """
+        Create a new version by copying an existing version.
+
+        Args:
+            topic: The coaching topic
+            source_version: Version to copy from
+            new_version: New version identifier
+
+        Returns:
+            The newly created template
+
+        Raises:
+            ValueError: If source version doesn't exist or new version already exists
+
+        Business Rule: Useful for creating draft versions from production templates
         """
         ...
 
