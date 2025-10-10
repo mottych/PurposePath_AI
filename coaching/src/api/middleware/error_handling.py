@@ -6,13 +6,10 @@ codes and error messages.
 """
 
 import structlog
+from coaching.src.domain.exceptions.base_exception import DomainException
 from coaching.src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
-)
-from coaching.src.domain.exceptions.domain_exceptions import (
-    DomainValidationError,
-    EntityNotFoundError,
 )
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError

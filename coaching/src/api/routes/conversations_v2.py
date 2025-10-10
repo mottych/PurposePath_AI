@@ -182,8 +182,7 @@ async def send_message(
 
         # Build conversation history for LLM
         llm_messages = [
-            LLMMessage(role=msg.role.value, content=msg.content)
-            for msg in conversation.messages
+            LLMMessage(role=msg.role.value, content=msg.content) for msg in conversation.messages
         ]
 
         # Generate AI response

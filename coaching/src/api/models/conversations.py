@@ -10,7 +10,6 @@ from typing import Any
 from coaching.src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field, field_validator
 
-
 # Request Models
 
 
@@ -161,17 +160,21 @@ class ConversationResponse(BaseModel):
         description="Conversation creation timestamp",
     )
 
-    model_config = {"json_schema_extra": {"example": {
-        "conversation_id": "conv_abc123",
-        "user_id": "user_123",
-        "tenant_id": "tenant_456",
-        "topic": "core_values",
-        "status": "active",
-        "current_phase": "introduction",
-        "initial_message": "Welcome! Let's explore your core values.",
-        "progress": 0.1,
-        "created_at": "2025-10-10T21:00:00Z",
-    }}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "conversation_id": "conv_abc123",
+                "user_id": "user_123",
+                "tenant_id": "tenant_456",
+                "topic": "core_values",
+                "status": "active",
+                "current_phase": "introduction",
+                "initial_message": "Welcome! Let's explore your core values.",
+                "progress": 0.1,
+                "created_at": "2025-10-10T21:00:00Z",
+            }
+        }
+    }
 
 
 class MessageResponse(BaseModel):

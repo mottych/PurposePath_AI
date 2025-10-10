@@ -10,7 +10,6 @@ from typing import Any
 from coaching.src.core.constants import AnalysisType
 from pydantic import BaseModel, Field, field_validator
 
-
 # Request Models
 
 
@@ -31,10 +30,12 @@ class AlignmentAnalysisRequest(BaseModel):
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional context for analysis",
-        examples=[{
-            "purpose": "To democratize access to quality education",
-            "core_values": ["Integrity", "Innovation", "Impact"],
-        }],
+        examples=[
+            {
+                "purpose": "To democratize access to quality education",
+                "core_values": ["Integrity", "Innovation", "Impact"],
+            }
+        ],
     )
 
     @field_validator("text_to_analyze")
@@ -63,11 +64,13 @@ class StrategyAnalysisRequest(BaseModel):
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Business context for strategy analysis",
-        examples=[{
-            "industry": "EdTech",
-            "market_size": "Mid-sized",
-            "target_audience": "K-12 educators",
-        }],
+        examples=[
+            {
+                "industry": "EdTech",
+                "market_size": "Mid-sized",
+                "target_audience": "K-12 educators",
+            }
+        ],
     )
 
 
@@ -87,10 +90,12 @@ class KPIAnalysisRequest(BaseModel):
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Business context for KPI analysis",
-        examples=[{
-            "business_goals": ["Increase revenue", "Improve customer satisfaction"],
-            "current_challenges": ["High churn rate", "Low brand awareness"],
-        }],
+        examples=[
+            {
+                "business_goals": ["Increase revenue", "Improve customer satisfaction"],
+                "current_challenges": ["High churn rate", "Low brand awareness"],
+            }
+        ],
     )
 
     @field_validator("current_kpis")
@@ -209,11 +214,15 @@ class AlignmentAnalysisResponse(BaseModel):
     recommendations: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Recommendations for improvement",
-        examples=[[{
-            "action": "Add specific metrics to revenue goals",
-            "priority": "high",
-            "rationale": "Clear metrics improve accountability",
-        }]],
+        examples=[
+            [
+                {
+                    "action": "Add specific metrics to revenue goals",
+                    "priority": "high",
+                    "rationale": "Clear metrics improve accountability",
+                }
+            ]
+        ],
     )
     created_at: datetime = Field(
         ...,
@@ -354,12 +363,14 @@ class OperationsAnalysisResponse(BaseModel):
     findings: dict[str, Any] = Field(
         ...,
         description="Analysis findings (structure varies by type)",
-        examples=[{
-            "strengths": ["Strong brand", "Loyal customer base"],
-            "weaknesses": ["Limited marketing budget"],
-            "opportunities": ["Growing market segment"],
-            "threats": ["New competitors entering market"],
-        }],
+        examples=[
+            {
+                "strengths": ["Strong brand", "Loyal customer base"],
+                "weaknesses": ["Limited marketing budget"],
+                "opportunities": ["Growing market segment"],
+                "threats": ["New competitors entering market"],
+            }
+        ],
     )
     recommendations: list[dict[str, Any]] = Field(
         default_factory=list,

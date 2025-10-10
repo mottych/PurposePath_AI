@@ -34,7 +34,7 @@ from coaching.src.application.analysis.alignment_service import AlignmentAnalysi
 from coaching.src.application.analysis.kpi_service import KPIAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 from coaching.src.core.constants import AnalysisType
-from coaching.src.core.types import AnalysisRequestId, TenantId, UserId
+from coaching.src.core.types import AnalysisRequestId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = structlog.get_logger()
@@ -44,7 +44,9 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 # Alignment Analysis Routes
 
 
-@router.post("/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_201_CREATED
+)
 async def analyze_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -142,7 +144,9 @@ async def analyze_alignment(
 # Strategy Analysis Routes
 
 
-@router.post("/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_201_CREATED
+)
 async def analyze_strategy(
     request: StrategyAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -355,7 +359,9 @@ async def analyze_kpis(
 # Operational Analysis Routes
 
 
-@router.post("/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_201_CREATED
+)
 async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -395,17 +401,10 @@ async def analyze_operations(
         )
 
         # Prepare analysis context
-        analysis_context = {
-            "user_id": user.user_id,
-            "tenant_id": user.tenant_id,
-            "analysis_type": request.analysis_type,
-            "description": request.description,
-            **request.context,
-        }
 
         # TODO: Route to appropriate service based on analysis_type
         # For now, using a placeholder implementation
-        
+
         # Simulate SWOT analysis
         if request.analysis_type == "swot":
             findings = {
@@ -424,7 +423,11 @@ async def analyze_operations(
             findings = {
                 "goal": request.description,
                 "action_items": [
-                    {"action": "Define clear objectives", "timeline": "Week 1", "owner": "Leadership"},
+                    {
+                        "action": "Define clear objectives",
+                        "timeline": "Week 1",
+                        "owner": "Leadership",
+                    },
                     {"action": "Gather stakeholder input", "timeline": "Week 2", "owner": "Team"},
                 ],
             }

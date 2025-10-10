@@ -32,7 +32,7 @@ def mock_conversation():
     )
     # Add initial message
     from coaching.src.core.constants import MessageRole
-    
+
     conversation.add_message(
         role=MessageRole.ASSISTANT,
         content="Welcome! Let's explore your core values.",
@@ -113,7 +113,7 @@ class TestMessageSending:
         """Test successful message sending."""
         # Add user message to conversation
         from coaching.src.core.constants import MessageRole
-        
+
         mock_conversation.add_message(
             role=MessageRole.USER,
             content="I value honesty and transparency",
@@ -126,7 +126,7 @@ class TestMessageSending:
         mock_conv_service_dep.return_value = mock_conv_service
 
         from coaching.src.domain.ports.llm_provider_port import LLMResponse
-        
+
         mock_llm_response = LLMResponse(
             content="That's wonderful! Honesty is a powerful core value.",
             model="test-model",
@@ -156,9 +156,7 @@ class TestMessageSending:
         assert "progress" in data
 
     @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    def test_send_message_conversation_not_found(
-        self, mock_conv_service_dep, client
-    ):
+    def test_send_message_conversation_not_found(self, mock_conv_service_dep, client):
         """Test message sending to non-existent conversation."""
         from coaching.src.domain.exceptions.conversation_exceptions import (
             ConversationNotFound,
@@ -191,9 +189,7 @@ class TestConversationRetrieval:
     """Test conversation retrieval endpoint."""
 
     @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    def test_get_conversation_success(
-        self, mock_conv_service_dep, client, mock_conversation
-    ):
+    def test_get_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation retrieval."""
         # Setup mock
         mock_conv_service = AsyncMock()
@@ -244,15 +240,11 @@ class TestConversationListing:
     """Test conversation listing endpoint."""
 
     @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    def test_list_conversations_success(
-        self, mock_conv_service_dep, client, mock_conversation
-    ):
+    def test_list_conversations_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation listing."""
         # Setup mock
         mock_conv_service = AsyncMock()
-        mock_conv_service.list_user_conversations = AsyncMock(
-            return_value=[mock_conversation]
-        )
+        mock_conv_service.list_user_conversations = AsyncMock(return_value=[mock_conversation])
         mock_conv_service_dep.return_value = mock_conv_service
 
         # Make request
@@ -275,9 +267,7 @@ class TestConversationListing:
         """Test conversation listing with pagination."""
         # Setup mock
         mock_conv_service = AsyncMock()
-        mock_conv_service.list_user_conversations = AsyncMock(
-            return_value=[mock_conversation]
-        )
+        mock_conv_service.list_user_conversations = AsyncMock(return_value=[mock_conversation])
         mock_conv_service_dep.return_value = mock_conv_service
 
         # Make request with pagination
@@ -297,9 +287,7 @@ class TestConversationActions:
     """Test conversation action endpoints (pause, complete)."""
 
     @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    def test_pause_conversation_success(
-        self, mock_conv_service_dep, client, mock_conversation
-    ):
+    def test_pause_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation pausing."""
         # Setup mock
         mock_conv_service = AsyncMock()
@@ -317,9 +305,7 @@ class TestConversationActions:
         assert response.status_code == 204
 
     @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    def test_complete_conversation_success(
-        self, mock_conv_service_dep, client, mock_conversation
-    ):
+    def test_complete_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation completion."""
         # Setup mock
         mock_conv_service = AsyncMock()

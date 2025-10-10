@@ -47,7 +47,7 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager.
-    
+
     Handles startup and shutdown events for the application.
     """
     # Startup
@@ -66,14 +66,14 @@ app = FastAPI(
     title="PurposePath AI Coaching API",
     description="""
     AI-powered coaching platform for personal and professional development.
-    
+
     This API provides:
     - **Conversational coaching** - Interactive coaching sessions on core values, purpose, vision, and goals
     - **Alignment analysis** - Analyze how goals align with purpose and values
     - **Strategy analysis** - Evaluate strategy effectiveness and get recommendations
     - **KPI analysis** - Assess KPI effectiveness and get metric recommendations
     - **Operational analysis** - SWOT, root cause, and action plan analysis
-    
+
     **Authentication**: All endpoints require Bearer token authentication.
     User and tenant context is extracted from JWT tokens.
     """,
@@ -154,7 +154,7 @@ app.include_router(
 @app.get("/", tags=["root"])
 async def root() -> dict[str, str]:
     """API root endpoint.
-    
+
     Returns basic API information and links to documentation.
     """
     return {
