@@ -1,172 +1,177 @@
-# PurposePath Platform Monorepo
+# PurposePath AI Coaching Service
 
-Multi-Language Microservices Architecture
+Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon Bedrock.
 
-## 🚨 Repository Structure Notice
-
-This repository contains the **unified PurposePath platform** that combines both .NET and Python services into a single monorepo for better coordination and development workflow.
-
-## 🏗️ Architecture Overview
-
-PurposePath is a comprehensive business coaching and traction management platform built with a microservices architecture:
-
-```
-PurposePath Platform (Monorepo)
-├── pp_api/         (.NET 8 - Account Service)
-├── pp_ai/          (Python - AI Coaching & Traction Services) 
-├── account/        (Streamlined .NET Account Deployment)
-├── deployment/     (Legacy Deployment Templates)
-└── docs/          (Shared Documentation)
-```
-
-## 🚀 Services
-
-### Account Service (.NET 8 Lambda)
-
-- **Location**: `pp_api/`
-- **Responsibility**: Authentication, user management, billing, onboarding
-- **Technology**: .NET 8, Clean Architecture, DynamoDB
-- **Endpoints**: `/account/api/v1/*`
-
-### AI Coaching Service (Python Lambda)
-
-- **Location**: `pp_ai/`
-- **Responsibility**: AI-powered business insights and coaching
-- **Technology**: Python 3.11, FastAPI, AWS Lambda
-- **Endpoints**: `/coaching/api/v1/*`
-
-## 🛠️ Development Setup
+## Quick Start
 
 ### Prerequisites
 
-- .NET 8 SDK
 - Python 3.11+
 - AWS CLI configured
-- Git with submodule support
+- AWS SAM CLI
+- Docker (for local development)
 
-### Clone & Setup
-
-```bash
-# Clone the main repository
-git clone https://github.com/mottych/PurposePath_Api.git
-cd PurposePath_Api
-
-# Setup .NET API
-cd pp_api
-dotnet restore
-dotnet build
-
-# Setup Python AI services
-cd ../pp_ai
-pip install -r requirements.txt
-```
-
-## 🏛️ Architecture Principles
-
-### Clean Architecture Maintained
-
-- **Domain-Driven Design**: Business logic in domain layer
-- **Dependency Inversion**: Infrastructure depends on domain abstractions
-- **Separation of Concerns**: Clear boundaries between layers and services
-
-### Shared Infrastructure Pattern
-
-- **Domain Models**: Single source of truth for business entities
-- **Repository Layer**: Consistent data access across services
-- **Common Utilities**: Shared middleware, configurations, and extensions
-
-## 🚀 Deployment
-
-PurposePath uses a **shared infrastructure pattern** that eliminates deployment complexity and enables seamless runtime switching.
-
-### New Deployment Architecture
-
-```
-deployment/
-├── shared-infrastructure/     # One-time AWS infrastructure
-│   ├── template.yaml         # VPC, DynamoDB, Redis, Custom Domain
-│   └── deploy-*.ps1          # Deployment scripts
-└── account-service/          # Service-specific templates
-    ├── template-dotnet.yaml  # .NET Lambda only
-    ├── template-python.yaml  # Python Lambda only
-    └── deploy-account.ps1    # Service deployment
-```
-
-### Quick Deployment
+### Setup
 
 ```powershell
-# Deploy .NET Account Service (uses existing shared infrastructure)
-.\deploy-account.ps1 -Stage dev
+.\setup.ps1
 ```
 
-**Benefits:**
-- ✅ **Uses existing infrastructure** - DynamoDB tables, JWT secrets, custom domain
-- ✅ **Streamlined deployment** - single script, minimal template
-- ✅ **Custom domain active** - `api.dev.purposepath.app` with service routing
-- ✅ **Multi-service architecture** - .NET Account + Python Coaching/Traction
+### Deploy
 
-📖 **See [`deployment/README.md`](deployment/README.md) for complete deployment guide**
-
-## 📊 Key Features Delivered
-
-### ✅ Comprehensive UserPreferences System
-
-- Strongly-typed preference management across all services
-- Theme, language, timezone, and notification preferences
-- Immutable value objects with comprehensive validation
-
-### ✅ Zero Code Smells
-
-- Eliminated all `object?` and `Dictionary<string, object?>` usage
-- Strongly-typed filtering and query parameters
-- Type-safe contracts throughout the application
-
-### ✅ Multi-Lambda Architecture
-
-- Independent service deployments
-- Shared infrastructure and domain models
-- Scalable microservices with clear boundaries
-
-## 🔄 Git Workflow
-
-### Unified Monorepo
-
-```bash
-# .NET API updates
-git add pp_api/
-git commit -m "feat: enhance account service"
-git push origin platform-monorepo
-
-# Python AI service updates  
-git add pp_ai/
-git commit -m "feat: improve coaching algorithms"
-git push origin platform-monorepo
-
-# Deployment updates
-git add deployment/
-git commit -m "infra: update shared infrastructure"
-git push origin platform-monorepo
+```powershell
+# Deploy coaching service
+.\deploy.ps1 -Stage dev -HostedZoneId Z09156212RNBEXAMPLE
 ```
 
-## 📋 Current Status
+## Architecture
 
-- ✅ Account Service: .NET 8 Lambda deployed to `api.dev.purposepath.app/account/`
-- ✅ AI Coaching Service: Python Lambda deployed to `api.dev.purposepath.app/coaching/`
-- ✅ Traction Service: Python Lambda deployed to `api.dev.purposepath.app/traction/`
-- ✅ Infrastructure: Shared DynamoDB tables, JWT secrets, custom domain
-- ✅ Deployment: Streamlined single-script deployment
-- ✅ Documentation: Updated with current architecture
+- **Coaching Service**: AI coaching conversations, insights, business data analysis
+- **Shared Types**: Strongly-typed definitions for consistency across services
+- **Custom Domain**: `api.{stage}.purposepath.app`
+- **API Paths**:
+  - `/account/api/v1/*` → Account Service
+  - `/coaching/api/v1/*` → Coaching Service
+  - `/traction/api/v1/*` → Traction Service
 
-## 🏆 Development Standards
+## Infrastructure
 
-- **Clean Architecture**: Domain-driven design principles
-- **Type Safety**: Comprehensive strongly-typed models
-- **Test Coverage**: Unit and integration tests
-- **Code Quality**: Zero warnings with `--warnaserror`
-- **Documentation**: Technical and architectural documentation
+- **3 Lambda Functions** (Account, Coaching, Traction)
+## Infrastructure
 
----
+- **AWS Lambda** (Serverless Python functions)
+- **Amazon Bedrock** (Claude 3.5 Sonnet for AI coaching)
+- **DynamoDB** (Data storage with typed models)
+- **S3 Buckets** (Prompts and file storage)
+- **Custom Domain** with SSL certificate
+- **API Gateway** with AWS SAM deployment
 
-**Last Updated**: September 29, 2025  
-**Version**: 2.1 (Shared Infrastructure Architecture)  
-**Team**: PurposePath Development Team
+## Development Workflow
+
+### Branching Strategy
+
+We follow a **GitFlow-inspired** workflow with three main branches:
+
+```
+master (production)  ←── PR ←── staging ←── PR ←── dev ←── feature branches
+```
+
+#### Main Branches
+
+- **`master`** - Production environment (`ai-coaching.purposepath.app`)
+- **`staging`** - Staging environment (`ai-coaching.staging.purposepath.app`)  
+- **`dev`** - Development environment (`ai-coaching.dev.purposepath.app`)
+
+#### Feature Development Process
+
+1. **Create feature branch** from `dev`:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Develop and commit** your changes:
+   ```bash
+   git add .
+   git commit -m "feat: description of your feature"
+   ```
+
+3. **Merge to dev** when feature is complete:
+   ```bash
+   git checkout dev
+   git merge feature/your-feature-name
+   git branch -d feature/your-feature-name  # Delete feature branch
+   git push origin dev
+   ```
+
+4. **Deploy to dev** for testing:
+   ```bash
+   .\deploy.ps1 -Stage dev
+   ```
+
+5. **Create PR to staging** when dev is stable:
+   ```bash
+   git checkout staging
+   git pull origin staging
+   # Create PR from dev to staging via GitHub
+   ```
+
+6. **Deploy staging** after PR approval:
+   ```bash
+   .\deploy.ps1 -Stage staging
+   ```
+
+7. **Create PR to master** when staging is verified:
+   ```bash
+   # Create PR from staging to master via GitHub
+   ```
+
+8. **Deploy production** after PR approval:
+   ```bash
+   .\deploy.ps1 -Stage production
+   ```
+
+### Environment Endpoints
+
+- **Development**: `https://ai-coaching.dev.purposepath.app/coaching/api/v1/`
+- **Staging**: `https://ai-coaching.staging.purposepath.app/coaching/api/v1/`
+- **Production**: `https://ai-coaching.purposepath.app/coaching/api/v1/`
+
+## Deployment
+
+### Quick Deploy
+
+```powershell
+# Development
+.\deploy.ps1 -Stage dev -HostedZoneId Z09156212RNBEXAMPLE
+
+# Staging
+.\deploy.ps1 -Stage staging -HostedZoneId Z09156212RNBEXAMPLE
+
+# Production  
+.\deploy.ps1 -Stage production -HostedZoneId Z09156212RNBEXAMPLE
+```
+
+### Files
+
+- `deploy.ps1` - Multi-environment deployment script
+- `coaching/template.yaml` - Coaching service SAM template
+- `infra/api-domain-*.yaml` - Environment-specific domain configurations
+
+## Shared Types System
+
+The PurposePath AI service uses a comprehensive shared types system for type safety and consistency. 
+
+### Quick Usage
+
+```python
+from shared.types import UserId, create_user_id, ConversationId
+from shared.types.coaching_models import SessionData, BusinessContext
+
+# Strong typing with domain IDs
+user_id = create_user_id("usr_123")
+conversation_id = create_conversation_id()
+
+# Typed coaching session data
+session_data: SessionData = {
+    "phase": "introduction",
+    "context": {},
+    "business_context": business_context,
+    "user_preferences": user_preferences
+}
+```
+
+### Features
+
+- **Strong Domain IDs**: `UserId`, `TenantId`, `ConversationId` with compile-time safety
+- **DynamoDB Inheritance**: All items inherit from `DynamoDBBaseItem` 
+- **Repository Types**: Specific `TypedDict` for all method returns
+- **External APIs**: Types for Stripe, Google OAuth, AWS Lambda
+- **Consistency**: Eliminates `dict[str, Any]` usage project-wide
+
+📖 **See [`docs/shared-types-guide.md`](docs/shared-types-guide.md) for complete documentation**
+
+## Project Automation
+
+Issues and PRs can be auto-added to a GitHub Project. See `docs/github-projects-setup.md` to configure the required secret and variable.
