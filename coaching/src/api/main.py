@@ -6,11 +6,14 @@ from typing import AsyncGenerator
 import structlog
 from coaching.src.api.middleware.logging import LoggingMiddleware
 from coaching.src.api.routes import (
+    analysis,
     coaching,
     conversations,
     health,
     insights,
     multitenant_conversations,
+    onboarding,
+    operations,
     suggestions,
     website,
 )
@@ -158,6 +161,21 @@ app.include_router(
     coaching.router,
     prefix=f"{settings.api_prefix}/coaching",
     tags=["coaching"],
+)
+
+# Analysis routes (without prefix - routes define full paths)
+app.include_router(
+    analysis.router,
+)
+
+# Operations routes (without prefix - routes define full paths)
+app.include_router(
+    operations.router,
+)
+
+# Onboarding routes (without prefix - routes define full paths) - Issue #48 Phase 3
+app.include_router(
+    onboarding.router,
 )
 
 
