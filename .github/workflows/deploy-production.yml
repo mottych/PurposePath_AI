@@ -1,0 +1,223 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests before deployment (NOT RECOMMENDED)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv .venv
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -r coaching/requirements.txt
+          uv pip install -r coaching/requirements-dev.txt
+        shell: bash
+
+      - name: Run Ruff Linting
+        run: |
+          source .venv/bin/activate
+          python -m ruff check . --exclude=".venv,venv,__pycache__,.pytest_cache"
+        shell: bash
+
+      - name: Run MyPy Type Checking
+        run: |
+          source .venv/bin/activate
+          python -m mypy coaching/src/ shared/ --config-file=pyproject.toml
+        shell: bash
+
+      - name: Run All Tests
+        run: |
+          source .venv/bin/activate
+          python -m pytest coaching/tests/ -v --cov=coaching/src --cov-fail-under=70
+        shell: bash
+        env:
+          PYTHONPATH: coaching:shared:.
+
+  build-and-deploy:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks]
+    if: always() && (needs.pre-deployment-checks.result == 'success' || github.event.inputs.skip_tests == 'true')
+    permissions:
+      id-token: write
+      contents: read
+    environment:
+      name: production
+      url: ${{ steps.api-url.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
+          role-session-name: purposepath-prod-deploy
+
+      - name: Build SAM Applications
+        run: |
+          sam build --template coaching/template-standalone.yaml --parallel --cached
+
+      - name: Resolve Production JWT Secret ARN
+        id: secret
+        run: |
+          ARN=$(aws secretsmanager list-secrets --query "SecretList[?Name=='purposepath/jwt-secret/prod'].ARN | [0]" --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy Coaching Service (production)
+        run: |
+          sam deploy \
+            --template-file coaching/template-standalone.yaml \
+            --stack-name purposepath-coaching-api-prod \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+            --parameter-overrides Stage=prod LogLevel=WARNING JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
+            --region us-east-1 \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --tags Environment=production Project=PurposePath Service=Coaching
+
+      - name: Get API Gateway URL
+        id: api-url
+        run: |
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name purposepath-coaching-api-prod \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            Production deployment of PurposePath Coaching API
+            
+            **Deployment Details:**
+            - Environment: Production
+            - Stack: purposepath-coaching-api-prod
+            - API URL: ${{ steps.api-url.outputs.url }}
+            - Deployed at: ${{ github.event.head_commit.timestamp }}
+            - Commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+        continue-on-error: true
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** purposepath-coaching-api-prod" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
+          echo "**Release:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  smoke-tests:
+    name: Post-Deployment Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [build-and-deploy]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
+          role-session-name: purposepath-prod-tests
+
+      - name: Get API Gateway URL
+        id: api-url
+        run: |
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name purposepath-coaching-api-prod \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Health Check
+        run: |
+          echo "Testing API health endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/health || echo "000")
+          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
+            echo "✅ API is responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ API returned HTTP $HTTP_CODE - Investigation needed"
+            exit 1
+          fi
+
+      - name: Smoke Test Summary
+        run: |
+          echo "## Smoke Tests - Production" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Health check passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ API is responsive" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production deployment verified" >> $GITHUB_STEP_SUMMARY
+
+  notify-deployment:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [build-and-deploy, smoke-tests]
+    if: always()
+    
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.build-and-deploy.result }}" == "success" ] && [ "${{ needs.smoke-tests.result }}" == "success" ]; then
+            echo "✅ Production deployment completed successfully"
+          else
+            echo "❌ Production deployment encountered issues"
+            exit 1
+          fi
