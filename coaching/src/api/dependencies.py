@@ -261,8 +261,14 @@ async def get_insights_service() -> InsightsService:
     """Get insights service."""
     conversation_repo = await get_conversation_repository()
     business_data_repo = await get_business_data_repository()
-
     return InsightsService(
-        conversation_repo=conversation_repo,
-        business_data_repo=business_data_repo,
+        conversation_repo=conversation_repo, business_data_repo=business_data_repo
     )
+
+
+async def get_onboarding_service():
+    """Get onboarding service (Issue #48 Phase 3)."""
+    from coaching.src.services.onboarding_service import OnboardingService
+
+    llm_service = await get_llm_service()
+    return OnboardingService(llm_service=llm_service)
