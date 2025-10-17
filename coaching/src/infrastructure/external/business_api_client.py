@@ -79,14 +79,25 @@ class BusinessApiClient:
 
     async def get_user_context(self, user_id: str, tenant_id: str) -> dict[str, Any]:
         """
-        Get user context data from Business API.
+        Get user context data from Account Service.
+
+        Uses existing /user/profile endpoint with MVP fallbacks.
+        
+        MVP Assumptions:
+        - Single user per tenant (business owner)
+        - No department structure
+        - Default role = "Business Owner"
 
         Args:
-            user_id: User identifier
+            user_id: User identifier (kept for API compatibility)
             tenant_id: Tenant identifier
 
         Returns:
-            User context including profile, role, department, etc.
+            User context with profile data and MVP fallbacks:
+            - user_id, email, first_name, last_name, name
+            - role: "Business Owner" (default)
+            - department: None (not in MVP)
+            - position: "Owner" (default)
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -95,19 +106,37 @@ class BusinessApiClient:
         try:
             logger.info("Fetching user context", user_id=user_id, tenant_id=tenant_id)
 
-            # GET /api/users/{userId}/context?tenantId={tenantId}
+            # GET /user/profile (Account Service)
             response = await self.client.get(
-                f"/api/users/{user_id}/context",
+                "/user/profile",
                 headers=self._get_headers(),
-                params={"tenantId": tenant_id},
             )
             response.raise_for_status()
 
-            user_context = response.json()
+            data = response.json()
+            user_data = data.get("data", {})
+
+            # Build context with MVP fallbacks
+            first_name = user_data.get("first_name", "")
+            last_name = user_data.get("last_name", "")
+            full_name = f"{first_name} {last_name}".strip() or user_data.get("email", "")
+
+            user_context = {
+                "user_id": user_data.get("user_id"),
+                "email": user_data.get("email"),
+                "first_name": first_name,
+                "last_name": last_name,
+                "name": full_name,
+                "tenant_id": tenant_id,
+                # MVP Fallbacks
+                "role": "Business Owner",
+                "department": None,
+                "position": "Owner",
+            }
 
             logger.debug(
                 "User context retrieved",
-                user_id=user_id,
+                user_id=user_context.get("user_id"),
                 status_code=response.status_code,
             )
 
@@ -131,13 +160,26 @@ class BusinessApiClient:
 
     async def get_organizational_context(self, tenant_id: str) -> dict[str, Any]:
         """
-        Get organizational context data.
+        Get organizational/business foundation context data.
+
+        Calls the new business foundation endpoint to retrieve:
+        - Vision, purpose, core values
+        - Industry, business type, company size
+        - Target market, value proposition
+        - Strategic priorities
+
+        Note: Endpoint implementation tracked in PurposePath_API#152
 
         Args:
             tenant_id: Tenant identifier
 
         Returns:
-            Organizational context including structure, values, etc.
+            Business foundation context data:
+            - tenant_id, organization_name
+            - vision, purpose, core_values
+            - industry, business_type, company_size
+            - target_market, value_proposition
+            - strategic_priorities
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -146,14 +188,15 @@ class BusinessApiClient:
         try:
             logger.info("Fetching organizational context", tenant_id=tenant_id)
 
-            # GET /api/tenants/{tenantId}/context
+            # GET /api/tenants/{tenantId}/business-foundation
             response = await self.client.get(
-                f"/api/tenants/{tenant_id}/context",
+                f"/api/tenants/{tenant_id}/business-foundation",
                 headers=self._get_headers(),
             )
             response.raise_for_status()
 
-            org_context = response.json()
+            data = response.json()
+            org_context = data.get("data", {})
 
             logger.debug(
                 "Organizational context retrieved",
@@ -181,14 +224,19 @@ class BusinessApiClient:
 
     async def get_user_goals(self, user_id: str, tenant_id: str) -> list[dict[str, Any]]:
         """
-        Get user's goals from Business API.
+        Get user's goals from Traction Service.
+
+        Uses existing /goals endpoint with ownerId filter.
 
         Args:
-            user_id: User identifier
-            tenant_id: Tenant identifier
+            user_id: User identifier (used as ownerId filter)
+            tenant_id: Tenant identifier (for context, included in headers)
 
         Returns:
-            List of user goals with details
+            List of goals owned by the user:
+            - id, title, intent, status, horizon
+            - strategies, kpis, progress
+            - owner_id, owner_name
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -197,24 +245,29 @@ class BusinessApiClient:
         try:
             logger.info("Fetching user goals", user_id=user_id, tenant_id=tenant_id)
 
-            # GET /api/users/{userId}/goals?tenantId={tenantId}
+            # GET /goals?ownerId={userId} (Traction Service)
             response = await self.client.get(
-                f"/api/users/{user_id}/goals",
+                "/goals",
                 headers=self._get_headers(),
-                params={"tenantId": tenant_id},
+                params={"ownerId": user_id},
             )
             response.raise_for_status()
 
-            goals = response.json()
+            data = response.json()
+            goals = data.get("data", [])
+
+            # Ensure we return a list
+            if not isinstance(goals, list):
+                goals = []
 
             logger.debug(
                 "User goals retrieved",
                 user_id=user_id,
-                count=len(goals) if isinstance(goals, list) else 0,
+                count=len(goals),
                 status_code=response.status_code,
             )
 
-            return goals if isinstance(goals, list) else []
+            return goals
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -232,63 +285,12 @@ class BusinessApiClient:
             )
             raise
 
-    async def get_metrics(self, entity_id: str, entity_type: str, tenant_id: str) -> dict[str, Any]:
-        """
-        Get metrics for an entity (user, team, organization).
-
-        Args:
-            entity_id: Entity identifier
-            entity_type: Type of entity (user, team, org)
-            tenant_id: Tenant identifier
-
-        Returns:
-            Metrics data
-
-        Raises:
-            httpx.HTTPStatusError: If API returns error status
-            httpx.RequestError: If request fails
-        """
-        try:
-            logger.info(
-                "Fetching metrics",
-                entity_id=entity_id,
-                entity_type=entity_type,
-                tenant_id=tenant_id,
-            )
-
-            # GET /api/{entityType}/{entityId}/metrics?tenantId={tenantId}
-            response = await self.client.get(
-                f"/api/{entity_type}/{entity_id}/metrics",
-                headers=self._get_headers(),
-                params={"tenantId": tenant_id},
-            )
-            response.raise_for_status()
-
-            metrics = response.json()
-
-            logger.debug(
-                "Metrics retrieved",
-                entity_id=entity_id,
-                status_code=response.status_code,
-            )
-
-            return metrics
-
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                "HTTP error fetching metrics",
-                entity_id=entity_id,
-                status_code=e.response.status_code,
-                error=str(e),
-            )
-            raise
-        except httpx.RequestError as e:
-            logger.error(
-                "Request error fetching metrics",
-                entity_id=entity_id,
-                error=str(e),
-            )
-            raise
+    # NOTE: get_metrics() removed - not in MVP scope
+    # User performance metrics will be added post-MVP when tracking is implemented.
+    # For tenant-wide metrics, use Traction Service endpoints:
+    #   - GET /goals/stats
+    #   - GET /performance/score
+    #   - GET /team/alignment
 
     async def close(self) -> None:
         """

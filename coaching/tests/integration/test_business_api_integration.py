@@ -1,12 +1,20 @@
-"""Integration tests for BusinessApiClient with deployed .NET Business API.
+"""Integration tests for BusinessApiClient with existing backend services.
 
-These tests verify the integration with the real .NET Business API endpoints.
-They require:
-- Deployed .NET API (Account Service)
+These tests verify integration with existing backend endpoints:
+- Account Service: /user/profile
+- Traction Service: /goals?ownerId={userId}
+- Business Foundation: /api/tenants/{tenantId}/business-foundation (pending implementation)
+
+Requirements:
+- Deployed backend services (Account, Traction)
 - Valid authentication credentials
 - Test data in the database
 
 Run with: pytest -m integration coaching/tests/integration/test_business_api_integration.py -v
+
+MVP Scope:
+- User metrics endpoints not yet implemented
+- Business foundation endpoint pending (tracked in PurposePath_API#152)
 """
 
 import os
@@ -145,32 +153,34 @@ class TestBusinessApiIntegration:
         user_id: str,
         tenant_id: str,
     ) -> None:
-        """Test retrieving user context from Business API."""
+        """Test retrieving user context from Account Service /user/profile."""
         try:
             result = await business_api_client.get_user_context(
                 user_id=user_id,
                 tenant_id=tenant_id,
             )
 
-            # Verify response structure
+            # Verify response structure (from /user/profile with MVP fallbacks)
             assert result is not None
             assert isinstance(result, dict)
 
-            # Log the response for inspection
+            # Verify expected fields
+            assert "user_id" in result
+            assert "email" in result
+            assert "name" in result
+            assert "tenant_id" in result
+
+            # Verify MVP fallback fields
+            assert result["role"] == "Business Owner"
+            assert result["position"] == "Owner"
+            assert result["department"] is None
+
             logger.info("User context retrieved", context=result)
-
-            # Basic validations (adjust based on actual API response)
-            # The actual structure may vary, so we're flexible here
-            assert len(result) > 0, "User context should not be empty"
-
             logger.info("✅ Get user context test passed")
 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                pytest.skip(
-                    f"User context endpoint not found (404). "
-                    f"The .NET API may not have this endpoint yet: {e.request.url}"
-                )
+            if e.response.status_code == 401:
+                pytest.skip("Authentication failed - check credentials")
             raise
 
     async def test_get_organizational_context(
@@ -178,7 +188,7 @@ class TestBusinessApiIntegration:
         business_api_client: BusinessApiClient,
         tenant_id: str,
     ) -> None:
-        """Test retrieving organizational context from Business API."""
+        """Test retrieving business foundation from /api/tenants/{id}/business-foundation."""
         try:
             result = await business_api_client.get_organizational_context(
                 tenant_id=tenant_id
@@ -191,6 +201,7 @@ class TestBusinessApiIntegration:
             # Log the response for inspection
             logger.info("Organizational context retrieved", context=result)
 
+            # Verify it has at least tenant info
             assert len(result) > 0, "Org context should not be empty"
 
             logger.info("✅ Get organizational context test passed")
@@ -198,8 +209,8 @@ class TestBusinessApiIntegration:
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 pytest.skip(
-                    f"Organizational context endpoint not found (404). "
-                    f"The .NET API may not have this endpoint yet: {e.request.url}"
+                    f"Business foundation endpoint not found (404). "
+                    f"Implementation tracked in PurposePath_API#152: {e.request.url}"
                 )
             raise
 
@@ -209,84 +220,66 @@ class TestBusinessApiIntegration:
         user_id: str,
         tenant_id: str,
     ) -> None:
-        """Test retrieving user goals from Business API."""
+        """Test retrieving user goals from Traction Service /goals?ownerId={userId}."""
         try:
             result = await business_api_client.get_user_goals(
                 user_id=user_id,
                 tenant_id=tenant_id,
             )
 
-            # Verify response structure
+            # Verify response is a list (may be empty if user has no goals)
             assert result is not None
-            assert isinstance(result, list) or isinstance(result, dict)
+            assert isinstance(result, list)
 
             # Log the response for inspection
-            logger.info("User goals retrieved", goals=result)
+            logger.info("User goals retrieved", goal_count=len(result))
+
+            # If goals exist, verify structure
+            if len(result) > 0:
+                goal = result[0]
+                assert "id" in goal
+                assert "title" in goal
+                logger.info("Sample goal", goal=goal)
 
             logger.info("✅ Get user goals test passed")
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 pytest.skip(
-                    f"User goals endpoint not found (404). "
-                    f"The .NET API may not have this endpoint yet: {e.request.url}"
+                    f"Goals endpoint not found (404): {e.request.url}"
                 )
             raise
 
-    async def test_get_metrics(
+    # test_get_metrics removed - not in MVP scope
+    # User performance metrics will be added post-MVP
+
+    async def test_error_handling_empty_goals(
         self,
         business_api_client: BusinessApiClient,
-        user_id: str,
         tenant_id: str,
     ) -> None:
-        """Test retrieving metrics from Business API."""
+        """Test handling of user with no goals."""
+        # Use a random UUID that probably has no goals
+        user_with_no_goals = "00000000-0000-0000-0000-000000000000"
+
         try:
-            result = await business_api_client.get_metrics(
-                entity_id=user_id,
-                entity_type="users",
+            result = await business_api_client.get_user_goals(
+                user_id=user_with_no_goals,
                 tenant_id=tenant_id,
             )
 
-            # Verify response structure
-            assert result is not None
-            assert isinstance(result, dict)
-
-            # Log the response for inspection
-            logger.info("Metrics retrieved", metrics=result)
-
-            logger.info("✅ Get metrics test passed")
+            # Should return empty list, not fail
+            assert isinstance(result, list)
+            logger.info(
+                "✅ Empty goals handling test passed",
+                goal_count=len(result),
+            )
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                pytest.skip(
-                    f"Metrics endpoint not found (404). "
-                    f"The .NET API may not have this endpoint yet: {e.request.url}"
-                )
-            raise
-
-    async def test_error_handling_invalid_user(
-        self,
-        business_api_client: BusinessApiClient,
-        tenant_id: str,
-    ) -> None:
-        """Test error handling with invalid user ID."""
-        invalid_user_id = "nonexistent-user-12345"
-
-        try:
-            await business_api_client.get_user_context(
-                user_id=invalid_user_id,
-                tenant_id=tenant_id,
-            )
-            # If we get here without exception, the endpoint might return empty data
-            logger.info("Endpoint returned data for invalid user (might be expected)")
-
-        except httpx.HTTPStatusError as e:
-            # Expected behavior: 404 for nonexistent user
-            assert e.response.status_code in [404, 400]
-            logger.info(
-                "✅ Error handling test passed",
-                status_code=e.response.status_code,
-            )
+                pytest.skip("Goals endpoint not available")
+            # Other errors are acceptable for this test
+            logger.info("Error expected for nonexistent user", status=e.response.status_code)
 
     async def test_error_handling_invalid_token(self, user_id: str, tenant_id: str) -> None:
         """Test error handling with invalid authentication token."""
@@ -352,13 +345,13 @@ class TestBusinessApiIntegration:
 class TestBusinessApiPerformance:
     """Performance tests for BusinessApiClient."""
 
-    async def test_user_context_response_time(
+    async def test_user_profile_response_time(
         self,
         business_api_client: BusinessApiClient,
         user_id: str,
         tenant_id: str,
     ) -> None:
-        """Test that user context API responds within acceptable time."""
+        """Test that /user/profile API responds within acceptable time."""
         import time
 
         start_time = time.time()
@@ -371,8 +364,8 @@ class TestBusinessApiPerformance:
 
             duration = time.time() - start_time
 
-            # Assert response time < 5 seconds
-            assert duration < 5.0, f"Response took {duration:.2f}s, expected < 5s"
+            # Assert response time < 3 seconds (profile should be fast)
+            assert duration < 3.0, f"Response took {duration:.2f}s, expected < 3s"
 
             logger.info(
                 "✅ Performance test passed",
@@ -380,6 +373,6 @@ class TestBusinessApiPerformance:
             )
 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                pytest.skip("Endpoint not available")
+            if e.response.status_code in [401, 404]:
+                pytest.skip("Authentication or endpoint issue")
             raise

@@ -1,4 +1,4 @@
-"""Unit tests for BusinessApiClient (Issue #48)."""
+"""Unit tests for BusinessApiClient (Issue #48, refactored for MVP in #52)."""
 
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
