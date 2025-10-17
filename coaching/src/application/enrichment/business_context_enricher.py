@@ -20,7 +20,8 @@ class BusinessContextEnricher(BaseEnrichmentService):
     - User profile and role
     - Organizational context
     - User goals
-    - Performance metrics
+
+    Note: User performance metrics not in MVP scope.
 
     Design:
         - Caching to reduce API calls
@@ -66,7 +67,6 @@ class BusinessContextEnricher(BaseEnrichmentService):
 
         Optional context fields:
         - include_goals: Whether to include user goals (default: True)
-        - include_metrics: Whether to include metrics (default: False)
         - include_org_context: Whether to include org context (default: True)
         """
         user_id = context.get("user_id")
@@ -93,10 +93,8 @@ class BusinessContextEnricher(BaseEnrichmentService):
                 goals = await self.business_api.get_user_goals(user_id, tenant_id)
                 enrichment_data["user_goals"] = goals
 
-            # Fetch metrics (if requested)
-            if context.get("include_metrics", False):
-                metrics = await self.business_api.get_metrics(user_id, "user", tenant_id)
-                enrichment_data["user_metrics"] = metrics
+            # Note: User metrics not in MVP scope - removed get_metrics() call
+            # For tenant-wide metrics, use Traction Service endpoints directly
 
             logger.info(
                 "Business context fetched",

@@ -59,6 +59,20 @@ class Settings(BaseSettings):
     # Memory Management
     max_conversation_memory: int = 4000
 
+    # Business API Configuration
+    business_api_base_url: str = Field(
+        default="https://api.dev.purposepath.app/account/api/v1",
+        validation_alias="BUSINESS_API_BASE_URL",
+    )
+    business_api_timeout: int = Field(
+        default=30,
+        validation_alias="BUSINESS_API_TIMEOUT",
+    )
+    business_api_max_retries: int = Field(
+        default=3,
+        validation_alias="BUSINESS_API_MAX_RETRIES",
+    )
+
 
 @lru_cache()
 def get_settings() -> Settings:
