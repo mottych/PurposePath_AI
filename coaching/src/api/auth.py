@@ -141,7 +141,7 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         raise HTTPException(status_code=401, detail="Invalid authorization header format")
 
     token = authorization.split(" ")[1]
-    
+
     # Test bypass: accept sentinel token in unit tests
     if token == "test_token":
         return UserContext(
@@ -155,7 +155,7 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
     try:
         # Decode and validate JWT token
         secret = _get_jwt_secret()
-        
+
         # Decode token; allow flexible fields and issuer in dev
         try:
             payload = jwt.decode(

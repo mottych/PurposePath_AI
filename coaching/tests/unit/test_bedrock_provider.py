@@ -133,7 +133,7 @@ class TestBedrockProviderValidation:
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
-        
+
         # Mock bedrock client response
         provider.bedrock_client.invoke_model = Mock(
             return_value={
@@ -213,7 +213,7 @@ class TestBedrockProviderEdgeCases:
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
-        
+
         provider.bedrock_client.invoke_model = Mock(
             return_value={
                 "body": Mock(read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}')
@@ -235,7 +235,7 @@ class TestBedrockProviderEdgeCases:
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
-        
+
         provider.bedrock_client.invoke_model = Mock(
             return_value={
                 "body": Mock(read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}')
@@ -284,7 +284,7 @@ class TestBedrockProviderMultipleModels:
         """Test generation with different Claude versions."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        
+
         claude_models = [
             "anthropic.claude-3-sonnet-20240229-v1:0",
             "anthropic.claude-3-haiku-20240307-v1:0",

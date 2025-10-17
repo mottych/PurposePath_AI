@@ -33,7 +33,7 @@ class TestConversationNotFoundError:
         # Act & Assert
         with pytest.raises(ConversationNotFoundError) as exc_info:
             raise ConversationNotFoundError(conversation_id)
-        
+
         assert conversation_id in str(exc_info.value)
 
     def test_exception_inherits_from_exception(self):
@@ -142,6 +142,6 @@ class TestExceptionHierarchy:
         # Arrange & Act & Assert
         with pytest.raises(Exception):
             raise ConversationNotFoundError("test")
-        
+
         with pytest.raises(Exception):
             raise InvalidTopicError("test")
