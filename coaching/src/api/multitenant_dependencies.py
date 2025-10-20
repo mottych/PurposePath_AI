@@ -22,6 +22,7 @@ from coaching.src.repositories.prompt_repository import PromptRepository
 from coaching.src.services.cache_service import CacheService
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
+from coaching.src.services.onboarding_service import OnboardingService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.workflows.orchestrator import WorkflowOrchestrator
 
@@ -250,3 +251,11 @@ async def get_conversation_service(
 ) -> MultitenantConversationService:
     """Get conversation service (legacy compatibility)."""
     return await get_multitenant_conversation_service(context)
+
+
+async def get_onboarding_service(
+    context: RequestContext = Depends(get_current_context),
+) -> OnboardingService:
+    """Get onboarding service with tenant context."""
+    llm_service = await get_llm_service(context)
+    return OnboardingService(llm_service=llm_service)
