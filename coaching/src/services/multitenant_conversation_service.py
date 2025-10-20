@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import structlog
 
@@ -15,6 +15,7 @@ from coaching.src.models.conversation import Conversation
 from coaching.src.models.llm_models import SessionOutcomes
 from coaching.src.models.responses import (
     AIResponseData,
+    BusinessContext,
     CacheSessionData,
     ConversationListResponse,
     ConversationResponse,
@@ -30,7 +31,6 @@ from coaching.src.services.prompt_service import PromptService
 
 # Import typed models for proper type safety
 from shared.types.coaching_models import (
-    BusinessContext,
     BusinessDataSummary,
     CompletionSummary,
     SessionCreateData,
@@ -117,32 +117,43 @@ class MultitenantConversationService:
 
         # Create coaching session record with proper typing
         # Create typed session data
-        business_context = self._extract_business_context(business_data, topic)
+        business_context_dict = self._extract_business_context(business_data, topic)
+        business_context_model = BusinessContext(**business_context_dict)
+
         user_preferences_data = UserPreferences()
         if user_prefs:
             coaching_prefs = user_prefs.get("coaching_preferences", {})
-            if coaching_prefs:
+            if coaching_prefs and isinstance(coaching_prefs, dict):
                 user_preferences_data = UserPreferences(
-                    communication_style=coaching_prefs.get("communication_style"),
-                    coaching_frequency=coaching_prefs.get("coaching_frequency"),
-                    focus_areas=coaching_prefs.get("focus_areas", []),
-                    notification_preferences=coaching_prefs.get("notification_preferences", {}),
+                    communication_style=cast(
+                        Optional[str], coaching_prefs.get("communication_style")
+                    ),
+                    coaching_frequency=cast(
+                        Optional[str], coaching_prefs.get("coaching_frequency")
+                    ),
+                    focus_areas=cast(Optional[List[str]], coaching_prefs.get("focus_areas", [])),
+                    notification_preferences=cast(
+                        Optional[Dict[str, bool]],
+                        coaching_prefs.get("notification_preferences", {}),
+                    ),
                 )
 
         session_context = SessionContextData(
             conversation_id=None,  # Will be updated after conversation creation
             phase="introduction",
             context=context_data or {},
-            business_context=business_context,
+            business_context=business_context_model,
             user_preferences=user_preferences_data,
         )
 
-        # Create session data from context
-        session_data = SessionData(
-            session_context=session_context,
-            conversation_history=[],
-            analysis_results={},
-        )
+        # Create session data from context - convert Pydantic models to dicts for TypedDict storage
+        session_data: SessionData = {
+            "conversation_id": None,
+            "phase": "introduction",
+            "context": cast(Dict[str, Any], context_data) if context_data else {},
+            "business_context": business_context_dict,
+            "user_preferences": user_preferences_data.model_dump(),
+        }
 
         session_create_data: SessionCreateData = {
             "session_id": f"session_{uuid.uuid4().hex[:12]}",
@@ -190,11 +201,14 @@ class MultitenantConversationService:
             user_preferences=session_context.user_preferences,
         )
 
-        updated_session_data = SessionData(
-            session_context=updated_session_context,
-            conversation_history=[],
-            analysis_results={},
-        )
+        # Create updated session data with proper TypedDict structure
+        updated_session_data: SessionData = {
+            "conversation_id": conversation.conversation_id,
+            "phase": "introduction",
+            "context": cast(Dict[str, Any], updated_session_context.context),
+            "business_context": updated_session_context.business_context.model_dump(),
+            "user_preferences": updated_session_context.user_preferences.model_dump(),
+        }
 
         session_update: SessionUpdateData = {"session_data": updated_session_data}
 
@@ -210,7 +224,9 @@ class MultitenantConversationService:
             business_context=updated_session_context.business_context,
         )
 
-        await self.cache_service.save_session_data(conversation.conversation_id, cache_session_data)
+        await self.cache_service.save_session_data(
+            conversation.conversation_id, cache_session_data.model_dump()
+        )
 
         return ConversationResponse(
             conversation_id=conversation.conversation_id,
@@ -251,13 +267,19 @@ class MultitenantConversationService:
         session_data: Optional[CacheSessionData] = None
         session_id: Optional[str] = None
         if session_data_raw:
+            business_ctx_raw = session_data_raw.get("business_context", {})
+            business_ctx = (
+                BusinessContext(**business_ctx_raw)
+                if isinstance(business_ctx_raw, dict)
+                else BusinessContext()
+            )
             session_data = CacheSessionData(
                 phase=session_data_raw.get("phase", "introduction"),
                 context=session_data_raw.get("context", {}),
                 message_count=session_data_raw.get("message_count", 0),
                 template_version=session_data_raw.get("template_version", "1.0"),
                 session_id=session_data_raw.get("session_id", ""),
-                business_context=BusinessContext(**(session_data_raw.get("business_context", {}))),
+                business_context=business_ctx,
             )
             session_id = session_data.session_id
 
@@ -267,47 +289,47 @@ class MultitenantConversationService:
         # Get current business data for context
         business_data_obj = self.business_data_repo.get_by_tenant()
         business_data_dict = business_data_obj.model_dump() if business_data_obj else None
-        current_business_context: BusinessContext = self._extract_business_context(
+        current_business_context_dict = self._extract_business_context(
             business_data_dict, SharedCoachingTopic(conversation.topic)
         )
 
-        # Generate AI response with business context
+        # Generate AI response with business context (pass dict)
         ai_response_raw = await self.llm_service.generate_coaching_response(
             conversation_id=conversation_id,
             topic=conversation.topic,
             user_message=user_message,
             conversation_history=conversation.get_conversation_history(),
-            business_context=(
-                current_business_context.model_dump() if current_business_context else {}
-            ),
+            business_context=current_business_context_dict,
         )
 
         ai_response = AIResponseData(
-            response=ai_response_raw.get("response", ""),
-            confidence=ai_response_raw.get("confidence"),
-            metadata=ai_response_raw.get("metadata", {}),
-            suggested_actions=ai_response_raw.get("suggested_actions"),
+            response=ai_response_raw.response,
+            confidence=None,  # LLMResponse doesn't have confidence, but AIResponseData requires it
+            metadata=ai_response_raw.metadata or {},
+            suggested_actions=ai_response_raw.insights,  # Map insights to suggested_actions
         )
 
         # Add AI response
-        await self.conversation_repo.add_message(
-            conversation_id, "assistant", ai_response["response"]
-        )
+        await self.conversation_repo.add_message(conversation_id, "assistant", ai_response.response)
 
         # Update session metrics
-        if session_id and session_data:
-            metrics_update: SessionUpdateData = {
-                "total_tokens": session_data.get("total_tokens", 0)
-                + ai_response.get("token_usage", 0),
-                "session_cost": session_data.get("session_cost", 0.0)
-                + ai_response.get("cost", 0.0),
-            }
-            self.coaching_session_repo.update(session_id, metrics_update)
+        if session_id:
+            # Fetch the latest session data to update metrics
+            session = self.coaching_session_repo.get_by_id(session_id)
+            if session:
+                metrics_update: SessionUpdateData = {
+                    "total_tokens": session.get("total_tokens", 0) + ai_response_raw.token_usage,
+                    "session_cost": session.get("session_cost", 0.0) + ai_response_raw.cost,
+                }
+                self.coaching_session_repo.update(session_id, metrics_update)
 
         # Check if conversation is complete and extract outcomes
-        is_complete: bool = ai_response.get("is_complete", False)
+        is_complete: bool = ai_response_raw.is_complete
         if is_complete and session_id:
-            await self._extract_and_save_outcomes(session_id, conversation, ai_response)
+            # Convert AIResponseData to dict for _extract_and_save_outcomes
+            await self._extract_and_save_outcomes(
+                session_id, conversation, ai_response.model_dump()
+            )
 
         # Update conversation context
         conversation = await self.conversation_repo.get(conversation_id)
@@ -315,9 +337,9 @@ class MultitenantConversationService:
             raise ConversationNotFoundCompatError(conversation_id)
 
         return MessageResponse(
-            ai_response=ai_response["response"],
-            follow_up_question=ai_response.get("follow_up_question"),
-            insights=ai_response.get("insights"),
+            ai_response=ai_response.response,
+            follow_up_question=ai_response_raw.follow_up_question,
+            insights=ai_response_raw.insights,
             progress=conversation.calculate_progress(),
             is_complete=is_complete,
             phase=conversation.context.phase,
@@ -442,9 +464,7 @@ class MultitenantConversationService:
             for conv in conversations
         ]
 
-        return ConversationListResponse(
-            conversations=summaries, total=len(summaries), page=page, page_size=page_size
-        )
+        return ConversationListResponse(conversations=summaries, total=len(summaries), page=page)
 
     def get_business_data_summary(self) -> BusinessDataSummary:
         """Get current business data summary for the tenant."""

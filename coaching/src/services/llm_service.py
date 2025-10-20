@@ -187,12 +187,16 @@ class LLMService:
             }
 
             # Use workflow orchestrator for analysis
-            workflow_result = await self.workflow_orchestrator.run_workflow(
-                "analysis", analysis_input
+            from coaching.src.workflows.base import WorkflowType
+
+            workflow_state = await self.workflow_orchestrator.start_workflow(
+                workflow_type=WorkflowType.SINGLE_SHOT_ANALYSIS,
+                user_id="system",  # System-level analysis
+                initial_input=analysis_input,
             )
 
-            # Extract analysis result
-            analysis_response = workflow_result.get("final_state", {}).get("response", "")
+            # Extract analysis result from workflow state
+            analysis_response = workflow_state.step_data.get("response", "")
 
             # Parse and validate the response
             if analysis_response:

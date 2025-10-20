@@ -55,7 +55,6 @@ Current Draft: {current or 'None'}
 
 Provide clear, specific niche descriptions that define the target market and unique positioning.
 Each should be 1-2 sentences.""",
-
             "ica": f"""Generate 3-5 Ideal Customer Avatar (ICA) descriptions for a business.
 
 Business Name: {business_name or 'Not provided'}
@@ -65,7 +64,6 @@ Current Draft: {current or 'None'}
 
 Describe the perfect customer in detail: demographics, psychographics, pain points, goals.
 Each should be specific and actionable.""",
-
             "valueProposition": f"""Generate 3-5 value proposition statements for a business.
 
 Business Name: {business_name or 'Not provided'}
@@ -80,18 +78,21 @@ Each should be concise and customer-focused.""",
         prompt = prompts.get(kind, prompts["niche"])
 
         # Generate suggestions using LLM
-        response = await self.llm_service.generate_completion(
-            prompt=prompt,
-            temperature=0.8,  # Higher for creativity
-            max_tokens=500,
+        response_data = await self.llm_service.generate_single_shot_analysis(
+            topic="onboarding",
+            user_input=prompt,
+            analysis_type="suggestion",
         )
+        response = response_data.get("response", "")
 
         # Parse response into list of suggestions
         suggestions = self._parse_suggestions(response)
 
-        reasoning = f"Based on your {industry or 'business'} " + \
-                   f"{'and products (' + ', '.join(products[:2]) + ')' if products else 'information'}, " + \
-                   "these suggestions align with market positioning best practices."
+        reasoning = (
+            f"Based on your {industry or 'business'} "
+            + f"{'and products (' + ', '.join(products[:2]) + ')' if products else 'information'}, "
+            + "these suggestions align with market positioning best practices."
+        )
 
         return {
             "suggestions": suggestions,
@@ -160,7 +161,6 @@ Provide helpful, actionable guidance. Explain what core values are, give example
 and help them think through what principles should guide their business decisions.
 
 Also suggest 4-6 potential core values they might consider.""",
-
             "purpose": f"""You are a business coach helping define company purpose.
 
 Business: {business_name}
@@ -173,7 +173,6 @@ Provide helpful guidance on crafting a purpose statement. Explain the difference
 give examples of strong purpose statements, and help them articulate why their business exists beyond profit.
 
 Suggest 2-3 purpose statement examples they could refine.""",
-
             "vision": f"""You are a business coach helping create a vision statement.
 
 Business: {business_name}
@@ -191,11 +190,12 @@ Suggest 2-3 vision statement examples they could adapt.""",
         prompt = topic_prompts.get(topic, topic_prompts["coreValues"])
 
         # Generate coaching response
-        response_text = await self.llm_service.generate_completion(
-            prompt=prompt,
-            temperature=0.7,
-            max_tokens=600,
+        response_data = await self.llm_service.generate_single_shot_analysis(
+            topic=topic,
+            user_input=prompt,
+            analysis_type="coaching",
         )
+        response_text = response_data.get("response", "")
 
         # Extract suggestions from response
         suggestions = self._extract_suggestions_from_coaching(response_text, topic)
@@ -222,9 +222,11 @@ Suggest 2-3 vision statement examples they could adapt.""",
         ]
 
         # Return up to 5 suggestions
-        return lines[:5] if lines else [
-            "Unable to generate suggestions. Please try with more context."
-        ]
+        return (
+            lines[:5]
+            if lines
+            else ["Unable to generate suggestions. Please try with more context."]
+        )
 
     def _extract_suggestions_from_coaching(
         self,
@@ -245,6 +247,7 @@ Suggest 2-3 vision statement examples they could adapt.""",
 
         # Look for quoted text
         import re
+
         quoted = re.findall(r'"([^"]+)"', response)
         suggestions.extend(quoted[:6])
 
