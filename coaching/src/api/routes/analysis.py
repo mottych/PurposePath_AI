@@ -8,6 +8,7 @@ This module provides REST API endpoints for various analysis types:
 """
 
 from datetime import datetime
+from typing import Any
 
 import structlog
 from coaching.src.api.auth import get_current_user
@@ -46,7 +47,7 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 @router.post(
     "/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_201_CREATED
-)
+)  # type: ignore[misc]
 async def analyze_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -146,7 +147,7 @@ async def analyze_alignment(
 
 @router.post(
     "/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_201_CREATED
-)
+)  # type: ignore[misc]
 async def analyze_strategy(
     request: StrategyAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -253,7 +254,7 @@ async def analyze_strategy(
 # KPI Analysis Routes
 
 
-@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_201_CREATED)  # type: ignore[misc]
 async def analyze_kpis(
     request: KPIAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -361,7 +362,7 @@ async def analyze_kpis(
 
 @router.post(
     "/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_201_CREATED
-)
+)  # type: ignore[misc]
 async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -406,6 +407,7 @@ async def analyze_operations(
         # For now, using a placeholder implementation
 
         # Simulate SWOT analysis
+        findings: dict[str, Any]
         if request.analysis_type == "swot":
             findings = {
                 "strengths": ["Clear vision", "Dedicated team"],
@@ -440,10 +442,18 @@ async def analyze_operations(
             analysis_type=request.analysis_type,
         )
 
+        # Map request type to AnalysisType enum
+        type_mapping = {
+            "swot": AnalysisType.SWOT,
+            "root_cause": AnalysisType.ROOT_CAUSE,
+            "action_plan": AnalysisType.ACTION_PLAN,
+        }
+        analysis_enum = type_mapping.get(request.analysis_type, AnalysisType.SWOT)
+
         # Build response
         return OperationsAnalysisResponse(
             analysis_id=AnalysisRequestId(f"anls_{datetime.utcnow().timestamp()}"),
-            analysis_type=AnalysisType.OPERATIONS,
+            analysis_type=analysis_enum,
             specific_analysis_type=request.analysis_type,
             findings=findings,
             recommendations=[

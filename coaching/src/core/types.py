@@ -17,6 +17,9 @@ ConversationId = NewType("ConversationId", str)
 TemplateId = NewType("TemplateId", str)
 """Unique identifier for a prompt template."""
 
+PromptTemplateId = TemplateId
+"""Alias for TemplateId - used for prompt templates."""
+
 AnalysisRequestId = NewType("AnalysisRequestId", str)
 """Unique identifier for an analysis request."""
 

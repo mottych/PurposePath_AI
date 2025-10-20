@@ -39,7 +39,7 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
-@router.post("/initiate", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/initiate", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)  # type: ignore[misc]
 async def initiate_conversation(
     request: InitiateConversationRequest,
     user: UserContext = Depends(get_current_user),
@@ -108,9 +108,9 @@ async def initiate_conversation(
             tenant_id=conversation.tenant_id,
             topic=conversation.topic,
             status=conversation.status,
-            current_phase=conversation.context.phase,
+            current_phase=conversation.context.current_phase,
             initial_message=initial_prompt,
-            progress=conversation.calculate_progress(),
+            progress=conversation.calculate_progress_percentage(),
             created_at=conversation.created_at,
         )
 
@@ -127,10 +127,10 @@ async def initiate_conversation(
         ) from e
 
 
-@router.post("/{conversation_id}/message", response_model=MessageResponse)
+@router.post("/{conversation_id}/message", response_model=MessageResponse)  # type: ignore[misc]
 async def send_message(
+    request: MessageRequest,
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: MessageRequest = ...,
     user: UserContext = Depends(get_current_user),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
     llm_service: LLMApplicationService = Depends(get_llm_service),
@@ -186,8 +186,8 @@ async def send_message(
         ]
 
         # Generate AI response
-        llm_response = await llm_service.generate_response(
-            messages=llm_messages,
+        llm_response = await llm_service.generate_coaching_response(
+            conversation_history=llm_messages,
             system_prompt=f"You are a professional coach helping with {conversation.topic.value.replace('_', ' ')}.",
             temperature=0.7,
         )
@@ -201,7 +201,7 @@ async def send_message(
         )
 
         # Check if conversation should complete
-        is_complete = conversation.should_complete()
+        is_complete = conversation.context.is_complete()
         if is_complete:
             conversation = await conversation_service.complete_conversation(
                 conversation_id=ConversationId(conversation_id),
@@ -223,8 +223,8 @@ async def send_message(
             conversation_id=conversation.conversation_id,
             ai_response=llm_response.content,
             follow_up_question=None,  # Could be extracted from AI response
-            current_phase=conversation.context.phase,
-            progress=conversation.calculate_progress(),
+            current_phase=conversation.context.current_phase,
+            progress=conversation.calculate_progress_percentage(),
             is_complete=is_complete,
             insights=insights,
             identified_values=[],  # Could be extracted from context
@@ -254,7 +254,7 @@ async def send_message(
         ) from e
 
 
-@router.get("/{conversation_id}", response_model=ConversationDetailResponse)
+@router.get("/{conversation_id}", response_model=ConversationDetailResponse)  # type: ignore[misc]
 async def get_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     user: UserContext = Depends(get_current_user),
@@ -302,8 +302,8 @@ async def get_conversation(
             tenant_id=conversation.tenant_id,
             topic=conversation.topic,
             status=conversation.status,
-            current_phase=conversation.context.phase,
-            progress=conversation.calculate_progress(),
+            current_phase=conversation.context.current_phase,
+            progress=conversation.calculate_progress_percentage(),
             messages=[
                 {
                     "role": msg.role.value,
@@ -339,7 +339,7 @@ async def get_conversation(
         ) from e
 
 
-@router.get("/", response_model=ConversationListResponse)
+@router.get("/", response_model=ConversationListResponse)  # type: ignore[misc]
 async def list_conversations(
     user: UserContext = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
@@ -385,8 +385,8 @@ async def list_conversations(
                 tenant_id=conv.tenant_id,
                 topic=conv.topic,
                 status=conv.status,
-                current_phase=conv.context.phase,
-                progress=conv.calculate_progress(),
+                current_phase=conv.context.current_phase,
+                progress=conv.calculate_progress_percentage(),
                 message_count=len(conv.messages),
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
@@ -416,10 +416,10 @@ async def list_conversations(
         ) from e
 
 
-@router.post("/{conversation_id}/pause", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{conversation_id}/pause", status_code=status.HTTP_204_NO_CONTENT)  # type: ignore[misc]
 async def pause_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: PauseConversationRequest = ...,
+    request: PauseConversationRequest = PauseConversationRequest(),
     user: UserContext = Depends(get_current_user),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
 ) -> None:
@@ -478,10 +478,10 @@ async def pause_conversation(
         ) from e
 
 
-@router.post("/{conversation_id}/complete", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{conversation_id}/complete", status_code=status.HTTP_204_NO_CONTENT)  # type: ignore[misc]
 async def complete_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: CompleteConversationRequest = ...,
+    request: CompleteConversationRequest = CompleteConversationRequest(),
     user: UserContext = Depends(get_current_user),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
 ) -> None:

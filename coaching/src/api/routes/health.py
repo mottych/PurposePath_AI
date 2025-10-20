@@ -14,7 +14,7 @@ from shared.models.schemas import ApiResponse
 router = APIRouter()
 
 
-@router.get("/", response_model=ApiResponse[HealthCheckResponse])
+@router.get("/", response_model=ApiResponse[HealthCheckResponse])  # type: ignore[misc]
 async def health_check() -> ApiResponse[HealthCheckResponse]:
     """Basic health check with ApiResponse envelope."""
     health_data = HealthCheckResponse(
@@ -23,7 +23,7 @@ async def health_check() -> ApiResponse[HealthCheckResponse]:
     return ApiResponse(success=True, data=health_data)
 
 
-@router.get("/ready", response_model=ApiResponse[ReadinessCheckResponse])
+@router.get("/ready", response_model=ApiResponse[ReadinessCheckResponse])  # type: ignore[misc]
 async def readiness_check(
     redis_client: Any = Depends(get_redis_client),
 ) -> ApiResponse[ReadinessCheckResponse]:

@@ -151,7 +151,7 @@ app.include_router(
 
 
 # Root endpoint
-@app.get("/", tags=["root"])
+@app.get("/", tags=["root"], response_model=dict[str, str])  # type: ignore[misc]
 async def root() -> dict[str, str]:
     """API root endpoint.
 
