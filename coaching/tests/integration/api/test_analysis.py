@@ -7,7 +7,7 @@ operational analysis endpoints.
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from coaching.src.api.main_v2 import app
+from coaching.src.api.main import app
 from fastapi.testclient import TestClient
 
 

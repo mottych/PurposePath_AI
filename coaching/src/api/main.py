@@ -1,27 +1,26 @@
-"""Main FastAPI application for the coaching module."""
+"""Main FastAPI application with Phase 7 architecture.
+
+This is the refactored main application that uses:
+- Phase 4-6 application services
+- New API models with Pydantic
+- Auth-based context extraction
+- Comprehensive middleware
+- Structured error handling
+"""
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import structlog
-from coaching.src.api.middleware.logging import LoggingMiddleware
-from coaching.src.api.routes import (
-    analysis,
-    coaching,
-    conversations,
-    health,
-    insights,
-    multitenant_conversations,
-    onboarding,
-    operations,
-    suggestions,
-    website,
+from coaching.src.api.middleware import (
+    ErrorHandlingMiddleware,
+    LoggingMiddleware,
+    RateLimitingMiddleware,
 )
+from coaching.src.api.routes import analysis, conversations, health
 from coaching.src.core.config_multitenant import settings
-from coaching.src.core.exceptions import CoachingError
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 # Configure structured logging
@@ -47,25 +46,66 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan manager."""
+    """Application lifespan manager.
+
+    Handles startup and shutdown events for the application.
+    """
     # Startup
-    logger.info("Starting TrueNorth Coaching API", stage=settings.stage)
+    logger.info(
+        "Starting PurposePath AI Coaching API",
+        stage=settings.stage,
+        version="2.0.0",
+    )
     yield
     # Shutdown
-    logger.info("Shutting down TrueNorth Coaching API")
+    logger.info("Shutting down PurposePath AI Coaching API")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="TrueNorth AI Coaching API",
-    description="AI-powered coaching module for personal and professional development",
-    version="1.0.0",
+    title="PurposePath AI Coaching API",
+    description="""
+    AI-powered coaching platform for personal and professional development.
+
+    This API provides:
+    - **Conversational coaching** - Interactive coaching sessions on core values, purpose, vision, and goals
+    - **Alignment analysis** - Analyze how goals align with purpose and values
+    - **Strategy analysis** - Evaluate strategy effectiveness and get recommendations
+    - **KPI analysis** - Assess KPI effectiveness and get metric recommendations
+    - **Operational analysis** - SWOT, root cause, and action plan analysis
+
+    **Authentication**: All endpoints require Bearer token authentication.
+    User and tenant context is extracted from JWT tokens.
+    """,
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "conversations",
+            "description": "Manage coaching conversations and sessions",
+        },
+        {
+            "name": "analysis",
+            "description": "Business and strategic analysis endpoints",
+        },
+        {
+            "name": "health",
+            "description": "Health check and system status",
+        },
+    ],
     lifespan=lifespan,
+    contact={
+        "name": "PurposePath Support",
+        "url": "https://purposepath.ai/support",
+        "email": "support@purposepath.ai",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
 )
 
-# Add CORS middleware
+# Add CORS middleware (first, so it wraps everything)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -74,57 +114,33 @@ app.add_middleware(
     allow_headers=settings.cors_allow_headers,
 )
 
-# Add custom logging middleware
+# Add rate limiting middleware (before error handling)
+app.add_middleware(
+    RateLimitingMiddleware,
+    default_capacity=100,  # 100 requests burst
+    default_refill_rate=10.0,  # 10 requests/second
+    endpoint_limits={
+        "/api/v1/analysis": (20, 1.0),  # Analysis limited to 20 burst, 1/sec
+        "/api/v1/conversations/initiate": (10, 0.5),  # Initiate limited to 10 burst, 0.5/sec
+    },
+)
+
+# Add error handling middleware
+app.add_middleware(ErrorHandlingMiddleware)
+
+# Add logging middleware (last, so it logs everything including errors)
 app.add_middleware(LoggingMiddleware)
-
-
-# Exception handlers with ApiResponse envelope
-@app.exception_handler(CoachingError)
-async def coaching_exception_handler(request: Request, exc: CoachingError) -> JSONResponse:
-    """Handle coaching-specific exceptions with ApiResponse envelope."""
-    logger.error(
-        "Coaching exception",
-        error=exc.message,
-        error_code=exc.error_code,
-        details=exc.details,
-        path=request.url.path,
-    )
-    return JSONResponse(
-        status_code=400,
-        content={
-            "success": False,
-            "data": None,
-            "message": None,
-            "error": f"{exc.message} (Code: {exc.error_code})",
-        },
-    )
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle general exceptions with ApiResponse envelope."""
-    logger.error(
-        "Unhandled exception",
-        error=str(exc),
-        path=request.url.path,
-        exc_info=True,
-    )
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "data": None,
-            "message": None,
-            "error": "An internal error occurred",
-        },
-    )
 
 
 # Include routers
 app.include_router(
     conversations.router,
-    prefix=f"{settings.api_prefix}/conversations",
-    tags=["conversations"],
+    prefix=f"{settings.api_prefix}",
+)
+
+app.include_router(
+    analysis.router,
+    prefix=f"{settings.api_prefix}",
 )
 
 app.include_router(
@@ -133,61 +149,21 @@ app.include_router(
     tags=["health"],
 )
 
-app.include_router(
-    multitenant_conversations.router,
-    prefix=f"{settings.api_prefix}/multitenant/conversations",
-    tags=["multitenant-conversations"],
-)
-
-app.include_router(
-    insights.router,
-    prefix=f"{settings.api_prefix}/insights",
-    tags=["insights"],
-)
-
-app.include_router(
-    suggestions.router,
-    prefix=f"{settings.api_prefix}/suggestions",
-    tags=["suggestions"],
-)
-
-app.include_router(
-    website.router,
-    prefix=f"{settings.api_prefix}/website",
-    tags=["website"],
-)
-
-app.include_router(
-    coaching.router,
-    prefix=f"{settings.api_prefix}/coaching",
-    tags=["coaching"],
-)
-
-# Analysis routes (without prefix - routes define full paths)
-app.include_router(
-    analysis.router,
-)
-
-# Operations routes (without prefix - routes define full paths)
-app.include_router(
-    operations.router,
-)
-
-# Onboarding routes (without prefix - routes define full paths) - Issue #48 Phase 3
-app.include_router(
-    onboarding.router,
-)
-
 
 # Root endpoint
-@app.get("/")
+@app.get("/", tags=["root"])
 async def root() -> dict[str, str]:
-    """Root endpoint."""
+    """API root endpoint.
+
+    Returns basic API information and links to documentation.
+    """
     return {
-        "name": "TrueNorth AI Coaching API",
-        "version": "1.0.0",
+        "name": "PurposePath AI Coaching API",
+        "version": "2.0.0",
         "stage": settings.stage,
         "docs": "/docs",
+        "redoc": "/redoc",
+        "health": f"{settings.api_prefix}/health",
     }
 
 
@@ -198,8 +174,9 @@ handler = Mangum(app, lifespan="off")
 if __name__ == "__main__":
     import uvicorn
 
+    logger.info("Starting development server")
     uvicorn.run(
-        "src.api.main:app",
+        "coaching.src.api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

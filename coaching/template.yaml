@@ -19,8 +19,8 @@ Parameters:
     Description: Optional ARN of an existing JWT secret in Secrets Manager
   NameSuffix:
     Type: String
-    Default: -v2
-    Description: Suffix to append to resource names to align with account stack
+    Default: ''
+    Description: Suffix to append to resource names
   EnableCustomDomain:
     Type: String
     AllowedValues: ['true','false']
@@ -236,7 +236,7 @@ Resources:
             Method: ANY
             Path: /api/v1/health
         
-        # Conversation endpoints (Phase 7 - conversations_v2.py)
+        # Conversation endpoints (Phase 7 - conversations.py)
         Conversations:
           Type: HttpApi
           Properties:

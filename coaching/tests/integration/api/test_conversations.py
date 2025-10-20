@@ -7,7 +7,7 @@ application services, domain entities, and auth-based context.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from coaching.src.api.main_v2 import app
+from coaching.src.api.main import app
 from coaching.src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
@@ -43,8 +43,8 @@ def mock_conversation():
 class TestConversationInitiation:
     """Test conversation initiation endpoint."""
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    @patch("coaching.src.api.routes.conversations_v2.get_llm_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
+    @patch("coaching.src.api.routes.conversations.get_llm_service")
     def test_initiate_conversation_success(
         self, mock_llm_service_dep, mock_conv_service_dep, client, mock_conversation
     ):
@@ -105,8 +105,8 @@ class TestConversationInitiation:
 class TestMessageSending:
     """Test message sending endpoint."""
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
-    @patch("coaching.src.api.routes.conversations_v2.get_llm_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
+    @patch("coaching.src.api.routes.conversations.get_llm_service")
     def test_send_message_success(
         self, mock_llm_service_dep, mock_conv_service_dep, client, mock_conversation
     ):
@@ -155,7 +155,7 @@ class TestMessageSending:
         assert "ai_response" in data
         assert "progress" in data
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_send_message_conversation_not_found(self, mock_conv_service_dep, client):
         """Test message sending to non-existent conversation."""
         from coaching.src.domain.exceptions.conversation_exceptions import (
@@ -188,7 +188,7 @@ class TestMessageSending:
 class TestConversationRetrieval:
     """Test conversation retrieval endpoint."""
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_get_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation retrieval."""
         # Setup mock
@@ -209,7 +209,7 @@ class TestConversationRetrieval:
         assert "messages" in data
         assert isinstance(data["messages"], list)
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_get_conversation_not_found(self, mock_conv_service_dep, client):
         """Test conversation retrieval when not found."""
         from coaching.src.domain.exceptions.conversation_exceptions import (
@@ -239,7 +239,7 @@ class TestConversationRetrieval:
 class TestConversationListing:
     """Test conversation listing endpoint."""
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_list_conversations_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation listing."""
         # Setup mock
@@ -260,7 +260,7 @@ class TestConversationListing:
         assert isinstance(data["conversations"], list)
         assert data["total"] >= 0
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_list_conversations_with_pagination(
         self, mock_conv_service_dep, client, mock_conversation
     ):
@@ -286,7 +286,7 @@ class TestConversationListing:
 class TestConversationActions:
     """Test conversation action endpoints (pause, complete)."""
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_pause_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation pausing."""
         # Setup mock
@@ -304,7 +304,7 @@ class TestConversationActions:
         # Should return 204 No Content
         assert response.status_code == 204
 
-    @patch("coaching.src.api.routes.conversations_v2.get_conversation_service_v2")
+    @patch("coaching.src.api.routes.conversations.get_conversation_service")
     def test_complete_conversation_success(self, mock_conv_service_dep, client, mock_conversation):
         """Test successful conversation completion."""
         # Setup mock

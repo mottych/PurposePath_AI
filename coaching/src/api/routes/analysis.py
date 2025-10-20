@@ -11,7 +11,7 @@ from datetime import datetime
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies_v2 import (
+from coaching.src.api.dependencies import (
     get_alignment_service,
     get_kpi_service,
     get_strategy_service,

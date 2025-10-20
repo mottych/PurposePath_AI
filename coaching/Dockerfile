@@ -10,6 +10,6 @@ COPY src ./src
 COPY shared ./shared
 
 # Set the Lambda handler
-# Uses main_v2.py with Phase 7 architecture (new routes, middleware, auth)
-CMD ["src.api.main_v2.handler"]
+# Uses main.py with Phase 7 architecture (new routes, middleware, auth)
+CMD ["src.api.main.handler"]
 
