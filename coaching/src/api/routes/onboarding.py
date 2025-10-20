@@ -1,8 +1,9 @@
 """Onboarding AI API routes (Issue #48 Phase 3)."""
 
+from typing import cast
+
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies import get_onboarding_service
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.onboarding import (
     OnboardingCoachingRequest,
@@ -12,6 +13,7 @@ from coaching.src.api.models.onboarding import (
     WebsiteScanRequest,
     WebsiteScanResponse,
 )
+from coaching.src.api.multitenant_dependencies import get_onboarding_service
 from coaching.src.services.onboarding_service import OnboardingService
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -68,8 +70,8 @@ async def get_onboarding_suggestions(
         )
 
         return OnboardingSuggestionResponse(
-            suggestions=result["suggestions"],
-            reasoning=result["reasoning"],
+            suggestions=cast(list[str], result["suggestions"]),
+            reasoning=cast(str, result["reasoning"]),
         )
 
     except ValueError as e:
@@ -141,7 +143,15 @@ async def scan_website(
             user_id=user.user_id,
         )
 
-        return WebsiteScanResponse(**result)
+        # Construct response with proper type casts using alias names
+        return WebsiteScanResponse(
+            businessName=cast(str, result.get("businessName", "")),
+            industry=cast(str, result.get("industry", "")),
+            description=cast(str, result.get("description", "")),
+            products=cast(list[str], result.get("products", [])),
+            targetMarket=cast(str, result.get("targetMarket", "")),
+            suggestedNiche=cast(str, result.get("suggestedNiche", "")),
+        )
 
     except NotImplementedError as e:
         logger.info(
@@ -223,8 +233,8 @@ async def get_onboarding_coaching(
         )
 
         return OnboardingCoachingResponse(
-            response=result["response"],
-            suggestions=result.get("suggestions", []),
+            response=cast(str, result["response"]),
+            suggestions=cast(list[str], result.get("suggestions", [])),
         )
 
     except ValueError as e:
