@@ -6,7 +6,7 @@ the API from abuse and ensure fair resource allocation.
 
 import time
 from collections import defaultdict
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable, Dict
 
 import structlog
 from fastapi import Request, Response, status
