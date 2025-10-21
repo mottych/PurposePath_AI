@@ -99,8 +99,9 @@ class BaseWorkflow(ABC):
     def __init__(self, config: WorkflowConfig):
         """Initialize workflow with configuration."""
         self.config = config
-        self._graph: Optional[StateGraph] = None
-        self._compiled_graph = None
+        # LangGraph prefers TypedDict but supports dict at runtime
+        self._graph: Optional[StateGraph[Dict[str, Any]]] = None  # type: ignore[type-var]
+        self._compiled_graph: Any = None
 
     @property
     @abstractmethod
@@ -115,7 +116,7 @@ class BaseWorkflow(ABC):
         pass
 
     @abstractmethod
-    async def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph[Dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         pass
 
@@ -143,6 +144,7 @@ class BaseWorkflow(ABC):
         state = await self.create_initial_state(initial_input)
 
         # Execute workflow
+        assert self._compiled_graph is not None
         final_state = await self._compiled_graph.ainvoke(state.model_dump())
 
         # Convert back to WorkflowState
@@ -157,6 +159,7 @@ class BaseWorkflow(ABC):
         state.status = WorkflowStatus.RUNNING
 
         # Execute from current state
+        assert self._compiled_graph is not None
         final_state = await self._compiled_graph.ainvoke(state.model_dump())
 
         return WorkflowState(**final_state)

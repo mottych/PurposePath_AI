@@ -81,8 +81,9 @@ class ConversationApplicationService:
                 )
 
             # Create new conversation
+            conv_id = ConversationId(f"conv_{user_id}_{int(datetime.now(timezone.utc).timestamp())}")
             conversation = Conversation(
-                conversation_id=f"conv_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
+                conversation_id=conv_id,
                 user_id=user_id,
                 tenant_id=tenant_id,
                 topic=topic,
@@ -105,7 +106,7 @@ class ConversationApplicationService:
                 topic=topic.value,
             )
 
-            return conversation  # type: ignore[return-value]
+            return conversation
 
         except Exception as e:
             logger.error(
