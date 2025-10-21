@@ -124,7 +124,7 @@ class ConversationService:
 
         # Add AI response
         await self.conversation_repo.add_message(
-            conversation_id, "assistant", ai_response["response"]
+            conversation_id, "assistant", ai_response.response
         )
 
         # Update conversation context
@@ -133,11 +133,11 @@ class ConversationService:
             raise ConversationNotFoundCompatError(conversation_id)
 
         return MessageResponse(
-            ai_response=ai_response["response"],
-            follow_up_question=ai_response.get("follow_up_question"),
-            insights=ai_response.get("insights"),
+            ai_response=ai_response.response,
+            follow_up_question=ai_response.follow_up_question,
+            insights=ai_response.insights,
             progress=conversation.calculate_progress(),
-            is_complete=ai_response.get("is_complete", False),
+            is_complete=ai_response.is_complete,
             phase=conversation.context.phase,
         )
 
@@ -259,5 +259,5 @@ class ConversationService:
         ]
 
         return ConversationListResponse(
-            conversations=summaries, total=len(summaries), page=page, page_size=page_size
+            conversations=summaries, total=len(summaries), page=page
         )

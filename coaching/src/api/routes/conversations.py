@@ -39,7 +39,7 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
-@router.post("/initiate", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)  # type: ignore[misc]
+@router.post("/initiate", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
 async def initiate_conversation(
     request: InitiateConversationRequest,
     user: UserContext = Depends(get_current_user),
@@ -127,7 +127,7 @@ async def initiate_conversation(
         ) from e
 
 
-@router.post("/{conversation_id}/message", response_model=MessageResponse)  # type: ignore[misc]
+@router.post("/{conversation_id}/message", response_model=MessageResponse)
 async def send_message(
     request: MessageRequest,
     conversation_id: str = Path(..., description="Conversation ID"),
@@ -254,7 +254,7 @@ async def send_message(
         ) from e
 
 
-@router.get("/{conversation_id}", response_model=ConversationDetailResponse)  # type: ignore[misc]
+@router.get("/{conversation_id}", response_model=ConversationDetailResponse)
 async def get_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     user: UserContext = Depends(get_current_user),
@@ -339,7 +339,7 @@ async def get_conversation(
         ) from e
 
 
-@router.get("/", response_model=ConversationListResponse)  # type: ignore[misc]
+@router.get("/", response_model=ConversationListResponse)
 async def list_conversations(
     user: UserContext = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
@@ -416,7 +416,7 @@ async def list_conversations(
         ) from e
 
 
-@router.post("/{conversation_id}/pause", status_code=status.HTTP_204_NO_CONTENT)  # type: ignore[misc]
+@router.post("/{conversation_id}/pause", status_code=status.HTTP_204_NO_CONTENT)
 async def pause_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     request: PauseConversationRequest = PauseConversationRequest(),
@@ -478,7 +478,7 @@ async def pause_conversation(
         ) from e
 
 
-@router.post("/{conversation_id}/complete", status_code=status.HTTP_204_NO_CONTENT)  # type: ignore[misc]
+@router.post("/{conversation_id}/complete", status_code=status.HTTP_204_NO_CONTENT)
 async def complete_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     request: CompleteConversationRequest = CompleteConversationRequest(),

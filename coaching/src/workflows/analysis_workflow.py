@@ -64,17 +64,18 @@ class AnalysisWorkflow(BaseWorkflow):
         """Get list of workflow step names."""
         return ["start", "analysis", "completion"]
 
-    async def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 
         # Create graph with our state schema
-        graph = StateGraph(dict)
+        # LangGraph prefers TypedDict but supports dict at runtime
+        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
 
         # Add nodes (workflow steps)
-        graph.add_node("start", self._start_node)
-        graph.add_node("analysis", self._analysis_node)
-        graph.add_node("completion", self._completion_node)
+        graph.add_node("start", self._start_node)  # type: ignore[type-var]
+        graph.add_node("analysis", self._analysis_node)  # type: ignore[type-var]
+        graph.add_node("completion", self._completion_node)  # type: ignore[type-var]
 
         # Add edges (workflow flow)
         graph.add_edge(START, "start")
@@ -124,7 +125,7 @@ class AnalysisWorkflow(BaseWorkflow):
 
         return True
 
-    async def _start_node(self, state: dict) -> dict:
+    async def _start_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Start node - begin analysis."""
         logger.info("Starting analysis workflow", workflow_id=state["workflow_id"])
 
@@ -133,7 +134,7 @@ class AnalysisWorkflow(BaseWorkflow):
 
         return state
 
-    async def _analysis_node(self, state: dict) -> dict:
+    async def _analysis_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Analysis node - perform the analysis using analysis service."""
         logger.info("Processing analysis", workflow_id=state["workflow_id"])
 
@@ -175,7 +176,7 @@ class AnalysisWorkflow(BaseWorkflow):
 
         return state
 
-    async def _completion_node(self, state: dict) -> dict:
+    async def _completion_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Completion node - finalize analysis."""
         logger.info("Completing analysis workflow", workflow_id=state["workflow_id"])
 
