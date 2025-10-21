@@ -636,15 +636,16 @@ Get business metrics and data summary.
 
 ---
 
-### GET /insights/
+### POST /insights/generate
 
-Get AI-generated coaching insights (paginated).
+Generate fresh AI-powered coaching insights using LLM.
 
 **Query Parameters:**
 - `page` - Page number (default: 1)
-- `limit` - Items per page (default: 10)
+- `page_size` - Items per page (default: 20, max: 100)
 - `category` - Filter by category (optional)
 - `priority` - Filter by priority (optional)
+- `status` - Filter by status (optional)
 
 **Response:**
 ```json
@@ -656,31 +657,42 @@ Get AI-generated coaching insights (paginated).
     "description": "Your churn rate increased 15% last month. Consider implementing a customer success program.",
     "category": "operations",
     "priority": "high",
-    "status": "pending",
-    "createdAt": "2025-10-13T12:00:00Z",
-    "actionable": true,
-    "suggestedActions": [
-      "Create customer success playbook",
-      "Schedule quarterly business reviews",
-      "Implement health scoring"
-    ]
+    "status": "active",
+    "created_at": "2025-10-13T12:00:00Z",
+    "updated_at": "2025-10-13T12:00:00Z",
+    "metadata": {
+      "conversation_count": 0,
+      "business_impact": "medium",
+      "effort_required": "medium"
+    }
   }],
   "pagination": {
     "page": 1,
-    "limit": 10,
-    "total": 25,
-    "totalPages": 3
+    "limit": 20,
+    "total": 8,
+    "total_pages": 1
   }
 }
 ```
 
 **Notes:**
-- AI-generated based on business data and patterns
-- `category`: "strategy" | "operations" | "finance" | "marketing" | "leadership"
+- **IMPORTANT:** This endpoint generates NEW insights using LLM (costs money!)
+- Each call fetches fresh business data and runs AI analysis
+- Frontend should persist results to .NET backend after generation
+- For viewing existing insights, call .NET API directly (not this endpoint)
+- `category`: "strategy" | "operations" | "finance" | "marketing" | "leadership" | "technology"
 - `priority`: "low" | "medium" | "high" | "critical"
-- `status`: "pending" | "in_progress" | "completed"
+- `status`: "active" | "dismissed" | "acknowledged"
 
-**Implementation:** `src/services/api.ts` → `ApiClient.getCoachingInsights()`
+**Architecture Flow:**
+1. User clicks "Generate Insights" → Frontend calls this endpoint
+2. Python AI service fetches data from .NET APIs
+3. Python AI service generates insights with Claude Sonnet
+4. Returns insights to frontend
+5. Frontend sends to .NET backend to persist
+6. Subsequent views fetch from .NET (no Python call)
+
+**Implementation:** `src/services/api.ts` → `ApiClient.generateCoachingInsights()`
 
 ---
 

@@ -16,7 +16,6 @@ from coaching.src.models.insights import (
     Insight,
     InsightCategory,
     InsightPriority,
-    InsightsCacheEntry,
     InsightStatus,
     SuggestedAction,
 )
@@ -32,31 +31,32 @@ logger = structlog.get_logger()
 
 
 class InsightsService:
-    """Service for generating and managing coaching insights.
+    """Service for generating coaching insights on-demand.
 
-    Architecture Note:
-    ------------------
-    This service generates insights on-demand when users explicitly request them.
-    The generated insights are then persisted by the .NET backend to DynamoDB.
-    On subsequent page loads, the frontend fetches persisted insights directly
-    from the .NET API, NOT from this Python service.
+    Architecture:
+    -------------
+    This service generates fresh insights when users explicitly request them
+    (via button click). The flow is:
 
-    Cache Behavior:
-    ---------------
-    The in-memory cache is currently unused in the normal flow because:
-    1. Insights are generated only on explicit user request (button click)
-    2. .NET backend persists insights to DynamoDB after generation
-    3. Frontend fetches from .NET API, not from this service
-    4. Cache would only help if user spam-clicks "Generate" button
+    1. User clicks "Generate Insights"
+    2. Frontend calls POST /insights/generate
+    3. Python AI Service:
+       - Fetches real-time business data from .NET APIs
+       - Generates insights using LLM (Claude Sonnet)
+       - Returns structured insights to frontend
+    4. Frontend sends insights to .NET backend
+    5. .NET backend persists to DynamoDB
+    6. On subsequent page loads:
+       - Frontend fetches from .NET API (not Python)
+       - No LLM call, reads persisted insights
 
-    The cache remains in place for potential future use cases:
-    - If insights endpoint is called programmatically/repeatedly
-    - If architecture changes to support polling or webhooks
-    - As a safeguard against accidental duplicate generation requests
-
-    For Lambda deployments, this in-memory cache has limited effectiveness due to
-    container lifecycle. Consider this cache as optional/defensive rather than
-    critical to the architecture.
+    No Caching:
+    -----------
+    This service does NOT cache insights because:
+    - Insights are generated on explicit user request only
+    - .NET backend handles all persistence
+    - Frontend fetches from .NET, not from this service
+    - Each generation should use fresh, real-time data
     """
 
     def __init__(
@@ -72,10 +72,8 @@ class InsightsService:
         self.llm_service = llm_service
         self.tenant_id = tenant_id
         self.user_id = user_id
-        # In-memory cache (currently unused in normal flow - see class docstring)
-        self._cache: dict[str, InsightsCacheEntry] = {}
 
-    async def get_insights(
+    async def generate_insights(
         self,
         page: int = 1,
         page_size: int = 20,
@@ -83,26 +81,45 @@ class InsightsService:
         priority: Optional[str] = None,
         status: Optional[str] = None,
     ) -> PaginatedResponse[InsightResponse]:
-        """Get coaching insights with pagination and filtering.
+        """Generate fresh coaching insights using LLM.
+
+        This method ALWAYS generates new insights from real-time business data.
+        No caching - each call fetches fresh data and calls the LLM.
 
         Steps:
-        1. Check cache for existing insights
-        2. If expired/missing, fetch business data and generate new insights
+        1. Fetch real-time business data from .NET APIs
+        2. Generate insights using LLM
         3. Apply filters (category, priority, status)
         4. Paginate results
-        5. Convert to response format
+        5. Return to frontend (frontend persists via .NET)
         """
         logger.info(
-            "Fetching insights",
+            "Generating fresh insights",
             tenant_id=self.tenant_id,
             page=page,
             page_size=page_size,
             filters={"category": category, "priority": priority, "status": status},
         )
 
-        # Get or generate insights
         try:
-            insights_list = await self._get_or_generate_insights()
+            # Fetch fresh business data
+            business_data = await self._fetch_business_data()
+
+            # Check if we have sufficient data
+            if not business_data.has_sufficient_data():
+                logger.warning(
+                    "Insufficient data for insights",
+                    tenant_id=self.tenant_id,
+                    data_summary=business_data.get_data_source_summary(),
+                )
+                return PaginatedResponse(
+                    success=False,
+                    data=[],
+                    pagination=PaginationMeta(page=page, limit=page_size, total=0, total_pages=0),
+                )
+
+            # Generate insights with LLM
+            insights_list = await self._generate_insights_with_llm(business_data)
 
             # Apply filters
             filtered_insights = self._apply_filters(
@@ -123,7 +140,7 @@ class InsightsService:
             total_pages = (total + page_size - 1) // page_size if total > 0 else 0
 
             logger.info(
-                "Insights fetched successfully",
+                "Insights generated successfully",
                 total=total,
                 returned=len(insight_responses),
                 page=page,
@@ -141,8 +158,7 @@ class InsightsService:
             )
 
         except Exception as e:
-            logger.error("Error fetching insights", error=str(e), tenant_id=self.tenant_id)
-            # Return empty on error rather than failing
+            logger.error("Error generating insights", error=str(e), tenant_id=self.tenant_id)
             return PaginatedResponse(
                 success=False,
                 data=[],
@@ -168,11 +184,26 @@ class InsightsService:
         logger.info(f"Insight {insight_id} acknowledged by user {user_id}")
 
     async def get_insights_summary(self, user_id: str) -> InsightsSummaryResponse:
-        """Get insights summary with counts by category and priority."""
-        logger.info("Fetching insights summary", user_id=user_id, tenant_id=self.tenant_id)
+        """Get insights summary with counts by category and priority.
+
+        Note: This generates fresh insights. For viewing persisted insights,
+        frontend should call .NET backend directly.
+        """
+        logger.info("Generating insights summary", user_id=user_id, tenant_id=self.tenant_id)
 
         try:
-            insights_list = await self._get_or_generate_insights()
+            # Fetch and generate fresh insights
+            business_data = await self._fetch_business_data()
+            if not business_data.has_sufficient_data():
+                return InsightsSummaryResponse(
+                    total_insights=0,
+                    by_category={},
+                    by_priority={},
+                    by_status={},
+                    recent_activity=[],
+                )
+
+            insights_list = await self._generate_insights_with_llm(business_data)
 
             # Count by category
             by_category: dict[str, int] = {}
@@ -210,42 +241,6 @@ class InsightsService:
                 recent_activity=[],
             )
 
-    async def _get_or_generate_insights(self) -> list[Insight]:
-        """Get insights from cache or generate new ones."""
-        cache_key = f"insights:{self.tenant_id}"
-
-        # Check cache
-        if cache_key in self._cache:
-            cache_entry = self._cache[cache_key]
-            if not cache_entry.is_expired():
-                logger.info("Returning cached insights", tenant_id=self.tenant_id)
-                return cache_entry.insights
-
-        # Generate new insights
-        logger.info("Generating new insights", tenant_id=self.tenant_id)
-        business_data = await self._fetch_business_data()
-
-        if not business_data.has_sufficient_data():
-            logger.warning(
-                "Insufficient data for insights",
-                tenant_id=self.tenant_id,
-                data_summary=business_data.get_data_source_summary(),
-            )
-            return []
-
-        insights = await self._generate_insights_with_llm(business_data)
-
-        # Cache for 24 hours
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        cache_entry = InsightsCacheEntry(
-            tenant_id=self.tenant_id,
-            insights=insights,
-            expires_at=expires_at,
-            cache_key=cache_key,
-        )
-        self._cache[cache_key] = cache_entry
-
-        return insights
 
     async def _fetch_business_data(self) -> BusinessDataContext:
         """Fetch business data from all .NET API endpoints in parallel."""

@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import structlog
 from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_insights_service  # type: ignore[attr-defined]
+from coaching.src.api.dependencies import get_insights_service
 from coaching.src.models.responses import (
     InsightActionResponse,
     InsightResponse,
@@ -20,8 +20,8 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-@router.get("/", response_model=PaginatedResponse[InsightResponse])
-async def get_coaching_insights(
+@router.post("/generate", response_model=PaginatedResponse[InsightResponse])
+async def generate_coaching_insights(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     category: Optional[str] = Query(None, description="Filter by category"),
@@ -30,9 +30,14 @@ async def get_coaching_insights(
     context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
 ) -> PaginatedResponse[InsightResponse]:
-    """Get coaching insights and recommendations for the user."""
+    """Generate fresh coaching insights using AI/LLM.
+
+    This endpoint generates NEW insights from real-time business data.
+    The frontend should persist results via .NET backend.
+    For viewing persisted insights, call .NET API directly.
+    """
     logger.info(
-        "Fetching coaching insights",
+        "Generating coaching insights",
         user_id=context.user_id,
         tenant_id=context.tenant_id,
         page=page,
@@ -43,13 +48,13 @@ async def get_coaching_insights(
     )
 
     try:
-        # Check permission to read insights
+        # Check permission to generate insights
         if Permission.READ_BUSINESS_DATA not in context.permissions:
             raise HTTPException(
-                status_code=403, detail="Permission required to read coaching insights"
+                status_code=403, detail="Permission required to generate coaching insights"
             )
 
-        response = await service.get_insights(
+        response = await service.generate_insights(
             page=page,
             page_size=page_size,
             category=category,
@@ -60,8 +65,8 @@ async def get_coaching_insights(
         return response
 
     except Exception as e:
-        logger.error(f"Error getting coaching insights: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve coaching insights")
+        logger.error(f"Error generating coaching insights: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate coaching insights")
 
 
 @router.get("/categories", response_model=ApiResponse[List[str]])
