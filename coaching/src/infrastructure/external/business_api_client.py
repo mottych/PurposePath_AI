@@ -292,6 +292,230 @@ class BusinessApiClient:
     #   - GET /performance/score
     #   - GET /team/alignment
 
+    async def get_goal_stats(self, tenant_id: str) -> dict[str, Any]:
+        """
+        Get goal statistics from Traction Service.
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            Goal statistics:
+            - total_goals, completion_rate
+            - at_risk, behind_schedule
+            - by_horizon, by_status
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching goal stats", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/goals/stats",
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            stats = data.get("data", {})
+
+            logger.debug(
+                "Goal stats retrieved",
+                tenant_id=tenant_id,
+                status_code=response.status_code,
+            )
+
+            return stats  # type: ignore[no-any-return]
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching goal stats",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching goal stats",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_performance_score(self, tenant_id: str) -> dict[str, Any]:
+        """
+        Get performance score from Traction Service.
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            Performance score data:
+            - overall_score
+            - component_scores (goals, strategies, kpis, actions)
+            - trend, last_updated
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching performance score", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/performance/score",
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            score = data.get("data", {})
+
+            logger.debug(
+                "Performance score retrieved",
+                tenant_id=tenant_id,
+                status_code=response.status_code,
+            )
+
+            return score  # type: ignore[no-any-return]
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching performance score",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching performance score",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_operations_actions(self, tenant_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        """
+        Get recent operations actions from Traction Service.
+
+        Args:
+            tenant_id: Tenant identifier
+            limit: Maximum number of actions to retrieve
+
+        Returns:
+            List of recent actions:
+            - id, title, description, status
+            - priority, due_date, assigned_to
+            - created_at, updated_at
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching operations actions", tenant_id=tenant_id, limit=limit)
+
+            response = await self.client.get(
+                "/api/operations/actions",
+                headers=self._get_headers(),
+                params={"limit": limit},
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            actions = data.get("data", [])
+
+            if not isinstance(actions, list):
+                actions = []
+
+            logger.debug(
+                "Operations actions retrieved",
+                tenant_id=tenant_id,
+                count=len(actions),
+                status_code=response.status_code,
+            )
+
+            return actions
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching operations actions",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching operations actions",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_operations_issues(self, tenant_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        """
+        Get open operations issues from Traction Service.
+
+        Args:
+            tenant_id: Tenant identifier
+            limit: Maximum number of issues to retrieve
+
+        Returns:
+            List of open issues:
+            - id, title, description, status
+            - business_impact, priority
+            - assigned_to, created_at
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching operations issues", tenant_id=tenant_id, limit=limit)
+
+            response = await self.client.get(
+                "/api/operations/issues",
+                headers=self._get_headers(),
+                params={"limit": limit, "status": "open"},
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            issues = data.get("data", [])
+
+            if not isinstance(issues, list):
+                issues = []
+
+            logger.debug(
+                "Operations issues retrieved",
+                tenant_id=tenant_id,
+                count=len(issues),
+                status_code=response.status_code,
+            )
+
+            return issues
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching operations issues",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching operations issues",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
     async def close(self) -> None:
         """
         Close the HTTP client and cleanup resources.
