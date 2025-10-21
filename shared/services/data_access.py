@@ -97,8 +97,9 @@ class TenantRepository(BaseRepository[Tenant]):
         item = self._model_to_item(tenant)
 
         try:
+            # Cast to Any for boto3 compatibility
             self.table.put_item(
-                Item=item,
+                Item=cast(dict[str, Any], item),
                 ConditionExpression=Attr('tenant_id').not_exists()
             )
             logger.info("Tenant created", tenant_id=tenant.tenant_id, name=tenant.name)
@@ -113,7 +114,8 @@ class TenantRepository(BaseRepository[Tenant]):
         try:
             response = self.table.get_item(Key={'tenant_id': tenant_id})
             if 'Item' in response:
-                return self._item_to_model(response['Item'])
+                # Cast from boto3's Any to our type
+                return self._item_to_model(cast(DynamoDBItem, response['Item']))
             return None
         except ClientError as e:
             logger.error("Failed to get tenant", tenant_id=tenant_id, error=str(e))
@@ -127,8 +129,10 @@ class TenantRepository(BaseRepository[Tenant]):
                 IndexName='domain-index',
                 KeyConditionExpression=Key('domain').eq(domain)
             )
-            if response['Items']:
-                return self._item_to_model(response['Items'][0])
+            items = response.get('Items', [])
+            if items:
+                # Cast from boto3's Any to our type
+                return self._item_to_model(cast(DynamoDBItem, items[0]))
             return None
         except ClientError as e:
             logger.error("Failed to get tenant by domain", domain=domain, error=str(e))
@@ -174,7 +178,7 @@ class UserRepository(BaseRepository[User]):
 
         try:
             self.table.put_item(
-                Item=item,
+                Item=cast(dict[str, Any], item),
                 ConditionExpression=Attr('user_id').not_exists()
             )
             logger.info("User created", user_id=user.user_id, tenant_id=context.tenant_id)
@@ -191,7 +195,7 @@ class UserRepository(BaseRepository[User]):
             item = self._model_to_item(user)
 
             self.table.put_item(
-                Item=item,
+                Item=cast(dict[str, Any], item),
                 ConditionExpression=Attr('user_id').not_exists()
             )
 
@@ -219,7 +223,7 @@ class UserRepository(BaseRepository[User]):
         try:
             response = self.table.get_item(Key={'user_id': user_id})
             if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, response['Item'])
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
                 return self._item_to_model(item)
             return None
         except ClientError as e:
@@ -231,7 +235,7 @@ class UserRepository(BaseRepository[User]):
         try:
             response = self.table.get_item(Key={'user_id': user_id})
             if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, response['Item'])
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
                 user = self._item_to_model(item)
                 logger.info("User found", user_id=user.user_id)
                 return {
@@ -263,7 +267,7 @@ class UserRepository(BaseRepository[User]):
                 FilterExpression=Attr('tenant_id').eq(context.tenant_id)
             )
             if response['Items']:
-                return self._item_to_model(response['Items'][0])
+                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
             return None
         except ClientError as e:
             logger.error("Failed to get user by email", email=email, error=str(e))
@@ -276,7 +280,7 @@ class UserRepository(BaseRepository[User]):
                 IndexName='tenant-index',
                 KeyConditionExpression=Key('tenant_id').eq(context.tenant_id)
             )
-            return [self._item_to_model(item) for item in response.get('Items', [])]
+            return [self._item_to_model(cast(DynamoDBItem, item)) for item in response.get('Items', [])]
         except ClientError as e:
             logger.error("Failed to list users", tenant_id=context.tenant_id, error=str(e))
             raise
@@ -342,7 +346,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
         try:
             response = self.table.get_item(Key={'tenant_id': self.context.tenant_id})
             if 'Item' in response:
-                return self._item_to_model(response['Item'])
+                return self._item_to_model(cast(DynamoDBItem, response['Item']))
             return None
         except ClientError as e:
             logger.error("Failed to get business data", tenant_id=self.context.tenant_id, error=str(e))
@@ -361,7 +365,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
         try:
             response = self.table.get_item(Key={'tenant_id': self.context.tenant_id})
             if 'Item' in response:
-                business_data = self._item_to_model(response['Item'])
+                business_data = self._item_to_model(cast(DynamoDBItem, response['Item']))
                 logger.info("Business data found", tenant_id=self.context.tenant_id, version=business_data.version)
                 return {
                     "success": True,
@@ -391,7 +395,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
         item = self._model_to_item(business_data)
 
         try:
-            self.table.put_item(Item=item)
+            self.table.put_item(Item=cast(dict[str, Any], item))
             logger.info("Business data updated", tenant_id=self.context.tenant_id)
             return business_data
         except ClientError as e:
@@ -526,7 +530,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
                 session_data["tenant_id"] = self.context.tenant_id
 
             self.table.put_item(
-                Item=session_data,
+                Item=cast(dict[str, Any], session_data),
                 ConditionExpression=Attr('session_id').not_exists()
             )
             logger.info("Coaching session created", session_id=session_data["session_id"])
@@ -543,7 +547,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             if 'Item' in response:
                 # If we have context, ensure tenant isolation
                 if self.context:
-                    item = self._ensure_tenant_isolation(self.context, response['Item'])
+                    item = self._ensure_tenant_isolation(self.context, cast(DynamoDBItem, response['Item']))
                     return cast(CoachingSessionDict, item)
                 return cast(CoachingSessionDict, response['Item'])
             return None
@@ -556,7 +560,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
         try:
             response = self.table.get_item(Key={'session_id': session_id})
             if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, response['Item'])
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
                 session = self._item_to_model(item)
                 # Additional check for user access (unless admin)
                 if session.user_id != context.user_id and not self._can_view_all_sessions(context):
@@ -577,7 +581,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
                 FilterExpression=Attr('status').eq('active') & Attr('tenant_id').eq(context.tenant_id)
             )
             if response['Items']:
-                return self._item_to_model(response['Items'][0])
+                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
             return None
         except ClientError as e:
             logger.error("Failed to get active session", user_id=context.user_id, topic=topic, error=str(e))
@@ -707,7 +711,7 @@ class InvitationRepository(BaseRepository[Invitation]):
 
         try:
             self.table.put_item(
-                Item=item,
+                Item=cast(dict[str, Any], item),
                 ConditionExpression=Attr('invitation_id').not_exists()
             )
             logger.info("Invitation created", invitation_id=invitation.invitation_id, email=invitation.email)
@@ -722,7 +726,7 @@ class InvitationRepository(BaseRepository[Invitation]):
         try:
             response = self.table.get_item(Key={'invitation_id': invitation_id})
             if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, response['Item'])
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
                 return self._item_to_model(item)
             return None
         except ClientError as e:
@@ -739,7 +743,7 @@ class InvitationRepository(BaseRepository[Invitation]):
                 filter_expr = And(filter_expr, status_condition)
 
             response = self.table.scan(FilterExpression=filter_expr)
-            return [self._item_to_model(item) for item in response.get('Items', [])]
+            return [self._item_to_model(cast(DynamoDBItem, item)) for item in response.get('Items', [])]
         except ClientError as e:
             logger.error("Failed to list invitations", tenant_id=context.tenant_id, error=str(e))
             raise
@@ -792,7 +796,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
 
         try:
             self.table.put_item(
-                Item=item,
+                Item=cast(dict[str, Any], item),
                 ConditionExpression=Attr('subscription_id').not_exists()
             )
             logger.info("Subscription created", subscription_id=subscription.subscription_id, tenant_id=context.tenant_id)
@@ -811,7 +815,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
                 FilterExpression=Attr('status').eq('active')
             )
             if response['Items']:
-                return self._item_to_model(response['Items'][0])
+                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
             return None
         except ClientError as e:
             logger.error("Failed to get subscription", tenant_id=context.tenant_id, error=str(e))
@@ -857,7 +861,7 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
         item = self._model_to_item(preferences)
 
         try:
-            self.table.put_item(Item=item)
+            self.table.put_item(Item=cast(dict[str, Any], item))
             logger.info("User preferences updated", user_id=context.user_id, tenant_id=context.tenant_id)
             return preferences
         except ClientError as e:
@@ -880,7 +884,7 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
         try:
             response = self.table.get_item(Key={'user_id': user_id})
             if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, response['Item'])
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
                 return self._item_to_model(item)
             return None
         except ClientError as e:

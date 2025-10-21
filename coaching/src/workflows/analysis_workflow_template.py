@@ -39,17 +39,18 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph for single-shot analysis."""
         # Create StateGraph with our enhanced state type
-        graph = StateGraph(dict)
+        # LangGraph prefers TypedDict but supports dict at runtime
+        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
 
         # Add nodes for each step in the analysis
-        graph.add_node("input_validation", self.input_validation_node)
-        graph.add_node("analysis_execution", self.analysis_execution_node)
-        graph.add_node("insight_extraction", self.insight_extraction_node)
-        graph.add_node("response_formatting", self.response_formatting_node)
-        graph.add_node("completion", self.completion_node)
+        graph.add_node("input_validation", self.input_validation_node)  # type: ignore[type-var]
+        graph.add_node("analysis_execution", self.analysis_execution_node)  # type: ignore[type-var]
+        graph.add_node("insight_extraction", self.insight_extraction_node)  # type: ignore[type-var]
+        graph.add_node("response_formatting", self.response_formatting_node)  # type: ignore[type-var]
+        graph.add_node("completion", self.completion_node)  # type: ignore[type-var]
 
         # Define linear flow for single-shot analysis
         graph.set_entry_point("input_validation")
@@ -191,7 +192,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         try:
             # Execute analysis
-            analysis_result = await provider.analyze_text(
+            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
                 text=content_to_analyze,
                 analysis_prompt=analysis_prompt,
                 **state.get("model_config", {}),
@@ -436,7 +437,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
     def _identify_key_themes(self, insights: List[Dict[str, Any]]) -> List[str]:
         """Identify key themes from insights."""
         themes = []
-        categories = {}
+        categories: dict[str, list[str]] = {}
 
         for insight in insights:
             category = insight.get("category", "general")
@@ -469,7 +470,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         response = response_templates.get(analysis_type, response_templates["general"])
 
         # Group insights by category
-        categories = {}
+        categories: dict[str, list[str]] = {}
         for insight in insights:
             category = insight.get("category", "general")
             if category not in categories:

@@ -2,14 +2,17 @@
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, TypedDict, cast
+from typing import Any, Dict, List, Optional, TypedDict, cast
 
 import structlog
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Attr, ConditionBase, Key
 from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
 from coaching.src.core.exceptions import ConversationNotFoundCompatError
 from coaching.src.models.conversation import Conversation, ConversationContext, Message
 from shared.types.common import JSONDict
+
+from mypy_boto3_dynamodb import DynamoDBServiceResource
+from mypy_boto3_dynamodb.service_resource import Table
 
 logger = structlog.get_logger()
 
@@ -20,7 +23,6 @@ MessageMetadataDict = Dict[str, str]
 BusinessContextDict = JSONDict
 UserPreferencesDict = JSONDict
 ProgressMarkersDict = JSONDict
-DynamoDBResource = object  # boto3.resources.base.ServiceResource
 
 
 class MessageItemDict(TypedDict):
@@ -71,7 +73,7 @@ class ConversationRepository:
     """Repository for managing conversation data in DynamoDB."""
 
     def __init__(
-        self, dynamodb_resource: DynamoDBResource, table_name: str, tenant_id: Optional[str] = None
+        self, dynamodb_resource: DynamoDBServiceResource, table_name: str, tenant_id: Optional[str] = None
     ):
         """Initialize conversation repository.
 
@@ -80,8 +82,8 @@ class ConversationRepository:
             table_name: DynamoDB table name
             tenant_id: Optional tenant ID for multitenant support
         """
-        self.dynamodb = dynamodb_resource  # type: ignore[misc] # AWS SDK boundary
-        self.table = self.dynamodb.Table(table_name)  # type: ignore[misc] # AWS SDK boundary
+        self.dynamodb: DynamoDBServiceResource = dynamodb_resource
+        self.table: Table = self.dynamodb.Table(table_name)
         self.tenant_id = tenant_id
 
     async def create(
@@ -109,13 +111,13 @@ class ConversationRepository:
 
         # Create conversation context with multitenant data
         conversation_context = ConversationContext()
-        if context:  # type: ignore[misc] # Input dict boundary
+        if context:
             # Set multitenant context fields from provided context with proper casting
-            conversation_context.tenant_id = cast(Optional[str], context.get("tenant_id"))  # type: ignore[misc] # Input dict boundary
-            conversation_context.session_id = cast(Optional[str], context.get("session_id"))  # type: ignore[misc] # Input dict boundary
-            conversation_context.business_context = cast(BusinessContextDict, context.get("business_context", {}))  # type: ignore[misc] # Input dict boundary
-            conversation_context.user_preferences = cast(UserPreferencesDict, context.get("user_preferences", {}))  # type: ignore[misc] # Input dict boundary
-            conversation_context.language = cast(str, context.get("language", "en"))  # type: ignore[misc] # Input dict boundary
+            conversation_context.tenant_id = cast(Optional[str], context.get("tenant_id"))
+            conversation_context.session_id = cast(Optional[str], context.get("session_id"))
+            conversation_context.business_context = cast(BusinessContextDict, context.get("business_context", {}))
+            conversation_context.user_preferences = cast(UserPreferencesDict, context.get("user_preferences", {}))
+            conversation_context.language = cast(str, context.get("language", "en"))
 
         # Create conversation object
         conversation = Conversation(
@@ -135,7 +137,7 @@ class ConversationRepository:
 
         # Save to DynamoDB
         item = self._conversation_to_item(conversation)
-        self.table.put_item(Item=item)  # type: ignore[misc] # AWS DynamoDB SDK
+        self.table.put_item(Item=cast(dict[str, Any], item))
 
         logger.info(
             "Conversation created", conversation_id=conversation_id, user_id=user_id, topic=topic
@@ -154,7 +156,7 @@ class ConversationRepository:
         """
         try:
             # Query with conversation_id and latest timestamp
-            response = self.table.query(  # type: ignore[misc] # AWS SDK boundary
+            response = self.table.query(
                 KeyConditionExpression=Key("conversation_id").eq(conversation_id),
                 ScanIndexForward=False,  # Get latest first
                 Limit=1,
@@ -184,7 +186,7 @@ class ConversationRepository:
         item = self._conversation_to_item(conversation)
 
         # Save to DynamoDB
-        self.table.put_item(Item=item)  # type: ignore[misc] # AWS DynamoDB SDK
+        self.table.put_item(Item=cast(dict[str, Any], item))
 
         logger.info("Conversation updated", conversation_id=conversation.conversation_id)
 
@@ -236,8 +238,8 @@ class ConversationRepository:
             List of conversations
         """
         try:
-            # Query using GSI
-            kwargs: Dict[str, object] = {  # DynamoDB query parameters
+            # Build query parameters
+            kwargs: dict[str, Any] = {
                 "IndexName": "user-conversations-index",
                 "KeyConditionExpression": Key("user_id").eq(user_id),
                 "ScanIndexForward": False,  # Most recent first
@@ -245,7 +247,7 @@ class ConversationRepository:
             }
 
             # Build filter expressions
-            filter_expressions: List[object] = []  # DynamoDB condition expressions
+            filter_expressions: List[ConditionBase] = []
 
             if status:
                 filter_expressions.append(Attr("status").eq(status))
@@ -262,12 +264,12 @@ class ConversationRepository:
                     kwargs["FilterExpression"] = filter_expressions[0]
                 else:
                     # Combine multiple filters with AND
-                    combined_filter: object = filter_expressions[0]  # DynamoDB condition expression
+                    combined_filter: ConditionBase = filter_expressions[0]
                     for expr in filter_expressions[1:]:
-                        combined_filter = combined_filter & expr  # type: ignore[misc] # DynamoDB condition boundary
+                        combined_filter = combined_filter & expr
                     kwargs["FilterExpression"] = combined_filter
 
-            response = self.table.query(**kwargs)  # type: ignore[misc] # AWS DynamoDB SDK
+            response = self.table.query(**kwargs)
 
             conversations: List[Conversation] = []
             items = cast(List[ConversationItemDict], response["Items"])
@@ -304,36 +306,36 @@ class ConversationRepository:
         Returns:
             DynamoDB item
         """
-        return {  # type: ignore[misc] # DynamoDB serialization boundary
+        return {
             "conversation_id": conversation.conversation_id,
             "timestamp": conversation.updated_at.isoformat(),
             "user_id": conversation.user_id,
             "topic": conversation.topic,
             "status": conversation.status.value,
-            "messages": [  # type: ignore[misc] # DynamoDB serialization boundary
+            "messages": [
                 {
                     "role": msg.role.value,
                     "content": msg.content,
                     "timestamp": msg.timestamp.isoformat(),
-                    "metadata": msg.metadata,  # type: ignore[misc] # DynamoDB serialization boundary
+                    "metadata": msg.metadata,
                 }
                 for msg in conversation.messages
             ],
-            "context": {  # type: ignore[misc] # DynamoDB serialization boundary
+            "context": {
                 "phase": conversation.context.phase.value,
                 "identified_values": conversation.context.identified_values,
                 "key_insights": conversation.context.key_insights,
-                "progress_markers": conversation.context.progress_markers,  # type: ignore[misc] # DynamoDB serialization boundary
+                "progress_markers": conversation.context.progress_markers,
                 "categories_explored": conversation.context.categories_explored,
                 "response_count": conversation.context.response_count,
                 "deepening_count": conversation.context.deepening_count,
                 "tenant_id": conversation.context.tenant_id,
                 "session_id": conversation.context.session_id,
-                "business_context": conversation.context.business_context,  # type: ignore[misc] # DynamoDB serialization boundary
-                "user_preferences": conversation.context.user_preferences,  # type: ignore[misc] # DynamoDB serialization boundary
+                "business_context": conversation.context.business_context,
+                "user_preferences": conversation.context.user_preferences,
                 "language": conversation.context.language,
             },
-            "llm_config": conversation.llm_config,  # type: ignore[misc] # DynamoDB serialization boundary
+            "llm_config": conversation.llm_config,
             "created_at": conversation.created_at.isoformat(),
             "updated_at": conversation.updated_at.isoformat(),
             "completed_at": (
@@ -396,21 +398,21 @@ class ConversationRepository:
                 updated_at=datetime.fromisoformat(item["updated_at"]),
                 completed_at=(
                     datetime.fromisoformat(item["completed_at"])
-                    if item["completed_at"]  # type: ignore[misc] # DynamoDB item boundary
+                    if item["completed_at"]
                     else None
                 ),
                 paused_at=(
                     datetime.fromisoformat(item["paused_at"])
-                    if item["paused_at"]  # type: ignore[misc] # DynamoDB item boundary
+                    if item["paused_at"]
                     else None
                 ),
-                ttl=item.get("ttl"),  # type: ignore[misc] # DynamoDB item boundary
+                ttl=item.get("ttl"),
             )
 
             return conversation
 
         except Exception as e:
             logger.error(
-                "Error parsing conversation item", error=str(e), item_id=item.get("conversation_id")  # type: ignore[misc] # DynamoDB item boundary
+                "Error parsing conversation item", error=str(e), item_id=item.get("conversation_id")
             )
             return None

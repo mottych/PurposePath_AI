@@ -28,7 +28,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     HTTP status codes.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         """Process request and handle any exceptions.
 
         Args:
@@ -45,8 +45,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         except ConversationNotFound as e:
             logger.warning(
                 "Conversation not found",
-                conversation_id=str(e.conversation_id),
-                tenant_id=str(e.tenant_id),
+                conversation_id=str(e.context.get("conversation_id")),
+                tenant_id=str(e.context.get("tenant_id")),
                 path=request.url.path,
             )
             return JSONResponse(
@@ -54,15 +54,15 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 content={
                     "error": "conversation_not_found",
                     "message": str(e),
-                    "conversation_id": e.conversation_id,
+                    "conversation_id": e.context.get("conversation_id"),
                 },
             )
 
         except ConversationNotActive as e:
             logger.warning(
                 "Conversation not active",
-                conversation_id=str(e.conversation_id),
-                current_status=e.current_status.value,
+                conversation_id=str(e.context.get("conversation_id")),
+                current_status=e.context.get("current_status"),
                 path=request.url.path,
             )
             return JSONResponse(
@@ -70,8 +70,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 content={
                     "error": "conversation_not_active",
                     "message": str(e),
-                    "conversation_id": e.conversation_id,
-                    "current_status": e.current_status.value,
+                    "conversation_id": e.context.get("conversation_id"),
+                    "current_status": e.context.get("current_status"),
                 },
             )
 

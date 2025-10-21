@@ -6,6 +6,8 @@ that integrate with the domain layer (Phase 1-3) and implement business logic.
 These dependencies replace the old service dependencies with the new architecture.
 """
 
+from typing import Any
+
 import structlog
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
@@ -16,10 +18,12 @@ from coaching.src.application.conversation.conversation_service import (
 )
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.config_multitenant import settings
+from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
 from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from mypy_boto3_dynamodb import DynamoDBServiceResource
 from shared.services.aws_helpers import (
     get_bedrock_client,
     get_dynamodb_resource,
@@ -34,7 +38,7 @@ _s3_client = None
 _bedrock_client = None
 
 
-def get_dynamodb_resource_singleton():
+def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
     """Get DynamoDB resource singleton."""
     global _dynamodb_resource
     if _dynamodb_resource is None:
@@ -42,7 +46,7 @@ def get_dynamodb_resource_singleton():
     return _dynamodb_resource
 
 
-def get_s3_client_singleton():
+def get_s3_client_singleton() -> Any:
     """Get S3 client singleton."""
     global _s3_client
     if _s3_client is None:
@@ -50,7 +54,7 @@ def get_s3_client_singleton():
     return _s3_client
 
 
-def get_bedrock_client_singleton():
+def get_bedrock_client_singleton() -> Any:
     """Get Bedrock client singleton."""
     global _bedrock_client
     if _bedrock_client is None:
@@ -100,15 +104,14 @@ async def get_llm_service() -> LLMApplicationService:
         LLMApplicationService instance
     """
     bedrock_client = get_bedrock_client_singleton()
-
-    return LLMApplicationService(
+    
+    # Create Bedrock provider implementation
+    bedrock_provider = BedrockLLMProvider(
         bedrock_client=bedrock_client,
-        model_id=settings.bedrock_model_id,
-        region=settings.bedrock_region,
-        default_temperature=settings.llm_temperature,
-        default_max_tokens=settings.llm_max_tokens,
-        timeout_seconds=settings.llm_timeout_seconds,
+        region=settings.bedrock_region
     )
+
+    return LLMApplicationService(llm_provider=bedrock_provider)
 
 
 async def get_conversation_service() -> ConversationApplicationService:
@@ -121,14 +124,8 @@ async def get_conversation_service() -> ConversationApplicationService:
         ConversationApplicationService instance
     """
     conversation_repo = await get_conversation_repository()
-    llm_service = await get_llm_service()
-    prompt_repo = await get_prompt_repository()
 
-    return ConversationApplicationService(
-        conversation_repository=conversation_repo,
-        llm_service=llm_service,
-        prompt_repository=prompt_repo,
-    )
+    return ConversationApplicationService(conversation_repository=conversation_repo)
 
 
 # Analysis Service dependencies

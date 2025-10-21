@@ -20,23 +20,20 @@ Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon 
 ### Deploy
 
 ```powershell
-# Deploy coaching service
-.\deploy.ps1 -Stage dev -HostedZoneId Z09156212RNBEXAMPLE
+# Deploy coaching service to dev
+.\deploy.ps1 -Stage dev
 ```
 
 ## Architecture
 
 - **Coaching Service**: AI coaching conversations, insights, business data analysis
 - **Shared Types**: Strongly-typed definitions for consistency across services
-- **Custom Domain**: `api.{stage}.purposepath.app`
+- **Custom Domain**: `api.dev.purposepath.app`
 - **API Paths**:
   - `/account/api/v1/*` → Account Service
   - `/coaching/api/v1/*` → Coaching Service
   - `/traction/api/v1/*` → Traction Service
 
-## Infrastructure
-
-- **3 Lambda Functions** (Account, Coaching, Traction)
 ## Infrastructure
 
 - **AWS Lambda** (Serverless Python functions)
@@ -58,9 +55,9 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
 
 #### Main Branches
 
-- **`master`** - Production environment (`ai-coaching.purposepath.app`)
-- **`staging`** - Staging environment (`ai-coaching.staging.purposepath.app`)  
-- **`dev`** - Development environment (`ai-coaching.dev.purposepath.app`)
+- **`master`** - Production environment
+- **`staging`** - Staging environment
+- **`dev`** - Development environment (`api.dev.purposepath.app/coaching`)
 
 #### Feature Development Process
 
@@ -114,9 +111,7 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
 
 ### Environment Endpoints
 
-- **Development**: `https://ai-coaching.dev.purposepath.app/coaching/api/v1/`
-- **Staging**: `https://ai-coaching.staging.purposepath.app/coaching/api/v1/`
-- **Production**: `https://ai-coaching.purposepath.app/coaching/api/v1/`
+- **Development**: `https://api.dev.purposepath.app/coaching/api/v1/`
 
 ## Deployment
 
@@ -124,20 +119,13 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
 
 ```powershell
 # Development
-.\deploy.ps1 -Stage dev -HostedZoneId Z09156212RNBEXAMPLE
-
-# Staging
-.\deploy.ps1 -Stage staging -HostedZoneId Z09156212RNBEXAMPLE
-
-# Production  
-.\deploy.ps1 -Stage production -HostedZoneId Z09156212RNBEXAMPLE
+.\deploy.ps1 -Stage dev
 ```
 
 ### Files
 
-- `deploy.ps1` - Multi-environment deployment script
+- `deploy.ps1` - Deployment script
 - `coaching/template.yaml` - Coaching service SAM template
-- `infra/api-domain-*.yaml` - Environment-specific domain configurations
 
 ## Shared Types System
 

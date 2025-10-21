@@ -5,9 +5,27 @@ Provides strong typing for AWS service operations.
 """
 
 from decimal import Decimal
-from typing import Any, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict, Union
 
-# Type aliases
+# Type aliases matching boto3 DynamoDB AttributeValue structure
+# DynamoDB AttributeValue can be: str, int, float, bool, bytes, bytearray, set, list, dict, Decimal, None
+DynamoDBAttributeValue = Union[
+    str,
+    int, 
+    float,
+    bool,
+    bytes,
+    bytearray,
+    Decimal,
+    None,
+    list[Any],
+    dict[str, Any],
+    set[str],
+    set[int],
+    set[bytes],
+]
+
+# JSONValue is for general JSON serialization (subset of DynamoDBAttributeValue)
 JSONValue = str | int | float | bool | None | dict[str, Any] | list[Any] | Decimal
 
 class QueryOutputTypeDef(TypedDict, total=False):

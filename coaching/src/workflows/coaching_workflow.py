@@ -78,21 +78,22 @@ class CoachingWorkflow(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 
         # Create graph with our state schema
-        graph = StateGraph(dict)
+        # LangGraph prefers TypedDict but supports dict at runtime
+        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
 
         # Add nodes (workflow steps)
-        graph.add_node("start", self._start_node)
-        graph.add_node("initial_assessment", self._initial_assessment_node)
-        graph.add_node("goal_exploration", self._goal_exploration_node)
-        graph.add_node("action_planning", self._action_planning_node)
-        graph.add_node("reflection", self._reflection_node)
-        graph.add_node("next_steps", self._next_steps_node)
-        graph.add_node("completion", self._completion_node)
+        graph.add_node("start", self._start_node)  # type: ignore[type-var]
+        graph.add_node("initial_assessment", self._initial_assessment_node)  # type: ignore[type-var]
+        graph.add_node("goal_exploration", self._goal_exploration_node)  # type: ignore[type-var]
+        graph.add_node("action_planning", self._action_planning_node)  # type: ignore[type-var]
+        graph.add_node("reflection", self._reflection_node)  # type: ignore[type-var]
+        graph.add_node("next_steps", self._next_steps_node)  # type: ignore[type-var]
+        graph.add_node("completion", self._completion_node)  # type: ignore[type-var]
 
         # Add edges (workflow flow)
         graph.add_edge(START, "start")
@@ -178,7 +179,7 @@ class CoachingWorkflow(BaseWorkflow):
         """Extract tenant ID from state."""
         return TenantId(state.get("tenant_id", state["user_id"]))
 
-    async def _start_node(self, state: dict) -> dict:
+    async def _start_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Start node - welcome the user and begin coaching."""
         logger.info("Starting coaching workflow", workflow_id=state["workflow_id"])
 
@@ -189,7 +190,7 @@ class CoachingWorkflow(BaseWorkflow):
 
         return state
 
-    async def _initial_assessment_node(self, state: dict) -> dict:
+    async def _initial_assessment_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Initial assessment - understand the user's current situation."""
         logger.info("Processing initial assessment", workflow_id=state["workflow_id"])
 
@@ -255,7 +256,7 @@ Do not give advice yet - focus on understanding first."""
 
         return state
 
-    async def _goal_exploration_node(self, state: dict) -> dict:
+    async def _goal_exploration_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Goal exploration - help user clarify their goals."""
         logger.info("Processing goal exploration", workflow_id=state["workflow_id"])
 
@@ -263,7 +264,7 @@ Do not give advice yet - focus on understanding first."""
         state["current_step"] = "action_planning"
         return state
 
-    async def _action_planning_node(self, state: dict) -> dict:
+    async def _action_planning_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Action planning - create concrete next steps."""
         logger.info("Processing action planning", workflow_id=state["workflow_id"])
 
@@ -271,7 +272,7 @@ Do not give advice yet - focus on understanding first."""
         state["current_step"] = "reflection"
         return state
 
-    async def _reflection_node(self, state: dict) -> dict:
+    async def _reflection_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Reflection - help user reflect on insights."""
         logger.info("Processing reflection", workflow_id=state["workflow_id"])
 
@@ -279,7 +280,7 @@ Do not give advice yet - focus on understanding first."""
         state["current_step"] = "next_steps"
         return state
 
-    async def _next_steps_node(self, state: dict) -> dict:
+    async def _next_steps_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Next steps - summarize and plan follow-up."""
         logger.info("Processing next steps", workflow_id=state["workflow_id"])
 
@@ -287,7 +288,7 @@ Do not give advice yet - focus on understanding first."""
         state["current_step"] = "completion"
         return state
 
-    async def _completion_node(self, state: dict) -> dict:
+    async def _completion_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Completion - wrap up the session."""
         logger.info("Completing coaching workflow", workflow_id=state["workflow_id"])
 

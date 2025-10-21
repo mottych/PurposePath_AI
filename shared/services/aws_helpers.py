@@ -12,10 +12,10 @@ from mypy_boto3_dynamodb import DynamoDBServiceResource
 def get_dynamodb_resource(region_name: str) -> DynamoDBServiceResource:
     """Get a properly typed DynamoDB resource.
 
-    This centralizes the boto3.resource call and type ignore for DynamoDB
-    to avoid repeated type: ignore comments throughout the codebase.
+    This centralizes the boto3.resource call for DynamoDB
+    to avoid repeated type annotations throughout the codebase.
     """
-    return cast(DynamoDBServiceResource, boto3.resource("dynamodb", region_name=region_name))
+    return boto3.resource("dynamodb", region_name=region_name)
 
 
 def get_secretsmanager_client(region_name: str) -> SecretsManagerClient:
