@@ -239,11 +239,11 @@ class BedrockLLMProvider:
             # Claude format
             content_blocks = response_body.get("content", [])
             if content_blocks and isinstance(content_blocks, list):
-                return content_blocks[0].get("text", "")
+                return content_blocks[0].get("text", "")  # type: ignore[no-any-return]
             return ""
         else:
             # Generic format
-            return response_body.get("generation", "")
+            return response_body.get("generation", "")  # type: ignore[no-any-return]
 
     def _extract_usage(self, response_body: dict[str, Any], model: str) -> dict[str, int]:
         """Extract usage metrics from response body."""

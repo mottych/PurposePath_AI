@@ -47,10 +47,10 @@ class TokenBucket:
         # Refill tokens based on elapsed time
         now = time.time()
         elapsed = now - self.last_refill
-        self.tokens = min(
+        self.tokens = int(min(
             self.capacity,
             self.tokens + (elapsed * self.refill_rate),
-        )
+        ))
         self.last_refill = now
 
         # Try to consume
@@ -70,7 +70,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,
+        app: Any,
         default_capacity: int = 100,
         default_refill_rate: float = 10.0,
         endpoint_limits: dict[str, tuple[int, float]] | None = None,

@@ -90,7 +90,8 @@ class BedrockProvider(BaseProvider):
             logger.info("Initializing Bedrock provider", model=self.config.model_name)
 
             # Create LangChain Bedrock client
-            self._client = ChatBedrock(
+            # Note: LangChain's ChatBedrock signature may vary by version
+            self._client = ChatBedrock(  # type: ignore[call-arg]
                 model_id=self.config.model_name,
                 region_name=self.config.region_name or "us-east-1",
                 model_kwargs={
