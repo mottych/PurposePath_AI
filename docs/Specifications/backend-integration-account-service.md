@@ -913,9 +913,11 @@ Get trial extension history for a user (admin only).
 
 ## Onboarding Endpoints
 
-### GET /onboarding
+### GET /business/onboarding
 
 Get current user's onboarding data.
+
+**URL:** `GET /business/onboarding`
 
 **Response:**
 
@@ -958,9 +960,11 @@ Get current user's onboarding data.
 
 ---
 
-### PUT /onboarding
+### PUT /business/onboarding
 
 Update onboarding data (partial or complete).
+
+**URL:** `PUT /business/onboarding`
 
 **Request:**
 
@@ -976,7 +980,7 @@ Update onboarding data (partial or complete).
     "country": "string?"
   },
   "products": [{
-    "id": "string",
+    "id": "string?",
     "name": "string",
     "problem": "string"
   }],
@@ -1005,13 +1009,63 @@ Update onboarding data (partial or complete).
 }
 ```
 
+**Products Field Behavior (Smart Merge):**
+- Products **with `id`**: Updates existing product
+- Products **without `id`** (null/omitted): Creates new product with generated ID
+- Products **not in array**: Deleted from business
+- **Optional**: Can omit `products` field entirely to leave products unchanged
+
 **Implementation:** `src/services/api.ts` → `ApiClient.updateOnboarding()`
 
 ---
 
-### POST /onboarding/products
+### PUT /business/onboarding/products
+
+**[NEW]** Bulk update all products - replaces entire product list.
+
+**URL:** `PUT /business/onboarding/products`
+
+**Request:**
+
+```json
+{
+  "products": [{
+    "id": "string?",
+    "name": "string",
+    "problem": "string"
+  }]
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [{
+    "id": "string",
+    "name": "string",
+    "problem": "string"
+  }]
+}
+```
+
+**Behavior (Smart Merge):**
+- Products **with `id`**: Updates existing product
+- Products **without `id`**: Creates new product with generated ID
+- Products **not in array**: Deleted from business
+
+**Use Case:** Replace entire products list in one transaction (e.g., onboarding form submission).
+
+**Implementation:** `src/services/api.ts` → `ApiClient.updateAllOnboardingProducts()`
+
+---
+
+### POST /business/onboarding/products
 
 Create new product entry in onboarding.
+
+**URL:** `POST /business/onboarding/products`
 
 **Request:**
 
@@ -1039,9 +1093,11 @@ Create new product entry in onboarding.
 
 ---
 
-### PUT /onboarding/products/{id}
+### PUT /business/onboarding/products/{id}
 
 Update product entry.
+
+**URL:** `PUT /business/onboarding/products/{id}`
 
 **Path Parameters:**
 
@@ -1073,9 +1129,11 @@ Update product entry.
 
 ---
 
-### DELETE /onboarding/products/{id}
+### DELETE /business/onboarding/products/{id}
 
 Delete product entry.
+
+**URL:** `DELETE /business/onboarding/products/{id}`
 
 **Path Parameters:**
 
@@ -1085,7 +1143,8 @@ Delete product entry.
 
 ```json
 {
-  "success": true
+  "success": true,
+  "message": "Product deleted successfully"
 }
 ```
 
@@ -1097,7 +1156,7 @@ Delete product entry.
 
 The Business Foundation endpoints manage the strategic foundation of the business including vision, purpose, core values, and market positioning. This data is used by the strategic planning module and AI alignment engine.
 
-### GET /api/business/foundation
+### GET /business/foundation
 
 Get business identity and strategic foundation.
 
@@ -1137,7 +1196,7 @@ Get business identity and strategic foundation.
 
 ---
 
-### PUT /api/business/foundation
+### PUT /business/foundation
 
 Update business foundation information (partial updates supported).
 

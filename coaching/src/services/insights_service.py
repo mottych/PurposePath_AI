@@ -7,7 +7,6 @@ from coaching.src.models.responses import (
     InsightResponse,
     InsightsSummaryResponse,
 )
-from coaching.src.repositories.business_data_repository import BusinessDataRepository
 from coaching.src.repositories.conversation_repository import ConversationRepository
 
 from shared.models.schemas import PaginatedResponse, PaginationMeta
@@ -18,11 +17,8 @@ logger = structlog.get_logger()
 class InsightsService:
     """Service for generating and managing coaching insights."""
 
-    def __init__(
-        self, conversation_repo: ConversationRepository, business_data_repo: BusinessDataRepository
-    ):
+    def __init__(self, conversation_repo: ConversationRepository):
         self.conversation_repo = conversation_repo
-        self.business_data_repo = business_data_repo
 
     async def get_insights(
         self,

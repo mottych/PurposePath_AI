@@ -630,9 +630,464 @@ const goalDetails = await getGoalById(selectedGoalId);
 
 ---
 
+## Health Check Endpoints (Kubernetes Patterns)
+
+### Overview
+
+All services implement standard Kubernetes health check patterns for infrastructure monitoring, orchestration, and load balancing. These endpoints provide different levels of health information for various use cases.
+
+### Service Availability
+
+| Service | Base Route | Endpoints |
+|---------|-----------|-----------|
+| Account Service | `/health` | All 4 health check types |
+| Traction Service | `/health` | All 4 health check types |
+
+### Endpoints
+
+#### 1. GET /health - Basic Health Check
+
+**Purpose:** Lightweight availability check for load balancers and uptime monitoring
+
+**Authentication:** None (public endpoint)
+
+**Request:** No parameters
+
+**Response:** `ApiResponse<HealthCheckResponse>` (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "Healthy",
+    "service": "PurposePath Account Lambda",
+    "version": "1.0.0",
+    "timestamp": "2025-10-17T12:00:00Z",
+    "environment": "production"
+  }
+}
+```
+
+**Use Cases:**
+
+- Load balancer health checks
+- Basic uptime monitoring
+- Service discovery verification
+- Quick availability checks
+
+**Check Frequency:** High (every 5-10 seconds)
+
+---
+
+#### 2. GET /health/detailed - Detailed Health Status
+
+**Purpose:** Comprehensive health check with dependency status and diagnostics
+
+**Authentication:** None (public endpoint)
+
+**Request:** No parameters
+
+**Response:** `ApiResponse<HealthCheckResponse>` (200 OK or 503 Service Unavailable)
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "Healthy",
+    "service": "PurposePath Traction Lambda",
+    "version": "1.0.0",
+    "timestamp": "2025-10-17T12:00:00Z",
+    "environment": "production",
+    "checks": [
+      {
+        "component": "API",
+        "status": "Healthy",
+        "description": "API is responsive"
+      },
+      {
+        "component": "Application",
+        "status": "Healthy",
+        "description": "Application is running normally"
+      },
+      {
+        "component": "Configuration",
+        "status": "Healthy",
+        "description": "Environment: production"
+      }
+    ]
+  }
+}
+```
+
+**Failure Response (503):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "Unhealthy",
+    "service": "PurposePath Account Lambda",
+    "version": "1.0.0",
+    "timestamp": "2025-10-17T12:00:00Z",
+    "environment": "production",
+    "checks": [
+      {
+        "component": "Application",
+        "status": "Unhealthy",
+        "description": "Database connection failed"
+      }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+
+- Monitoring dashboards (Datadog, New Relic, CloudWatch)
+- Detailed service health debugging
+- Dependency health tracking
+- Root cause analysis during incidents
+
+**Check Frequency:** Medium (every 30-60 seconds)
+
+---
+
+#### 3. GET /health/ready - Readiness Probe
+
+**Purpose:** Kubernetes readiness probe - determines if pod should receive traffic
+
+**Authentication:** None (public endpoint)
+
+**Request:** No parameters
+
+**Response:** 200 OK or 503 Service Unavailable
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "Ready",
+    "timestamp": "2025-10-17T12:00:00Z",
+    "message": "Service is ready to accept requests"
+  }
+}
+```
+
+**Failure Response (503):**
+
+```json
+{
+  "success": false,
+  "error": "Service not ready"
+}
+```
+
+**Kubernetes Behavior:**
+
+- **200 response:** Pod added to service load balancer pool (receives traffic)
+- **503 response:** Pod removed from load balancer pool (stops receiving traffic)
+- **Does NOT restart pod** (unlike liveness probe)
+- Pod stays running but excluded from traffic routing
+
+**Use Cases:**
+
+- Zero-downtime deployments
+- Gradual rollouts and canary deployments
+- Prevents traffic to initializing pods
+- Warm-up period handling
+- Database connection establishment
+- Cache warming
+
+**Check Frequency:** High (every 10 seconds)
+
+**Example Kubernetes Configuration:**
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+```
+
+---
+
+#### 4. GET /health/live - Liveness Probe
+
+**Purpose:** Kubernetes liveness probe - determines if pod should be restarted
+
+**Authentication:** None (public endpoint)
+
+**Request:** No parameters
+
+**Response:** 200 OK (always successful unless service is completely unresponsive)
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "Alive",
+    "timestamp": "2025-10-17T12:00:00Z",
+    "message": "Service is running"
+  }
+}
+```
+
+**Kubernetes Behavior:**
+
+- **200 response:** Pod continues running normally
+- **No response or timeout:** Kubernetes **restarts the pod**
+- **More lenient than readiness** (higher thresholds)
+- Used to detect deadlocks, memory leaks, or unrecoverable states
+
+**Use Cases:**
+
+- Automatic recovery from deadlocks
+- Memory leak detection and recovery
+- Thread hang detection
+- Self-healing infrastructure
+- Recovery from unrecoverable errors
+
+**Check Frequency:** Low (every 30-60 seconds)
+
+**Example Kubernetes Configuration:**
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
+```
+
+---
+
+### Health Check Comparison Table
+
+| Endpoint | Purpose | K8s Feature | Failure Behavior | Check Frequency | Authentication |
+|----------|---------|-------------|------------------|-----------------|----------------|
+| `/health` | Basic availability | Load Balancer | None (monitoring only) | High (5-10s) | None |
+| `/health/detailed` | Diagnostics | Observability | None (monitoring only) | Medium (30-60s) | None |
+| `/health/ready` | Traffic routing | Readiness Probe | Remove from LB pool | High (10s) | None |
+| `/health/live` | Pod health | Liveness Probe | **Restart pod** | Low (30-60s) | None |
+
+### Readiness vs Liveness
+
+**Key Difference:**
+
+```text
+Readiness: "Can I send traffic to this pod?"
+Liveness:  "Should I restart this pod?"
+```
+
+**Example Scenario:**
+
+1. Pod starts → Readiness fails (503) → No traffic sent
+2. Pod initializes → Readiness passes (200) → Traffic starts flowing
+3. Pod runs fine → Both probes pass (200)
+4. Database connection lost → Readiness fails (503) → Traffic stops, **pod stays running**
+5. Database reconnects → Readiness passes (200) → Traffic resumes
+6. Pod deadlocks → Liveness fails (no response) → **Kubernetes restarts pod**
+
+### Monitoring Integration
+
+#### Datadog Integration
+
+```yaml
+# datadog-agent.yaml
+checks:
+  - name: purposepath_health
+    url: https://api.purposepath.app/health/detailed
+    method: GET
+    interval: 60
+    alert_on_failure: true
+```
+
+#### New Relic Synthetic Monitor
+
+```javascript
+// New Relic Synthetic Script
+const assert = require('assert');
+
+$http.get('https://api.purposepath.app/health/detailed', function(err, response, body) {
+  assert.equal(response.statusCode, 200, 'Expected 200 OK');
+  const data = JSON.parse(body);
+  assert.equal(data.data.status, 'Healthy', 'Service should be healthy');
+  
+  data.data.checks.forEach(check => {
+    assert.equal(check.status, 'Healthy', `${check.component} should be healthy`);
+  });
+});
+```
+
+#### CloudWatch Alarms
+
+```bash
+# Create CloudWatch alarm for health check failures
+aws cloudwatch put-metric-alarm \
+  --alarm-name purposepath-account-unhealthy \
+  --alarm-description "Alert when Account service is unhealthy" \
+  --metric-name HealthCheckStatus \
+  --namespace PurposePath/Services \
+  --statistic Average \
+  --period 60 \
+  --threshold 1 \
+  --comparison-operator LessThanThreshold \
+  --evaluation-periods 3
+```
+
+### Frontend Integration Example
+
+Frontend can use health checks for status pages or admin dashboards:
+
+```typescript
+// Status page component
+async function checkServiceHealth() {
+  try {
+    const accountHealth = await fetch('/api/v1/health');
+    const tractionHealth = await fetch('/api/v1/health');
+    
+    return {
+      account: accountHealth.ok ? 'operational' : 'degraded',
+      traction: tractionHealth.ok ? 'operational' : 'degraded'
+    };
+  } catch (error) {
+    return {
+      account: 'down',
+      traction: 'down'
+    };
+  }
+}
+
+// Admin dashboard with detailed status
+async function getDetailedServiceStatus() {
+  const response = await fetch('/api/v1/health/detailed');
+  const data = await response.json();
+  
+  return {
+    status: data.data.status,
+    version: data.data.version,
+    checks: data.data.checks,
+    timestamp: data.data.timestamp
+  };
+}
+```
+
+### Complete Kubernetes Deployment Example
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: purposepath-account
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: purposepath-account
+  template:
+    metadata:
+      labels:
+        app: purposepath-account
+    spec:
+      containers:
+      - name: account-service
+        image: purposepath/account:latest
+        ports:
+        - containerPort: 8080
+        
+        # Readiness probe - controls traffic routing
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Liveness probe - controls pod restart
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: purposepath-account
+spec:
+  selector:
+    app: purposepath-account
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+### Best Practices
+
+1. **Readiness Probe:**
+
+   - Check all critical dependencies (database, cache, external APIs)
+   - Return 503 if any critical dependency is unavailable
+   - Use shorter timeouts and more frequent checks
+   - Should recover automatically when dependencies recover
+
+2. **Liveness Probe:**
+
+   - Keep checks simple and fast
+   - Only fail for unrecoverable errors (deadlocks, memory exhaustion)
+   - Use longer timeouts and less frequent checks
+   - Avoid checking external dependencies (use readiness for that)
+
+3. **Detailed Health:**
+
+   - Include all dependency statuses
+   - Add latency metrics
+   - Include version information
+   - Log failures for debugging
+
+4. **Basic Health:**
+
+   - Keep extremely lightweight
+   - Return quickly
+   - Minimal dependencies
+   - Suitable for high-frequency polling
+
+---
+
 ## Security Best Practices
 
 1. **Never log sensitive data:**
+
    ```typescript
    // Bad
    console.log('Token:', accessToken);
@@ -642,24 +1097,29 @@ const goalDetails = await getGoalById(selectedGoalId);
    ```
 
 2. **Validate on both client and server:**
+
    - Client validation for UX
    - Server validation for security
 
 3. **Handle token expiration gracefully:**
+
    - Auto-refresh on 401
    - Clear tokens and redirect on refresh failure
 
 4. **Use HTTPS in production:**
+
    - All API endpoints must use HTTPS
    - No mixed content
 
 5. **Sanitize user input:**
+
    - Especially in rich text editors
    - Prevent XSS attacks
 
 ---
 
 **Navigation:**
+
 - [← Back to Index](./backend-integration-index.md)
 - [← Account Service](./backend-integration-account-service.md)
 - [← Coaching Service](./backend-integration-coaching-service.md)

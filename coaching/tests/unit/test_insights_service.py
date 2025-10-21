@@ -14,17 +14,12 @@ class TestInsightsServiceInitialization:
         """Test initialization with repository dependencies."""
         # Arrange
         conversation_repo = AsyncMock()
-        business_data_repo = AsyncMock()
 
         # Act
-        service = InsightsService(
-            conversation_repo=conversation_repo,
-            business_data_repo=business_data_repo,
-        )
+        service = InsightsService(conversation_repo=conversation_repo)
 
         # Assert
         assert service.conversation_repo == conversation_repo
-        assert service.business_data_repo == business_data_repo
 
 
 @pytest.mark.unit
@@ -34,10 +29,7 @@ class TestInsightsServiceGetInsights:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_get_insights_returns_empty_results(self, insights_service):
         """Test that get_insights returns empty paginated response."""
@@ -48,11 +40,11 @@ class TestInsightsServiceGetInsights:
         )
 
         # Assert
-        assert result.items == []
-        assert result.total == 0
-        assert result.page == 1
-        assert result.page_size == 20
-        assert result.total_pages == 0
+        assert result.data == []
+        assert result.pagination.total == 0
+        assert result.pagination.page == 1
+        assert result.pagination.limit == 20
+        assert result.pagination.total_pages == 0
 
     async def test_get_insights_with_filters(self, insights_service):
         """Test get_insights with category, priority, and status filters."""
@@ -66,8 +58,8 @@ class TestInsightsServiceGetInsights:
         )
 
         # Assert
-        assert result.items == []
-        assert result.total == 0
+        assert result.data == []
+        assert result.pagination.total == 0
         # Filters are accepted but return empty (stub implementation)
 
     async def test_get_insights_with_pagination(self, insights_service):
@@ -78,12 +70,12 @@ class TestInsightsServiceGetInsights:
         result_page_3 = await insights_service.get_insights(page=3, page_size=50)
 
         # Assert
-        assert result_page_1.page == 1
-        assert result_page_1.page_size == 10
-        assert result_page_2.page == 2
-        assert result_page_2.page_size == 20
-        assert result_page_3.page == 3
-        assert result_page_3.page_size == 50
+        assert result_page_1.pagination.page == 1
+        assert result_page_1.pagination.limit == 10
+        assert result_page_2.pagination.page == 2
+        assert result_page_2.pagination.limit == 20
+        assert result_page_3.pagination.page == 3
+        assert result_page_3.pagination.limit == 50
         # All return empty results (stub implementation)
 
     async def test_get_insights_default_parameters(self, insights_service):
@@ -92,9 +84,9 @@ class TestInsightsServiceGetInsights:
         result = await insights_service.get_insights()
 
         # Assert
-        assert result.page == 1
-        assert result.page_size == 20
-        assert result.items == []
+        assert result.pagination.page == 1
+        assert result.pagination.limit == 20
+        assert result.data == []
 
 
 @pytest.mark.unit
@@ -104,10 +96,7 @@ class TestInsightsServiceGetInsightsSummary:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_get_insights_summary_returns_empty(self, insights_service):
         """Test that get_insights_summary returns empty summary."""
@@ -145,15 +134,12 @@ class TestInsightsServiceGetCategories:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_get_available_categories(self, insights_service):
         """Test that available categories are returned."""
         # Act
-        categories = await insights_service.get_available_categories()
+        categories = await insights_service.get_categories()
 
         # Assert
         assert isinstance(categories, list)
@@ -172,7 +158,7 @@ class TestInsightsServiceGetCategories:
     async def test_categories_are_lowercase(self, insights_service):
         """Test that all categories are lowercase."""
         # Act
-        categories = await insights_service.get_available_categories()
+        categories = await insights_service.get_categories()
 
         # Assert
         assert all(cat == cat.lower() for cat in categories)
@@ -185,15 +171,12 @@ class TestInsightsServiceGetPriorities:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_get_available_priorities(self, insights_service):
         """Test that available priorities are returned."""
         # Act
-        priorities = await insights_service.get_available_priorities()
+        priorities = await insights_service.get_priorities()
 
         # Assert
         assert isinstance(priorities, list)
@@ -205,7 +188,7 @@ class TestInsightsServiceGetPriorities:
     async def test_priorities_order(self, insights_service):
         """Test that priorities are in severity order."""
         # Act
-        priorities = await insights_service.get_available_priorities()
+        priorities = await insights_service.get_priorities()
 
         # Assert
         assert priorities[0] == "critical"
@@ -221,10 +204,7 @@ class TestInsightsServiceDismissInsight:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_dismiss_insight(self, insights_service):
         """Test dismissing an insight."""
@@ -260,10 +240,7 @@ class TestInsightsServiceAcknowledgeInsight:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_acknowledge_insight(self, insights_service):
         """Test acknowledging an insight."""
@@ -298,10 +275,7 @@ class TestInsightsServiceEdgeCases:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        return InsightsService(conversation_repo=AsyncMock())
 
     async def test_get_insights_with_invalid_page(self, insights_service):
         """Test get_insights with page 0 (boundary condition)."""
@@ -309,7 +283,7 @@ class TestInsightsServiceEdgeCases:
         result = await insights_service.get_insights(page=0, page_size=20)
 
         # Assert
-        assert result.items == []
+        assert result.data == []
         # Service handles it gracefully
 
     async def test_get_insights_with_large_page_size(self, insights_service):
@@ -318,8 +292,8 @@ class TestInsightsServiceEdgeCases:
         result = await insights_service.get_insights(page=1, page_size=1000)
 
         # Assert
-        assert result.items == []
-        assert result.page_size == 1000
+        assert result.data == []
+        assert result.pagination.limit == 1000
 
     async def test_get_insights_with_none_filters(self, insights_service):
         """Test get_insights with explicitly None filters."""
@@ -331,7 +305,7 @@ class TestInsightsServiceEdgeCases:
         )
 
         # Assert
-        assert result.items == []
+        assert result.data == []
         # None filters are handled gracefully
 
     async def test_dismiss_insight_with_empty_ids(self, insights_service):
@@ -358,10 +332,7 @@ class TestInsightsServiceIntegrationPatterns:
     async def test_service_with_none_repositories(self):
         """Test that service can be created (repositories not used in stubs)."""
         # Arrange & Act
-        service = InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        service = InsightsService(conversation_repo=AsyncMock())
 
         # Assert
         assert service is not None
@@ -370,10 +341,7 @@ class TestInsightsServiceIntegrationPatterns:
     async def test_concurrent_operations(self):
         """Test concurrent insight operations."""
         # Arrange
-        service = InsightsService(
-            conversation_repo=AsyncMock(),
-            business_data_repo=AsyncMock(),
-        )
+        service = InsightsService(conversation_repo=AsyncMock())
 
         # Act - Multiple concurrent operations
         import asyncio
@@ -382,8 +350,8 @@ class TestInsightsServiceIntegrationPatterns:
             service.get_insights(page=1),
             service.get_insights(page=2),
             service.get_insights_summary("user-1"),
-            service.get_available_categories(),
-            service.get_available_priorities(),
+            service.get_categories(),
+            service.get_priorities(),
         )
 
         # Assert
