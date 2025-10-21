@@ -17,7 +17,7 @@ from coaching.src.api.middleware import (
     LoggingMiddleware,
     RateLimitingMiddleware,
 )
-from coaching.src.api.routes import analysis, conversations, health
+from coaching.src.api.routes import admin, analysis, conversations, health
 from coaching.src.core.config_multitenant import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,6 +93,10 @@ app = FastAPI(
             "name": "health",
             "description": "Health check and system status",
         },
+        {
+            "name": "Admin",
+            "description": "Administrative endpoints for template and model management (requires ADMIN_ACCESS permission)",
+        },
     ],
     lifespan=lifespan,
     contact={
@@ -147,6 +151,12 @@ app.include_router(
     health.router,
     prefix=f"{settings.api_prefix}/health",
     tags=["health"],
+)
+
+# Admin routes (requires ADMIN_ACCESS permission)
+app.include_router(
+    admin.router,
+    prefix=f"{settings.api_prefix}",
 )
 
 
