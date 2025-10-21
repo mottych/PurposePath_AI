@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "name": "insights_generation",
+  "description": "Generate actionable business coaching insights based on comprehensive business data",
+  "model_config": {
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "temperature": 0.4,
+    "max_tokens": 4000
+  },
+  "system_prompt": "You are an expert business coach and strategic advisor with deep expertise in helping small business owners improve their operations, strategy, and leadership. Your role is to analyze business data and generate specific, actionable insights that drive meaningful improvement.\n\nKey Principles:\n1. **Specificity**: Reference actual data points from the business (goals, metrics, issues)\n2. **Actionability**: Every insight must have concrete next steps\n3. **Prioritization**: Focus on high-impact areas that need attention\n4. **Clarity**: Use plain business language, avoid jargon\n5. **Empathy**: Consider the business owner's constraints and challenges\n\nYou will analyze:\n- Business foundation (vision, purpose, core values, target market)\n- Goals and strategic objectives\n- Performance metrics and completion rates\n- Operational actions and open issues\n- Progress patterns and trends",
+  "user_prompt_template": "Analyze the following business data and generate 5-10 actionable coaching insights.\n\n## Business Foundation\n{{#if foundation}}\nVision: {{foundation.vision}}\nPurpose: {{foundation.purpose}}\nCore Values: {{#each foundation.core_values}}{{this}}, {{/each}}\nTarget Market: {{foundation.target_market}}\nValue Proposition: {{foundation.value_proposition}}\n{{else}}\n[No foundation data available]\n{{/if}}\n\n## Goals Overview\n{{#if goal_stats}}\nTotal Goals: {{goal_stats.total_goals}}\nCompletion Rate: {{goal_stats.completion_rate}}%\nAt Risk: {{goal_stats.at_risk}}\nBehind Schedule: {{goal_stats.behind_schedule}}\n{{else}}\n[No goal statistics available]\n{{/if}}\n\n## Active Goals\n{{#if goals}}\n{{#each goals}}\n- {{this.title}} (Status: {{this.status}}, Progress: {{this.progress}}%)\n  Intent: {{this.intent}}\n  {{#if this.strategies}}Strategies: {{this.strategies.length}}{{/if}}\n  {{#if this.kpis}}KPIs: {{this.kpis.length}}{{/if}}\n{{/each}}\n{{else}}\n[No active goals found]\n{{/if}}\n\n## Performance Score\n{{#if performance_score}}\nOverall Score: {{performance_score.overall_score}}/100\nGoals: {{performance_score.goals_score}}/100\nStrategies: {{performance_score.strategies_score}}/100\nKPIs: {{performance_score.kpis_score}}/100\nActions: {{performance_score.actions_score}}/100\n{{else}}\n[No performance data available]\n{{/if}}\n\n## Recent Actions\n{{#if recent_actions}}\n{{#each recent_actions}}\n- {{this.title}} (Status: {{this.status}}, Priority: {{this.priority}})\n{{/each}}\n{{else}}\n[No recent actions]\n{{/if}}\n\n## Open Issues\n{{#if open_issues}}\n{{#each open_issues}}\n- {{this.title}} (Impact: {{this.business_impact}}, Priority: {{this.priority}})\n{{/each}}\n{{else}}\n[No open issues]\n{{/if}}\n\n---\n\nGenerate insights following this structure:\n\nFor each insight, provide:\n1. **Title**: Clear, specific insight (10-15 words)\n2. **Description**: Detailed explanation with specific data references (50-150 words)\n3. **Category**: One of [strategy, operations, finance, marketing, leadership, technology]\n4. **Priority**: One of [critical, high, medium, low]\n5. **Suggested Actions**: 2-4 specific, ordered actions with:\n   - title: Action name\n   - description: What to do and why\n   - effort: low/medium/high\n   - impact: low/medium/high\n   - order: 1-4 (priority order)\n6. **Data Sources**: Which data informed this insight (e.g., [\"goals\", \"performance_score\"])\n7. **Confidence**: Your confidence in this insight (0.0-1.0)\n\nFocus on:\n- Gaps between vision/purpose and current execution\n- At-risk or behind-schedule goals that need attention\n- Low performance scores that indicate problems\n- Patterns in issues or actions that suggest systemic problems\n- Missing strategies or KPIs for important goals\n- Alignment issues between goals and core values\n\nReturn ONLY valid JSON in this exact format:\n```json\n{\n  \"insights\": [\n    {\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"category\": \"strategy|operations|finance|marketing|leadership|technology\",\n      \"priority\": \"critical|high|medium|low\",\n      \"suggested_actions\": [\n        {\n          \"title\": \"string\",\n          \"description\": \"string\",\n          \"effort\": \"low|medium|high\",\n          \"impact\": \"low|medium|high\",\n          \"order\": 1\n        }\n      ],\n      \"data_sources\": [\"goals\", \"performance_score\"],\n      \"confidence_score\": 0.85\n    }\n  ]\n}\n```\n\nGenerate insights now:",
+  "output_format": "json",
+  "expected_fields": [
+    "insights",
+    "insights[].title",
+    "insights[].description",
+    "insights[].category",
+    "insights[].priority",
+    "insights[].suggested_actions",
+    "insights[].data_sources",
+    "insights[].confidence_score"
+  ],
+  "validation_rules": {
+    "min_insights": 5,
+    "max_insights": 10,
+    "min_actions_per_insight": 2,
+    "max_actions_per_insight": 4,
+    "required_categories": ["strategy", "operations", "finance", "marketing", "leadership", "technology"],
+    "required_priorities": ["critical", "high", "medium", "low"]
+  }
+}
