@@ -89,10 +89,12 @@ class TestBusinessApiClientUserContext:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "userId": "user-123",
-            "email": "test@example.com",
-            "role": "admin",
-            "department": "Engineering",
+            "data": {
+                "user_id": "user-123",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+            }
         }
         mock_client.get = AsyncMock(return_value=mock_response)
         return mock_client
@@ -114,11 +116,12 @@ class TestBusinessApiClientUserContext:
         result = await business_client.get_user_context(user_id, tenant_id)
 
         # Assert
-        assert result["userId"] == "user-123"
+        assert result["user_id"] == "user-123"
         assert result["email"] == "test@example.com"
+        assert result["role"] == "Business Owner"  # MVP fallback
         mock_http_client.get.assert_called_once()
         call_args = mock_http_client.get.call_args
-        assert f"/api/users/{user_id}/context" in str(call_args)
+        assert "/user/profile" in str(call_args)
 
     async def test_get_user_context_http_error(self, business_client, mock_http_client):
         """Test HTTP error handling."""
@@ -158,10 +161,12 @@ class TestBusinessApiClientOrganizationalContext:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "tenantId": "tenant-456",
-            "companyName": "Test Corp",
-            "industry": "Technology",
-            "values": ["Innovation", "Excellence"],
+            "data": {
+                "tenantId": "tenant-456",
+                "companyName": "Test Corp",
+                "industry": "Technology",
+                "values": ["Innovation", "Excellence"],
+            }
         }
         mock_client.get = AsyncMock(return_value=mock_response)
         client.client = mock_client
@@ -212,10 +217,12 @@ class TestBusinessApiClientUserGoals:
         # Arrange
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = [
-            {"goalId": "goal-1", "title": "Increase revenue"},
-            {"goalId": "goal-2", "title": "Improve efficiency"},
-        ]
+        mock_response.json.return_value = {
+            "data": [
+                {"goalId": "goal-1", "title": "Increase revenue"},
+                {"goalId": "goal-2", "title": "Improve efficiency"},
+            ]
+        }
         business_client.client.get = AsyncMock(return_value=mock_response)
 
         # Act
@@ -231,7 +238,7 @@ class TestBusinessApiClientUserGoals:
         # Arrange
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = []
+        mock_response.json.return_value = {"data": []}
         business_client.client.get = AsyncMock(return_value=mock_response)
 
         # Act
@@ -257,6 +264,7 @@ class TestBusinessApiClientUserGoals:
 
 
 @pytest.mark.unit
+@pytest.mark.skip(reason="get_metrics() removed - not in MVP scope (post-MVP feature)")
 class TestBusinessApiClientMetrics:
     """Test get_metrics method."""
 
@@ -268,6 +276,7 @@ class TestBusinessApiClientMetrics:
         client.client = mock_client
         return client
 
+    @pytest.mark.skip(reason="get_metrics() removed - not in MVP scope")
     async def test_get_metrics_success(self, business_client):
         """Test successful metrics retrieval."""
         # Arrange
@@ -286,6 +295,7 @@ class TestBusinessApiClientMetrics:
         assert result["entityId"] == "user-123"
         assert result["metrics"]["revenue"] == 100000
 
+    @pytest.mark.skip(reason="get_metrics() removed - not in MVP scope")
     async def test_get_metrics_with_entity_types(self, business_client):
         """Test metrics retrieval for different entity types."""
         # Arrange
@@ -350,7 +360,14 @@ class TestBusinessApiClientEdgeCases:
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"data": "test"}
+        mock_response.json.return_value = {
+            "data": {
+                "user_id": "user-1",
+                "email": "test@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+            }
+        }
         mock_client.get = AsyncMock(return_value=mock_response)
         client.client = mock_client
 
@@ -365,5 +382,6 @@ class TestBusinessApiClientEdgeCases:
 
         # Assert
         assert len(results) == 3
-        assert all(r["data"] == "test" for r in results)
+        assert all(r["user_id"] is not None for r in results)
+        assert all(r["role"] == "Business Owner" for r in results)
         assert mock_client.get.call_count == 3
