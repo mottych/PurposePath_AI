@@ -61,6 +61,10 @@ class Settings(BaseSettings):
 
     # API Configuration
     api_prefix: str = "/api/v1"
+    business_api_base_url: str = Field(
+        default="https://api.dev.purposepath.app/account/api/v1",
+        validation_alias="BUSINESS_API_BASE_URL",
+    )
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:3000",

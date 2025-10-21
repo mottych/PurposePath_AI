@@ -8,6 +8,9 @@ from typing import Any, List, Optional
 
 import structlog
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+    DynamoDBConversationRepository,
+)
 from coaching.src.models.insights import (
     BusinessDataContext,
     Insight,
@@ -22,7 +25,6 @@ from coaching.src.models.responses import (
     InsightResponse,
     InsightsSummaryResponse,
 )
-from coaching.src.repositories.conversation_repository import ConversationRepository
 
 from shared.models.schemas import PaginatedResponse, PaginationMeta
 
@@ -34,7 +36,7 @@ class InsightsService:
 
     def __init__(
         self,
-        conversation_repo: ConversationRepository,
+        conversation_repo: DynamoDBConversationRepository,
         business_api_client: BusinessApiClient,
         llm_service: Any,  # LLMService - avoiding circular import
         tenant_id: str,

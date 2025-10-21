@@ -9,6 +9,7 @@ These dependencies replace the old service dependencies with the new architectur
 from typing import Any
 
 import structlog
+from coaching.src.api.auth import get_current_context
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
 from coaching.src.application.analysis.kpi_service import KPIAnalysisService
@@ -18,17 +19,22 @@ from coaching.src.application.conversation.conversation_service import (
 )
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.config_multitenant import settings
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
 from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from coaching.src.services.insights_service import InsightsService
+from fastapi import Depends
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 from shared.services.aws_helpers import (
     get_bedrock_client,
     get_dynamodb_resource,
     get_s3_client,
 )
+
+from shared.models.multitenant import RequestContext
 
 logger = structlog.get_logger()
 
@@ -190,6 +196,44 @@ async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisServic
         raise ValueError(f"Unknown analysis type: {analysis_type}")
 
 
+# Insights Service dependency
+
+
+async def get_insights_service(
+    context: RequestContext = Depends(get_current_context),
+) -> InsightsService:
+    """Get insights service with dependencies.
+
+    Creates InsightsService with all required dependencies including
+    conversation repository, business API client, LLM service, and context.
+
+    Args:
+        context: Request context with tenant_id and user_id
+
+    Returns:
+        InsightsService instance
+    """
+    # Get dependencies
+    conversation_repo = await get_conversation_repository()
+    llm_service = await get_llm_service()
+
+    # Create business API client
+    # TODO: Get JWT token from context or session for API calls
+    business_api_client = BusinessApiClient(
+        base_url=settings.business_api_base_url,
+        jwt_token=None,  # Will be added when auth is fully integrated
+        timeout=30,
+    )
+
+    return InsightsService(
+        conversation_repo=conversation_repo,
+        business_api_client=business_api_client,
+        llm_service=llm_service,
+        tenant_id=context.tenant_id,
+        user_id=context.user_id,
+    )
+
+
 __all__ = [
     # Repository dependencies
     "get_conversation_repository",
@@ -202,4 +246,6 @@ __all__ = [
     "get_strategy_service",
     "get_kpi_service",
     "get_analysis_service_by_type",
+    # Insights service
+    "get_insights_service",
 ]
