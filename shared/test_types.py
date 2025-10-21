@@ -34,7 +34,7 @@ def test_dynamodb_types():
         "email": "test@example.com",
         "name": "Test User",
         "subscription_tier": "starter",
-        "is_active": True
+        "is_active": True,
     }
 
     assert user_item["user_id"] == "user_123"
@@ -43,15 +43,12 @@ def test_dynamodb_types():
 
 def test_repository_result_types():
     """Test that repository result types work correctly."""
-    success_result: UserCreateResult = {
-        "success": True,
-        "user_id": create_user_id("user_123")
-    }
+    success_result: UserCreateResult = {"success": True, "user_id": create_user_id("user_123")}
 
     error_result: UserCreateResult = {
         "success": False,
         "error": "User already exists",
-        "error_code": "USER_EXISTS"
+        "error_code": "USER_EXISTS",
     }
 
     assert success_result["success"] is True
@@ -67,7 +64,7 @@ def test_external_api_types():
         "name": "Google User",
         "given_name": "Google",
         "family_name": "User",
-        "picture": "https://example.com/photo.jpg"
+        "picture": "https://example.com/photo.jpg",
     }
 
     stripe_customer: StripeCustomer = {
@@ -78,7 +75,7 @@ def test_external_api_types():
         "metadata": {},
         "balance": 0,
         "delinquent": False,
-        "livemode": False
+        "livemode": False,
     }
 
     assert google_user["verified_email"] is True

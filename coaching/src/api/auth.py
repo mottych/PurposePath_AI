@@ -185,12 +185,15 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         tenant_id = payload.get("tenant_id")
         email = payload.get("email")
         roles = payload.get("roles", [])
-        scopes = payload.get("scope", "").split() if isinstance(payload.get("scope"), str) else payload.get("scopes", [])
+        scopes = (
+            payload.get("scope", "").split()
+            if isinstance(payload.get("scope"), str)
+            else payload.get("scopes", [])
+        )
 
         if not user_id or not tenant_id:
             raise HTTPException(
-                status_code=401,
-                detail="Token missing required fields: user_id and tenant_id"
+                status_code=401, detail="Token missing required fields: user_id and tenant_id"
             )
 
         return UserContext(

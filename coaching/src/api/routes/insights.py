@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import structlog
 from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_insights_service
+from coaching.src.api.dependencies import get_insights_service  # type: ignore[attr-defined]
 from coaching.src.models.responses import (
     InsightActionResponse,
     InsightResponse,

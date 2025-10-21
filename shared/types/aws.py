@@ -11,7 +11,7 @@ from typing import Any, NotRequired, TypedDict, Union
 # DynamoDB AttributeValue can be: str, int, float, bool, bytes, bytearray, set, list, dict, Decimal, None
 DynamoDBAttributeValue = Union[
     str,
-    int, 
+    int,
     float,
     bool,
     bytes,
@@ -28,52 +28,68 @@ DynamoDBAttributeValue = Union[
 # JSONValue is for general JSON serialization (subset of DynamoDBAttributeValue)
 JSONValue = str | int | float | bool | None | dict[str, Any] | list[Any] | Decimal
 
+
 class QueryOutputTypeDef(TypedDict, total=False):
     """DynamoDB Query operation output"""
+
     Items: NotRequired[list[dict[str, JSONValue]]]
     Count: NotRequired[int]
     ScannedCount: NotRequired[int]
     LastEvaluatedKey: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
+
 
 class ScanOutputTypeDef(TypedDict, total=False):
     """DynamoDB Scan operation output"""
+
     Items: NotRequired[list[dict[str, JSONValue]]]
     Count: NotRequired[int]
     ScannedCount: NotRequired[int]
     LastEvaluatedKey: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
 
+
 class PutItemOutputTypeDef(TypedDict, total=False):
     """DynamoDB PutItem operation output"""
+
     Attributes: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
     ItemCollectionMetrics: NotRequired[dict[str, JSONValue]]
+
 
 class UpdateItemOutputTypeDef(TypedDict, total=False):
     """DynamoDB UpdateItem operation output"""
+
     Attributes: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
     ItemCollectionMetrics: NotRequired[dict[str, JSONValue]]
+
 
 class DeleteItemOutputTypeDef(TypedDict, total=False):
     """DynamoDB DeleteItem operation output"""
+
     Attributes: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
     ItemCollectionMetrics: NotRequired[dict[str, JSONValue]]
 
+
 class GetItemOutputTypeDef(TypedDict, total=False):
     """DynamoDB GetItem operation output"""
+
     Item: NotRequired[dict[str, JSONValue]]
     ConsumedCapacity: NotRequired[dict[str, JSONValue]]
 
+
 class DynamoDBKey(TypedDict, total=False):
     """Primary key structure for DynamoDB items"""
+
     pk: str  # Partition key
     sk: NotRequired[str]  # Sort key (optional)
 
+
 class DynamoDBItem(TypedDict, total=False):
     """Base DynamoDB item structure"""
+
     pk: str
     sk: NotRequired[str]
     tenant_id: NotRequired[str]
@@ -81,9 +97,11 @@ class DynamoDBItem(TypedDict, total=False):
     updated_at: NotRequired[str]
     ttl: NotRequired[int]
 
+
 # Lambda types
 class LambdaContext:
     """AWS Lambda context object"""
+
     function_name: str
     function_version: str
     invoked_function_arn: str
@@ -99,9 +117,11 @@ class LambdaContext:
         """Get remaining execution time in milliseconds"""
         return self.remaining_time_in_millis
 
+
 # API Gateway types
 class APIGatewayProxyEvent(TypedDict, total=False):
     """API Gateway Lambda proxy integration event"""
+
     resource: str
     path: str
     httpMethod: str
@@ -115,8 +135,10 @@ class APIGatewayProxyEvent(TypedDict, total=False):
     body: NotRequired[str]
     isBase64Encoded: bool
 
+
 class APIGatewayProxyResponse(TypedDict, total=False):
     """API Gateway Lambda proxy integration response"""
+
     statusCode: int
     headers: NotRequired[dict[str, str]]
     multiValueHeaders: NotRequired[dict[str, list[str]]]

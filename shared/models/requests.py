@@ -32,15 +32,21 @@ class BulkDeleteRequest(BaseRequestModel):
 class UserPreferencesUpdateRequest(BaseRequestModel):
     """Request to update user preferences."""
 
-    notifications: dict[str, bool] | None = Field(default=None, description="Notification preferences")
-    timezone: str | None = Field(default=None, max_length=50, description="User timezone preference")
-    language: str | None = Field(default=None, max_length=10, description="User language preference")
+    notifications: dict[str, bool] | None = Field(
+        default=None, description="Notification preferences"
+    )
+    timezone: str | None = Field(
+        default=None, max_length=50, description="User timezone preference"
+    )
+    language: str | None = Field(
+        default=None, max_length=10, description="User language preference"
+    )
     theme: str | None = Field(default=None, description="UI theme preference")
     date_format: str | None = Field(default=None, description="Date format preference")
     time_format: str | None = Field(default=None, description="Time format preference")
     currency: str | None = Field(default=None, max_length=10, description="Currency preference")
 
-    @field_validator('theme')
+    @field_validator("theme")
     @classmethod
     def validate_theme(cls, v: str | None) -> str | None:
         """Validate theme preference."""
@@ -48,7 +54,7 @@ class UserPreferencesUpdateRequest(BaseRequestModel):
             raise ValueError("Theme must be 'light', 'dark', or 'auto'")
         return v
 
-    @field_validator('time_format')
+    @field_validator("time_format")
     @classmethod
     def validate_time_format(cls, v: str | None) -> str | None:
         """Validate time format preference."""
@@ -65,16 +71,20 @@ class CreateIssueRequest(BaseRequestModel):
     """Request to create a new issue."""
 
     title: str = Field(min_length=1, max_length=200, description="Issue title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     issue_type: IssueType = Field(default=IssueType.TASK, description="Type of issue")
     priority: Priority = Field(default=Priority.MEDIUM, description="Priority level")
     goal_id: str | None = Field(default=None, description="Associated goal ID")
     owner_id: str | None = Field(default=None, description="Assigned owner user ID")
     tags: list[str] = Field(default_factory=lambda: [], max_length=10, description="Issue tags")
     due_date: datetime | None = Field(default=None, description="Due date")
-    estimated_effort: int | None = Field(default=None, ge=1, le=1000, description="Estimated effort in hours")
+    estimated_effort: int | None = Field(
+        default=None, ge=1, le=1000, description="Estimated effort in hours"
+    )
 
-    @field_validator('title')
+    @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
         """Ensure title is not empty after stripping."""
@@ -82,7 +92,7 @@ class CreateIssueRequest(BaseRequestModel):
             raise ValueError("Title cannot be empty")
         return v.strip()
 
-    @field_validator('tags')
+    @field_validator("tags")
     @classmethod
     def validate_tags(cls, v: list[str]) -> list[str]:
         """Validate and clean tags."""
@@ -93,7 +103,9 @@ class UpdateIssueRequest(BaseRequestModel):
     """Request to update an existing issue."""
 
     title: str | None = Field(default=None, min_length=1, max_length=200, description="Issue title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     issue_type: IssueType | None = Field(default=None, description="Type of issue")
     status: ActionStatus | None = Field(default=None, description="Current status")
     priority: Priority | None = Field(default=None, description="Priority level")
@@ -101,8 +113,12 @@ class UpdateIssueRequest(BaseRequestModel):
     owner_id: str | None = Field(default=None, description="Assigned owner user ID")
     tags: list[str] | None = Field(default=None, max_length=10, description="Issue tags")
     due_date: datetime | None = Field(default=None, description="Due date")
-    estimated_effort: int | None = Field(default=None, ge=1, le=1000, description="Estimated effort in hours")
-    actual_effort: int | None = Field(default=None, ge=0, le=1000, description="Actual effort in hours")
+    estimated_effort: int | None = Field(
+        default=None, ge=1, le=1000, description="Estimated effort in hours"
+    )
+    actual_effort: int | None = Field(
+        default=None, ge=0, le=1000, description="Actual effort in hours"
+    )
 
 
 class ListIssuesRequest(BaseRequestModel):
@@ -114,7 +130,9 @@ class ListIssuesRequest(BaseRequestModel):
     owner_id: str | None = Field(default=None, description="Filter by owner ID")
     issue_type: IssueType | None = Field(default=None, description="Filter by issue type")
     tags: list[str] | None = Field(default=None, description="Filter by tags (any match)")
-    search: str | None = Field(default=None, max_length=100, description="Search in title/description")
+    search: str | None = Field(
+        default=None, max_length=100, description="Search in title/description"
+    )
 
 
 class RootCauseAnalysisRequest(BaseRequestModel):
@@ -123,7 +141,9 @@ class RootCauseAnalysisRequest(BaseRequestModel):
     method: str = Field(default="5-whys", description="RCA method to use")
     root_causes: list[str] = Field(min_length=1, description="Identified root causes")
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence level (0-1)")
-    analysis_notes: str | None = Field(default=None, max_length=2000, description="Additional analysis notes")
+    analysis_notes: str | None = Field(
+        default=None, max_length=2000, description="Additional analysis notes"
+    )
 
 
 # Goal Request Models
@@ -131,7 +151,9 @@ class CreateGoalRequest(BaseRequestModel):
     """Request to create a new goal."""
 
     title: str = Field(min_length=3, max_length=200, description="Goal title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     time_horizon: TimeHorizon = Field(default=TimeHorizon.QUARTERLY, description="Time horizon")
     target_value: float | None = Field(default=None, description="Target value for the goal")
     current_value: float | None = Field(default=None, description="Current progress value")
@@ -147,7 +169,9 @@ class UpdateGoalRequest(BaseRequestModel):
     """Request to update an existing goal."""
 
     title: str | None = Field(default=None, min_length=1, max_length=200, description="Goal title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     status: ActionStatus | None = Field(default=None, description="Current status")
     time_horizon: TimeHorizon | None = Field(default=None, description="Time horizon")
     target_value: float | None = Field(default=None, description="Target value for the goal")
@@ -168,7 +192,9 @@ class ListGoalsRequest(BaseRequestModel):
     owner_id: str | None = Field(default=None, description="Filter by owner ID")
     parent_goal_id: str | None = Field(default=None, description="Filter by parent goal")
     tags: list[str] | None = Field(default=None, description="Filter by tags (any match)")
-    search: str | None = Field(default=None, max_length=100, description="Search in title/description")
+    search: str | None = Field(
+        default=None, max_length=100, description="Search in title/description"
+    )
 
 
 # Strategy Request Models
@@ -176,22 +202,30 @@ class CreateStrategyRequest(BaseRequestModel):
     """Request to create a new strategy."""
 
     title: str = Field(min_length=1, max_length=200, description="Strategy title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     goal_id: str = Field(description="Associated goal ID")
     owner_id: str | None = Field(default=None, description="Strategy owner user ID")
     priority: Priority = Field(default=Priority.MEDIUM, description="Priority level")
     tags: list[str] = Field(default_factory=lambda: [], max_length=10, description="Strategy tags")
     due_date: datetime | None = Field(default=None, description="Target completion date")
     success_metrics: list[str] = Field(default_factory=lambda: [], description="Success metrics")
-    resources_required: list[str] = Field(default_factory=lambda: [], description="Required resources")
+    resources_required: list[str] = Field(
+        default_factory=lambda: [], description="Required resources"
+    )
     dependencies: list[str] = Field(default_factory=lambda: [], description="Dependencies")
 
 
 class UpdateStrategyRequest(BaseRequestModel):
     """Request to update an existing strategy."""
 
-    title: str | None = Field(default=None, min_length=1, max_length=200, description="Strategy title")
-    description: str | None = Field(default=None, max_length=2000, description="Detailed description")
+    title: str | None = Field(
+        default=None, min_length=1, max_length=200, description="Strategy title"
+    )
+    description: str | None = Field(
+        default=None, max_length=2000, description="Detailed description"
+    )
     status: ActionStatus | None = Field(default=None, description="Current status")
     priority: Priority | None = Field(default=None, description="Priority level")
     owner_id: str | None = Field(default=None, description="Strategy owner user ID")
@@ -250,7 +284,9 @@ class CreateReviewRequest(BaseRequestModel):
 class UpdateReviewRequest(BaseRequestModel):
     """Request to update an existing review."""
 
-    title: str | None = Field(default=None, min_length=1, max_length=200, description="Review title")
+    title: str | None = Field(
+        default=None, min_length=1, max_length=200, description="Review title"
+    )
     content: str | None = Field(default=None, min_length=1, description="Review content")
     status: ActionStatus | None = Field(default=None, description="Review status")
     next_review_date: datetime | None = Field(default=None, description="Next scheduled review")
@@ -268,17 +304,25 @@ class CreateDecisionRequest(BaseRequestModel):
     description: str = Field(min_length=1, description="Decision description")
     decision_type: DecisionType = Field(description="Type of decision")
     stakeholders: list[str] = Field(default_factory=lambda: [], description="Stakeholder user IDs")
-    options_considered: list[str] = Field(default_factory=lambda: [], description="Options considered")
+    options_considered: list[str] = Field(
+        default_factory=lambda: [], description="Options considered"
+    )
     rationale: str | None = Field(default=None, description="Decision rationale")
-    expected_outcomes: list[str] = Field(default_factory=lambda: [], description="Expected outcomes")
-    implementation_date: datetime | None = Field(default=None, description="Planned implementation date")
+    expected_outcomes: list[str] = Field(
+        default_factory=lambda: [], description="Expected outcomes"
+    )
+    implementation_date: datetime | None = Field(
+        default=None, description="Planned implementation date"
+    )
     review_date: datetime | None = Field(default=None, description="Planned review date")
 
 
 class UpdateDecisionRequest(BaseRequestModel):
     """Request to update an existing decision."""
 
-    title: str | None = Field(default=None, min_length=1, max_length=200, description="Decision title")
+    title: str | None = Field(
+        default=None, min_length=1, max_length=200, description="Decision title"
+    )
     description: str | None = Field(default=None, min_length=1, description="Decision description")
     status: ActionStatus | None = Field(default=None, description="Implementation status")
     decision_date: datetime | None = Field(default=None, description="When decision was made")
@@ -325,9 +369,11 @@ class AddNoteRequest(BaseRequestModel):
     """Request to add a note to a goal."""
 
     note: str = Field(min_length=1, max_length=2000, description="Note content")
-    attachments: list[str] = Field(default_factory=list, max_length=10, description="Attachment IDs")
+    attachments: list[str] = Field(
+        default_factory=list, max_length=10, description="Attachment IDs"
+    )
 
-    @field_validator('note')
+    @field_validator("note")
     @classmethod
     def validate_note(cls, v: str) -> str:
         """Ensure note is not empty after stripping."""
@@ -349,12 +395,18 @@ class CreateProposalRequest(BaseRequestModel):
     """Request to create a proposal for a goal."""
 
     title: str = Field(min_length=1, max_length=200, description="Proposal title")
-    description: str | None = Field(default=None, max_length=2000, description="Proposal description")
-    rationale: str | None = Field(default=None, max_length=1000, description="Rationale for proposal")
-    estimated_impact: str | None = Field(default=None, max_length=500, description="Estimated impact")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Proposal description"
+    )
+    rationale: str | None = Field(
+        default=None, max_length=1000, description="Rationale for proposal"
+    )
+    estimated_impact: str | None = Field(
+        default=None, max_length=500, description="Estimated impact"
+    )
     priority: Priority = Field(default=Priority.MEDIUM, description="Proposal priority")
 
-    @field_validator('title')
+    @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
         """Ensure title is not empty after stripping."""
@@ -367,9 +419,11 @@ class LinkKPIRequest(BaseRequestModel):
     """Request to link a KPI to a goal."""
 
     kpi_id: str = Field(min_length=1, description="KPI identifier to link")
-    threshold_pct: float | None = Field(default=None, ge=0, le=100, description="Threshold percentage")
+    threshold_pct: float | None = Field(
+        default=None, ge=0, le=100, description="Threshold percentage"
+    )
 
-    @field_validator('kpi_id')
+    @field_validator("kpi_id")
     @classmethod
     def validate_kpi_id(cls, v: str) -> str:
         """Ensure KPI ID is not empty after stripping."""
@@ -384,7 +438,7 @@ class UpdateActionStatusRequest(BaseRequestModel):
 
     status: str = Field(min_length=1, max_length=50, description="New status value")
 
-    @field_validator('status')
+    @field_validator("status")
     @classmethod
     def validate_status(cls, v: str) -> str:
         """Ensure status is not empty after stripping."""

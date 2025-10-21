@@ -4,14 +4,13 @@ Tests the refactored conversation routes using new architecture with
 application services, domain entities, and auth-based context.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from coaching.src.api.main import app
-from coaching.src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
+from coaching.src.core.constants import CoachingTopic, ConversationStatus
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.value_objects.conversation_context import ConversationContext
 from fastapi.testclient import TestClient
 
 

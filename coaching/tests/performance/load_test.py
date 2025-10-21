@@ -207,7 +207,9 @@ async def main() -> None:
         print(f"\n⚠️  WARNING: P95 latency ({result.p95_latency_ms:.2f}ms) exceeds target (2000ms)")
 
     if result.failed_requests / result.total_requests > 0.01:
-        print(f"\n⚠️  WARNING: Error rate ({result.failed_requests / result.total_requests:.2%}) exceeds 1%")
+        print(
+            f"\n⚠️  WARNING: Error rate ({result.failed_requests / result.total_requests:.2%}) exceeds 1%"
+        )
 
     if result.errors:
         print(f"\n❌ Errors encountered: {len(set(result.errors))} unique errors")

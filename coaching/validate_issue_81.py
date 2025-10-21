@@ -20,6 +20,7 @@ from pathlib import Path
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
+
 def validate_imports() -> bool:
     """Validate all required modules can be imported."""
     print("🔍 Validating imports...")
@@ -30,6 +31,7 @@ def validate_imports() -> bool:
             AdvancedStateManager,
             LangGraphWorkflowOrchestrator,
         )
+
         print("✅ LangGraphWorkflowOrchestrator imported successfully")
 
         # Test workflow templates import
@@ -37,10 +39,12 @@ def validate_imports() -> bool:
         from workflows.conversation_workflow_template import (
             ConversationWorkflowTemplate,  # noqa: F401
         )
+
         print("✅ Workflow templates imported successfully")
 
         # Test base workflow classes
         from workflows.base import WorkflowConfig, WorkflowState, WorkflowType  # noqa: F401
+
         print("✅ Base workflow classes imported successfully")
 
         return True
@@ -48,6 +52,7 @@ def validate_imports() -> bool:
     except ImportError as e:
         print(f"❌ Import error: {e}")
         return False
+
 
 def validate_class_structure() -> bool:
     """Validate that classes have the expected structure."""
@@ -61,8 +66,11 @@ def validate_class_structure() -> bool:
 
         # Test LangGraphWorkflowOrchestrator structure
         orchestrator_methods = [
-            'initialize', 'register_workflow', 'create_workflow_graph',
-            'start_workflow', 'continue_workflow'
+            "initialize",
+            "register_workflow",
+            "create_workflow_graph",
+            "start_workflow",
+            "continue_workflow",
         ]
 
         for method in orchestrator_methods:
@@ -72,7 +80,7 @@ def validate_class_structure() -> bool:
         print("✅ LangGraphWorkflowOrchestrator structure valid")
 
         # Test GraphUtilities
-        if hasattr(GraphUtilities, 'create_standard_nodes'):
+        if hasattr(GraphUtilities, "create_standard_nodes"):
             print("✅ GraphUtilities structure valid")
         else:
             print("❌ GraphUtilities missing create_standard_nodes")
@@ -81,9 +89,7 @@ def validate_class_structure() -> bool:
         # Test workflow templates
         config = WorkflowConfig(workflow_type=WorkflowType.CONVERSATIONAL_COACHING)
         ConversationWorkflowTemplate(config)
-        AnalysisWorkflowTemplate(
-            WorkflowConfig(workflow_type=WorkflowType.SINGLE_SHOT_ANALYSIS)
-        )
+        AnalysisWorkflowTemplate(WorkflowConfig(workflow_type=WorkflowType.SINGLE_SHOT_ANALYSIS))
 
         print("✅ Workflow templates instantiated successfully")
         return True
@@ -91,6 +97,7 @@ def validate_class_structure() -> bool:
     except Exception as e:
         print(f"❌ Structure validation error: {e}")
         return False
+
 
 async def validate_basic_functionality() -> bool:
     """Validate basic functionality works."""
@@ -107,8 +114,10 @@ async def validate_basic_functionality() -> bool:
         class MockCache:
             def __init__(self) -> None:
                 self.storage: dict[str, Any] = {}
+
             async def save_workflow_state(self, workflow_id: str, state_data: Any) -> None:
                 self.storage[workflow_id] = state_data
+
             async def load_workflow_state(self, workflow_id: str) -> Any:
                 return self.storage.get(workflow_id)
 
@@ -119,16 +128,13 @@ async def validate_basic_functionality() -> bool:
 
         # Test workflow registration
         orchestrator.register_workflow(
-            WorkflowType.CONVERSATIONAL_COACHING,
-            ConversationWorkflowTemplate
+            WorkflowType.CONVERSATIONAL_COACHING, ConversationWorkflowTemplate
         )
         print("✅ Workflow registration successful")
 
         # Test graph creation
         config = WorkflowConfig(workflow_type=WorkflowType.CONVERSATIONAL_COACHING)
-        await orchestrator.create_workflow_graph(
-            WorkflowType.CONVERSATIONAL_COACHING, config
-        )
+        await orchestrator.create_workflow_graph(WorkflowType.CONVERSATIONAL_COACHING, config)
         print("✅ Graph construction successful")
 
         return True
@@ -136,8 +142,10 @@ async def validate_basic_functionality() -> bool:
     except Exception as e:
         print(f"❌ Functionality validation error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def validate_acceptance_criteria() -> None:
     """Validate all Issue #81 acceptance criteria."""
@@ -153,13 +161,14 @@ def validate_acceptance_criteria() -> None:
         "✅ GraphUtilities for standard workflow nodes",
         "✅ Comprehensive test coverage",
         "✅ Type safety with Pydantic models throughout",
-        "✅ Error handling and recovery mechanisms"
+        "✅ Error handling and recovery mechanisms",
     ]
 
     for criterion in criteria:
         print(f"  {criterion}")
 
     print("\n🎯 All Issue #81 acceptance criteria have been implemented!")
+
 
 async def main() -> int:
     """Main validation function."""
@@ -196,6 +205,7 @@ async def main() -> int:
     else:
         print("❌ Some validations failed - Please review implementation")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())

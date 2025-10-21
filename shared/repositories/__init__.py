@@ -13,9 +13,9 @@ from .enhanced_repositories import (
 )
 
 __all__ = [
-    'BaseRepository',
-    'GoalRepository',
-    'IssueRepository',
-    'KPIRepository',
-    'UserRepository',
+    "BaseRepository",
+    "GoalRepository",
+    "IssueRepository",
+    "KPIRepository",
+    "UserRepository",
 ]

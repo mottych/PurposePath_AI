@@ -104,11 +104,10 @@ async def get_llm_service() -> LLMApplicationService:
         LLMApplicationService instance
     """
     bedrock_client = get_bedrock_client_singleton()
-    
+
     # Create Bedrock provider implementation
     bedrock_provider = BedrockLLMProvider(
-        bedrock_client=bedrock_client,
-        region=settings.bedrock_region
+        bedrock_client=bedrock_client, region=settings.bedrock_region
     )
 
     return LLMApplicationService(llm_provider=bedrock_provider)

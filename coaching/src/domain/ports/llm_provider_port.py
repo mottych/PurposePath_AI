@@ -127,7 +127,7 @@ class LLMProviderPort(Protocol):
         """
         ...
         # Required for async iterator protocol
-        yield ""  # type: ignore[misc]
+        yield ""
 
     async def count_tokens(self, text: str, model: str) -> int:
         """

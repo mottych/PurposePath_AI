@@ -3,10 +3,9 @@
 from typing import Any, cast
 
 import boto3
+from mypy_boto3_dynamodb import DynamoDBServiceResource
 from mypy_boto3_secretsmanager import SecretsManagerClient
 from mypy_boto3_ses import SESClient
-
-from mypy_boto3_dynamodb import DynamoDBServiceResource
 
 
 def get_dynamodb_resource(region_name: str) -> DynamoDBServiceResource:

@@ -37,7 +37,7 @@ async def readiness_check(
 
         dynamodb = get_dynamodb_resource(settings.aws_region)
         # Access the DynamoDB client through meta to describe table
-        dynamodb.meta.client.describe_table(TableName=settings.conversations_table)  # type: ignore[attr-defined]
+        dynamodb.meta.client.describe_table(TableName=settings.conversations_table)
         services["dynamodb"] = "healthy"
     except Exception as e:
         services["dynamodb"] = f"unhealthy: {str(e)}"

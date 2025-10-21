@@ -41,8 +41,7 @@ async def auth_data() -> dict[str, Any]:
         Dict with access_token, user_id, and tenant_id
     """
     account_api_url = os.getenv(
-        "BUSINESS_API_ACCOUNT_URL",
-        "https://api.dev.purposepath.app/account/api/v1"
+        "BUSINESS_API_ACCOUNT_URL", "https://api.dev.purposepath.app/account/api/v1"
     )
     email = os.getenv("BUSINESS_API_TEST_EMAIL", "motty@purposepath.ai")
     password = os.getenv("BUSINESS_API_TEST_PASSWORD", "Abcd1234")
@@ -117,10 +116,7 @@ async def business_api_client(auth_token: str) -> BusinessApiClient:
     Returns:
         Configured BusinessApiClient instance
     """
-    base_url = os.getenv(
-        "BUSINESS_API_BASE_URL",
-        "https://api.dev.purposepath.app/account/api/v1"
-    )
+    base_url = os.getenv("BUSINESS_API_BASE_URL", "https://api.dev.purposepath.app/account/api/v1")
 
     client = BusinessApiClient(
         base_url=base_url,
@@ -190,9 +186,7 @@ class TestBusinessApiIntegration:
     ) -> None:
         """Test retrieving business foundation from /api/tenants/{id}/business-foundation."""
         try:
-            result = await business_api_client.get_organizational_context(
-                tenant_id=tenant_id
-            )
+            result = await business_api_client.get_organizational_context(tenant_id=tenant_id)
 
             # Verify response structure
             assert result is not None
@@ -245,9 +239,7 @@ class TestBusinessApiIntegration:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                pytest.skip(
-                    f"Goals endpoint not found (404): {e.request.url}"
-                )
+                pytest.skip(f"Goals endpoint not found (404): {e.request.url}")
             raise
 
     # test_get_metrics removed - not in MVP scope
@@ -284,8 +276,7 @@ class TestBusinessApiIntegration:
     async def test_error_handling_invalid_token(self, user_id: str, tenant_id: str) -> None:
         """Test error handling with invalid authentication token."""
         base_url = os.getenv(
-            "BUSINESS_API_BASE_URL",
-            "https://api.dev.purposepath.app/account/api/v1"
+            "BUSINESS_API_BASE_URL", "https://api.dev.purposepath.app/account/api/v1"
         )
 
         # Create client with invalid token
@@ -317,8 +308,7 @@ class TestBusinessApiIntegration:
     ) -> None:
         """Test timeout handling with very short timeout."""
         base_url = os.getenv(
-            "BUSINESS_API_BASE_URL",
-            "https://api.dev.purposepath.app/account/api/v1"
+            "BUSINESS_API_BASE_URL", "https://api.dev.purposepath.app/account/api/v1"
         )
 
         # Create client with very short timeout

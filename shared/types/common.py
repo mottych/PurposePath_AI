@@ -11,28 +11,28 @@ from typing import Literal, NewType, TypeAlias, TypedDict
 # ========================================
 # These provide compile-time type safety while maintaining string runtime behavior
 
-UserId = NewType('UserId', str)
+UserId = NewType("UserId", str)
 """Strongly-typed user identifier"""
 
-TenantId = NewType('TenantId', str)
+TenantId = NewType("TenantId", str)
 """Strongly-typed tenant identifier"""
 
-ConversationId = NewType('ConversationId', str)
+ConversationId = NewType("ConversationId", str)
 """Strongly-typed conversation identifier"""
 
-MessageId = NewType('MessageId', str)
+MessageId = NewType("MessageId", str)
 """Strongly-typed message identifier"""
 
-SessionId = NewType('SessionId', str)
+SessionId = NewType("SessionId", str)
 """Strongly-typed coaching session identifier"""
 
-GoalId = NewType('GoalId', str)
+GoalId = NewType("GoalId", str)
 """Strongly-typed goal identifier"""
 
-ActionId = NewType('ActionId', str)
+ActionId = NewType("ActionId", str)
 """Strongly-typed action identifier"""
 
-StrategyId = NewType('StrategyId', str)
+StrategyId = NewType("StrategyId", str)
 """Strongly-typed strategy identifier"""
 
 # ========================================
@@ -53,13 +53,17 @@ JSONDict: TypeAlias = dict[str, JSONValue]
 # Pagination Patterns
 # ========================================
 
+
 class PaginationParams(TypedDict):
     """Standard pagination parameters"""
+
     page: int
     limit: int
 
+
 class PaginationMeta(TypedDict):
     """Pagination metadata for responses"""
+
     page: int
     limit: int
     total: int
@@ -67,20 +71,26 @@ class PaginationMeta(TypedDict):
     has_next: bool
     has_prev: bool
 
+
 # ========================================
 # API Response Patterns
 # ========================================
 
+
 class SuccessData(TypedDict):
     """Success response structure"""
+
     success: Literal[True]
     message: str | None
 
+
 class ErrorData(TypedDict):
     """Error response structure"""
+
     success: Literal[False]
     error: str
     error_code: str | None
+
 
 # ========================================
 # Status and State Types
@@ -102,29 +112,36 @@ ActionStatus: TypeAlias = Literal["not_started", "in_progress", "completed", "bl
 # Utility Functions for Type Creation
 # ========================================
 
+
 def create_user_id(value: str) -> UserId:
     """Create a strongly-typed UserId from string"""
     return UserId(value)
+
 
 def create_tenant_id(value: str) -> TenantId:
     """Create a strongly-typed TenantId from string"""
     return TenantId(value)
 
+
 def create_conversation_id(value: str) -> ConversationId:
     """Create a strongly-typed ConversationId from string"""
     return ConversationId(value)
+
 
 def create_session_id(value: str) -> SessionId:
     """Create a strongly-typed SessionId from string"""
     return SessionId(value)
 
+
 def create_goal_id(value: str) -> GoalId:
     """Create a strongly-typed GoalId from string"""
     return GoalId(value)
 
+
 def create_action_id(value: str) -> ActionId:
     """Create a strongly-typed ActionId from string"""
     return ActionId(value)
+
 
 def create_strategy_id(value: str) -> StrategyId:
     """Create a strongly-typed StrategyId from string"""

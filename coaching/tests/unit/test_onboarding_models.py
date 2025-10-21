@@ -1,15 +1,15 @@
 """Unit tests for Onboarding Pydantic models (Issue #48)."""
 
 import pytest
-from pydantic import ValidationError
 from coaching.src.api.models.onboarding import (
+    OnboardingCoachingRequest,
+    OnboardingCoachingResponse,
     OnboardingSuggestionRequest,
     OnboardingSuggestionResponse,
     WebsiteScanRequest,
     WebsiteScanResponse,
-    OnboardingCoachingRequest,
-    OnboardingCoachingResponse,
 )
+from pydantic import ValidationError
 
 
 @pytest.mark.unit

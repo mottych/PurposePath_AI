@@ -82,7 +82,7 @@ class BusinessApiClient:
         Get user context data from Account Service.
 
         Uses existing /user/profile endpoint with MVP fallbacks.
-        
+
         MVP Assumptions:
         - Single user per tenant (business owner)
         - No department structure
@@ -204,7 +204,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return org_context
+            return org_context  # type: ignore[no-any-return]
 
         except httpx.HTTPStatusError as e:
             logger.error(

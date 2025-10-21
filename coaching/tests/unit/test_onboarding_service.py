@@ -1,7 +1,8 @@
 """Unit tests for OnboardingService (Issue #37 - Sample Test)."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from coaching.src.services.onboarding_service import OnboardingService
 
 
@@ -120,9 +121,7 @@ class TestOnboardingService:
         topic = "coreValues"
 
         # Act
-        suggestions = onboarding_service._extract_suggestions_from_coaching(
-            response, topic
-        )
+        suggestions = onboarding_service._extract_suggestions_from_coaching(response, topic)
 
         # Assert
         assert "Excellence" in suggestions

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class TenantStatus(str, Enum):
     """Status of a tenant."""
+
     ACTIVE = "active"
     SUSPENDED = "suspended"
     TRIAL = "trial"
@@ -18,6 +19,7 @@ class TenantStatus(str, Enum):
 
 class UserRole(str, Enum):
     """User roles within a tenant."""
+
     OWNER = "owner"
     ADMIN = "admin"
     MANAGER = "manager"
@@ -27,6 +29,7 @@ class UserRole(str, Enum):
 
 class UserStatus(str, Enum):
     """Status of a user."""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
@@ -35,6 +38,7 @@ class UserStatus(str, Enum):
 
 class InvitationStatus(str, Enum):
     """Status of an invitation."""
+
     PENDING = "pending"
     ACCEPTED = "accepted"
     EXPIRED = "expired"
@@ -43,6 +47,7 @@ class InvitationStatus(str, Enum):
 
 class SubscriptionTier(str, Enum):
     """Available subscription tiers."""
+
     STARTER = "starter"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
@@ -50,6 +55,7 @@ class SubscriptionTier(str, Enum):
 
 class CoachingTopic(str, Enum):
     """Available coaching topics."""
+
     CORE_VALUES = "core_values"
     PURPOSE = "purpose"
     VISION = "vision"
@@ -58,6 +64,7 @@ class CoachingTopic(str, Enum):
 
 class Permission(str, Enum):
     """Available permissions for multitenant access control."""
+
     START_COACHING = "start_coaching"
     VIEW_ALL_SESSIONS = "view_all_sessions"
     READ_BUSINESS_DATA = "read_business_data"
@@ -68,18 +75,22 @@ class Permission(str, Enum):
 
 # Base Models with Common Fields
 
+
 class TimestampMixin(BaseModel):
     """Mixin for common timestamp fields."""
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class TenantScopedMixin(BaseModel):
     """Mixin for tenant-scoped entities."""
+
     tenant_id: str = Field(..., description="Unique identifier for the tenant")
 
 
 # Core Entity Models
+
 
 class Tenant(TimestampMixin):
     """Tenant entity representing an organization."""
@@ -124,8 +135,7 @@ class User(TimestampMixin, TenantScopedMixin):
 
     # User preferences and settings
     preferences: dict[str, Any] = Field(
-        default_factory=dict,
-        description="User-specific preferences and settings"
+        default_factory=dict, description="User-specific preferences and settings"
     )
 
     @property
@@ -156,13 +166,9 @@ class Subscription(TimestampMixin, TenantScopedMixin):
 
     # Usage limits and tracking
     limits: dict[str, int] = Field(
-        default_factory=dict,
-        description="Subscription limits (max_users, max_sessions, etc.)"
+        default_factory=dict, description="Subscription limits (max_users, max_sessions, etc.)"
     )
-    usage: dict[str, int] = Field(
-        default_factory=dict,
-        description="Current usage tracking"
-    )
+    usage: dict[str, int] = Field(default_factory=dict, description="Current usage tracking")
 
     # External billing system integration
     external_subscription_id: str | None = Field(None, description="ID from billing provider")
@@ -193,6 +199,7 @@ class Invitation(TimestampMixin, TenantScopedMixin):
 
 # Shared Business Data Models
 
+
 class BusinessData(TimestampMixin, TenantScopedMixin):
     """Shared business data within a tenant."""
 
@@ -219,8 +226,7 @@ class BusinessData(TimestampMixin, TenantScopedMixin):
 
     # Change tracking
     change_history: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="History of changes made to business data"
+        default_factory=list, description="History of changes made to business data"
     )
 
 
@@ -236,14 +242,12 @@ class CoachingSession(TimestampMixin, TenantScopedMixin):
 
     # Session data (private to user)
     session_data: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Private session conversation data"
+        default_factory=dict, description="Private session conversation data"
     )
 
     # Outcomes (shared with tenant business data)
     outcomes: dict[str, Any] | None = Field(
-        None,
-        description="Session outcomes to be shared with business data"
+        None, description="Session outcomes to be shared with business data"
     )
 
     # Session metadata
@@ -277,7 +281,7 @@ class UserPreferences(TimestampMixin, TenantScopedMixin):
             "coaching_reminders": True,
             "team_updates": True,
             "system_notifications": True,
-            "marketing": False
+            "marketing": False,
         }
     )
 
@@ -286,21 +290,22 @@ class UserPreferences(TimestampMixin, TenantScopedMixin):
         default_factory=lambda: {
             "preferred_session_length": 30,  # minutes
             "reminder_frequency": "weekly",
-            "coaching_style": "collaborative"
+            "coaching_style": "collaborative",
         }
     )
 
     # Dashboard and view preferences
     dashboard_layout: dict[str, Any] = Field(
-        default_factory=dict,
-        description="User's dashboard layout preferences"
+        default_factory=dict, description="User's dashboard layout preferences"
     )
 
 
 # Request/Response Models
 
+
 class RequestContext(BaseModel):
     """Request context with user and tenant information."""
+
     user_id: str
     tenant_id: str
     role: UserRole
@@ -347,5 +352,5 @@ class BusinessDataUpdateRequest(BaseModel):
 
 class UserContext(RequestContext):
     """Backward compatible alias for request-scoped user context."""
-    pass
 
+    pass

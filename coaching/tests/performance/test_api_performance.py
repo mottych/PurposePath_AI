@@ -6,7 +6,6 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
-
 from shared.observability.performance import measure_time
 
 
@@ -48,7 +47,9 @@ class TestAPIPerformance:
             }
 
         # Execute concurrent requests
-        with measure_time(f"{concurrent_requests}_concurrent_requests", record_metric=False) as timing:
+        with measure_time(
+            f"{concurrent_requests}_concurrent_requests", record_metric=False
+        ) as timing:
             results = await asyncio.gather(*[make_request() for _ in range(concurrent_requests)])
 
         # Validate results

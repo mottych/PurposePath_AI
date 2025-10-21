@@ -1,6 +1,5 @@
 """Unit tests for analysis domain exceptions."""
 
-
 from coaching.src.core.constants import AnalysisType
 from coaching.src.domain.exceptions.analysis_exceptions import (
     AnalysisNotFound,

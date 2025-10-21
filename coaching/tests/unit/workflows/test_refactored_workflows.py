@@ -4,9 +4,7 @@ This test suite verifies that the refactored coaching_workflow.py and
 analysis_workflow.py properly integrate with domain entities and services.
 """
 
-import uuid
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
@@ -17,7 +15,7 @@ from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.constants import AnalysisType, CoachingTopic, ConversationStatus, MessageRole
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
+from coaching.src.domain.ports.llm_provider_port import LLMResponse
 from coaching.src.domain.value_objects.message import Message
 from coaching.src.workflows.analysis_workflow import (
     AnalysisWorkflow,

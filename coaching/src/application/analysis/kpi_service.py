@@ -126,7 +126,7 @@ Recommend 5-8 specific, measurable KPIs."""
                 kpis_count=len(result["recommended_kpis"]),
             )
 
-            return result
+            return result  # type: ignore[no-any-return]
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse KPI JSON response", error=str(e))

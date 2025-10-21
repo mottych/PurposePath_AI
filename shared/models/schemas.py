@@ -2,6 +2,7 @@
 Canonical data models for multitenant API standardization.
 All models use snake_case fields and ISO 8601 datetime strings.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -15,13 +16,13 @@ import uuid
 from enum import Enum
 
 # Generic type for ApiResponse
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseModelWithDatetime(BaseModel):
     """Base model with datetime serialization for all datetime fields."""
 
-    @field_serializer('*', when_used='json')
+    @field_serializer("*", when_used="json")
     def serialize_datetime(self, value: Any) -> Any:
         """Serialize datetime objects to ISO format strings."""
         if isinstance(value, datetime):
@@ -31,6 +32,7 @@ class BaseModelWithDatetime(BaseModel):
 
 class ErrorCode(str, Enum):
     """Standardized error codes for all API responses."""
+
     # Authentication errors
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     TOKEN_EXPIRED = "TOKEN_EXPIRED"
@@ -96,6 +98,7 @@ class ErrorCode(str, Enum):
 
 class ApiResponse(BaseModelWithDatetime, Generic[T]):
     """Standard API response envelope for all endpoints."""
+
     success: bool
     data: T | None = None
     message: str | None = None
@@ -107,25 +110,21 @@ class ApiResponse(BaseModelWithDatetime, Generic[T]):
     @classmethod
     def success_response(cls, data: T | None = None, message: str | None = None) -> ApiResponse[T]:
         """Create a successful response."""
-        return cls(
-            success=True,
-            data=data,
-            message=message
-        )
+        return cls(success=True, data=data, message=message)
 
     @classmethod
-    def error_response(cls, error_message: str, error_code: ErrorCode | None = None) -> ApiResponse[None]:
+    def error_response(
+        cls, error_message: str, error_code: ErrorCode | None = None
+    ) -> ApiResponse[None]:
         """Create an error response."""
         return ApiResponse[None](
-            success=False,
-            data=None,
-            error=error_message,
-            error_code=error_code
+            success=False, data=None, error=error_message, error_code=error_code
         )
 
 
 class PaginationMeta(BaseModelWithDatetime):
     """Pagination metadata for list responses."""
+
     page: int
     limit: int
     total: int
@@ -138,6 +137,7 @@ class PaginationMeta(BaseModelWithDatetime):
 
 class PaginatedResponse(BaseModelWithDatetime, Generic[T]):
     """Standard paginated response envelope."""
+
     success: bool
     data: list[T]
     pagination: PaginationMeta
@@ -151,6 +151,7 @@ class PaginatedResponse(BaseModelWithDatetime, Generic[T]):
 
 class UserProfile(BaseModelWithDatetime):
     """Canonical user profile model with snake_case fields."""
+
     user_id: str
     tenant_id: str
     email: str
@@ -171,6 +172,7 @@ class UserProfile(BaseModelWithDatetime):
 
 class UserReference(BaseModelWithDatetime):
     """Minimal user reference for lists and references."""
+
     user_id: str
     first_name: str
     last_name: str
@@ -182,6 +184,7 @@ class UserReference(BaseModelWithDatetime):
 
 class TenantInfo(BaseModelWithDatetime):
     """Tenant information model with subscription details."""
+
     tenant_id: str
     name: str
     status: str
@@ -196,6 +199,7 @@ class AuthResponse(BaseModelWithDatetime):
     """Authentication response with tokens and user profile.
     Uses snake_case keys to match API spec.
     """
+
     access_token: str
     refresh_token: str
     user: UserProfile
@@ -206,16 +210,16 @@ class RegistrationVerificationPending(BaseModelWithDatetime):
     """Response when email verification is required after registration.
     Uses snake_case keys to match API spec.
     """
+
     requires_email_verification: bool
     tenant_id: str | None = None
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class UpdateUserProfileRequest(BaseModelWithDatetime):
     """Request model for updating user profile."""
+
     first_name: str | None = None
     last_name: str | None = None
     phone: str | None = None
@@ -225,12 +229,14 @@ class UpdateUserProfileRequest(BaseModelWithDatetime):
 
 class UpdateSubscriptionRequest(BaseModelWithDatetime):
     """Request model for updating subscription."""
+
     plan: Literal["monthly", "yearly"] | None = None
     tier: Literal["starter", "professional", "enterprise"] | None = None
 
 
 class LoginRequest(BaseModelWithDatetime):
     """Login request model."""
+
     email: str
     password: str
     tenant_id: str | None = None
@@ -238,6 +244,7 @@ class LoginRequest(BaseModelWithDatetime):
 
 class RegisterRequest(BaseModelWithDatetime):
     """Registration request model with split names."""
+
     email: str
     password: str
     first_name: str
@@ -249,27 +256,32 @@ class RegisterRequest(BaseModelWithDatetime):
 
 class RefreshTokenRequest(BaseModelWithDatetime):
     """Refresh token request model."""
+
     refresh_token: str
 
 
 class ForgotPasswordRequest(BaseModelWithDatetime):
     """Forgot password request model."""
+
     email: str
 
 
 class ResetPasswordRequest(BaseModelWithDatetime):
     """Reset password request model."""
+
     token: str
     new_password: str
 
 
 class ConfirmEmailRequest(BaseModelWithDatetime):
     """Email confirmation request model."""
+
     token: str
 
 
 class GoogleAuthRequest(BaseModelWithDatetime):
     """Google OAuth request model."""
+
     token: str
     tenant_id: str | None = None
 
@@ -277,18 +289,18 @@ class GoogleAuthRequest(BaseModelWithDatetime):
 # Enhanced business domain models
 class NotificationSettings(BaseModelWithDatetime):
     """User notification preferences."""
+
     email: bool = True
     push: bool = True
     sms: bool = False
     marketing: bool = False
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class EnhancedUserPreferences(BaseModelWithDatetime):
     """Enhanced user preferences with comprehensive settings."""
+
     notifications: NotificationSettings = Field(default_factory=NotificationSettings)
     timezone: str = "America/New_York"
     language: str = "en"
@@ -297,13 +309,12 @@ class EnhancedUserPreferences(BaseModelWithDatetime):
     time_format: Literal["12h", "24h"] = "12h"
     currency: str = "USD"
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class PaymentMethod(BaseModelWithDatetime):
     """Payment method information."""
+
     id: str
     type: Literal["card", "google_pay", "apple_pay", "bank_account"]
     last4: str | None = None
@@ -313,13 +324,12 @@ class PaymentMethod(BaseModelWithDatetime):
     is_default: bool = True
     created_at: datetime
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class Subscription(BaseModelWithDatetime):
     """User subscription information with comprehensive details."""
+
     id: str
     user_id: str
     tenant_id: str
@@ -338,13 +348,12 @@ class Subscription(BaseModelWithDatetime):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class Address(BaseModelWithDatetime):
     """Business address information."""
+
     street: str
     city: str
     state: str
@@ -353,12 +362,12 @@ class Address(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class Product(BaseModelWithDatetime):
     """Business product/service information."""
+
     id: str | None = None
     name: str
     description: str | None = None
@@ -368,13 +377,12 @@ class Product(BaseModelWithDatetime):
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class OnboardingStep3(BaseModelWithDatetime):
     """Onboarding step 3: Business positioning."""
+
     niche: str | None = None
     ica: str | None = None  # Ideal Customer Avatar
     value_proposition: str | None = Field(alias="valueProposition", default=None)
@@ -383,12 +391,12 @@ class OnboardingStep3(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class OnboardingStep4(BaseModelWithDatetime):
     """Onboarding step 4: Core business values and vision."""
+
     core_values: list[str] = Field(alias="coreValues", default_factory=list)
     core_values_status: Literal["Not started", "In progress", "Completed"] = Field(
         alias="coreValuesStatus", default="Not started"
@@ -408,12 +416,12 @@ class OnboardingStep4(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class OnboardingData(BaseModelWithDatetime):
     """Comprehensive business onboarding data."""
+
     id: str | None = None
     user_id: str
     tenant_id: str
@@ -433,7 +441,6 @@ class OnboardingData(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
@@ -443,38 +450,36 @@ OnboardingData.model_rebuild()
 
 class BillingPortalRequest(BaseModelWithDatetime):
     """Request model for billing portal access."""
+
     return_url: str | None = None
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class BillingPortalResponse(BaseModelWithDatetime):
     """Response model for billing portal URL."""
+
     url: str
     expires_at: datetime
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 class UserLimitsResponse(BaseModelWithDatetime):
     """Response model for user subscription limits."""
+
     subscription_tier: str
     limits: dict[str, Any] = Field(default_factory=dict)
     usage: dict[str, Any] = Field(default_factory=dict)
     reset_date: datetime | None = None
 
-    model_config = ConfigDict(
-
-    )
+    model_config = ConfigDict()
 
 
 # Request models for API endpoints
 class CreateProductRequest(BaseModelWithDatetime):
     """Request model for creating a new product."""
+
     name: str
     description: str | None = None
     problem: str
@@ -484,6 +489,7 @@ class CreateProductRequest(BaseModelWithDatetime):
 
 class UpdateProductRequest(BaseModelWithDatetime):
     """Request model for updating an existing product."""
+
     name: str | None = None
     description: str | None = None
     problem: str | None = None
@@ -493,6 +499,7 @@ class UpdateProductRequest(BaseModelWithDatetime):
 
 class UpdateOnboardingRequest(BaseModelWithDatetime):
     """Request model for updating onboarding data."""
+
     business_name: str | None = Field(alias="businessName", default=None)
     website: str | None = None
     industry: str | None = None
@@ -504,5 +511,4 @@ class UpdateOnboardingRequest(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )

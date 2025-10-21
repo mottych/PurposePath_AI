@@ -2,19 +2,20 @@
 Canonical data models for multitenant API standardization.
 All models use snake_case fields and ISO 8601 datetime strings.
 """
+
 from datetime import datetime
 from typing import Any, Generic, List, Literal, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 # Generic type for ApiResponse
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseModelWithDatetime(BaseModel):
     """Base model with datetime serialization for all datetime fields."""
 
-    @field_serializer('*', when_used='json')
+    @field_serializer("*", when_used="json")
     def serialize_datetime(self, value: Any) -> Any:
         """Serialize datetime objects to ISO format strings."""
         if isinstance(value, datetime):
@@ -24,6 +25,7 @@ class BaseModelWithDatetime(BaseModel):
 
 class ApiResponse(BaseModelWithDatetime, Generic[T]):
     """Standard API response envelope for all endpoints."""
+
     success: bool
     data: Optional[T] = None
     message: Optional[str] = None
@@ -32,6 +34,7 @@ class ApiResponse(BaseModelWithDatetime, Generic[T]):
 
 class PaginationMeta(BaseModelWithDatetime):
     """Pagination metadata for list responses."""
+
     page: int
     limit: int
     total: int
@@ -39,12 +42,12 @@ class PaginationMeta(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Standard paginated response envelope."""
+
     success: bool
     data: List[T]
     pagination: PaginationMeta
@@ -53,12 +56,12 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class UserProfile(BaseModelWithDatetime):
     """User profile with standardized fields."""
+
     user_id: str = Field(alias="userId")
     tenant_id: str = Field(alias="tenantId")
     email: str
@@ -83,6 +86,7 @@ class UserProfile(BaseModelWithDatetime):
 
 class TenantInfo(BaseModelWithDatetime):
     """Tenant information model."""
+
     tenant_id: str
     name: str
     status: str
@@ -95,6 +99,7 @@ class TenantInfo(BaseModelWithDatetime):
 
 class AuthResponse(BaseModelWithDatetime):
     """Authentication response with tokens and user profile."""
+
     access_token: str = Field(alias="accessToken")
     refresh_token: str = Field(alias="refreshToken")
     user: UserProfile
@@ -102,12 +107,12 @@ class AuthResponse(BaseModelWithDatetime):
 
     model_config = ConfigDict(
         populate_by_name=True,
-
     )
 
 
 class RegistrationVerificationPending(BaseModelWithDatetime):
     """Response when email verification is required after registration."""
+
     requires_email_verification: bool = Field(alias="requiresEmailVerification")
     tenant_id: Optional[str] = None
 
@@ -119,6 +124,7 @@ class RegistrationVerificationPending(BaseModelWithDatetime):
 
 class UpdateUserProfileRequest(BaseModelWithDatetime):
     """Request model for updating user profile."""
+
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -128,12 +134,14 @@ class UpdateUserProfileRequest(BaseModelWithDatetime):
 
 class UpdateSubscriptionRequest(BaseModelWithDatetime):
     """Request model for updating subscription."""
+
     plan: Optional[Literal["monthly", "yearly"]] = None
     tier: Optional[Literal["starter", "professional", "enterprise"]] = None
 
 
 class LoginRequest(BaseModelWithDatetime):
     """Login request model."""
+
     email: str
     password: str
     tenant_id: Optional[str] = None
@@ -141,6 +149,7 @@ class LoginRequest(BaseModelWithDatetime):
 
 class RegisterRequest(BaseModelWithDatetime):
     """Registration request model with split names."""
+
     email: str
     password: str
     first_name: str
@@ -152,26 +161,31 @@ class RegisterRequest(BaseModelWithDatetime):
 
 class RefreshTokenRequest(BaseModelWithDatetime):
     """Refresh token request model."""
+
     refresh_token: str
 
 
 class ForgotPasswordRequest(BaseModelWithDatetime):
     """Forgot password request model."""
+
     email: str
 
 
 class ResetPasswordRequest(BaseModelWithDatetime):
     """Reset password request model."""
+
     token: str
     new_password: str
 
 
 class ConfirmEmailRequest(BaseModelWithDatetime):
     """Email confirmation request model."""
+
     token: str
 
 
 class GoogleAuthRequest(BaseModelWithDatetime):
     """Google OAuth request model."""
+
     token: str
     tenant_id: Optional[str] = None

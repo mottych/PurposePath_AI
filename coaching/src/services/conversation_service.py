@@ -123,9 +123,7 @@ class ConversationService:
         )
 
         # Add AI response
-        await self.conversation_repo.add_message(
-            conversation_id, "assistant", ai_response.response
-        )
+        await self.conversation_repo.add_message(conversation_id, "assistant", ai_response.response)
 
         # Update conversation context
         conversation = await self.conversation_repo.get(conversation_id)
@@ -258,6 +256,4 @@ class ConversationService:
             for conv in conversations
         ]
 
-        return ConversationListResponse(
-            conversations=summaries, total=len(summaries), page=page
-        )
+        return ConversationListResponse(conversations=summaries, total=len(summaries), page=page)

@@ -143,7 +143,7 @@ class DynamoDBConversationRepository:
             key_condition = Key("user_id").eq(user_id)
 
             # Add tenant filter if provided
-            filter_expression = None
+            filter_expression: Any = None
             if tenant_id:
                 filter_expression = Attr("tenant_id").eq(tenant_id)
 

@@ -48,7 +48,7 @@ class GraphState(TypedDict):
     updated_at: str
 
 
-class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
+class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
     """Enhanced workflow orchestrator with LangGraph-specific features."""
 
     def __init__(self, cache_service: Any = None) -> None:
@@ -171,7 +171,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
                     else workflow_state.status
                 ),
             )
-            return workflow_state
+            return workflow_state  # type: ignore[no-any-return]
 
         except Exception as e:
             logger.error("LangGraph workflow start failed", workflow_id=workflow_id, error=str(e))
@@ -375,7 +375,7 @@ class GraphUtilities:
         # Generate contextual question
         prompt = "Based on the conversation context, generate a thoughtful follow-up question."
 
-        response = await provider.generate_response(
+        response = await provider.generate_response(  # type: ignore[attr-defined]
             messages=state["messages"], system_prompt=prompt, **state.get("model_config", {})
         )
 
@@ -403,7 +403,7 @@ class GraphUtilities:
         Return insights as structured analysis.
         """
 
-        analysis = await provider.analyze_text(
+        analysis = await provider.analyze_text(  # type: ignore[attr-defined]
             text=latest_response, analysis_prompt=analysis_prompt, **state.get("model_config", {})
         )
 

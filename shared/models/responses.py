@@ -420,7 +420,9 @@ class DashboardSummary(BaseResponseModel):
 
     # Performance metrics
     goals_completion_rate: float = Field(..., description="Goals completion rate percentage")
-    average_issue_resolution_time: float | None = Field(None, description="Average resolution time in hours")
+    average_issue_resolution_time: float | None = Field(
+        None, description="Average resolution time in hours"
+    )
 
 
 class BulkOperationResponse(BaseResponseModel):
@@ -429,8 +431,12 @@ class BulkOperationResponse(BaseResponseModel):
     total_requested: int = Field(..., description="Total items requested for operation")
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
-    errors: list[str] = Field(default_factory=list, description="Error messages for failed operations")
-    updated_ids: list[str] = Field(default_factory=list, description="IDs of successfully updated items")
+    errors: list[str] = Field(
+        default_factory=list, description="Error messages for failed operations"
+    )
+    updated_ids: list[str] = Field(
+        default_factory=list, description="IDs of successfully updated items"
+    )
 
 
 class HealthCheckResponse(BaseResponseModel):
@@ -512,8 +518,12 @@ class PlanResponse(BaseResponseModel):
 
     goal_id: str = Field(..., description="Goal identifier")
     # Pylance has intermittent resolution issues with these types despite proper definition
-    milestones: list["MilestoneResponse"] = Field(default_factory=list, description="Plan milestones")  # pyright: ignore[reportUnknownVariableType]
-    actions: list["ActionResponse"] = Field(default_factory=list, description="Plan actions")  # pyright: ignore[reportUnknownVariableType]
+    milestones: list[MilestoneResponse] = Field(
+        default_factory=list, description="Plan milestones"
+    )  # pyright: ignore[reportUnknownVariableType]
+    actions: list[ActionResponse] = Field(
+        default_factory=list, description="Plan actions"
+    )  # pyright: ignore[reportUnknownVariableType]
     total_milestones: int = Field(default=0, description="Total milestone count")
     total_actions: int = Field(default=0, description="Total action count")
     completion_percentage: float = Field(default=0.0, description="Overall completion percentage")
@@ -583,8 +593,12 @@ class AlignmentDriversResponse(BaseResponseModel):
 
     kpi_performance: float = Field(..., alias="kpiPerformance", description="KPI performance score")
     plan_health: float = Field(..., alias="planHealth", description="Plan health score")
-    cadence_adherence: float = Field(..., alias="cadenceAdherence", description="Cadence adherence score")
-    value_action_coherence: float = Field(..., alias="valueActionCoherence", description="Value-action coherence score")
+    cadence_adherence: float = Field(
+        ..., alias="cadenceAdherence", description="Cadence adherence score"
+    )
+    value_action_coherence: float = Field(
+        ..., alias="valueActionCoherence", description="Value-action coherence score"
+    )
 
 
 class AlignmentScoreResponse(BaseResponseModel):
@@ -607,7 +621,9 @@ class AlignmentCalculationResponse(BaseResponseModel):
     """Response model for alignment calculation across all goals."""
 
     overall_score: float = Field(..., description="Overall alignment score across all goals")
-    goals: list[GoalAlignmentBreakdownResponse] = Field(..., description="Per-goal alignment breakdown")
+    goals: list[GoalAlignmentBreakdownResponse] = Field(
+        ..., description="Per-goal alignment breakdown"
+    )
 
 
 class IntegrityAlertResponse(BaseResponseModel):

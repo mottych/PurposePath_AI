@@ -1,7 +1,8 @@
 """Unit tests for InsightsService (Issue #48 - After mock removal)."""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from coaching.src.services.insights_service import InsightsService
 
 
@@ -376,6 +377,7 @@ class TestInsightsServiceIntegrationPatterns:
 
         # Act - Multiple concurrent operations
         import asyncio
+
         results = await asyncio.gather(
             service.get_insights(page=1),
             service.get_insights(page=2),

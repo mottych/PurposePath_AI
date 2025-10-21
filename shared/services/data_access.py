@@ -7,7 +7,6 @@ from typing import Any, Generic, TypeVar, cast
 import structlog
 from boto3.dynamodb.conditions import And, Attr, ConditionBase, Key
 from botocore.exceptions import ClientError
-
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 from mypy_boto3_dynamodb.service_resource import Table
 
@@ -42,11 +41,13 @@ from ..models.multitenant import (
 
 logger = structlog.get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Type aliases for data access patterns
 DynamoDBItem = JSONDict
-BusinessFieldValue = str | int | float | bool | list[object] | dict[str, object]  # Valid business field types
+BusinessFieldValue = (
+    str | int | float | bool | list[object] | dict[str, object]
+)  # Valid business field types
 ContextOrTable = str | RequestContext | None  # Table name string or RequestContext object
 
 
@@ -57,6 +58,7 @@ class BaseRepository(ABC, Generic[T]):
         """Initialize repository with DynamoDB table."""
         # Use aws_helpers for proper typing
         from .aws_helpers import get_dynamodb_resource
+
         self.dynamodb: DynamoDBServiceResource = get_dynamodb_resource(region)
         # DynamoDB.Table() return type needs explicit annotation for proper typing
         self.table: Table = self.dynamodb.Table(table_name)
@@ -74,7 +76,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def _ensure_tenant_isolation(self, context: RequestContext, item: DynamoDBItem) -> DynamoDBItem:
         """Ensure tenant isolation by adding tenant_id filter."""
-        if 'tenant_id' in item and item['tenant_id'] != context.tenant_id:
+        if "tenant_id" in item and item["tenant_id"] != context.tenant_id:
             raise PermissionError("Access denied: tenant mismatch")
         return item
 
@@ -99,23 +101,22 @@ class TenantRepository(BaseRepository[Tenant]):
         try:
             # Cast to Any for boto3 compatibility
             self.table.put_item(
-                Item=cast(dict[str, Any], item),
-                ConditionExpression=Attr('tenant_id').not_exists()
+                Item=cast(dict[str, Any], item), ConditionExpression=Attr("tenant_id").not_exists()
             )
             logger.info("Tenant created", tenant_id=tenant.tenant_id, name=tenant.name)
             return tenant
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
                 raise ValueError(f"Tenant with ID {tenant.tenant_id} already exists") from e
             raise
 
     def get_by_id(self, tenant_id: str) -> Tenant | None:
         """Get tenant by ID."""
         try:
-            response = self.table.get_item(Key={'tenant_id': tenant_id})
-            if 'Item' in response:
+            response = self.table.get_item(Key={"tenant_id": tenant_id})
+            if "Item" in response:
                 # Cast from boto3's Any to our type
-                return self._item_to_model(cast(DynamoDBItem, response['Item']))
+                return self._item_to_model(cast(DynamoDBItem, response["Item"]))
             return None
         except ClientError as e:
             logger.error("Failed to get tenant", tenant_id=tenant_id, error=str(e))
@@ -126,10 +127,9 @@ class TenantRepository(BaseRepository[Tenant]):
         try:
             # Assuming GSI on domain
             response = self.table.query(
-                IndexName='domain-index',
-                KeyConditionExpression=Key('domain').eq(domain)
+                IndexName="domain-index", KeyConditionExpression=Key("domain").eq(domain)
             )
-            items = response.get('Items', [])
+            items = response.get("Items", [])
             if items:
                 # Cast from boto3's Any to our type
                 return self._item_to_model(cast(DynamoDBItem, items[0]))
@@ -142,15 +142,15 @@ class TenantRepository(BaseRepository[Tenant]):
         """Update tenant status."""
         try:
             _ = self.table.update_item(
-                Key={'tenant_id': tenant_id},
-                UpdateExpression='SET #status = :status, updated_at = :updated_at, updated_by = :updated_by',
-                ExpressionAttributeNames={'#status': 'status'},
+                Key={"tenant_id": tenant_id},
+                UpdateExpression="SET #status = :status, updated_at = :updated_at, updated_by = :updated_by",
+                ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={
-                    ':status': status,
-                    ':updated_at': datetime.now(UTC).isoformat(),
-                    ':updated_by': updated_by
+                    ":status": status,
+                    ":updated_at": datetime.now(UTC).isoformat(),
+                    ":updated_by": updated_by,
                 },
-                ReturnValues='UPDATED_NEW'
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -178,13 +178,12 @@ class UserRepository(BaseRepository[User]):
 
         try:
             self.table.put_item(
-                Item=cast(dict[str, Any], item),
-                ConditionExpression=Attr('user_id').not_exists()
+                Item=cast(dict[str, Any], item), ConditionExpression=Attr("user_id").not_exists()
             )
             logger.info("User created", user_id=user.user_id, tenant_id=context.tenant_id)
             return user
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
                 raise ValueError(f"User with ID {user.user_id} already exists") from e
             raise
 
@@ -195,35 +194,34 @@ class UserRepository(BaseRepository[User]):
             item = self._model_to_item(user)
 
             self.table.put_item(
-                Item=cast(dict[str, Any], item),
-                ConditionExpression=Attr('user_id').not_exists()
+                Item=cast(dict[str, Any], item), ConditionExpression=Attr("user_id").not_exists()
             )
 
             logger.info("User created", user_id=user.user_id, tenant_id=context.tenant_id)
             return {
                 "success": True,
-                "user_id": create_user_id(user.user_id)
+                "user_id": create_user_id(user.user_id),
                 # Note: 'user' field omitted for now - would need full DynamoDB type conversion
             }
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
                 return {
                     "success": False,
                     "error": f"User with ID {user.user_id} already exists",
-                    "error_code": "USER_EXISTS"
+                    "error_code": "USER_EXISTS",
                 }
             return {
                 "success": False,
                 "error": f"Failed to create user: {e!s}",
-                "error_code": "CREATE_FAILED"
+                "error_code": "CREATE_FAILED",
             }
 
     def get_by_id(self, context: RequestContext, user_id: str) -> User | None:
         """Get user by ID with tenant isolation."""
         try:
-            response = self.table.get_item(Key={'user_id': user_id})
-            if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"user_id": user_id})
+            if "Item" in response:
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response["Item"]))
                 return self._item_to_model(item)
             return None
         except ClientError as e:
@@ -233,20 +231,17 @@ class UserRepository(BaseRepository[User]):
     def get_by_id_typed(self, context: RequestContext, user_id: str) -> UserGetResult:
         """Get user by ID with typed result."""
         try:
-            response = self.table.get_item(Key={'user_id': user_id})
-            if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"user_id": user_id})
+            if "Item" in response:
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response["Item"]))
                 user = self._item_to_model(item)
                 logger.info("User found", user_id=user.user_id)
-                return {
-                    "success": True,
-                    "found": True
-                }
+                return {"success": True, "found": True}
             return {
                 "success": False,
                 "found": False,
                 "error": "User not found",
-                "error_code": "USER_NOT_FOUND"
+                "error_code": "USER_NOT_FOUND",
             }
         except ClientError as e:
             logger.error("Failed to get user", user_id=user_id, error=str(e))
@@ -254,7 +249,7 @@ class UserRepository(BaseRepository[User]):
                 "success": False,
                 "found": False,
                 "error": f"Failed to get user: {e!s}",
-                "error_code": "GET_FAILED"
+                "error_code": "GET_FAILED",
             }
 
     def get_by_email(self, context: RequestContext, email: str) -> User | None:
@@ -262,12 +257,12 @@ class UserRepository(BaseRepository[User]):
         try:
             # Assuming GSI on email
             response = self.table.query(
-                IndexName='email-index',
-                KeyConditionExpression=Key('email').eq(email),
-                FilterExpression=Attr('tenant_id').eq(context.tenant_id)
+                IndexName="email-index",
+                KeyConditionExpression=Key("email").eq(email),
+                FilterExpression=Attr("tenant_id").eq(context.tenant_id),
             )
-            if response['Items']:
-                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
+            if response["Items"]:
+                return self._item_to_model(cast(DynamoDBItem, response["Items"][0]))
             return None
         except ClientError as e:
             logger.error("Failed to get user by email", email=email, error=str(e))
@@ -277,10 +272,12 @@ class UserRepository(BaseRepository[User]):
         """List all users in a tenant."""
         try:
             response = self.table.query(
-                IndexName='tenant-index',
-                KeyConditionExpression=Key('tenant_id').eq(context.tenant_id)
+                IndexName="tenant-index",
+                KeyConditionExpression=Key("tenant_id").eq(context.tenant_id),
             )
-            return [self._item_to_model(cast(DynamoDBItem, item)) for item in response.get('Items', [])]
+            return [
+                self._item_to_model(cast(DynamoDBItem, item)) for item in response.get("Items", [])
+            ]
         except ClientError as e:
             logger.error("Failed to list users", tenant_id=context.tenant_id, error=str(e))
             raise
@@ -294,15 +291,15 @@ class UserRepository(BaseRepository[User]):
                 return False
 
             _ = self.table.update_item(
-                Key={'user_id': user_id},
-                UpdateExpression='SET #role = :role, updated_at = :updated_at',
-                ExpressionAttributeNames={'#role': 'role'},
+                Key={"user_id": user_id},
+                UpdateExpression="SET #role = :role, updated_at = :updated_at",
+                ExpressionAttributeNames={"#role": "role"},
                 ExpressionAttributeValues={
-                    ':role': role.value,
-                    ':updated_at': datetime.now(UTC).isoformat()
+                    ":role": role.value,
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
-                ConditionExpression=Attr('tenant_id').eq(context.tenant_id),
-                ReturnValues='UPDATED_NEW'
+                ConditionExpression=Attr("tenant_id").eq(context.tenant_id),
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -344,12 +341,14 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
             raise ValueError("Context required for tenant-based operations")
 
         try:
-            response = self.table.get_item(Key={'tenant_id': self.context.tenant_id})
-            if 'Item' in response:
-                return self._item_to_model(cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"tenant_id": self.context.tenant_id})
+            if "Item" in response:
+                return self._item_to_model(cast(DynamoDBItem, response["Item"]))
             return None
         except ClientError as e:
-            logger.error("Failed to get business data", tenant_id=self.context.tenant_id, error=str(e))
+            logger.error(
+                "Failed to get business data", tenant_id=self.context.tenant_id, error=str(e)
+            )
             raise
 
     def get_by_tenant_typed(self) -> BusinessDataGetResult:
@@ -359,31 +358,34 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
                 "success": False,
                 "found": False,
                 "error": "Context required for tenant operations",
-                "error_code": "NO_CONTEXT"
+                "error_code": "NO_CONTEXT",
             }
 
         try:
-            response = self.table.get_item(Key={'tenant_id': self.context.tenant_id})
-            if 'Item' in response:
-                business_data = self._item_to_model(cast(DynamoDBItem, response['Item']))
-                logger.info("Business data found", tenant_id=self.context.tenant_id, version=business_data.version)
-                return {
-                    "success": True,
-                    "found": True
-                }
+            response = self.table.get_item(Key={"tenant_id": self.context.tenant_id})
+            if "Item" in response:
+                business_data = self._item_to_model(cast(DynamoDBItem, response["Item"]))
+                logger.info(
+                    "Business data found",
+                    tenant_id=self.context.tenant_id,
+                    version=business_data.version,
+                )
+                return {"success": True, "found": True}
             return {
                 "success": False,
                 "found": False,
                 "error": "Business data not found",
-                "error_code": "DATA_NOT_FOUND"
+                "error_code": "DATA_NOT_FOUND",
             }
         except ClientError as e:
-            logger.error("Failed to get business data", tenant_id=self.context.tenant_id, error=str(e))
+            logger.error(
+                "Failed to get business data", tenant_id=self.context.tenant_id, error=str(e)
+            )
             return {
                 "success": False,
                 "found": False,
                 "error": f"Failed to get business data: {e!s}",
-                "error_code": "GET_FAILED"
+                "error_code": "GET_FAILED",
             }
 
     def create_or_update(self, business_data: BusinessData) -> BusinessData:
@@ -399,7 +401,9 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
             logger.info("Business data updated", tenant_id=self.context.tenant_id)
             return business_data
         except ClientError as e:
-            logger.error("Failed to update business data", tenant_id=self.context.tenant_id, error=str(e))
+            logger.error(
+                "Failed to update business data", tenant_id=self.context.tenant_id, error=str(e)
+            )
             raise
 
     def update_field(self, field: str, value: BusinessFieldValue, updated_by: str) -> bool:
@@ -419,30 +423,32 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
                 "field": field,
                 "previous_value": previous_value,
                 "new_value": value,
-                "source": "direct_update"
+                "source": "direct_update",
             }
 
             # Update the field and add to change history
-            update_expr = f"SET #{field} = :value, updated_at = :updated_at, updated_by = :updated_by"
+            update_expr = (
+                f"SET #{field} = :value, updated_at = :updated_at, updated_by = :updated_by"
+            )
             expr_attr_names = {f"#{field}": field}
             expr_attr_values: dict[str, Any] = {
                 ":value": value,
                 ":updated_at": datetime.now(UTC).isoformat(),
-                ":updated_by": updated_by
+                ":updated_by": updated_by,
             }
 
             # Add change history if current data exists
-            if current_data and hasattr(current_data, 'change_history'):
+            if current_data and hasattr(current_data, "change_history"):
                 update_expr += ", change_history = list_append(if_not_exists(change_history, :empty_list), :change_entry)"
                 expr_attr_values[":change_entry"] = [change_entry]
                 expr_attr_values[":empty_list"] = []
 
             _ = self.table.update_item(
-                Key={'tenant_id': self.context.tenant_id},
+                Key={"tenant_id": self.context.tenant_id},
                 UpdateExpression=update_expr,
                 ExpressionAttributeNames=expr_attr_names,
                 ExpressionAttributeValues=expr_attr_values,
-                ReturnValues='UPDATED_NEW'
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -453,8 +459,8 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
         """Update business data with change tracking."""
         try:
             # Get current data for change history
-            response = self.table.get_item(Key={'tenant_id': tenant_id})
-            current_data: dict[str, Any] = response.get('Item', {}) if 'Item' in response else {}
+            response = self.table.get_item(Key={"tenant_id": tenant_id})
+            current_data: dict[str, Any] = response.get("Item", {}) if "Item" in response else {}
 
             # Create change history entry
             change_entry: dict[str, Any] = {
@@ -462,7 +468,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
                 "user_id": update_data.get("last_updated_by", "system"),
                 "fields_changed": list(update_data.keys()),
                 "source": "business_update",
-                "version": update_data.get("version", "1.0")
+                "version": update_data.get("version", "1.0"),
             }
 
             # Build update expression
@@ -476,17 +482,19 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
 
             # Add change history
             if current_data:
-                update_expr_parts.append("change_history = list_append(if_not_exists(change_history, :empty_list), :change_entry)")
+                update_expr_parts.append(
+                    "change_history = list_append(if_not_exists(change_history, :empty_list), :change_entry)"
+                )
                 expr_attr_values[":change_entry"] = [change_entry]
                 expr_attr_values[":empty_list"] = []
 
             update_expr = "SET " + ", ".join(update_expr_parts)
 
             _ = self.table.update_item(
-                Key={'tenant_id': tenant_id},
+                Key={"tenant_id": tenant_id},
                 UpdateExpression=update_expr,
                 ExpressionAttributeValues=expr_attr_values,
-                ReturnValues='UPDATED_NEW'
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -531,25 +539,29 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
 
             self.table.put_item(
                 Item=cast(dict[str, Any], session_data),
-                ConditionExpression=Attr('session_id').not_exists()
+                ConditionExpression=Attr("session_id").not_exists(),
             )
             logger.info("Coaching session created", session_id=session_data["session_id"])
             return cast(CoachingSessionDict, session_data)
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
-                raise ValueError(f"Session with ID {session_data['session_id']} already exists") from e
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                raise ValueError(
+                    f"Session with ID {session_data['session_id']} already exists"
+                ) from e
             raise
 
     def get_by_id(self, session_id: str) -> CoachingSessionDict | None:
         """Get coaching session by ID with proper typing."""
         try:
-            response = self.table.get_item(Key={'session_id': session_id})
-            if 'Item' in response:
+            response = self.table.get_item(Key={"session_id": session_id})
+            if "Item" in response:
                 # If we have context, ensure tenant isolation
                 if self.context:
-                    item = self._ensure_tenant_isolation(self.context, cast(DynamoDBItem, response['Item']))
+                    item = self._ensure_tenant_isolation(
+                        self.context, cast(DynamoDBItem, response["Item"])
+                    )
                     return cast(CoachingSessionDict, item)
-                return cast(CoachingSessionDict, response['Item'])
+                return cast(CoachingSessionDict, response["Item"])
             return None
         except ClientError as e:
             logger.error("Failed to get coaching session", session_id=session_id, error=str(e))
@@ -558,9 +570,9 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
     def get_by_id_full(self, context: RequestContext, session_id: str) -> CoachingSession | None:
         """Get coaching session by ID (full domain model)."""
         try:
-            response = self.table.get_item(Key={'session_id': session_id})
-            if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"session_id": session_id})
+            if "Item" in response:
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response["Item"]))
                 session = self._item_to_model(item)
                 # Additional check for user access (unless admin)
                 if session.user_id != context.user_id and not self._can_view_all_sessions(context):
@@ -571,23 +583,30 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             logger.error("Failed to get coaching session", session_id=session_id, error=str(e))
             raise
 
-    def get_active_session_by_topic(self, context: RequestContext, topic: CoachingTopic) -> CoachingSession | None:
+    def get_active_session_by_topic(
+        self, context: RequestContext, topic: CoachingTopic
+    ) -> CoachingSession | None:
         """Get active coaching session for a user and topic."""
         try:
             # Query by user and topic, filter by status = 'active'
             response = self.table.query(
-                IndexName='user-topic-index',
-                KeyConditionExpression=Key('user_id').eq(context.user_id) & Key('topic').eq(topic),
-                FilterExpression=Attr('status').eq('active') & Attr('tenant_id').eq(context.tenant_id)
+                IndexName="user-topic-index",
+                KeyConditionExpression=Key("user_id").eq(context.user_id) & Key("topic").eq(topic),
+                FilterExpression=Attr("status").eq("active")
+                & Attr("tenant_id").eq(context.tenant_id),
             )
-            if response['Items']:
-                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
+            if response["Items"]:
+                return self._item_to_model(cast(DynamoDBItem, response["Items"][0]))
             return None
         except ClientError as e:
-            logger.error("Failed to get active session", user_id=context.user_id, topic=topic, error=str(e))
+            logger.error(
+                "Failed to get active session", user_id=context.user_id, topic=topic, error=str(e)
+            )
             return None
 
-    def complete_session(self, context: RequestContext, session_id: str, outcomes: dict[str, Any]) -> bool:
+    def complete_session(
+        self, context: RequestContext, session_id: str, outcomes: dict[str, Any]
+    ) -> bool:
         """Complete a coaching session with outcomes."""
         try:
             # Verify session belongs to user/tenant
@@ -596,16 +615,16 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
                 return False
 
             _ = self.table.update_item(
-                Key={'session_id': session_id},
-                UpdateExpression='SET #status = :status, outcomes = :outcomes, completed_at = :completed_at',
-                ExpressionAttributeNames={'#status': 'status'},
+                Key={"session_id": session_id},
+                UpdateExpression="SET #status = :status, outcomes = :outcomes, completed_at = :completed_at",
+                ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={
-                    ':status': 'completed',
-                    ':outcomes': outcomes,
-                    ':completed_at': datetime.now(UTC).isoformat()
+                    ":status": "completed",
+                    ":outcomes": outcomes,
+                    ":completed_at": datetime.now(UTC).isoformat(),
                 },
-                ConditionExpression=Attr('tenant_id').eq(context.tenant_id),
-                ReturnValues='UPDATED_NEW'
+                ConditionExpression=Attr("tenant_id").eq(context.tenant_id),
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -629,10 +648,10 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             update_expr = "SET " + ", ".join(update_expr_parts)
 
             _ = self.table.update_item(
-                Key={'session_id': session_id},
+                Key={"session_id": session_id},
                 UpdateExpression=update_expr,
                 ExpressionAttributeValues=expr_attr_values,
-                ReturnValues='UPDATED_NEW'
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
@@ -643,19 +662,23 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
         """Get sessions by user and topic with proper typing."""
         try:
             # Build filter expression
-            filter_expr = Key('user_id').eq(user_id) & Key('topic').eq(topic)
+            filter_expr = Key("user_id").eq(user_id) & Key("topic").eq(topic)
 
             # Add tenant filter if context available
             if self.context:
-                filter_expr = filter_expr & Attr('tenant_id').eq(self.context.tenant_id)
+                filter_expr = filter_expr & Attr("tenant_id").eq(self.context.tenant_id)
 
             response = self.table.query(
-                IndexName='user-topic-index',
-                KeyConditionExpression=filter_expr
+                IndexName="user-topic-index", KeyConditionExpression=filter_expr
             )
-            return cast(list[CoachingSessionDict], response.get('Items', []))
+            return cast(list[CoachingSessionDict], response.get("Items", []))
         except ClientError as e:
-            logger.error("Failed to get sessions by user and topic", user_id=user_id, topic=topic, error=str(e))
+            logger.error(
+                "Failed to get sessions by user and topic",
+                user_id=user_id,
+                topic=topic,
+                error=str(e),
+            )
             return []
 
     def _can_view_all_sessions(self, _context: RequestContext) -> bool:
@@ -671,35 +694,37 @@ class InvitationRepository(BaseRepository[Invitation]):
     def _item_to_model(self, item: DynamoDBItem) -> Invitation:
         """Convert DynamoDB item to Invitation model."""
         # Convert JSONValue types properly
-        expires_at_str = str(item.get('expires_at', datetime.now(UTC).isoformat()))
-        accepted_at_val = item.get('accepted_at')
+        expires_at_str = str(item.get("expires_at", datetime.now(UTC).isoformat()))
+        accepted_at_val = item.get("accepted_at")
         accepted_at = datetime.fromisoformat(str(accepted_at_val)) if accepted_at_val else None
-        email_sent_at_val = item.get('email_sent_at')
-        email_sent_at = datetime.fromisoformat(str(email_sent_at_val)) if email_sent_at_val else None
-        message_val = item.get('message')
+        email_sent_at_val = item.get("email_sent_at")
+        email_sent_at = (
+            datetime.fromisoformat(str(email_sent_at_val)) if email_sent_at_val else None
+        )
+        message_val = item.get("message")
         message = str(message_val) if message_val is not None else None
-        accepted_user_id_val = item.get('accepted_user_id')
+        accepted_user_id_val = item.get("accepted_user_id")
         accepted_user_id = str(accepted_user_id_val) if accepted_user_id_val is not None else None
 
         return Invitation(
-            invitation_id=str(item.get('invitation_id', '')),
-            tenant_id=str(item.get('tenant_id', '')),
-            email=str(item.get('email', '')),
-            invited_by_user_id=str(item.get('invited_by_user_id', '')),
-            role=UserRole(item.get('role', UserRole.MEMBER.value)),
-            status=InvitationStatus(item.get('status', InvitationStatus.PENDING.value)),
+            invitation_id=str(item.get("invitation_id", "")),
+            tenant_id=str(item.get("tenant_id", "")),
+            email=str(item.get("email", "")),
+            invited_by_user_id=str(item.get("invited_by_user_id", "")),
+            role=UserRole(item.get("role", UserRole.MEMBER.value)),
+            status=InvitationStatus(item.get("status", InvitationStatus.PENDING.value)),
             expires_at=datetime.fromisoformat(expires_at_str),
             accepted_at=accepted_at,
             message=message,
             email_sent_at=email_sent_at,
-            accepted_user_id=accepted_user_id
+            accepted_user_id=accepted_user_id,
         )
 
     def _model_to_item(self, model: Invitation) -> DynamoDBItem:
         """Convert Invitation model to DynamoDB item."""
         item = model.model_dump()
         # Convert datetime objects to ISO strings for DynamoDB
-        for field in ['invited_at', 'expires_at', 'accepted_at']:
+        for field in ["invited_at", "expires_at", "accepted_at"]:
             if item.get(field) and isinstance(item[field], datetime):
                 item[field] = item[field].isoformat()
         return item
@@ -712,67 +737,79 @@ class InvitationRepository(BaseRepository[Invitation]):
         try:
             self.table.put_item(
                 Item=cast(dict[str, Any], item),
-                ConditionExpression=Attr('invitation_id').not_exists()
+                ConditionExpression=Attr("invitation_id").not_exists(),
             )
-            logger.info("Invitation created", invitation_id=invitation.invitation_id, email=invitation.email)
+            logger.info(
+                "Invitation created", invitation_id=invitation.invitation_id, email=invitation.email
+            )
             return invitation
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
-                raise ValueError(f"Invitation with ID {invitation.invitation_id} already exists") from e
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                raise ValueError(
+                    f"Invitation with ID {invitation.invitation_id} already exists"
+                ) from e
             raise
 
     def get_by_id(self, context: RequestContext, invitation_id: str) -> Invitation | None:
         """Get invitation by ID with tenant isolation."""
         try:
-            response = self.table.get_item(Key={'invitation_id': invitation_id})
-            if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"invitation_id": invitation_id})
+            if "Item" in response:
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response["Item"]))
                 return self._item_to_model(item)
             return None
         except ClientError as e:
             logger.error("Failed to get invitation", invitation_id=invitation_id, error=str(e))
             raise
 
-    def list_by_tenant(self, context: RequestContext, status: InvitationStatus | None = None) -> list[Invitation]:
+    def list_by_tenant(
+        self, context: RequestContext, status: InvitationStatus | None = None
+    ) -> list[Invitation]:
         """List invitations by tenant with optional status filter."""
         try:
-            filter_expr: ConditionBase = Attr('tenant_id').eq(context.tenant_id)
+            filter_expr: ConditionBase = Attr("tenant_id").eq(context.tenant_id)
             if status:
-                status_condition = Attr('status').eq(status.value)
+                status_condition = Attr("status").eq(status.value)
                 # Use And to properly combine conditions
                 filter_expr = And(filter_expr, status_condition)
 
             response = self.table.scan(FilterExpression=filter_expr)
-            return [self._item_to_model(cast(DynamoDBItem, item)) for item in response.get('Items', [])]
+            return [
+                self._item_to_model(cast(DynamoDBItem, item)) for item in response.get("Items", [])
+            ]
         except ClientError as e:
             logger.error("Failed to list invitations", tenant_id=context.tenant_id, error=str(e))
             raise
 
-    def update_status(self, context: RequestContext, invitation_id: str, status: InvitationStatus) -> bool:
+    def update_status(
+        self, context: RequestContext, invitation_id: str, status: InvitationStatus
+    ) -> bool:
         """Update invitation status."""
         try:
-            update_expr = 'SET #status = :status, updated_at = :updated_at'
-            expr_attr_names = {'#status': 'status'}
+            update_expr = "SET #status = :status, updated_at = :updated_at"
+            expr_attr_names = {"#status": "status"}
             expr_attr_values = {
-                ':status': status.value,
-                ':updated_at': datetime.now(UTC).isoformat()
+                ":status": status.value,
+                ":updated_at": datetime.now(UTC).isoformat(),
             }
 
             if status == InvitationStatus.ACCEPTED:
-                update_expr += ', accepted_at = :accepted_at'
-                expr_attr_values[':accepted_at'] = datetime.now(UTC).isoformat()
+                update_expr += ", accepted_at = :accepted_at"
+                expr_attr_values[":accepted_at"] = datetime.now(UTC).isoformat()
 
             _ = self.table.update_item(
-                Key={'invitation_id': invitation_id},
+                Key={"invitation_id": invitation_id},
                 UpdateExpression=update_expr,
                 ExpressionAttributeNames=expr_attr_names,
                 ExpressionAttributeValues=expr_attr_values,
-                ConditionExpression=Attr('tenant_id').eq(context.tenant_id),
-                ReturnValues='UPDATED_NEW'
+                ConditionExpression=Attr("tenant_id").eq(context.tenant_id),
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
-            logger.error("Failed to update invitation status", invitation_id=invitation_id, error=str(e))
+            logger.error(
+                "Failed to update invitation status", invitation_id=invitation_id, error=str(e)
+            )
             return False
 
 
@@ -797,25 +834,31 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         try:
             self.table.put_item(
                 Item=cast(dict[str, Any], item),
-                ConditionExpression=Attr('subscription_id').not_exists()
+                ConditionExpression=Attr("subscription_id").not_exists(),
             )
-            logger.info("Subscription created", subscription_id=subscription.subscription_id, tenant_id=context.tenant_id)
+            logger.info(
+                "Subscription created",
+                subscription_id=subscription.subscription_id,
+                tenant_id=context.tenant_id,
+            )
             return subscription
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
-                raise ValueError(f"Subscription with ID {subscription.subscription_id} already exists") from e
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                raise ValueError(
+                    f"Subscription with ID {subscription.subscription_id} already exists"
+                ) from e
             raise
 
     def get_by_tenant(self, context: RequestContext) -> Subscription | None:
         """Get active subscription for tenant."""
         try:
             response = self.table.query(
-                IndexName='tenant-index',
-                KeyConditionExpression=Key('tenant_id').eq(context.tenant_id),
-                FilterExpression=Attr('status').eq('active')
+                IndexName="tenant-index",
+                KeyConditionExpression=Key("tenant_id").eq(context.tenant_id),
+                FilterExpression=Attr("status").eq("active"),
             )
-            if response['Items']:
-                return self._item_to_model(cast(DynamoDBItem, response['Items'][0]))
+            if response["Items"]:
+                return self._item_to_model(cast(DynamoDBItem, response["Items"][0]))
             return None
         except ClientError as e:
             logger.error("Failed to get subscription", tenant_id=context.tenant_id, error=str(e))
@@ -825,19 +868,23 @@ class SubscriptionRepository(BaseRepository[Subscription]):
         """Update subscription status."""
         try:
             _ = self.table.update_item(
-                Key={'subscription_id': subscription_id},
-                UpdateExpression='SET #status = :status, updated_at = :updated_at',
-                ExpressionAttributeNames={'#status': 'status'},
+                Key={"subscription_id": subscription_id},
+                UpdateExpression="SET #status = :status, updated_at = :updated_at",
+                ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={
-                    ':status': status,
-                    ':updated_at': datetime.now(UTC).isoformat()
+                    ":status": status,
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
-                ConditionExpression=Attr('tenant_id').eq(context.tenant_id),
-                ReturnValues='UPDATED_NEW'
+                ConditionExpression=Attr("tenant_id").eq(context.tenant_id),
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
-            logger.error("Failed to update subscription status", subscription_id=subscription_id, error=str(e))
+            logger.error(
+                "Failed to update subscription status",
+                subscription_id=subscription_id,
+                error=str(e),
+            )
             return False
 
 
@@ -854,7 +901,9 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
         """Convert UserPreferences model to DynamoDB item."""
         return model.model_dump()
 
-    def create_or_update(self, context: RequestContext, preferences: UserPreferences) -> UserPreferences:
+    def create_or_update(
+        self, context: RequestContext, preferences: UserPreferences
+    ) -> UserPreferences:
         """Create or update user preferences."""
         preferences.user_id = context.user_id
         preferences.tenant_id = context.tenant_id
@@ -862,7 +911,9 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
 
         try:
             self.table.put_item(Item=cast(dict[str, Any], item))
-            logger.info("User preferences updated", user_id=context.user_id, tenant_id=context.tenant_id)
+            logger.info(
+                "User preferences updated", user_id=context.user_id, tenant_id=context.tenant_id
+            )
             return preferences
         except ClientError as e:
             logger.error("Failed to update user preferences", user_id=context.user_id, error=str(e))
@@ -871,9 +922,9 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
     def get_by_user_id(self, user_id: str) -> UserPreferencesDict | None:
         """Get user preferences by user ID with proper typing."""
         try:
-            response = self.table.get_item(Key={'user_id': user_id})
-            if 'Item' in response:
-                return cast(UserPreferencesDict, response['Item'])
+            response = self.table.get_item(Key={"user_id": user_id})
+            if "Item" in response:
+                return cast(UserPreferencesDict, response["Item"])
             return None
         except ClientError as e:
             logger.error("Failed to get user preferences", user_id=user_id, error=str(e))
@@ -882,29 +933,33 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
     def get_by_user_id_full(self, context: RequestContext, user_id: str) -> UserPreferences | None:
         """Get user preferences by user ID (full domain model)."""
         try:
-            response = self.table.get_item(Key={'user_id': user_id})
-            if 'Item' in response:
-                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response['Item']))
+            response = self.table.get_item(Key={"user_id": user_id})
+            if "Item" in response:
+                item = self._ensure_tenant_isolation(context, cast(DynamoDBItem, response["Item"]))
                 return self._item_to_model(item)
             return None
         except ClientError as e:
             logger.error("Failed to get user preferences", user_id=user_id, error=str(e))
             raise
 
-    def update_coaching_preferences(self, context: RequestContext, preferences: dict[str, Any]) -> bool:
+    def update_coaching_preferences(
+        self, context: RequestContext, preferences: dict[str, Any]
+    ) -> bool:
         """Update coaching-specific preferences."""
         try:
             _ = self.table.update_item(
-                Key={'user_id': context.user_id},
-                UpdateExpression='SET coaching_preferences = :prefs, updated_at = :updated_at',
+                Key={"user_id": context.user_id},
+                UpdateExpression="SET coaching_preferences = :prefs, updated_at = :updated_at",
                 ExpressionAttributeValues={
-                    ':prefs': preferences,
-                    ':updated_at': datetime.now(UTC).isoformat()
+                    ":prefs": preferences,
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
-                ConditionExpression=Attr('tenant_id').eq(context.tenant_id),
-                ReturnValues='UPDATED_NEW'
+                ConditionExpression=Attr("tenant_id").eq(context.tenant_id),
+                ReturnValues="UPDATED_NEW",
             )
             return True
         except ClientError as e:
-            logger.error("Failed to update coaching preferences", user_id=context.user_id, error=str(e))
+            logger.error(
+                "Failed to update coaching preferences", user_id=context.user_id, error=str(e)
+            )
             return False

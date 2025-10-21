@@ -31,9 +31,7 @@ class CoachingWorkflowInput(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     topic: CoachingTopic = Field(..., description="Coaching topic")
     session_id: str | None = Field(default=None, description="Session identifier")
-    initial_message: str | None = Field(
-        default=None, description="Initial user message (optional)"
-    )
+    initial_message: str | None = Field(default=None, description="Initial user message (optional)")
 
 
 class CoachingWorkflowConfig(BaseModel):

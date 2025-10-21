@@ -108,7 +108,7 @@ class WorkflowOrchestrator:
             self._workflow_states[workflow_id] = state
 
             logger.info("Workflow started", workflow_id=workflow_id, status=state.status.value)
-            return state
+            return state  # type: ignore[no-any-return]
 
         except Exception as e:
             logger.error("Workflow start failed", workflow_id=workflow_id, error=str(e))
@@ -281,11 +281,11 @@ class WorkflowOrchestrator:
         for state in self._workflow_states.values():
             # Count by status
             status = state.status.value
-            stats["status_counts"][status] = stats["status_counts"].get(status, 0) + 1
+            stats["status_counts"][status] = stats["status_counts"].get(status, 0) + 1  # type: ignore[index,attr-defined]
 
             # Count by type
             workflow_type = state.workflow_type.value
-            stats["type_counts"][workflow_type] = stats["type_counts"].get(workflow_type, 0) + 1
+            stats["type_counts"][workflow_type] = stats["type_counts"].get(workflow_type, 0) + 1  # type: ignore[index,attr-defined]
 
         return stats
 

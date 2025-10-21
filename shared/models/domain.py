@@ -12,6 +12,7 @@ from .base import BaseDomainModel, IdentifiedMixin, TenantScopedMixin
 # Enums for domain entities
 class ActionStatus(str, Enum):
     """Status values for actions, goals, and strategies."""
+
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -21,6 +22,7 @@ class ActionStatus(str, Enum):
 
 class Priority(str, Enum):
     """Priority levels for issues and tasks."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -29,6 +31,7 @@ class Priority(str, Enum):
 
 class TimeHorizon(str, Enum):
     """Time horizons for goals and strategies."""
+
     ANNUAL = "annual"
     QUARTERLY = "quarterly"
     MONTHLY = "monthly"
@@ -38,6 +41,7 @@ class TimeHorizon(str, Enum):
 
 class ReviewType(str, Enum):
     """Types of reviews."""
+
     WEEKLY = "weekly"
     MONTHLY = "monthly"
     QUARTERLY = "quarterly"
@@ -46,6 +50,7 @@ class ReviewType(str, Enum):
 
 class IssueType(str, Enum):
     """Types of issues."""
+
     BUG = "bug"
     FEATURE = "feature"
     IMPROVEMENT = "improvement"
@@ -55,6 +60,7 @@ class IssueType(str, Enum):
 
 class DecisionType(str, Enum):
     """Types of decisions."""
+
     STRATEGIC = "strategic"
     OPERATIONAL = "operational"
     TACTICAL = "tactical"
@@ -62,6 +68,7 @@ class DecisionType(str, Enum):
 
 
 # Core Business Domain Models
+
 
 class Issue(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
     """Issue tracking entity."""
@@ -91,7 +98,7 @@ class Issue(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
     estimated_effort: int | None = Field(None, ge=1, description="Estimated effort in hours")
     actual_effort: int | None = Field(None, ge=0, description="Actual effort in hours")
 
-    @field_validator('title')
+    @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
         """Ensure title is not empty after stripping."""
@@ -137,7 +144,7 @@ class Goal(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
             return 100.0 if self.current_value > 0 else 0.0
         return min(100.0, max(0.0, (self.current_value / self.target_value) * 100))
 
-    @field_validator('title')
+    @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
         """Ensure title is not empty after stripping."""
@@ -170,7 +177,7 @@ class Strategy(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
     resources_required: list[str] = Field(default_factory=list, description="Required resources")
     dependencies: list[str] = Field(default_factory=list, description="Dependencies")
 
-    @field_validator('title')
+    @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
         """Ensure title is not empty after stripping."""
@@ -255,7 +262,9 @@ class Decision(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
     expected_outcomes: list[str] = Field(default_factory=list, description="Expected outcomes")
 
     # Status and tracking
-    status: ActionStatus = Field(default=ActionStatus.NOT_STARTED, description="Implementation status")
+    status: ActionStatus = Field(
+        default=ActionStatus.NOT_STARTED, description="Implementation status"
+    )
     implementation_date: datetime | None = Field(None, description="Implementation date")
     review_date: datetime | None = Field(None, description="Review date")
 

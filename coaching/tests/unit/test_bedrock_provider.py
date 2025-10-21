@@ -1,9 +1,10 @@
 """Unit tests for BedrockLLMProvider."""
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
-from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
+from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 
 
 @pytest.mark.unit
@@ -137,7 +138,9 @@ class TestBedrockProviderValidation:
         # Mock bedrock client response
         provider.bedrock_client.invoke_model = Mock(
             return_value={
-                "body": Mock(read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}')
+                "body": Mock(
+                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
+                )
             }
         )
 
@@ -199,7 +202,9 @@ class TestBedrockProviderEdgeCases:
             # Mock the client to avoid actual API call
             provider.bedrock_client.invoke_model = Mock(
                 return_value={
-                    "body": Mock(read=lambda: b'{"content": [{"text": ""}], "usage": {"input_tokens": 0, "output_tokens": 0}}')
+                    "body": Mock(
+                        read=lambda: b'{"content": [{"text": ""}], "usage": {"input_tokens": 0, "output_tokens": 0}}'
+                    )
                 }
             )
             result = await provider.generate(messages=messages, model=model)
@@ -216,7 +221,9 @@ class TestBedrockProviderEdgeCases:
 
         provider.bedrock_client.invoke_model = Mock(
             return_value={
-                "body": Mock(read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}')
+                "body": Mock(
+                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
+                )
             }
         )
 
@@ -238,7 +245,9 @@ class TestBedrockProviderEdgeCases:
 
         provider.bedrock_client.invoke_model = Mock(
             return_value={
-                "body": Mock(read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}')
+                "body": Mock(
+                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
+                )
             }
         )
 
@@ -263,7 +272,9 @@ class TestBedrockProviderMultipleModels:
         mock_client = Mock()
         mock_client.invoke_model = Mock(
             return_value={
-                "body": Mock(read=lambda: b'{"content": [{"text": "Test response"}], "usage": {"input_tokens": 5, "output_tokens": 10}}')
+                "body": Mock(
+                    read=lambda: b'{"content": [{"text": "Test response"}], "usage": {"input_tokens": 5, "output_tokens": 10}}'
+                )
             }
         )
         return BedrockLLMProvider(bedrock_client=mock_client)

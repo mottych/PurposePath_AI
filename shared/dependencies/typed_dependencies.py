@@ -33,8 +33,7 @@ class PermissionChecker:
         """Require owner or admin role"""
         if context.role not in ["owner", "admin"]:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Owner or admin role required"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Owner or admin role required"
             )
 
     @staticmethod
@@ -42,8 +41,7 @@ class PermissionChecker:
         """Require manager role or above"""
         if context.role not in ["owner", "admin", "manager"]:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Manager role or above required"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Manager role or above required"
             )
 
     @staticmethod
@@ -52,16 +50,13 @@ class PermissionChecker:
         return permission in context.permissions
 
 
-
-
-
 def validate_request_body(body: JSONDict, required_fields: list[str]) -> None:
     """Validate request body has required fields"""
     missing_fields = [field for field in required_fields if field not in body]
     if missing_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Missing required fields: {', '.join(missing_fields)}"
+            detail=f"Missing required fields: {', '.join(missing_fields)}",
         )
 
 
@@ -71,17 +66,9 @@ class TypedResponseBuilder:
     @staticmethod
     def success(data: Any, message: str | None = None) -> dict[str, Any]:
         """Build success response"""
-        return {
-            "success": True,
-            "data": data,
-            "message": message
-        }
+        return {"success": True, "data": data, "message": message}
 
     @staticmethod
     def error(message: str, error_code: str | None = None) -> dict[str, Any]:
         """Build error response"""
-        return {
-            "success": False,
-            "error": message,
-            "error_code": error_code
-        }
+        return {"success": False, "error": message, "error_code": error_code}

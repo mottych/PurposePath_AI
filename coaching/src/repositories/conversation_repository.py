@@ -9,10 +9,9 @@ from boto3.dynamodb.conditions import Attr, ConditionBase, Key
 from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
 from coaching.src.core.exceptions import ConversationNotFoundCompatError
 from coaching.src.models.conversation import Conversation, ConversationContext, Message
-from shared.types.common import JSONDict
-
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 from mypy_boto3_dynamodb.service_resource import Table
+from shared.types.common import JSONDict
 
 logger = structlog.get_logger()
 
@@ -73,7 +72,10 @@ class ConversationRepository:
     """Repository for managing conversation data in DynamoDB."""
 
     def __init__(
-        self, dynamodb_resource: DynamoDBServiceResource, table_name: str, tenant_id: Optional[str] = None
+        self,
+        dynamodb_resource: DynamoDBServiceResource,
+        table_name: str,
+        tenant_id: Optional[str] = None,
     ):
         """Initialize conversation repository.
 
@@ -115,8 +117,12 @@ class ConversationRepository:
             # Set multitenant context fields from provided context with proper casting
             conversation_context.tenant_id = cast(Optional[str], context.get("tenant_id"))
             conversation_context.session_id = cast(Optional[str], context.get("session_id"))
-            conversation_context.business_context = cast(BusinessContextDict, context.get("business_context", {}))
-            conversation_context.user_preferences = cast(UserPreferencesDict, context.get("user_preferences", {}))
+            conversation_context.business_context = cast(
+                BusinessContextDict, context.get("business_context", {})
+            )
+            conversation_context.user_preferences = cast(
+                UserPreferencesDict, context.get("user_preferences", {})
+            )
             conversation_context.language = cast(str, context.get("language", "en"))
 
         # Create conversation object
@@ -397,14 +403,10 @@ class ConversationRepository:
                 created_at=datetime.fromisoformat(item["created_at"]),
                 updated_at=datetime.fromisoformat(item["updated_at"]),
                 completed_at=(
-                    datetime.fromisoformat(item["completed_at"])
-                    if item["completed_at"]
-                    else None
+                    datetime.fromisoformat(item["completed_at"]) if item["completed_at"] else None
                 ),
                 paused_at=(
-                    datetime.fromisoformat(item["paused_at"])
-                    if item["paused_at"]
-                    else None
+                    datetime.fromisoformat(item["paused_at"]) if item["paused_at"] else None
                 ),
                 ttl=item.get("ttl"),
             )

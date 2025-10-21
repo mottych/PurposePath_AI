@@ -21,8 +21,10 @@ from .common import JSONValue
 # Strategy API Response Types
 # ========================================
 
+
 class StrategyResponse(TypedDict):
     """Strategy response structure for API endpoints"""
+
     strategy_id: StrategyId
     goal_id: GoalId
     title: NotRequired[str]
@@ -38,12 +40,14 @@ class StrategyResponse(TypedDict):
 
 class StrategyListResponse(TypedDict):
     """List of strategies response structure"""
+
     strategies: list[StrategyResponse]
     total: int
 
 
 class StrategyCreateRequest(TypedDict):
     """Strategy creation request structure"""
+
     title: str
     description: NotRequired[str]
     priority: NotRequired[int]
@@ -54,6 +58,7 @@ class StrategyCreateRequest(TypedDict):
 
 class StrategyUpdateRequest(TypedDict):
     """Strategy update request structure (all fields optional)"""
+
     title: NotRequired[str]
     description: NotRequired[str]
     status: NotRequired[ActionStatus]
@@ -67,8 +72,10 @@ class StrategyUpdateRequest(TypedDict):
 # Goal API Response Types
 # ========================================
 
+
 class GoalResponse(TypedDict):
     """Goal response structure for API endpoints"""
+
     id: GoalId
     title: str
     description: NotRequired[str]
@@ -88,12 +95,14 @@ class GoalResponse(TypedDict):
 
 class GoalListResponse(TypedDict):
     """List of goals response structure"""
+
     goals: list[GoalResponse]
     total: int
 
 
 class GoalCreateRequest(TypedDict):
     """Goal creation request structure"""
+
     title: str
     description: NotRequired[str]
     time_horizon: NotRequired[Literal["annual", "quarterly", "long_term"]]
@@ -106,6 +115,7 @@ class GoalCreateRequest(TypedDict):
 
 class GoalUpdateRequest(TypedDict):
     """Goal update request structure (all fields optional)"""
+
     title: NotRequired[str]
     description: NotRequired[str]
     status: NotRequired[ActionStatus]
@@ -119,6 +129,7 @@ class GoalUpdateRequest(TypedDict):
 
 class GoalNoteResponse(TypedDict):
     """Goal note response structure"""
+
     id: str
     note: str
     attachments: NotRequired[list[str]]
@@ -128,6 +139,7 @@ class GoalNoteResponse(TypedDict):
 
 class GoalNoteCreateRequest(TypedDict):
     """Goal note creation request structure"""
+
     note: str
     attachments: NotRequired[list[str]]
 
@@ -136,8 +148,10 @@ class GoalNoteCreateRequest(TypedDict):
 # Billing API Response Types
 # ========================================
 
+
 class SubscriptionStatusResponse(TypedDict):
     """Subscription status response structure"""
+
     active: bool
     tier: SubscriptionTier
     status: str
@@ -149,6 +163,7 @@ class SubscriptionStatusResponse(TypedDict):
 
 class StripeSubscriptionData(TypedDict):
     """Stripe subscription data structure for webhooks"""
+
     status: str
     tier: SubscriptionTier
     stripe_subscription_id: str
@@ -161,14 +176,17 @@ class StripeSubscriptionData(TypedDict):
 # Common Response Patterns
 # ========================================
 
+
 class DeleteResponse(TypedDict):
     """Standard delete operation response"""
+
     deleted: bool
     message: NotRequired[str]
 
 
 class UpdatedResponse(TypedDict):
     """Standard update operation response"""
+
     updated: bool
     message: NotRequired[str]
 
@@ -177,8 +195,10 @@ class UpdatedResponse(TypedDict):
 # Review API Response Types
 # ========================================
 
+
 class ReviewResponse(TypedDict):
     """Review response structure"""
+
     id: str
     goal_id: GoalId
     review_type: Literal["weekly", "monthly", "quarterly", "annual"]
@@ -192,8 +212,10 @@ class ReviewResponse(TypedDict):
 # Report API Response Types
 # ========================================
 
+
 class ReportResponse(TypedDict):
     """Report response structure"""
+
     report_type: str
     data: dict[str, JSONValue]  # Report data structure varies by type
     generated_at: ISODateString
@@ -203,8 +225,10 @@ class ReportResponse(TypedDict):
 # Realtime API Response Types
 # ========================================
 
+
 class ActivityResponse(TypedDict):
     """Activity response structure for realtime updates"""
+
     id: str
     text: str
     created_at: ISODateString

@@ -1,4 +1,5 @@
 """Simple in-memory DynamoDB stub for tests."""
+
 from __future__ import annotations
 
 import threading

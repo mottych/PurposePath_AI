@@ -1,14 +1,15 @@
 """Unit tests for response models."""
 
-import pytest
 from datetime import datetime
-from coaching.src.models.responses import (
-    ConversationResponse,
-    MessageResponse,
-    ConversationSummary,
-    ConversationListResponse,
-)
+
+import pytest
 from coaching.src.core.constants import ConversationStatus
+from coaching.src.models.responses import (
+    ConversationListResponse,
+    ConversationResponse,
+    ConversationSummary,
+    MessageResponse,
+)
 
 
 @pytest.mark.unit

@@ -156,7 +156,7 @@ Provide a thorough, actionable analysis."""
                 recommendations_count=len(result["recommendations"]),
             )
 
-            return result
+            return result  # type: ignore[no-any-return]
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse alignment JSON response", error=str(e))

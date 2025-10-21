@@ -2,10 +2,10 @@
 
 import pytest
 from coaching.src.core.exceptions import (
-    ConversationNotFoundError,
     ConversationNotFoundCompatError,
-    InvalidTopicError,
+    ConversationNotFoundError,
     InvalidPhaseTransitionError,
+    InvalidTopicError,
 )
 
 

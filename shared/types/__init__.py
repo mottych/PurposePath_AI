@@ -240,5 +240,5 @@ __all__ = [
     "create_strategy_id",
     "create_tenant_id",
     # ID creation utilities
-    "create_user_id"
+    "create_user_id",
 ]

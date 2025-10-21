@@ -2,14 +2,14 @@
 
 import pytest
 from coaching.src.core.constants import (
-    CoachingTopic,
-    ConversationStatus,
-    ConversationPhase,
-    MessageRole,
-    AnalysisType,
+    DEFAULT_LLM_MODELS,
     PHASE_PROGRESS_WEIGHTS,
     PHASE_REQUIREMENTS,
-    DEFAULT_LLM_MODELS,
+    AnalysisType,
+    CoachingTopic,
+    ConversationPhase,
+    ConversationStatus,
+    MessageRole,
 )
 
 

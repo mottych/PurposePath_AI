@@ -1,4 +1,5 @@
 """Test configuration for coaching service with explicit imports."""
+
 import os
 import sys
 from pathlib import Path

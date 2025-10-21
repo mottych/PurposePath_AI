@@ -1,8 +1,9 @@
 """Unit tests for BusinessApiClient (Issue #48, refactored for MVP in #52)."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
+
 import httpx
+import pytest
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
 
@@ -13,10 +14,7 @@ class TestBusinessApiClientInitialization:
     def test_init_with_default_values(self):
         """Test initialization with default values."""
         # Arrange & Act
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
 
         # Assert
         assert client.base_url == "https://api.test.com"
@@ -69,10 +67,7 @@ class TestBusinessApiClientHeaders:
     def test_get_headers_with_token(self):
         """Test headers with JWT token."""
         # Arrange
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-jwt-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-jwt-token")
 
         # Act
         headers = client._get_headers()
@@ -97,7 +92,7 @@ class TestBusinessApiClientUserContext:
             "userId": "user-123",
             "email": "test@example.com",
             "role": "admin",
-            "department": "Engineering"
+            "department": "Engineering",
         }
         mock_client.get = AsyncMock(return_value=mock_response)
         return mock_client
@@ -105,10 +100,7 @@ class TestBusinessApiClientUserContext:
     @pytest.fixture
     def business_client(self, mock_http_client):
         """Create BusinessApiClient with mocked HTTP client."""
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         client.client = mock_http_client
         return client
 
@@ -134,9 +126,7 @@ class TestBusinessApiClientUserContext:
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Not found",
-            request=Mock(),
-            response=mock_response
+            "Not found", request=Mock(), response=mock_response
         )
         mock_http_client.get = AsyncMock(return_value=mock_response)
 
@@ -163,10 +153,7 @@ class TestBusinessApiClientOrganizationalContext:
     @pytest.fixture
     def business_client(self):
         """Create BusinessApiClient with mocked HTTP client."""
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.status_code = 200
@@ -174,7 +161,7 @@ class TestBusinessApiClientOrganizationalContext:
             "tenantId": "tenant-456",
             "companyName": "Test Corp",
             "industry": "Technology",
-            "values": ["Innovation", "Excellence"]
+            "values": ["Innovation", "Excellence"],
         }
         mock_client.get = AsyncMock(return_value=mock_response)
         client.client = mock_client
@@ -215,10 +202,7 @@ class TestBusinessApiClientUserGoals:
     @pytest.fixture
     def business_client(self):
         """Create BusinessApiClient with mocked HTTP client."""
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         mock_client = AsyncMock()
         client.client = mock_client
         return client
@@ -230,7 +214,7 @@ class TestBusinessApiClientUserGoals:
         mock_response.status_code = 200
         mock_response.json.return_value = [
             {"goalId": "goal-1", "title": "Increase revenue"},
-            {"goalId": "goal-2", "title": "Improve efficiency"}
+            {"goalId": "goal-2", "title": "Improve efficiency"},
         ]
         business_client.client.get = AsyncMock(return_value=mock_response)
 
@@ -279,10 +263,7 @@ class TestBusinessApiClientMetrics:
     @pytest.fixture
     def business_client(self):
         """Create BusinessApiClient with mocked HTTP client."""
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         mock_client = AsyncMock()
         client.client = mock_client
         return client
@@ -294,10 +275,7 @@ class TestBusinessApiClientMetrics:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "entityId": "user-123",
-            "metrics": {
-                "revenue": 100000,
-                "growth": 15.5
-            }
+            "metrics": {"revenue": 100000, "growth": 15.5},
         }
         business_client.client.get = AsyncMock(return_value=mock_response)
 
@@ -336,10 +314,7 @@ class TestBusinessApiClientClose:
     async def test_close_client(self):
         """Test proper client cleanup."""
         # Arrange
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         client.client = AsyncMock()
 
         # Act
@@ -371,10 +346,7 @@ class TestBusinessApiClientEdgeCases:
     async def test_multiple_concurrent_requests(self):
         """Test handling of concurrent requests."""
         # Arrange
-        client = BusinessApiClient(
-            base_url="https://api.test.com",
-            jwt_token="test-token"
-        )
+        client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.status_code = 200
@@ -384,6 +356,7 @@ class TestBusinessApiClientEdgeCases:
 
         # Act - Multiple concurrent calls
         import asyncio
+
         results = await asyncio.gather(
             client.get_user_context("user-1", "tenant-1"),
             client.get_user_context("user-2", "tenant-1"),

@@ -29,7 +29,7 @@ class BusinessDataRepository:
             metric_type="business_overview",
             time_period="current",
             data_points=[],
-            summary={"total_goals": 0, "active_projects": 0, "completion_rate": 0.0},
+            summary={"total_goals": "0", "active_projects": "0", "completion_rate": "0.0"},
             generated_at=datetime.now(UTC),
         )
 

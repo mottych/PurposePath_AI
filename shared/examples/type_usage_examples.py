@@ -27,6 +27,7 @@ from shared.types import (  # Common patterns; External API types; Repository re
 # Domain ID Usage Examples
 # ========================================
 
+
 def example_domain_ids() -> tuple[UserId, TenantId, str]:
     """Examples of strong typing with domain IDs."""
 
@@ -51,6 +52,7 @@ def process_user_data(user_id: UserId) -> None:
 # Repository Pattern Examples
 # ========================================
 
+
 class UserRepository:
     """Example repository using shared types."""
 
@@ -60,33 +62,28 @@ class UserRepository:
             # Simulate user creation
             user_id = create_user_id(f"usr_{email.split('@')[0]}")
 
-            user_item = cast(DynamoDBItem, {
-                "pk": f"USER#{user_id}",
-                "sk": f"USER#{user_id}",
-                "tenant_id": str(tenant_id),
-                "created_at": "2024-01-15T10:30:00Z",
-                "user_id": str(user_id),
-                "email": email,
-                "name": name,
-                "subscription_tier": "starter",
-                "is_active": True
-            })
+            user_item = cast(
+                DynamoDBItem,
+                {
+                    "pk": f"USER#{user_id}",
+                    "sk": f"USER#{user_id}",
+                    "tenant_id": str(tenant_id),
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "user_id": str(user_id),
+                    "email": email,
+                    "name": name,
+                    "subscription_tier": "starter",
+                    "is_active": True,
+                },
+            )
 
             # Simulate DynamoDB put_item
             # self.dynamodb.put_item(Item=user_item)
 
-            return {
-                "success": True,
-                "user_id": user_id,
-                "user": user_item
-            }
+            return {"success": True, "user_id": user_id, "user": user_item}
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "error_code": "USER_CREATION_FAILED"
-            }
+            return {"success": False, "error": str(e), "error_code": "USER_CREATION_FAILED"}
 
     def get_user(self, user_id: UserId) -> UserGetResult:
         """Get user with typed result."""
@@ -95,34 +92,30 @@ class UserRepository:
             found = True  # Simulate found user
 
             if found:
-                user_item = cast(DynamoDBItem, {
-                    "pk": f"USER#{user_id}",
-                    "sk": f"USER#{user_id}",
-                    "created_at": "2024-01-15T10:30:00Z",
-                    "user_id": str(user_id),
-                    "email": "user@example.com",
-                    "name": "John Doe",
-                    "subscription_tier": "professional",
-                    "is_active": True
-                })
+                user_item = cast(
+                    DynamoDBItem,
+                    {
+                        "pk": f"USER#{user_id}",
+                        "sk": f"USER#{user_id}",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "user_id": str(user_id),
+                        "email": "user@example.com",
+                        "name": "John Doe",
+                        "subscription_tier": "professional",
+                        "is_active": True,
+                    },
+                )
 
-                return {
-                    "success": True,
-                    "user": user_item,
-                    "found": True
-                }
+                return {"success": True, "user": user_item, "found": True}
             else:
-                return {
-                    "success": True,
-                    "found": False
-                }
+                return {"success": True, "found": False}
 
         except Exception as e:
             return {
                 "success": False,
                 "found": False,
                 "error": str(e),
-                "error_code": "USER_FETCH_FAILED"
+                "error_code": "USER_FETCH_FAILED",
             }
 
 
@@ -130,63 +123,53 @@ class ConversationRepository:
     """Example conversation repository."""
 
     def list_user_conversations(
-        self,
-        user_id: UserId,
-        _params: PaginationParams
+        self, user_id: UserId, _params: PaginationParams
     ) -> ConversationListResult:
         """List conversations with pagination."""
         try:
             # Simulate DynamoDB query
             conversations: list[DynamoDBItem] = [
-                cast(DynamoDBItem, {
-                    "pk": f"USER#{user_id}",
-                    "sk": "CONV#conv_123",
-                    "created_at": "2024-01-15T10:30:00Z",
-                    "conversation_id": "conv_123",
-                    "user_id": str(user_id),
-                    "topic": "Goal Setting",
-                    "status": "active",
-                    "messages": [],
-                    "context": {}
-                })
+                cast(
+                    DynamoDBItem,
+                    {
+                        "pk": f"USER#{user_id}",
+                        "sk": "CONV#conv_123",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "conversation_id": "conv_123",
+                        "user_id": str(user_id),
+                        "topic": "Goal Setting",
+                        "status": "active",
+                        "messages": [],
+                        "context": {},
+                    },
+                )
             ]
 
             return {
                 "success": True,
                 "conversations": conversations,
-                "total_count": len(conversations)
+                "total_count": len(conversations),
             }
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "error_code": "CONVERSATION_LIST_FAILED"
-            }
+            return {"success": False, "error": str(e), "error_code": "CONVERSATION_LIST_FAILED"}
 
 
 # ========================================
 # External API Integration Examples
 # ========================================
 
+
 def handle_google_oauth(user_info: GoogleUserInfo) -> UserCreateResult:
     """Handle Google OAuth user creation."""
     if not user_info["verified_email"]:
-        return {
-            "success": False,
-            "error": "Email not verified",
-            "error_code": "EMAIL_NOT_VERIFIED"
-        }
+        return {"success": False, "error": "Email not verified", "error_code": "EMAIL_NOT_VERIFIED"}
 
     # Create user from Google data
     repo = UserRepository()
     tenant_id = create_tenant_id("default_tenant")
 
-    return repo.create_user(
-        email=user_info["email"],
-        name=user_info["name"],
-        tenant_id=tenant_id
-    )
+    return repo.create_user(email=user_info["email"], name=user_info["name"], tenant_id=tenant_id)
 
 
 def handle_stripe_customer(customer: StripeCustomer) -> SuccessData | ErrorData:
@@ -199,22 +182,16 @@ def handle_stripe_customer(customer: StripeCustomer) -> SuccessData | ErrorData:
             # Handle delinquent account
             pass
 
-        return {
-            "success": True,
-            "message": "Customer processed successfully"
-        }
+        return {"success": True, "message": "Customer processed successfully"}
 
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_code": "STRIPE_PROCESSING_FAILED"
-        }
+        return {"success": False, "error": str(e), "error_code": "STRIPE_PROCESSING_FAILED"}
 
 
 # ========================================
 # Service Layer Examples
 # ========================================
+
 
 class UserService:
     """Example service layer using typed repositories."""
@@ -223,12 +200,7 @@ class UserService:
         self.user_repo = UserRepository()
         self.conversation_repo = ConversationRepository()
 
-    def create_user_workflow(
-        self,
-        email: str,
-        name: str,
-        tenant_id: TenantId
-    ) -> UserCreateResult:
+    def create_user_workflow(self, email: str, name: str, tenant_id: TenantId) -> UserCreateResult:
         """Complete user creation workflow."""
 
         # Create user
@@ -254,14 +226,13 @@ class UserService:
 
         # Get conversations
         conv_result = self.conversation_repo.list_user_conversations(
-            user_id,
-            {"page": 1, "limit": 10}
+            user_id, {"page": 1, "limit": 10}
         )
 
         return {
             "user": user_result.get("user"),
             "conversations": conv_result.get("conversations", []),
-            "conversation_count": conv_result.get("total_count", 0)
+            "conversation_count": conv_result.get("total_count", 0),
         }
 
 
@@ -296,7 +267,7 @@ if __name__ == "__main__":
         "name": "Google User",
         "given_name": "Google",
         "family_name": "User",
-        "picture": "https://example.com/photo.jpg"
+        "picture": "https://example.com/photo.jpg",
     }
 
     google_result = handle_google_oauth(google_user)

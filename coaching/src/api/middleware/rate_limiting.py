@@ -6,7 +6,7 @@ the API from abuse and ensure fair resource allocation.
 
 import time
 from collections import defaultdict
-from typing import Any, Awaitable, Callable, Dict
+from typing import Any, Awaitable, Callable
 
 import structlog
 from fastapi import Request, Response, status
@@ -47,10 +47,12 @@ class TokenBucket:
         # Refill tokens based on elapsed time
         now = time.time()
         elapsed = now - self.last_refill
-        self.tokens = int(min(
-            self.capacity,
-            self.tokens + (elapsed * self.refill_rate),
-        ))
+        self.tokens = int(
+            min(
+                self.capacity,
+                self.tokens + (elapsed * self.refill_rate),
+            )
+        )
         self.last_refill = now
 
         # Try to consume
