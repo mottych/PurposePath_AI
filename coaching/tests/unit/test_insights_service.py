@@ -1,4 +1,4 @@
-"""Unit tests for InsightsService (Issue #48 - After mock removal)."""
+"""Unit tests for InsightsService (Issue #59 - Full Implementation)."""
 
 from unittest.mock import AsyncMock
 
@@ -10,16 +10,30 @@ from coaching.src.services.insights_service import InsightsService
 class TestInsightsServiceInitialization:
     """Test InsightsService initialization."""
 
-    def test_init_with_repositories(self):
-        """Test initialization with repository dependencies."""
+    def test_init_with_all_dependencies(self):
+        """Test initialization with all required dependencies."""
         # Arrange
         conversation_repo = AsyncMock()
+        business_api_client = AsyncMock()
+        llm_service = AsyncMock()
+        tenant_id = "tenant-123"
+        user_id = "user-456"
 
         # Act
-        service = InsightsService(conversation_repo=conversation_repo)
+        service = InsightsService(
+            conversation_repo=conversation_repo,
+            business_api_client=business_api_client,
+            llm_service=llm_service,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
 
         # Assert
         assert service.conversation_repo == conversation_repo
+        assert service.business_api_client == business_api_client
+        assert service.llm_service == llm_service
+        assert service.tenant_id == tenant_id
+        assert service.user_id == user_id
 
 
 @pytest.mark.unit
@@ -29,7 +43,13 @@ class TestInsightsServiceGetInsights:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_get_insights_returns_empty_results(self, insights_service):
         """Test that get_insights returns empty paginated response."""
@@ -96,7 +116,13 @@ class TestInsightsServiceGetInsightsSummary:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_get_insights_summary_returns_empty(self, insights_service):
         """Test that get_insights_summary returns empty summary."""
@@ -134,7 +160,13 @@ class TestInsightsServiceGetCategories:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_get_available_categories(self, insights_service):
         """Test that available categories are returned."""
@@ -171,7 +203,13 @@ class TestInsightsServiceGetPriorities:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_get_available_priorities(self, insights_service):
         """Test that available priorities are returned."""
@@ -204,7 +242,13 @@ class TestInsightsServiceDismissInsight:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_dismiss_insight(self, insights_service):
         """Test dismissing an insight."""
@@ -240,7 +284,13 @@ class TestInsightsServiceAcknowledgeInsight:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_acknowledge_insight(self, insights_service):
         """Test acknowledging an insight."""
@@ -275,7 +325,13 @@ class TestInsightsServiceEdgeCases:
     @pytest.fixture
     def insights_service(self):
         """Create InsightsService with mocked dependencies."""
-        return InsightsService(conversation_repo=AsyncMock())
+        return InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
     async def test_get_insights_with_invalid_page(self, insights_service):
         """Test get_insights with page 0 (boundary condition)."""
@@ -329,19 +385,32 @@ class TestInsightsServiceEdgeCases:
 class TestInsightsServiceIntegrationPatterns:
     """Test integration patterns and dependencies."""
 
-    async def test_service_with_none_repositories(self):
-        """Test that service can be created (repositories not used in stubs)."""
+    async def test_service_with_all_dependencies(self):
+        """Test that service can be created with all required dependencies."""
         # Arrange & Act
-        service = InsightsService(conversation_repo=AsyncMock())
+        service = InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
         # Assert
         assert service is not None
-        # Repositories are stored but not used in stub implementation
+        assert service.tenant_id == "tenant-test"
+        assert service.user_id == "user-test"
 
     async def test_concurrent_operations(self):
         """Test concurrent insight operations."""
         # Arrange
-        service = InsightsService(conversation_repo=AsyncMock())
+        service = InsightsService(
+            conversation_repo=AsyncMock(),
+            business_api_client=AsyncMock(),
+            llm_service=AsyncMock(),
+            tenant_id="tenant-test",
+            user_id="user-test",
+        )
 
         # Act - Multiple concurrent operations
         import asyncio
