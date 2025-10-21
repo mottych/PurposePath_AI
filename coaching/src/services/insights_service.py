@@ -32,7 +32,32 @@ logger = structlog.get_logger()
 
 
 class InsightsService:
-    """Service for generating and managing coaching insights."""
+    """Service for generating and managing coaching insights.
+
+    Architecture Note:
+    ------------------
+    This service generates insights on-demand when users explicitly request them.
+    The generated insights are then persisted by the .NET backend to DynamoDB.
+    On subsequent page loads, the frontend fetches persisted insights directly
+    from the .NET API, NOT from this Python service.
+
+    Cache Behavior:
+    ---------------
+    The in-memory cache is currently unused in the normal flow because:
+    1. Insights are generated only on explicit user request (button click)
+    2. .NET backend persists insights to DynamoDB after generation
+    3. Frontend fetches from .NET API, not from this service
+    4. Cache would only help if user spam-clicks "Generate" button
+
+    The cache remains in place for potential future use cases:
+    - If insights endpoint is called programmatically/repeatedly
+    - If architecture changes to support polling or webhooks
+    - As a safeguard against accidental duplicate generation requests
+
+    For Lambda deployments, this in-memory cache has limited effectiveness due to
+    container lifecycle. Consider this cache as optional/defensive rather than
+    critical to the architecture.
+    """
 
     def __init__(
         self,
@@ -47,7 +72,8 @@ class InsightsService:
         self.llm_service = llm_service
         self.tenant_id = tenant_id
         self.user_id = user_id
-        self._cache: dict[str, InsightsCacheEntry] = {}  # In-memory cache for now
+        # In-memory cache (currently unused in normal flow - see class docstring)
+        self._cache: dict[str, InsightsCacheEntry] = {}
 
     async def get_insights(
         self,
