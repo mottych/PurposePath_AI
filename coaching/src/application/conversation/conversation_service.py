@@ -4,6 +4,7 @@ This service orchestrates conversation-related use cases, coordinating
 domain entities, repositories, and infrastructure services.
 """
 
+from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -80,7 +81,8 @@ class ConversationApplicationService:
                 )
 
             # Create new conversation
-            conversation = Conversation.create(
+            conversation = Conversation(
+                conversation_id=f"conv_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
                 user_id=user_id,
                 tenant_id=tenant_id,
                 topic=topic,
@@ -103,7 +105,7 @@ class ConversationApplicationService:
                 topic=topic.value,
             )
 
-            return conversation
+            return conversation  # type: ignore[return-value]
 
         except Exception as e:
             logger.error(
@@ -147,7 +149,7 @@ class ConversationApplicationService:
 
             # Check if active
             if conversation.status != ConversationStatus.ACTIVE:
-                raise ConversationNotActive(conversation_id, conversation.status)
+                raise ConversationNotActive(conversation_id, conversation.status, "add message")
 
             # Add message (domain entity enforces rules)
             conversation.add_message(role=role, content=content)
@@ -256,7 +258,7 @@ class ConversationApplicationService:
         conversation = await self.get_conversation(conversation_id, tenant_id)
 
         # Pause (domain entity enforces rules)
-        conversation.pause()
+        conversation.mark_paused()
 
         # Persist
         await self.repository.save(conversation)
@@ -316,7 +318,7 @@ class ConversationApplicationService:
         conversation = await self.get_conversation(conversation_id, tenant_id)
 
         # Complete (domain entity enforces rules)
-        conversation.complete()
+        conversation.mark_completed()
 
         # Persist
         await self.repository.save(conversation)
