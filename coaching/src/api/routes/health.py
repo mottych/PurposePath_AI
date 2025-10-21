@@ -14,7 +14,7 @@ from shared.models.schemas import ApiResponse
 router = APIRouter()
 
 
-@router.get("/", response_model=ApiResponse[HealthCheckResponse])  # type: ignore[misc]
+@router.get("/", response_model=ApiResponse[HealthCheckResponse])
 async def health_check() -> ApiResponse[HealthCheckResponse]:
     """Basic health check with ApiResponse envelope."""
     health_data = HealthCheckResponse(
@@ -23,7 +23,7 @@ async def health_check() -> ApiResponse[HealthCheckResponse]:
     return ApiResponse(success=True, data=health_data)
 
 
-@router.get("/ready", response_model=ApiResponse[ReadinessCheckResponse])  # type: ignore[misc]
+@router.get("/ready", response_model=ApiResponse[ReadinessCheckResponse])
 async def readiness_check(
     redis_client: Any = Depends(get_redis_client),
 ) -> ApiResponse[ReadinessCheckResponse]:
@@ -36,7 +36,8 @@ async def readiness_check(
         from shared.services.boto3_helpers import get_dynamodb_resource
 
         dynamodb = get_dynamodb_resource(settings.aws_region)
-        dynamodb.describe_table(TableName=settings.conversations_table)
+        # Access the DynamoDB client through meta to describe table
+        dynamodb.meta.client.describe_table(TableName=settings.conversations_table)  # type: ignore[attr-defined]
         services["dynamodb"] = "healthy"
     except Exception as e:
         services["dynamodb"] = f"unhealthy: {str(e)}"

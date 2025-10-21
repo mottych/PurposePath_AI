@@ -47,7 +47,7 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 @router.post(
     "/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_201_CREATED
-)  # type: ignore[misc]
+)
 async def analyze_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -147,7 +147,7 @@ async def analyze_alignment(
 
 @router.post(
     "/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_201_CREATED
-)  # type: ignore[misc]
+)
 async def analyze_strategy(
     request: StrategyAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -254,7 +254,7 @@ async def analyze_strategy(
 # KPI Analysis Routes
 
 
-@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_201_CREATED)  # type: ignore[misc]
+@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_201_CREATED)
 async def analyze_kpis(
     request: KPIAnalysisRequest,
     user: UserContext = Depends(get_current_user),
@@ -362,7 +362,7 @@ async def analyze_kpis(
 
 @router.post(
     "/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_201_CREATED
-)  # type: ignore[misc]
+)
 async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
