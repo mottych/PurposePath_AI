@@ -9,6 +9,7 @@ import structlog
 # Enhanced with shared types for better type safety
 from coaching.src.core.config_multitenant import settings
 from coaching.src.core.exceptions import ConversationNotFoundCompatError
+from coaching.src.infrastructure.llm.model_pricing import calculate_cost
 from coaching.src.models.conversation import Conversation
 
 # Import LLM models for better type safety
@@ -309,17 +310,54 @@ class MultitenantConversationService:
             suggested_actions=ai_response_raw.insights,  # Map insights to suggested_actions
         )
 
-        # Add AI response
-        await self.conversation_repo.add_message(conversation_id, "assistant", ai_response.response)
+        # Extract token usage and calculate cost
+        tokens_dict: Optional[Dict[str, int]] = None
+        cost: Optional[float] = None
+
+        if isinstance(ai_response_raw.token_usage, dict):
+            tokens_dict = ai_response_raw.token_usage
+            # Calculate cost from detailed token breakdown
+            input_tokens = tokens_dict.get("input", tokens_dict.get("prompt_tokens", 0))
+            output_tokens = tokens_dict.get("output", tokens_dict.get("completion_tokens", 0))
+            cost = calculate_cost(input_tokens, output_tokens, ai_response_raw.model_id)
+        elif isinstance(ai_response_raw.token_usage, int) and ai_response_raw.token_usage > 0:
+            # Backward compatibility: if just a total count, estimate 60/40 split
+            total = ai_response_raw.token_usage
+            input_tokens = int(total * 0.6)
+            output_tokens = int(total * 0.4)
+            tokens_dict = {
+                "input": input_tokens,
+                "output": output_tokens,
+                "total": total,
+            }
+            cost = calculate_cost(input_tokens, output_tokens, ai_response_raw.model_id)
+
+        # Add AI response with token tracking
+        await self.conversation_repo.add_message(
+            conversation_id,
+            "assistant",
+            ai_response.response,
+            tokens=tokens_dict,
+            cost=cost,
+            model_id=ai_response_raw.model_id,
+        )
 
         # Update session metrics
         if session_id:
             # Fetch the latest session data to update metrics
             session = self.coaching_session_repo.get_by_id(session_id)
             if session:
+                # Calculate total tokens from dict if available
+                total_tokens = 0
+                if isinstance(ai_response_raw.token_usage, dict):
+                    total_tokens = ai_response_raw.token_usage.get("total", 0)
+                elif isinstance(ai_response_raw.token_usage, int):
+                    total_tokens = ai_response_raw.token_usage
+
                 metrics_update: SessionUpdateData = {
-                    "total_tokens": session.get("total_tokens", 0) + ai_response_raw.token_usage,
-                    "session_cost": session.get("session_cost", 0.0) + ai_response_raw.cost,
+                    "total_tokens": session.get("total_tokens", 0) + total_tokens,
+                    "session_cost": session.get("session_cost", 0.0)
+                    + (cost or ai_response_raw.cost),
                 }
                 self.coaching_session_repo.update(session_id, metrics_update)
 

@@ -4,16 +4,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
+from coaching.src.domain.value_objects.message import Message
 from pydantic import BaseModel, Field
-
-
-class Message(BaseModel):
-    """A message in a conversation."""
-
-    role: MessageRole
-    content: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ConversationContext(BaseModel):
@@ -67,10 +59,32 @@ class Conversation(BaseModel):
     ttl: Optional[int] = None
 
     def add_message(
-        self, role: MessageRole, content: str, metadata: Optional[Dict[str, Any]] = None
+        self,
+        role: MessageRole,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        tokens: Optional[Dict[str, int]] = None,
+        cost: Optional[float] = None,
+        model_id: Optional[str] = None,
     ) -> None:
-        """Add a message to the conversation."""
-        message = Message(role=role, content=content, metadata=metadata or {})
+        """Add a message to the conversation.
+
+        Args:
+            role: Message role (USER, ASSISTANT, SYSTEM)
+            content: Message content
+            metadata: Optional metadata
+            tokens: Token usage dict with 'input', 'output', 'total' keys
+            cost: Calculated cost in USD for this message
+            model_id: LLM model identifier used
+        """
+        message = Message(
+            role=role,
+            content=content,
+            metadata=metadata or {},
+            tokens=tokens,
+            cost=cost,
+            model_id=model_id,
+        )
         self.messages.append(message)
         self.updated_at = datetime.now(timezone.utc)
 

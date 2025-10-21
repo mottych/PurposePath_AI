@@ -9,8 +9,11 @@ class LLMResponse(BaseModel):
     """Response from LLM orchestrator."""
 
     response: str = Field(..., description="Generated response content")
-    token_usage: int = Field(default=0, description="Number of tokens used")
-    cost: float = Field(default=0.0, description="Cost of the request")
+    token_usage: Dict[str, int] | int = Field(
+        default=0,
+        description="Token usage - dict with 'input', 'output', 'total' keys or int for backward compat",
+    )
+    cost: float = Field(default=0.0, description="Cost of the request in USD")
     model_id: str = Field(..., description="Model used for generation")
 
     # Optional metadata

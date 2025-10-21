@@ -1,10 +1,11 @@
 """Data models for the coaching module."""
 
+from coaching.src.domain.value_objects.message import Message
+
 from .conversation import (
     Conversation,
     ConversationContext,
     ConversationSession,
-    Message,
 )
 from .llm_models import (
     BusinessContextForLLM,

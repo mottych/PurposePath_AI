@@ -5,6 +5,7 @@ from typing import Any, Optional
 import structlog
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.exceptions import ConversationNotFoundCompatError, ConversationNotFoundError
+from coaching.src.infrastructure.llm.model_pricing import calculate_cost
 from coaching.src.models.conversation import Conversation
 from coaching.src.models.responses import (
     ConversationListResponse,
@@ -122,8 +123,37 @@ class ConversationService:
             conversation_history=conversation.get_conversation_history(),
         )
 
-        # Add AI response
-        await self.conversation_repo.add_message(conversation_id, "assistant", ai_response.response)
+        # Extract token usage and calculate cost
+        tokens_dict: Optional[dict[str, int]] = None
+        cost: Optional[float] = None
+
+        if isinstance(ai_response.token_usage, dict):
+            tokens_dict = ai_response.token_usage
+            # Calculate cost from detailed token breakdown
+            input_tokens = tokens_dict.get("input", tokens_dict.get("prompt_tokens", 0))
+            output_tokens = tokens_dict.get("output", tokens_dict.get("completion_tokens", 0))
+            cost = calculate_cost(input_tokens, output_tokens, ai_response.model_id)
+        elif isinstance(ai_response.token_usage, int) and ai_response.token_usage > 0:
+            # Backward compatibility: if just a total count, estimate 60/40 split
+            total = ai_response.token_usage
+            input_tokens = int(total * 0.6)
+            output_tokens = int(total * 0.4)
+            tokens_dict = {
+                "input": input_tokens,
+                "output": output_tokens,
+                "total": total,
+            }
+            cost = calculate_cost(input_tokens, output_tokens, ai_response.model_id)
+
+        # Add AI response with token tracking
+        await self.conversation_repo.add_message(
+            conversation_id,
+            "assistant",
+            ai_response.response,
+            tokens=tokens_dict,
+            cost=cost,
+            model_id=ai_response.model_id,
+        )
 
         # Update conversation context
         conversation = await self.conversation_repo.get(conversation_id)

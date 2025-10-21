@@ -5,7 +5,7 @@ a single message within a coaching conversation.
 """
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from coaching.src.core.constants import MessageRole
 from coaching.src.core.types import MessageId, create_message_id
@@ -25,6 +25,9 @@ class Message(BaseModel):
         content: The actual message content
         timestamp: When the message was created (UTC)
         metadata: Optional additional information about the message
+        tokens: Token usage data (input, output, total) for LLM responses
+        cost: Calculated cost in USD for this message
+        model_id: LLM model identifier used to generate this message
 
     Example:
         >>> message = Message(
@@ -47,6 +50,21 @@ class Message(BaseModel):
         description="Message creation timestamp (UTC)",
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional message metadata")
+
+    # Token tracking fields for LLM usage analytics
+    tokens: Optional[dict[str, int]] = Field(
+        default=None,
+        description="Token usage: {'input': int, 'output': int, 'total': int}",
+    )
+    cost: Optional[float] = Field(
+        default=None,
+        description="Calculated cost in USD for this message",
+        ge=0.0,
+    )
+    model_id: Optional[str] = Field(
+        default=None,
+        description="LLM model identifier (e.g., 'anthropic.claude-3-5-sonnet-20241022-v2:0')",
+    )
 
     model_config = {"frozen": True, "extra": "forbid"}
 

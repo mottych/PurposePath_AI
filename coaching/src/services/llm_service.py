@@ -120,14 +120,34 @@ class LLMService:
         # Extract response data
         response_text = adapter_response.get("response", "")
         insights = adapter_response.get("insights", [])
-        token_count = adapter_response.get("token_count", 0)
         provider_used = adapter_response.get("provider", "bedrock")
+
+        # Extract token usage - handle both dict and int formats
+        token_data = adapter_response.get("token_count", 0)
+        if isinstance(token_data, dict):
+            token_usage = token_data
+        else:
+            # Legacy format: single count, create dict with estimate
+            token_usage = {
+                "input": int(token_data * 0.6) if token_data else 0,
+                "output": int(token_data * 0.4) if token_data else 0,
+                "total": token_data,
+            }
+
+        # Calculate cost from token breakdown
+        from coaching.src.infrastructure.llm.model_pricing import calculate_cost
+
+        cost = calculate_cost(
+            token_usage.get("input", 0),
+            token_usage.get("output", 0),
+            model_id,
+        )
 
         # Create structured response
         llm_response = LLMResponse(
             response=response_text,
-            token_usage=token_count,
-            cost=self._calculate_cost(token_count, model_id),
+            token_usage=token_usage,
+            cost=cost,
             model_id=model_id,
             conversation_id=conversation_id,
             tenant_id=self.tenant_id,

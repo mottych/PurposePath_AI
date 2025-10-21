@@ -202,6 +202,9 @@ class ConversationRepository:
         role: str,
         content: str,
         metadata: Optional[Dict[str, str]] = None,
+        tokens: Optional[Dict[str, int]] = None,
+        cost: Optional[float] = None,
+        model_id: Optional[str] = None,
     ) -> None:
         """Add a message to a conversation.
 
@@ -210,6 +213,9 @@ class ConversationRepository:
             role: Message role
             content: Message content
             metadata: Optional metadata
+            tokens: Token usage dict with 'input', 'output', 'total' keys
+            cost: Calculated cost in USD for this message
+            model_id: LLM model identifier used
         """
         # Get conversation
         conversation = await self.get(conversation_id)
@@ -217,8 +223,15 @@ class ConversationRepository:
         if not conversation:
             raise ConversationNotFoundCompatError(conversation_id)
 
-        # Add message
-        conversation.add_message(role=MessageRole(role), content=content, metadata=metadata)
+        # Add message with token tracking
+        conversation.add_message(
+            role=MessageRole(role),
+            content=content,
+            metadata=metadata,
+            tokens=tokens,
+            cost=cost,
+            model_id=model_id,
+        )
 
         # Update conversation
         await self.update(conversation)

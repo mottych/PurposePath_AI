@@ -319,11 +319,21 @@ class LLMServiceAdapter:
         metadata = workflow_state.metadata or {}
         results = workflow_state.results or {}
 
+        # Extract token usage - prefer dict format, fall back to int
+        token_usage = metadata.get("token_usage", 0)
+        if not isinstance(token_usage, dict) and isinstance(token_usage, int):
+            # Convert int to dict format for consistency
+            token_usage = {
+                "input": int(token_usage * 0.6) if token_usage else 0,
+                "output": int(token_usage * 0.4) if token_usage else 0,
+                "total": token_usage,
+            }
+
         return {
             "response": results.get("response", ""),
             "insights": results.get("insights", []),
             "memory_summary": metadata.get("memory_summary", ""),
-            "token_count": metadata.get("token_usage", 0),
+            "token_count": token_usage,  # Now returns dict with input/output/total
             "provider": provider_name,
             "model_id": model_id,
             "workflow_id": workflow_state.workflow_id,
