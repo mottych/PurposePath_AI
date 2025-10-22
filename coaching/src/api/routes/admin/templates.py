@@ -709,4 +709,112 @@ async def set_latest_version(
         )
 
 
+@router.delete(
+    "/prompts/{topic}/{version}",
+    response_model=ApiResponse[dict[str, str]],
+)
+async def delete_template_version(
+    topic: str = Path(..., description="Coaching topic identifier"),
+    version: str = Path(..., description="Version to delete"),
+    context: RequestContext = Depends(get_current_context),
+    _admin: RequestContext = Depends(require_admin_access),
+    prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
+) -> ApiResponse[dict[str, str]]:
+    """
+    Delete a specific template version.
+
+    This endpoint permanently removes a template version from storage.
+    Safety checks prevent deletion of the active "latest" version.
+
+    **Permissions Required:** ADMIN_ACCESS
+
+    **Parameters:**
+    - `topic`: Coaching topic identifier
+    - `version`: Version to delete
+
+    **Returns:**
+    - Confirmation of deletion
+
+    **Safety Rules:**
+    - Cannot delete version marked as "latest"
+    - Must set another version as latest before deleting
+    - Returns 404 if version doesn't exist
+    - Returns 409 if trying to delete latest version
+    """
+    logger.info(
+        "Deleting template version",
+        topic=topic,
+        version=version,
+        admin_user_id=context.user_id,
+    )
+
+    audit_service = AuditLogService()
+
+    try:
+        # Validate topic
+        try:
+            coaching_topic = CoachingTopic(topic)
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Unknown coaching topic: {topic}",
+            )
+
+        # Attempt to delete
+        try:
+            deleted = await prompt_repo.delete(coaching_topic, version)
+        except ValueError as e:
+            # This happens when trying to delete the latest version
+            raise HTTPException(
+                status_code=409,
+                detail=str(e),
+            )
+
+        if not deleted:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Version '{version}' not found for topic '{topic}'",
+            )
+
+        # Log audit event
+        await audit_service.log_template_deleted(
+            user_id=context.user_id,
+            tenant_id=context.tenant_id,
+            topic=topic,
+            version=version,
+        )
+
+        logger.info(
+            "Template version deleted",
+            topic=topic,
+            version=version,
+            admin_user_id=context.user_id,
+        )
+
+        return ApiResponse(
+            success=True,
+            data={
+                "message": f"Version '{version}' deleted successfully",
+                "topic": topic,
+                "version": version,
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to delete template version",
+            topic=topic,
+            version=version,
+            error=str(e),
+            admin_user_id=context.user_id,
+        )
+        return ApiResponse(
+            success=False,
+            data=None,
+            error=f"Failed to delete template version: {str(e)}",
+        )
+
+
 __all__ = ["router"]

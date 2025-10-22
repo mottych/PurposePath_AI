@@ -2,8 +2,10 @@
 
 import structlog
 from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies import get_model_config_service
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.constants import CoachingTopic
+from coaching.src.models.admin_requests import UpdateModelConfigRequest
 from coaching.src.models.admin_responses import (
     AIModelInfo,
     AIModelsResponse,
@@ -11,7 +13,9 @@ from coaching.src.models.admin_responses import (
     CoachingTopicInfo,
     ModelCostInfo,
 )
-from fastapi import APIRouter, Depends
+from coaching.src.services.audit_log_service import AuditLogService
+from coaching.src.services.model_config_service import ModelConfigService
+from fastapi import APIRouter, Depends, HTTPException, Path
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
@@ -159,6 +163,118 @@ async def list_coaching_topics(
             success=False,
             data=[],
             error="Failed to retrieve coaching topics",
+        )
+
+
+@router.put("/models/{model_id}", response_model=ApiResponse[dict[str, str]])
+async def update_model_configuration(
+    model_id: str = Path(..., description="Unique model identifier"),
+    request: UpdateModelConfigRequest = ...,
+    context: RequestContext = Depends(get_current_context),
+    _admin: RequestContext = Depends(require_admin_access),
+    model_config_service: ModelConfigService = Depends(get_model_config_service),
+) -> ApiResponse[dict[str, str]]:
+    """
+    Update configuration for a specific AI model.
+
+    This endpoint allows admins to modify model settings including
+    pricing, operational status, and other parameters.
+
+    **Permissions Required:** ADMIN_ACCESS
+
+    **Parameters:**
+    - `modelId`: Unique model identifier
+
+    **Request Body:** (all fields optional)
+    - `display_name`: Human-readable model name
+    - `is_active`: Whether model is available for use
+    - `input_cost_per_1k_tokens`: Cost per 1000 input tokens
+    - `output_cost_per_1k_tokens`: Cost per 1000 output tokens
+    - `context_window`: Maximum context window size
+    - `max_tokens`: Maximum output tokens
+    - `supports_streaming`: Whether model supports streaming
+    - `metadata`: Additional configuration data
+    - `reason`: Reason for configuration change
+
+    **Returns:**
+    - Confirmation of update with changed fields
+    """
+    logger.info(
+        "Updating model configuration",
+        model_id=model_id,
+        admin_user_id=context.user_id,
+    )
+
+    audit_service = AuditLogService()
+
+    try:
+        # Build updates dictionary (exclude None values and reason)
+        updates = {}
+        request_dict = request.model_dump(exclude_none=True)
+
+        # Remove reason from updates (it's for audit only)
+        reason = request_dict.pop("reason", None)
+
+        # Track what changed
+        changes: dict[str, str] = {}
+
+        for key, value in request_dict.items():
+            updates[key] = value
+            changes[key] = f"updated to {value}"
+
+        if not updates:
+            raise HTTPException(
+                status_code=400,
+                detail="No updates provided. At least one field must be changed.",
+            )
+
+        # Update the configuration
+        try:
+            await model_config_service.update_config(model_id, updates)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=404,
+                detail=str(e),
+            )
+
+        # Log audit event
+        await audit_service.log_model_updated(
+            user_id=context.user_id,
+            tenant_id=context.tenant_id,
+            model_id=model_id,
+            changes=changes,
+            reason=reason,
+        )
+
+        logger.info(
+            "Model configuration updated",
+            model_id=model_id,
+            updated_fields=list(updates.keys()),
+            admin_user_id=context.user_id,
+        )
+
+        return ApiResponse(
+            success=True,
+            data={
+                "message": f"Model '{model_id}' configuration updated successfully",
+                "model_id": model_id,
+                "updated_fields": list(updates.keys()),
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to update model configuration",
+            model_id=model_id,
+            error=str(e),
+            admin_user_id=context.user_id,
+        )
+        return ApiResponse(
+            success=False,
+            data=None,
+            error=f"Failed to update model configuration: {str(e)}",
         )
 
 

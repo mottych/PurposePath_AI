@@ -97,20 +97,43 @@ class SetLatestVersionRequest(BaseModel):
 class UpdateModelConfigRequest(BaseModel):
     """Request to update model configuration."""
 
+    display_name: str | None = Field(
+        None,
+        description="Human-readable model name",
+        min_length=1,
+        max_length=200,
+    )
     is_active: bool | None = Field(
         None,
         description="Whether model is active",
-        alias="isActive",
     )
-    is_default: bool | None = Field(
+    input_cost_per_1k_tokens: float | None = Field(
         None,
-        description="Whether model is default",
-        alias="isDefault",
+        description="Cost per 1000 input tokens in USD",
+        ge=0,
     )
-    cost_per_1k_tokens: dict[str, float] | None = Field(
+    output_cost_per_1k_tokens: float | None = Field(
         None,
-        description="Token pricing (input/output)",
-        alias="costPer1kTokens",
+        description="Cost per 1000 output tokens in USD",
+        ge=0,
+    )
+    context_window: int | None = Field(
+        None,
+        description="Maximum context window size",
+        gt=0,
+    )
+    max_tokens: int | None = Field(
+        None,
+        description="Maximum output tokens",
+        gt=0,
+    )
+    supports_streaming: bool | None = Field(
+        None,
+        description="Whether model supports streaming",
+    )
+    metadata: dict[str, Any] | None = Field(
+        None,
+        description="Additional metadata",
     )
     reason: str | None = Field(
         None,

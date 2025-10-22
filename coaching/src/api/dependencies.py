@@ -97,6 +97,21 @@ async def get_prompt_repository() -> S3PromptRepository:
     )
 
 
+async def get_model_config_service():
+    """Get model configuration service (Phase 3).
+
+    Returns:
+        ModelConfigService instance configured with settings
+    """
+    from coaching.src.services.model_config_service import ModelConfigService
+
+    s3_client = get_s3_client_singleton()
+    return ModelConfigService(
+        s3_client=s3_client,
+        bucket_name=settings.prompts_bucket,  # Use same bucket, different path
+    )
+
+
 # Application Service dependencies
 
 
@@ -238,6 +253,7 @@ __all__ = [
     # Repository dependencies
     "get_conversation_repository",
     "get_prompt_repository",
+    "get_model_config_service",
     # Application service dependencies
     "get_llm_service",
     "get_conversation_service",
