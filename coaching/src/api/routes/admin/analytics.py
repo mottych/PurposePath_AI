@@ -82,7 +82,7 @@ async def get_usage_analytics(
 
     **Example:**
     ```
-    GET /api/v1/admin/ai/usage?start_date=2025-10-01T00:00:00Z&end_date=2025-10-31T23:59:59Z
+    GET /api/v1/admin/usage?start_date=2025-10-01T00:00:00Z&end_date=2025-10-31T23:59:59Z
     ```
     """
     logger.info(
@@ -162,7 +162,7 @@ async def get_model_metrics(
 
     **Example:**
     ```
-    GET /api/v1/admin/ai/models/anthropic.claude-3-5-sonnet-20241022-v2:0/metrics
+    GET /api/v1/admin/models/anthropic.claude-3-5-sonnet-20241022-v2:0/metrics
     ```
     """
     logger.info(

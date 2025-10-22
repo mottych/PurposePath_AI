@@ -8,7 +8,7 @@ from .models import router as models_router
 from .templates import router as templates_router
 
 # Create main admin router
-router = APIRouter(prefix="/admin/ai", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Include sub-routers
 router.include_router(models_router)
