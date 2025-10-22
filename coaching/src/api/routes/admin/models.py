@@ -123,27 +123,17 @@ async def list_coaching_topics(
         for topic in CoachingTopic:
             # Create topic info with friendly display names
             display_names = {
-                CoachingTopic.GOAL_ALIGNMENT: "Goal Alignment",
-                CoachingTopic.STRATEGY_SUGGESTION: "Strategy Suggestions",
-                CoachingTopic.KPI_RECOMMENDATION: "KPI Recommendations",
-                CoachingTopic.BUSINESS_INSIGHTS: "Business Insights",
-                CoachingTopic.OPERATIONS_ALIGNMENT: "Operations Alignment",
-                CoachingTopic.ROOT_CAUSE_ANALYSIS: "Root Cause Analysis",
-                CoachingTopic.ACTION_PLANNING: "Action Planning",
-                CoachingTopic.PRIORITIZATION_ADVICE: "Prioritization Advice",
-                CoachingTopic.SCHEDULING_OPTIMIZATION: "Scheduling Optimization",
+                CoachingTopic.CORE_VALUES: "Core Values",
+                CoachingTopic.PURPOSE: "Purpose",
+                CoachingTopic.VISION: "Vision",
+                CoachingTopic.GOALS: "Goals",
             }
 
             descriptions = {
-                CoachingTopic.GOAL_ALIGNMENT: "Evaluate goal alignment with business foundation",
-                CoachingTopic.STRATEGY_SUGGESTION: "Generate strategic recommendations for goals",
-                CoachingTopic.KPI_RECOMMENDATION: "Suggest relevant KPIs for measurement",
-                CoachingTopic.BUSINESS_INSIGHTS: "Analyze business data for actionable insights",
-                CoachingTopic.OPERATIONS_ALIGNMENT: "Assess operational strategic alignment",
-                CoachingTopic.ROOT_CAUSE_ANALYSIS: "Identify root causes of issues",
-                CoachingTopic.ACTION_PLANNING: "Create action plans for problems",
-                CoachingTopic.PRIORITIZATION_ADVICE: "Advise on task prioritization",
-                CoachingTopic.SCHEDULING_OPTIMIZATION: "Optimize action scheduling",
+                CoachingTopic.CORE_VALUES: "Discover and clarify personal core values",
+                CoachingTopic.PURPOSE: "Define life and business purpose",
+                CoachingTopic.VISION: "Articulate vision for the future",
+                CoachingTopic.GOALS: "Set aligned and achievable goals",
             }
 
             topic_info = CoachingTopicInfo(

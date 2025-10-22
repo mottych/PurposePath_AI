@@ -32,9 +32,10 @@ class TemplateValidationService:
 
     # Reserved parameters that must be present in certain templates
     REQUIRED_PARAMETERS = {
-        CoachingTopic.GOAL_ALIGNMENT: ["goal", "purpose", "vision"],
-        CoachingTopic.STRATEGY_SUGGESTION: ["goal", "strategies"],
-        CoachingTopic.KPI_RECOMMENDATION: ["goal", "strategies"],
+        CoachingTopic.CORE_VALUES: ["user_input", "context"],
+        CoachingTopic.PURPOSE: ["core_values", "context"],
+        CoachingTopic.VISION: ["purpose", "core_values"],
+        CoachingTopic.GOALS: ["vision", "purpose", "core_values"],
     }
 
     def __init__(self):
