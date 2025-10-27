@@ -1,17 +1,33 @@
 # Coaching Service Backend Integration Specifications
 
-**Version:** 3.0  
+**Version:** 3.1  
+**Last Updated:** October 27, 2025  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
 
 [← Back to Index](./backend-integration-index.md)
 
+---
+
+## URL Structure
+
+All endpoints in this document are shown as **relative paths** from the base URL.
+
+**Example:**
+
+- **Endpoint:** `/coaching/alignment-check`
+- **Full URL:** `https://api.dev.purposepath.app/coaching/api/v1/coaching/alignment-check`
+- **Frontend Usage:** `coachingClient.post('/coaching/alignment-check', data)`
+
+The base URL already includes `/coaching/api/v1`, so endpoints should not repeat this prefix.
+
 ## Overview
 
 The Coaching Service handles all AI/ML operations, including goal alignment calculations, strategy suggestions, KPI recommendations, business insights, coaching conversations, and operations AI assistance.
 
 ### Frontend Implementation
+
 - **Primary Client:** `coachingClient` (axios instance in `src/services/api.ts`)
 - **Related Files:**
   - `src/services/api.ts` - Main ApiClient class with coachingClient
@@ -25,11 +41,14 @@ The Coaching Service handles all AI/ML operations, including goal alignment calc
 
 ## Strategic Planning AI Endpoints
 
-### POST /api/coaching/alignment-check
+### POST /coaching/alignment-check
 
 Calculate alignment score for a goal against business foundation.
 
+**Note:** Full URL: `{BASE_URL}/coaching/alignment-check`
+
 **Request:**
+
 ```json
 {
   "goalIntent": "string",
@@ -46,6 +65,7 @@ Calculate alignment score for a goal against business foundation.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -73,6 +93,7 @@ Calculate alignment score for a goal against business foundation.
 ```
 
 **Notes:**
+
 - Scores are 0-100 percentages
 - Called automatically when goal, strategies, or KPIs change
 - Results cached to reduce API calls
@@ -81,11 +102,14 @@ Calculate alignment score for a goal against business foundation.
 
 ---
 
-### POST /api/coaching/alignment-explanation
+### POST /coaching/alignment-explanation
 
 Get detailed AI explanation for goal alignment (more verbose than alignment-check).
 
+**Note:** Full URL: `{BASE_URL}/coaching/alignment-explanation`
+
 **Request:**
+
 ```json
 {
   "goal": {
@@ -104,6 +128,7 @@ Get detailed AI explanation for goal alignment (more verbose than alignment-chec
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -114,6 +139,7 @@ Get detailed AI explanation for goal alignment (more verbose than alignment-chec
 ```
 
 **Notes:**
+
 - More detailed explanation than `alignment-check`
 - Used for detailed alignment panels
 - May take longer to process
@@ -122,11 +148,14 @@ Get detailed AI explanation for goal alignment (more verbose than alignment-chec
 
 ---
 
-### POST /api/coaching/alignment-suggestions
+### POST /coaching/alignment-suggestions
 
 Get AI-generated suggestions for improving goal alignment.
 
+**Note:** Full URL: `{BASE_URL}/coaching/alignment-suggestions`
+
 **Request:**
+
 ```json
 {
   "goal": {
@@ -143,6 +172,7 @@ Get AI-generated suggestions for improving goal alignment.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -160,11 +190,14 @@ Get AI-generated suggestions for improving goal alignment.
 
 ---
 
-### POST /api/coaching/strategy-suggestions
+### POST /coaching/strategy-suggestions
 
 Get AI-generated strategy recommendations for a goal.
 
+**Note:** Full URL: `{BASE_URL}/coaching/strategy-suggestions`
+
 **Request:**
+
 ```json
 {
   "goalIntent": "string",
@@ -184,6 +217,7 @@ Get AI-generated strategy recommendations for a goal.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -209,6 +243,7 @@ Get AI-generated strategy recommendations for a goal.
 ```
 
 **Notes:**
+
 - `difficulty`: "low" | "medium" | "high"
 - `expectedImpact`: "low" | "medium" | "high"
 - `confidence`: 0-1 scale
@@ -218,11 +253,14 @@ Get AI-generated strategy recommendations for a goal.
 
 ---
 
-### POST /api/coaching/kpi-recommendations
+### POST /coaching/kpi-recommendations
 
 Get AI-recommended KPIs for a goal and strategies.
 
+**Note:** Full URL: `{BASE_URL}/coaching/kpi-recommendations`
+
 **Request:**
+
 ```json
 {
   "goalIntent": "string",
@@ -244,6 +282,7 @@ Get AI-recommended KPIs for a goal and strategies.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -273,6 +312,7 @@ Get AI-recommended KPIs for a goal and strategies.
 ```
 
 **Notes:**
+
 - `direction`: "up" (higher is better) | "down" (lower is better)
 - `isLeading`: true for predictive metrics, false for historical
 - `difficulty`: how hard to measure/track
@@ -283,11 +323,14 @@ Get AI-recommended KPIs for a goal and strategies.
 
 ## Operations AI Endpoints
 
-### POST /api/operations/strategic-alignment
+### POST /operations/strategic-alignment
 
 Analyze strategic alignment of operations (actions) with business goals.
 
+**Note:** Full URL: `{BASE_URL}/operations/strategic-alignment`
+
 **Request:**
+
 ```json
 {
   "actions": [{
@@ -311,6 +354,7 @@ Analyze strategic alignment of operations (actions) with business goals.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -339,6 +383,7 @@ Analyze strategic alignment of operations (actions) with business goals.
 ```
 
 **Notes:**
+
 - Helps identify misaligned operational work
 - Recommends action prioritization based on strategic value
 
@@ -346,11 +391,14 @@ Analyze strategic alignment of operations (actions) with business goals.
 
 ---
 
-### POST /api/operations/root-cause-suggestions
+### POST /operations/root-cause-suggestions
 
 Get AI suggestions for root cause analysis methods.
 
+**Note:** Full URL: `{BASE_URL}/operations/root-cause-suggestions`
+
 **Request:**
+
 ```json
 {
   "issueTitle": "string",
@@ -366,6 +414,7 @@ Get AI suggestions for root cause analysis methods.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -398,6 +447,7 @@ Get AI suggestions for root cause analysis methods.
 ```
 
 **Notes:**
+
 - Multiple analysis methods suggested
 - Confidence score indicates AI certainty
 - Pre-filled suggestions to speed up analysis
@@ -406,11 +456,14 @@ Get AI suggestions for root cause analysis methods.
 
 ---
 
-### POST /api/operations/action-suggestions
+### POST /operations/action-suggestions
 
 Get AI-generated action plan suggestions for an issue.
 
+**Note:** Full URL: `{BASE_URL}/operations/action-suggestions`
+
 **Request:**
+
 ```json
 {
   "issue": {
@@ -433,6 +486,7 @@ Get AI-generated action plan suggestions for an issue.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -456,6 +510,7 @@ Get AI-generated action plan suggestions for an issue.
 ```
 
 **Notes:**
+
 - `estimatedDuration` in hours
 - Actions ranked by effectiveness and feasibility
 - Considers constraints provided
@@ -464,11 +519,14 @@ Get AI-generated action plan suggestions for an issue.
 
 ---
 
-### POST /api/operations/prioritization-suggestions
+### POST /operations/prioritization-suggestions
 
 Get AI suggestions for action prioritization.
 
+**Note:** Full URL: `{BASE_URL}/operations/prioritization-suggestions`
+
 **Request:**
+
 ```json
 {
   "actions": [{
@@ -490,6 +548,7 @@ Get AI suggestions for action prioritization.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -516,6 +575,7 @@ Get AI suggestions for action prioritization.
 ```
 
 **Notes:**
+
 - Analyzes priority based on dependencies, impact, and business context
 - `recommendedAction`: "escalate" | "maintain" | "de-prioritize"
 
@@ -523,11 +583,14 @@ Get AI suggestions for action prioritization.
 
 ---
 
-### POST /api/operations/scheduling-suggestions
+### POST /operations/scheduling-suggestions
 
 Get AI suggestions for action scheduling optimization.
 
+**Note:** Full URL: `{BASE_URL}/operations/scheduling-suggestions`
+
 **Request:**
+
 ```json
 {
   "actions": [{
@@ -556,6 +619,7 @@ Get AI suggestions for action scheduling optimization.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -584,6 +648,7 @@ Get AI suggestions for action scheduling optimization.
 ```
 
 **Notes:**
+
 - Optimizes for deadline adherence and resource utilization
 - Considers dependencies and capacity constraints
 
@@ -597,7 +662,10 @@ Get AI suggestions for action scheduling optimization.
 
 Get business metrics and data summary.
 
+**Note:** Full URL: `{BASE_URL}/multitenant/conversations/business-data`
+
 **Response:**
+
 ```json
 {
   "success": true,
@@ -629,6 +697,7 @@ Get business metrics and data summary.
 ```
 
 **Notes:**
+
 - May be wrapped in `data` envelope or returned directly
 - Used for dashboard and business context in AI requests
 
@@ -640,7 +709,10 @@ Get business metrics and data summary.
 
 Generate fresh AI-powered coaching insights using LLM.
 
+**Note:** Full URL: `{BASE_URL}/insights/generate`
+
 **Query Parameters:**
+
 - `page` - Page number (default: 1)
 - `page_size` - Items per page (default: 20, max: 100)
 - `category` - Filter by category (optional)
@@ -648,6 +720,7 @@ Generate fresh AI-powered coaching insights using LLM.
 - `status` - Filter by status (optional)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -676,6 +749,7 @@ Generate fresh AI-powered coaching insights using LLM.
 ```
 
 **Notes:**
+
 - **IMPORTANT:** This endpoint generates NEW insights using LLM (costs money!)
 - Each call fetches fresh business data and runs AI analysis
 - Frontend should persist results to .NET backend after generation
@@ -685,6 +759,7 @@ Generate fresh AI-powered coaching insights using LLM.
 - `status`: "active" | "dismissed" | "acknowledged"
 
 **Architecture Flow:**
+
 1. User clicks "Generate Insights" → Frontend calls this endpoint
 2. Python AI service fetches data from .NET APIs
 3. Python AI service generates insights with Claude Sonnet
@@ -702,7 +777,10 @@ Generate fresh AI-powered coaching insights using LLM.
 
 Get AI suggestions for onboarding fields.
 
+**Note:** Full URL: `{BASE_URL}/suggestions/onboarding`
+
 **Request:**
+
 ```json
 {
   "kind": "niche|ica|valueProposition",
@@ -716,6 +794,7 @@ Get AI suggestions for onboarding fields.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -731,6 +810,7 @@ Get AI suggestions for onboarding fields.
 ```
 
 **Notes:**
+
 - `kind`: "niche" | "ica" | "valueProposition"
 - Helps users define business positioning during onboarding
 
@@ -742,7 +822,10 @@ Get AI suggestions for onboarding fields.
 
 Scan website URL to extract business information.
 
+**Note:** Full URL: `{BASE_URL}/website/scan`
+
 **Request:**
+
 ```json
 {
   "url": "https://example.com"
@@ -750,6 +833,7 @@ Scan website URL to extract business information.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -765,6 +849,7 @@ Scan website URL to extract business information.
 ```
 
 **Notes:**
+
 - Uses web scraping and AI to extract business info
 - Results used to pre-fill onboarding form
 - May fail if website has anti-scraping measures
@@ -777,7 +862,10 @@ Scan website URL to extract business information.
 
 Get coaching assistance for onboarding sections.
 
+**Note:** Full URL: `{BASE_URL}/coaching/onboarding`
+
 **Request:**
+
 ```json
 {
   "topic": "coreValues|purpose|vision",
@@ -791,6 +879,7 @@ Get coaching assistance for onboarding sections.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -807,6 +896,7 @@ Get coaching assistance for onboarding sections.
 ```
 
 **Notes:**
+
 - Interactive coaching for business foundation elements
 - Provides context-aware guidance and examples
 
@@ -820,7 +910,10 @@ Get coaching assistance for onboarding sections.
 
 Start new coaching conversation.
 
+**Note:** Full URL: `{BASE_URL}/conversations/initiate`
+
 **Request:**
+
 ```json
 {
   "topic": "string",
@@ -833,6 +926,7 @@ Start new coaching conversation.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -852,10 +946,14 @@ Start new coaching conversation.
 
 Send message to coaching conversation.
 
-**Path Parameters:** 
+**Note:** Full URL: `{BASE_URL}/conversations/{id}/message`
+
+**Path Parameters:**
+
 - `id` - Conversation ID
 
 **Request:**
+
 ```json
 {
   "message": "string"
@@ -863,6 +961,7 @@ Send message to coaching conversation.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -875,6 +974,7 @@ Send message to coaching conversation.
 ```
 
 **Notes:**
+
 - Response format may vary
 - Frontend normalizes response for consistent handling
 
@@ -895,6 +995,7 @@ All Coaching Service endpoints follow the standard error format:
 ```
 
 ### Common Error Codes
+
 - `INSUFFICIENT_CONTEXT` - Not enough data to generate AI response
 - `AI_SERVICE_UNAVAILABLE` - ML service temporarily unavailable
 - `RATE_LIMIT_EXCEEDED` - Too many AI requests
@@ -904,6 +1005,7 @@ All Coaching Service endpoints follow the standard error format:
 ---
 
 **Navigation:**
+
 - [← Back to Index](./backend-integration-index.md)
 - [← Account Service](./backend-integration-account-service.md)
 - [Traction Service Specs →](./backend-integration-traction-service.md)

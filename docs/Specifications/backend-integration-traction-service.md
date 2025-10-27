@@ -42,10 +42,89 @@ Update goal. **Implementation:** `goal-service.ts` → `updateGoal()`
 ### DELETE /goals/{id}
 Delete goal (soft delete). **Implementation:** `goal-service.ts` → `deleteGoal()`
 
-### POST /goals/{id}:close
-Close/complete goal. **Implementation:** `goal-service.ts` → `closeGoal()`
+### POST /goals/{id}:activate
+Activate a goal (transition from draft or paused to active). **Implementation:** `goal-service.ts` → `activateGoal()`
 
-**Request:** `{reason?, finalStatus: "completed|cancelled"}`
+**Request:**
+```json
+{
+  "reason": "Ready to begin Q1 execution"  // Optional
+}
+```
+
+**Response:** Updated Goal object with `status: "active"`
+
+**Status Transition:**
+- `draft` → `active` (starting the goal)
+- `paused` → `active` (resuming the goal)
+
+**Business Rules:**
+- Can only activate from `draft` or `paused` status
+- If `reason` is provided, an activity entry is created with context-aware title ("Goal Started" for draft→active, "Goal Resumed" for paused→active)
+- Activity text format: "Goal started: {reason}" or "Goal resumed: {reason}"
+
+**Validation:**
+- Returns 400 if goal cannot be activated from current status (e.g., "Cannot activate goal in Completed status")
+- Returns 404 if goal not found
+
+### POST /goals/{id}:pause
+Pause an active goal (put on hold). **Implementation:** `goal-service.ts` → `pauseGoal()`
+
+**Request:**
+```json
+{
+  "reason": "Waiting for Q2 budget approval"  // Optional
+}
+```
+
+**Response:** Updated Goal object with `status: "paused"`
+
+**Status Transition:**
+- `active` → `paused`
+
+**Business Rules:**
+- Can only pause from `active` status
+- If `reason` is provided, an activity entry is created with title "Goal Paused"
+- Activity text format: "Goal paused: {reason}"
+
+**Validation:**
+- Returns 400 if goal is not `active` (e.g., "Cannot put goal on hold from Completed status")
+- Returns 404 if goal not found
+
+### POST /goals/{id}:close
+Close/complete a goal. **Implementation:** `goal-service.ts` → `closeGoal()`
+
+**Request:**
+```json
+{
+  "finalStatus": "completed",  // Required: "completed" or "cancelled"
+  "reason": "All KPIs achieved"  // Optional
+}
+```
+
+**Response:** Updated Goal object with `status: "completed"` or `"cancelled"`
+
+**Status Transitions:**
+- When `finalStatus: "completed"`:
+  - `active` → `completed` (ONLY from active status)
+  - Sets `completedAt` timestamp
+- When `finalStatus: "cancelled"`:
+  - ANY status (except `completed`) → `cancelled`
+  - Can cancel from `draft`, `active`, `paused`, or `archived`
+
+**Business Rules:**
+- `finalStatus` parameter is **required** to distinguish between successful completion vs abandonment
+- If `reason` is provided, an activity entry is created
+- Activity text format: "Goal completed: {reason}" or "Goal cancelled: {reason}"
+- Cannot cancel a goal that is already `completed`
+
+**Validation:**
+- Returns 400 if `finalStatus` is not "completed" or "cancelled"
+- Returns 400 if `finalStatus: "completed"` and goal is not `active` (e.g., "Cannot complete goal in Draft status")
+- Returns 400 if `finalStatus: "cancelled"` and goal is already `completed` (e.g., "Cannot cancel completed goal")
+- Returns 404 if goal not found
+
+**Breaking Change Note:** Enhanced from previous implementation that only accepted `reason` field. Now requires `finalStatus` parameter to properly distinguish between completion and cancellation.
 
 ---
 
@@ -168,32 +247,338 @@ Delete action. **Implementation:** `action-service.ts` → `deleteAction()`
 ### GET /api/operations/issues
 List issues. **Implementation:** `issue-service.ts` → `getIssues()`
 
-**Query Params:** status, priority, businessImpact, reportedBy, assignedTo, search
+**Query Params:** 
+- `status` (string) - Filter by status
+- `priority` (string) - Filter by priority  
+- `businessImpact` (string) - Filter by impact level
+- `reportedBy` (string) - Filter by reporter ID
+- `assignedTo` (string) - Filter by assignee ID
+- `typeConfigId` (string) - Filter by issue type configuration ID
+- `search` (string) - Search in title/description
+- `page` (number) - Page number for pagination
+- `size` (number) - Items per page
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "issue_123abc",
+      "title": "Hire senior developer",
+      "description": "Need experienced developer for project X",
+      "typeConfigId": "uuid",
+      "statusConfigId": "uuid",
+      "impact": "high",
+      "priority": "critical",
+      "reporterId": "user_123",
+      "reporterName": "John Doe",
+      "assignedPersonId": "user_456",
+      "assignedPersonName": "Jane Smith",
+      "dueDate": "2025-02-15T00:00:00Z",
+      "estimatedHours": 40.0,
+      "actualHours": 25.5,
+      "tags": ["hiring", "urgent"],
+      "displayOrder": 1,
+      "connections": {
+        "goalIds": ["goal_123"],
+        "strategyIds": ["strategy_456"],
+        "actionIds": ["action_789"]
+      },
+      "rootCauseAnalysis": "Expansion requirements",
+      "resolutionNotes": null,
+      "createdAt": "2025-01-15T10:00:00Z",
+      "updatedAt": "2025-01-20T14:30:00Z",
+      "createdBy": "user_123",
+      "updatedBy": "user_123"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 45,
+    "totalPages": 3
+  }
+}
+```
 
 ### POST /api/operations/issues
 Create issue. **Implementation:** `issue-service.ts` → `createIssue()`
 
-**Request:** `{title, description, reportedBy, businessImpact: "low|medium|high|critical", priority, statusId?}`
+**Request:** 
+```json
+{
+  "title": "Hire senior developer",
+  "description": "Need experienced developer for project X",
+  "typeConfigId": "uuid",
+  "reportedBy": "user_123",
+  "businessImpact": "high",
+  "priority": "critical",
+  "statusId": "uuid",
+  "assignedPersonId": "user_456",
+  "dueDate": "2025-02-15T00:00:00Z",
+  "estimatedHours": 40.0,
+  "tags": ["hiring", "urgent"],
+  "connections": {
+    "goalIds": ["goal_123"],
+    "strategyIds": ["strategy_456"]
+  }
+}
+```
+
+**Response:** Single issue object (same structure as GET response item)
+
+### GET /api/operations/issues/{issueId}
+Get single issue. **Implementation:** `issue-service.ts` → `getIssueById()`
+
+**Response:** Single issue object (same structure as GET list response item)
 
 ### PUT /api/operations/issues/{issueId}
 Update issue. **Implementation:** `issue-service.ts` → `updateIssue()`
 
+**Request:** Same structure as POST (all fields optional except those being updated)
+
+**Response:** Updated issue object
+
 ### DELETE /api/operations/issues/{issueId}
 Delete issue. **Implementation:** `issue-service.ts` → `deleteIssue()`
 
-### GET /api/operations/issue-statuses
-Get issue statuses. **Implementation:** `issue-service.ts` → `getIssueStatuses()`
+**Response:**
+```json
+{
+  "success": true,
+  "deletedIssueId": "issue_123abc",
+  "deletedAt": "2025-01-20T15:00:00Z"
+}
+```
 
-**Response:** Array of IssueStatus `{id, name, category: "open|active|inactive|closed", color, order}`
+---
+
+## Issue Configuration: Types
+
+Issue types define categories for business issues (e.g., Personnel, Financial, Process). Tenants can use SYSTEM types or create custom types.
+
+### GET /api/operations/issue-types
+List active issue types. **Implementation:** `issue-service.ts` → `getIssueTypes()`
+
+**Query Params:** 
+- `includeInactive` (boolean, default: false) - Include inactive types
+- `includeSystem` (boolean, default: true) - Include SYSTEM types
+
+**Response:** 
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Personnel",
+      "description": "People-related issues",
+      "color": "#FF6B6B",
+      "icon": "users",
+      "order": 1,
+      "isActive": true,
+      "isSystemType": true,
+      "isDefault": false,
+      "createdAt": "2025-01-15T10:00:00Z",
+      "updatedAt": null
+    }
+  ]
+}
+```
+
+**SYSTEM Types** (provided by default):
+- Personnel (People-related issues)
+- Financial (Budget, revenue, cost issues)
+- Process (Workflow, operational issues)
+- Legal (Compliance, legal issues)
+- Customer (Customer-related issues)
+- Technical (Technology, infrastructure issues)
+- General (Miscellaneous issues)
+
+### POST /api/operations/issue-types
+Create custom issue type. **Implementation:** `issue-service.ts` → `createIssueType()`
+
+**Request:**
+```json
+{
+  "name": "Marketing",
+  "description": "Marketing and branding issues",
+  "color": "#4ECDC4",
+  "icon": "bullhorn",
+  "order": 8,
+  "isDefault": false
+}
+```
+
+**Response:** Created IssueType object
+
+**Validation:**
+- `name`: Required, max 100 chars, unique per tenant
+- `color`: Optional, hex color format (e.g., #FF6B6B)
+- `icon`: Optional, string identifier
+- `order`: Optional, positive integer
+- `isDefault`: Optional, boolean (default: false). Only one type can be default per tenant.
+
+### PUT /api/operations/issue-types/{typeId}
+Update custom issue type. **Implementation:** `issue-service.ts` → `updateIssueType()`
+
+**Request:**
+```json
+{
+  "name": "Marketing & Sales",
+  "description": "Updated description",
+  "color": "#4ECDC4",
+  "icon": "chart-line",
+  "order": 5,
+  "isDefault": true
+}
+```
+
+**Notes:**
+- Cannot modify SYSTEM types (isSystemType = true)
+- All fields optional; only provided fields are updated
+- Setting `isDefault: true` will unset any previous default type
+
+### DELETE /api/operations/issue-types/{typeId}
+Soft-delete custom issue type (sets isActive = false). **Implementation:** `issue-service.ts` → `deleteIssueType()`
+
+**Notes:**
+- Cannot delete SYSTEM types
+- Cannot delete if issues exist with this type (must reassign first)
+- Soft delete only (preserves data integrity)
+
+### POST /api/operations/issue-types/{typeId}:activate
+Reactivate a previously deleted issue type. **Implementation:** `issue-service.ts` → `activateIssueType()`
+
+**Response:** Updated IssueType with `isActive: true`
+
+---
+
+## Issue Configuration: Statuses
+
+Issue statuses define the workflow states (e.g., Open, In Progress, Resolved, Closed). Tenants can use SYSTEM statuses or create custom ones.
+
+### GET /api/operations/issue-statuses
+List active issue statuses. **Implementation:** `issue-service.ts` → `getIssueStatuses()`
+
+**Query Params:**
+- `category` (string) - Filter by category: "open" | "active" | "inactive" | "closed"
+- `includeInactive` (boolean, default: false) - Include inactive statuses
+- `includeSystem` (boolean, default: true) - Include SYSTEM statuses
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Open",
+      "description": "Issue reported, not yet started",
+      "category": "open",
+      "color": "#3498db",
+      "icon": "inbox",
+      "order": 1,
+      "isActive": true,
+      "isSystemStatus": true,
+      "createdAt": "2025-01-15T10:00:00Z",
+      "updatedAt": null
+    }
+  ]
+}
+```
+
+**SYSTEM Statuses** (provided by default):
+
+**Open Category:**
+- Open (Issue reported, awaiting triage)
+- Backlog (Acknowledged, queued for future work)
+
+**Active Category:**
+- In Progress (Currently being worked on)
+- In Review (Work completed, under review)
+- Blocked (Work paused due to dependencies)
+
+**Inactive Category:**
+- On Hold (Temporarily paused)
+- Deferred (Postponed to later date)
+
+**Closed Category:**
+- Resolved (Issue fixed/completed)
+- Closed (Issue no longer relevant)
+- Duplicate (Duplicate of another issue)
+- Won't Fix (Decided not to address)
 
 ### POST /api/operations/issue-statuses
-Create custom status.
+Create custom issue status. **Implementation:** `issue-service.ts` → `createIssueStatus()`
+
+**Request:**
+```json
+{
+  "name": "Pending Approval",
+  "description": "Awaiting management approval",
+  "category": "active",
+  "color": "#F39C12",
+  "icon": "clock",
+  "order": 4
+}
+```
+
+**Response:** Created IssueStatus object
+
+**Validation:**
+- `name`: Required, max 100 chars, unique per tenant
+- `category`: Required, one of: "open" | "active" | "inactive" | "closed"
+- `color`: Optional, hex color format
+- `icon`: Optional, string identifier
+- `order`: Optional, positive integer (controls display order)
 
 ### PUT /api/operations/issue-statuses/{statusId}
-Update status.
+Update custom issue status. **Implementation:** `issue-service.ts` → `updateIssueStatus()`
+
+**Request:**
+```json
+{
+  "name": "Pending Review",
+  "description": "Updated description",
+  "color": "#E67E22",
+  "icon": "eye",
+  "order": 3
+}
+```
+
+**Notes:**
+- Cannot modify SYSTEM statuses (isSystemStatus = true)
+- Cannot change `category` after creation (data integrity)
+- All fields optional except for category restriction
 
 ### DELETE /api/operations/issue-statuses/{statusId}
-Delete status.
+Soft-delete custom issue status. **Implementation:** `issue-service.ts` → `deleteIssueStatus()`
+
+**Notes:**
+- Cannot delete SYSTEM statuses
+- Cannot delete if issues exist with this status (must reassign first)
+- Soft delete only (sets isActive = false)
+
+### POST /api/operations/issue-statuses/{statusId}:activate
+Reactivate a previously deleted issue status. **Implementation:** `issue-service.ts` → `activateIssueStatus()`
+
+**Response:** Updated IssueStatus with `isActive: true`
+
+### PUT /api/operations/issue-statuses:reorder
+Reorder issue statuses within a category. **Implementation:** `issue-service.ts` → `reorderIssueStatuses()`
+
+**Request:**
+```json
+{
+  "category": "active",
+  "statusIds": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**Notes:**
+- Updates `order` field for each status
+- Only affects statuses within the specified category
+- Array order determines new display order
 
 ---
 
