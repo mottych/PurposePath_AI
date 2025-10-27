@@ -17,7 +17,15 @@ from coaching.src.api.middleware import (
     LoggingMiddleware,
     RateLimitingMiddleware,
 )
-from coaching.src.api.routes import admin, analysis, conversations, health
+from coaching.src.api.routes import (
+    admin,
+    analysis,
+    conversations,
+    health,
+    insights,
+    multitenant_conversations,
+    onboarding,
+)
 from coaching.src.core.config_multitenant import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -97,6 +105,18 @@ app = FastAPI(
             "name": "Admin",
             "description": "Administrative endpoints for template and model management (requires ADMIN_ACCESS permission)",
         },
+        {
+            "name": "insights",
+            "description": "AI-powered coaching insights and recommendations",
+        },
+        {
+            "name": "onboarding",
+            "description": "Onboarding AI assistance and suggestions",
+        },
+        {
+            "name": "multitenant",
+            "description": "Multitenant conversations with business data integration",
+        },
     ],
     lifespan=lifespan,
     contact={
@@ -157,6 +177,26 @@ app.include_router(
 app.include_router(
     admin.router,
     prefix=f"{settings.api_prefix}",
+)
+
+# Insights routes
+app.include_router(
+    insights.router,
+    prefix=f"{settings.api_prefix}/insights",
+    tags=["insights"],
+)
+
+# Onboarding AI routes (routes already have /api/coaching prefix)
+app.include_router(
+    onboarding.router,
+    prefix="",  # Routes already include full path
+)
+
+# Multitenant conversation routes
+app.include_router(
+    multitenant_conversations.router,
+    prefix=f"{settings.api_prefix}/multitenant/conversations",
+    tags=["multitenant", "conversations"],
 )
 
 
