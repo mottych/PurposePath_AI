@@ -167,7 +167,7 @@ class LLMService:
         self,
         conversation_history: list[dict[str, str]],
         topic: str,
-        ai_response: dict[str, Any] | None = None,
+        _ai_response: dict[str, Any] | None = None,
     ) -> SessionOutcomes:
         """Extract actionable outcomes from a completed coaching session.
 

@@ -94,13 +94,8 @@ async def list_ai_models(
         return ApiResponse(success=True, data=response_data)
 
     except Exception as e:
-        logger.error("Failed to fetch AI models", error=str(e), admin_user_id=context.user_id)
-        return ApiResponse(
-            success=False,
-            data=None,
-            error="Failed to retrieve AI models configuration",
-        )
-
+        logger.error("Error listing AI models", error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to list AI models") from e
 
 @router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
 async def list_coaching_topics(
@@ -235,7 +230,7 @@ async def update_model_configuration(
             raise HTTPException(
                 status_code=404,
                 detail=str(e),
-            )
+            ) from e
 
         # Log audit event
         await audit_service.log_model_updated(

@@ -162,7 +162,7 @@ class BedrockLLMProvider:
         response = await self.generate(messages, model, temperature, max_tokens, system_prompt)
         yield response.content
 
-    async def count_tokens(self, text: str, model: str) -> int:
+    async def count_tokens(self, text: str, _model: str) -> int:
         """
         Count tokens in text for a specific model.
 

@@ -229,9 +229,9 @@ class UsageAnalyticsService:
     async def _get_filtered_conversations(
         self,
         tenant_id: str | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-        topic: str | None = None,
+        _start_date: datetime | None = None,
+        _end_date: datetime | None = None,
+        _topic: str | None = None,
     ) -> list[Any]:
         """
         Get conversations with filters.

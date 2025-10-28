@@ -359,7 +359,7 @@ class BedrockProviderLegacy(LLMProvider):
         self,
         text: str,
         analysis_prompt: str,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         """Analyze text using Bedrock."""
         # Construct analysis message

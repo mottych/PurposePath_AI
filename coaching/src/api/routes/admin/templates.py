@@ -65,11 +65,11 @@ async def list_template_versions(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Get versions from repository
         versions = await prompt_repo.list_versions(coaching_topic)
@@ -173,11 +173,11 @@ async def get_template_content(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Get template from repository
         template = await prompt_repo.get_by_topic(coaching_topic, version)
@@ -279,11 +279,11 @@ async def create_template_version(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Validate version format
         try:
@@ -292,7 +292,7 @@ async def create_template_version(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid version format: {e.message}",
-            )
+            ) from e
 
         # Check if version already exists
         existing = await prompt_repo.exists(coaching_topic, request.version)
@@ -324,7 +324,7 @@ async def create_template_version(
                 raise HTTPException(
                     status_code=400,
                     detail=f"Template validation failed: {e.message}",
-                )
+                ) from e
 
             # Create new template entity
             template = PromptTemplate(
@@ -466,11 +466,11 @@ async def update_template(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Get existing template
         existing_template = await prompt_repo.get_by_topic(coaching_topic, version)
@@ -528,7 +528,7 @@ async def update_template(
             raise HTTPException(
                 status_code=400,
                 detail=f"Template validation failed: {e.message}",
-            )
+            ) from e
 
         # Create updated template entity
         updated_template = PromptTemplate(
@@ -644,11 +644,11 @@ async def set_latest_version(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Get previous latest version
         previous_latest = await prompt_repo._get_latest_version_marker(coaching_topic)
@@ -660,7 +660,7 @@ async def set_latest_version(
             raise HTTPException(
                 status_code=404,
                 detail=str(e),
-            )
+            ) from e
 
         # Log audit event
         await audit_service.log_version_activated(
@@ -752,11 +752,11 @@ async def delete_template_version(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Attempt to delete
         try:
@@ -766,7 +766,7 @@ async def delete_template_version(
             raise HTTPException(
                 status_code=409,
                 detail=str(e),
-            )
+            ) from e
 
         if not deleted:
             raise HTTPException(

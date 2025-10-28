@@ -103,7 +103,7 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
             user_role = UserRole(role)
             sub_tier = SubscriptionTier(subscription_tier)
         except ValueError as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token values: {e}")
+            raise HTTPException(status_code=401, detail=f"Invalid token values: {e}") from e
 
         return RequestContext(
             user_id=str(user_id),
@@ -116,10 +116,10 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
 
     except JWTError as e:
         logger.warning(f"JWT validation failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from e
     except Exception as e:
         logger.error(f"Unexpected error in token validation: {e}")
-        raise HTTPException(status_code=401, detail="Token validation failed")
+        raise HTTPException(status_code=401, detail="Token validation failed") from e
 
 
 async def get_current_user(authorization: str = Header(...)) -> UserContext:
@@ -206,10 +206,10 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
 
     except JWTError as e:
         logger.warning(f"JWT validation failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from e
     except Exception as e:
         logger.error(f"Unexpected error in token validation: {e}")
-        raise HTTPException(status_code=401, detail="Token validation failed")
+        raise HTTPException(status_code=401, detail="Token validation failed") from e
 
 
 async def get_optional_context(

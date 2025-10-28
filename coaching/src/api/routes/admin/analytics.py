@@ -117,7 +117,7 @@ async def get_usage_analytics(
 
     except Exception as e:
         logger.error(
-            "Failed to get usage analytics",
+            "Failed to retrieve usage analytics",
             error=str(e),
             admin_user_id=context.user_id,
         )
@@ -267,11 +267,11 @@ async def test_template(
         # Validate topic
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=404,
                 detail=f"Unknown coaching topic: {topic}",
-            )
+            ) from e
 
         # Create testing service
         testing_service = TemplateTestingService(

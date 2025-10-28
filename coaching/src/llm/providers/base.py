@@ -121,9 +121,9 @@ class LLMProvider(BaseProvider):
         self,
         messages: list[dict[str, str]],
         system_prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 2000,
-        **kwargs: Any,
+        _temperature: float = 0.7,
+        _max_tokens: int = 2000,
+        **_kwargs: Any,
     ) -> str:
         """Generate a response from the LLM (legacy interface)."""
         # Convert to LangChain format and delegate to new interface
@@ -138,7 +138,7 @@ class LLMProvider(BaseProvider):
 
         return await self.invoke(lc_messages)
 
-    async def analyze_text(self, text: str, analysis_prompt: str, **kwargs: Any) -> dict[str, Any]:
+    async def analyze_text(self, text: str, analysis_prompt: str, **_kwargs: Any) -> dict[str, Any]:
         """Analyze text using the LLM (legacy interface)."""
         from langchain_core.messages import HumanMessage
 

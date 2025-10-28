@@ -82,7 +82,7 @@ class TenantRepository(BaseRepository[Tenant]):
             return tenant
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                raise ValueError(f"Tenant with ID {tenant.tenant_id} already exists")
+                raise ValueError(f"Tenant with ID {tenant.tenant_id} already exists") from e
             raise
 
     def get_by_id(self, tenant_id: str) -> Tenant | None:
@@ -152,7 +152,7 @@ class UserRepository(BaseRepository[User]):
             return user
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                raise ValueError(f"User with ID {user.user_id} already exists")
+                raise ValueError(f"User with ID {user.user_id} already exists") from e
             raise
 
     def get_by_id(self, context: RequestContext, user_id: str) -> User | None:
@@ -406,7 +406,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             return session_data
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                raise ValueError(f"Session with ID {session_data.get('session_id')} already exists")
+                raise ValueError(f"Session with ID {session_data.get('session_id')} already exists") from e
             raise
 
     def create_full(self, context: RequestContext, session: CoachingSession) -> CoachingSession:
@@ -423,7 +423,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             return session
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                raise ValueError(f"Session with ID {session.session_id} already exists")
+                raise ValueError(f"Session with ID {session.session_id} already exists") from e
             raise
 
     def get_by_id(self, session_id: str) -> dict[str, Any] | None:
@@ -885,7 +885,7 @@ class SharedDataService:
 
         return False
 
-    def check_subscription_limits(self, context: RequestContext, action: str) -> dict[str, Any]:
+    def check_subscription_limits(self, _context: RequestContext, _action: str) -> dict[str, Any]:
         """Check subscription limits for various actions."""
         # This would integrate with subscription repository
         # For now, return a placeholder

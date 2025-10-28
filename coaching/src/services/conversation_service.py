@@ -49,7 +49,7 @@ class ConversationService:
         user_id: str,
         topic: CoachingTopic,
         context: dict[str, Any] | None = None,
-        language: str = "en",
+        _language: str = "en",
     ) -> ConversationResponse:
         """Initiate a new coaching conversation.
 
@@ -180,7 +180,7 @@ class ConversationService:
         """
         return await self.conversation_repo.get(conversation_id)
 
-    async def pause_conversation(self, conversation_id: str, reason: str | None = None) -> None:
+    async def pause_conversation(self, conversation_id: str, _reason: str | None = None) -> None:
         """Pause a conversation.
 
         Args:
@@ -226,8 +226,8 @@ class ConversationService:
     async def complete_conversation(
         self,
         conversation_id: str,
-        feedback: str | None = None,
-        rating: int | None = None,
+        _feedback: str | None = None,
+        _rating: int | None = None,
     ) -> None:
         """Mark a conversation as complete.
 

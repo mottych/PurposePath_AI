@@ -378,7 +378,7 @@ Generate 3-5 actions with title, description, priority, estimatedDuration, estim
     def _format_constraints(self, constraints: dict[str, Any]) -> str:
         return f"- Team Capacity: {constraints.get('teamCapacity', 'N/A')} hours\n- Critical Deadlines: {len(constraints.get('criticalDeadlines', []))} deadlines"
 
-    def _format_issue_for_root_cause(self, issue: dict[str, Any], context: dict[str, Any]) -> str:
+    def _format_issue_for_root_cause(self, issue: dict[str, Any], _context: dict[str, Any]) -> str:
         return f"**Title:** {issue.get('issueTitle', 'Untitled')}\n**Description:** {issue.get('issueDescription', 'No description')}\n**Impact:** {issue.get('businessImpact', 'Unknown')}"
 
     def _format_issue_for_action_plan(self, issue: dict[str, Any]) -> str:

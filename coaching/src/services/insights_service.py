@@ -397,7 +397,7 @@ class InsightsService:
             return {"insights": []}
 
     def _build_insight_objects(
-        self, insights_data: dict[str, Any], business_data: BusinessDataContext
+        self, insights_data: dict[str, Any], _business_data: BusinessDataContext
     ) -> list[Insight]:
         """Convert parsed insights data to Insight objects."""
         insights = []

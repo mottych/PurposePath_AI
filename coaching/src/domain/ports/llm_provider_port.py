@@ -99,11 +99,11 @@ class LLMProviderPort(Protocol):
 
     async def generate_stream(
         self,
-        messages: list[LLMMessage],
-        model: str,
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
-        system_prompt: str | None = None,
+        _messages: list[LLMMessage],
+        _model: str,
+        _temperature: float = 0.7,
+        _max_tokens: int | None = None,
+        _system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
         Generate a completion with token streaming.

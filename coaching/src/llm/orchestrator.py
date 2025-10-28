@@ -151,7 +151,7 @@ class LLMOrchestrator:
         }
 
     async def analyze_response(
-        self, conversation_id: str, user_response: str, topic: str, model_id: str | None = None
+        self, _conversation_id: str, user_response: str, topic: str, model_id: str | None = None
     ) -> dict[str, Any]:
         """Analyze a user response for insights.
 
@@ -283,7 +283,7 @@ class LLMOrchestrator:
 
         return prompts.get(topic, prompts["core_values"])
 
-    async def extract_insights(self, response: str, topic: str, provider: LLMProvider) -> list[str]:
+    async def extract_insights(self, response: str, _topic: str, _provider: LLMProvider) -> list[str]:
         """Extract key insights from a response.
 
         Args:

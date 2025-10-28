@@ -386,8 +386,8 @@ class MultitenantConversationService:
     async def complete_conversation(
         self,
         conversation_id: str,
-        feedback: str | None = None,
-        rating: int | None = None,
+        _feedback: str | None = None,
+        _rating: int | None = None,
     ) -> CompletionSummary:
         """Mark a conversation as complete and process outcomes.
 

@@ -153,7 +153,7 @@ class AlignmentCalculator:
         return min(100.0, (strategy_clarity + execution_level) / 2)
 
     def _score_operations_alignment(
-        self, business_context: dict[str, Any], current_state: dict[str, Any]
+        self, _business_context: dict[str, Any], current_state: dict[str, Any]
     ) -> float:
         """Score operations alignment (0-100)."""
         efficiency = float(current_state.get("operational_efficiency", 50.0))
