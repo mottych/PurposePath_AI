@@ -79,5 +79,5 @@ class DomainError(Exception):
 
 __all__ = ["DomainError"]
 
-# Backwards compatibility alias (deprecated)
+# Backwards compatibility alias (deprecated)  # noqa: N818
 DomainException = DomainError
