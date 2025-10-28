@@ -94,9 +94,7 @@ def sample_scheduling_constraints():
     """Sample scheduling constraints."""
     return {
         "teamCapacity": 160,
-        "criticalDeadlines": [
-            {"date": "2025-11-15", "description": "Product launch"}
-        ],
+        "criticalDeadlines": [{"date": "2025-11-15", "description": "Product launch"}],
         "teamAvailability": [
             {"personId": "dev_1", "hoursPerWeek": 40, "unavailableDates": []},
         ],
@@ -228,7 +226,9 @@ class TestAnalyzeStrategicAlignment:
     ):
         """Test that alignment analysis uses temperature 0.6."""
         # Arrange
-        mock_llm_service.generate_analysis.return_value.content = '{"alignmentAnalysis": [], "overallAlignment": 50}'
+        mock_llm_service.generate_analysis.return_value.content = (
+            '{"alignmentAnalysis": [], "overallAlignment": 50}'
+        )
 
         # Act
         await operations_service.analyze_strategic_alignment(
@@ -352,8 +352,16 @@ class TestSuggestPrioritization:
     ):
         """Test that prioritization uses temperature 0.5."""
         # Arrange
-        actions = [{"id": "act_1", "title": "Test", "currentPriority": "medium", "status": "planned", "linkedGoals": []}]
-        mock_llm_service.generate_analysis.return_value.content = '[]'
+        actions = [
+            {
+                "id": "act_1",
+                "title": "Test",
+                "currentPriority": "medium",
+                "status": "planned",
+                "linkedGoals": [],
+            }
+        ]
+        mock_llm_service.generate_analysis.return_value.content = "[]"
 
         # Act
         await operations_service.suggest_prioritization(
@@ -374,7 +382,15 @@ class TestSuggestPrioritization:
     ):
         """Test fallback when LLM returns malformed JSON."""
         # Arrange
-        actions = [{"id": "act_1", "title": "Test", "currentPriority": "medium", "status": "planned", "linkedGoals": []}]
+        actions = [
+            {
+                "id": "act_1",
+                "title": "Test",
+                "currentPriority": "medium",
+                "status": "planned",
+                "linkedGoals": [],
+            }
+        ]
         mock_llm_service.generate_analysis.return_value.content = "Invalid JSON"
 
         # Act
@@ -498,7 +514,7 @@ class TestOptimizeScheduling:
         """Test that scheduling uses temperature 0.4."""
         # Arrange
         actions = [{"id": "act_1", "title": "Test", "estimatedDuration": 40, "priority": "high"}]
-        mock_llm_service.generate_analysis.return_value.content = '[]'
+        mock_llm_service.generate_analysis.return_value.content = "[]"
 
         # Act
         await operations_service.optimize_scheduling(
@@ -563,7 +579,7 @@ class TestSuggestRootCauseMethods:
             "affectedAreas": ["Customer Success", "Sales"],
             "relatedActions": ["act_123"],
         }
-        
+
         llm_response = """[
             {
                 "method": "five_whys",
@@ -640,7 +656,7 @@ class TestSuggestRootCauseMethods:
             "issueDescription": "Test description",
             "businessImpact": "medium",
         }
-        mock_llm_service.generate_analysis.return_value.content = '[]'
+        mock_llm_service.generate_analysis.return_value.content = "[]"
 
         # Act
         await operations_service.suggest_root_cause_methods(
@@ -713,7 +729,7 @@ class TestGenerateActionPlan:
             "currentActions": ["Monitoring implementation"],
             "businessPriorities": ["Customer experience", "System stability"],
         }
-        
+
         llm_response = """[
             {
                 "title": "Optimize database queries",
@@ -789,7 +805,7 @@ class TestGenerateActionPlan:
             "description": "Test description",
             "impact": "medium",
         }
-        mock_llm_service.generate_analysis.return_value.content = '[]'
+        mock_llm_service.generate_analysis.return_value.content = "[]"
 
         # Act
         await operations_service.generate_action_plan(
