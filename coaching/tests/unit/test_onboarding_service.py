@@ -15,9 +15,7 @@ class TestOnboardingService:
         """Create mock LLM service."""
         service = AsyncMock()
         service.generate_single_shot_analysis = AsyncMock(
-            return_value={
-                "response": "1. Suggestion one\n2. Suggestion two\n3. Suggestion three"
-            }
+            return_value={"response": "1. Suggestion one\n2. Suggestion two\n3. Suggestion three"}
         )
         return service
 
