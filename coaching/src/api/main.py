@@ -82,8 +82,16 @@ app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=[
 app.include_router(admin.router, prefix=f"{settings.api_prefix}")
 app.include_router(insights.router, prefix=f"{settings.api_prefix}/insights", tags=["insights"])
 app.include_router(onboarding.router, prefix="")
-app.include_router(multitenant_conversations.router, prefix=f"{settings.api_prefix}/multitenant/conversations", tags=["multitenant", "conversations"])
-app.include_router(business_data.router, prefix=f"{settings.api_prefix}/multitenant/conversations", tags=["business-data", "multitenant"])
+app.include_router(
+    multitenant_conversations.router,
+    prefix=f"{settings.api_prefix}/multitenant/conversations",
+    tags=["multitenant", "conversations"],
+)
+app.include_router(
+    business_data.router,
+    prefix=f"{settings.api_prefix}/multitenant/conversations",
+    tags=["business-data", "multitenant"],
+)
 app.include_router(coaching_ai.router, prefix=f"{settings.api_prefix}")
 app.include_router(operations_ai.router, prefix=f"{settings.api_prefix}")
 
@@ -106,5 +114,12 @@ handler = Mangum(app, lifespan="off")
 
 if __name__ == "__main__":
     import uvicorn
+
     logger.info("Starting development server")
-    uvicorn.run("coaching.src.api.main:app", host="0.0.0.0", port=8000, reload=True, log_level=settings.log_level.lower())
+    uvicorn.run(
+        "coaching.src.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level=settings.log_level.lower(),
+    )

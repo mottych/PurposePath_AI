@@ -24,7 +24,9 @@ class OperationsAIService:
         business_foundation: dict[str, Any],
     ) -> dict[str, Any]:
         """Analyze how well actions align with business goals and foundation."""
-        logger.info("Analyzing strategic alignment", action_count=len(actions), goal_count=len(goals))
+        logger.info(
+            "Analyzing strategic alignment", action_count=len(actions), goal_count=len(goals)
+        )
 
         if not actions:
             raise ValueError("At least one action is required")
@@ -52,7 +54,11 @@ Format your response as JSON with alignmentAnalysis (array), overallAlignment (n
 
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
-            context={"actions": actions, "goals": goals, "business_foundation": business_foundation},
+            context={
+                "actions": actions,
+                "goals": goals,
+                "business_foundation": business_foundation,
+            },
             temperature=0.6,
         )
 
@@ -65,11 +71,22 @@ Format your response as JSON with alignmentAnalysis (array), overallAlignment (n
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
             analysis = json.loads(response_text.strip())
-            logger.info("Strategic alignment analysis completed", overall_score=analysis.get("overallAlignment"))
+            logger.info(
+                "Strategic alignment analysis completed",
+                overall_score=analysis.get("overallAlignment"),
+            )
             return analysis
         except json.JSONDecodeError:
             return {
-                "alignmentAnalysis": [{"actionId": a.get("id"), "alignmentScore": 50, "strategicConnections": [], "recommendations": ["Review alignment"]} for a in actions],
+                "alignmentAnalysis": [
+                    {
+                        "actionId": a.get("id"),
+                        "alignmentScore": 50,
+                        "strategicConnections": [],
+                        "recommendations": ["Review alignment"],
+                    }
+                    for a in actions
+                ],
                 "overallAlignment": 50,
                 "insights": ["Unable to complete detailed analysis"],
             }
@@ -116,7 +133,20 @@ Format as JSON array with actionId, suggestedPriority, currentPriority, reasonin
             logger.info("Prioritization suggestions generated", suggestions_count=len(suggestions))
             return suggestions
         except json.JSONDecodeError:
-            return [{"actionId": a.get("id"), "suggestedPriority": a.get("currentPriority", "medium"), "currentPriority": a.get("currentPriority", "medium"), "reasoning": "Unable to analyze", "confidence": 0.5, "urgencyFactors": ["Requires review"], "impactFactors": ["Assessment needed"], "recommendedAction": "maintain", "estimatedBusinessValue": None} for a in actions]
+            return [
+                {
+                    "actionId": a.get("id"),
+                    "suggestedPriority": a.get("currentPriority", "medium"),
+                    "currentPriority": a.get("currentPriority", "medium"),
+                    "reasoning": "Unable to analyze",
+                    "confidence": 0.5,
+                    "urgencyFactors": ["Requires review"],
+                    "impactFactors": ["Assessment needed"],
+                    "recommendedAction": "maintain",
+                    "estimatedBusinessValue": None,
+                }
+                for a in actions
+            ]
 
     async def optimize_scheduling(
         self,
@@ -163,7 +193,20 @@ Format as JSON array with actionId, suggestedStartDate, suggestedDueDate, reason
             return schedules
         except json.JSONDecodeError:
             today = datetime.now().date()
-            return [{"actionId": a.get("id"), "suggestedStartDate": today.isoformat(), "suggestedDueDate": (today + timedelta(days=7)).isoformat(), "reasoning": "Default schedule", "confidence": 0.5, "dependencies": [], "resourceConsiderations": ["Requires review"], "risks": ["Not optimized"], "alternativeSchedules": []} for a in actions]
+            return [
+                {
+                    "actionId": a.get("id"),
+                    "suggestedStartDate": today.isoformat(),
+                    "suggestedDueDate": (today + timedelta(days=7)).isoformat(),
+                    "reasoning": "Default schedule",
+                    "confidence": 0.5,
+                    "dependencies": [],
+                    "resourceConsiderations": ["Requires review"],
+                    "risks": ["Not optimized"],
+                    "alternativeSchedules": [],
+                }
+                for a in actions
+            ]
 
     async def suggest_root_cause_methods(
         self,
@@ -200,10 +243,27 @@ Suggest 1-3 methods (five_whys, fishbone, swot, pareto) with method, confidence,
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
             suggestions = json.loads(response_text.strip())
-            logger.info("Root cause method suggestions generated", suggestions_count=len(suggestions))
+            logger.info(
+                "Root cause method suggestions generated", suggestions_count=len(suggestions)
+            )
             return suggestions
         except json.JSONDecodeError:
-            return [{"method": "five_whys", "confidence": 0.7, "suggestions": {"fiveWhys": {"suggestedQuestions": ["Why did this occur?", "Why wasn't it prevented?"], "potentialRootCauses": ["Process gaps", "Communication issues"]}}, "reasoning": "Five Whys is a good general-purpose method"}]
+            return [
+                {
+                    "method": "five_whys",
+                    "confidence": 0.7,
+                    "suggestions": {
+                        "fiveWhys": {
+                            "suggestedQuestions": [
+                                "Why did this occur?",
+                                "Why wasn't it prevented?",
+                            ],
+                            "potentialRootCauses": ["Process gaps", "Communication issues"],
+                        }
+                    },
+                    "reasoning": "Five Whys is a good general-purpose method",
+                }
+            ]
 
     async def generate_action_plan(
         self,
@@ -253,30 +313,66 @@ Generate 3-5 actions with title, description, priority, estimatedDuration, estim
             return actions
         except json.JSONDecodeError:
             return [
-                {"title": "Investigate root cause", "description": "Conduct investigation", "priority": "high", "estimatedDuration": 16, "estimatedCost": None, "assignmentSuggestion": "Team lead", "dependencies": [], "confidence": 0.8, "reasoning": "Understanding root cause is essential", "expectedOutcome": "Clear identification", "risks": ["May take longer"]},
-                {"title": "Implement solution", "description": "Design and implement solution", "priority": "high", "estimatedDuration": 40, "estimatedCost": None, "assignmentSuggestion": "Development team", "dependencies": ["Investigate root cause"], "confidence": 0.75, "reasoning": "Direct action to resolve", "expectedOutcome": "Issue resolved", "risks": ["May need iterations"]},
+                {
+                    "title": "Investigate root cause",
+                    "description": "Conduct investigation",
+                    "priority": "high",
+                    "estimatedDuration": 16,
+                    "estimatedCost": None,
+                    "assignmentSuggestion": "Team lead",
+                    "dependencies": [],
+                    "confidence": 0.8,
+                    "reasoning": "Understanding root cause is essential",
+                    "expectedOutcome": "Clear identification",
+                    "risks": ["May take longer"],
+                },
+                {
+                    "title": "Implement solution",
+                    "description": "Design and implement solution",
+                    "priority": "high",
+                    "estimatedDuration": 40,
+                    "estimatedCost": None,
+                    "assignmentSuggestion": "Development team",
+                    "dependencies": ["Investigate root cause"],
+                    "confidence": 0.75,
+                    "reasoning": "Direct action to resolve",
+                    "expectedOutcome": "Issue resolved",
+                    "risks": ["May need iterations"],
+                },
             ]
 
     def _format_actions_for_prompt(self, actions: list[dict[str, Any]]) -> str:
-        lines = [f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Description: {a.get('description', 'N/A')}\n   Priority: {a.get('priority', 'N/A')}\n   Status: {a.get('status', 'N/A')}" for i, a in enumerate(actions, 1)]
+        lines = [
+            f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Description: {a.get('description', 'N/A')}\n   Priority: {a.get('priority', 'N/A')}\n   Status: {a.get('status', 'N/A')}"
+            for i, a in enumerate(actions, 1)
+        ]
         return "\n\n".join(lines)
 
     def _format_goals_for_prompt(self, goals: list[dict[str, Any]]) -> str:
-        lines = [f"{i}. **{g.get('intent')}** (ID: {g.get('id')})\n   Strategies: {', '.join(g.get('strategies', [])) or 'None'}" for i, g in enumerate(goals, 1)]
+        lines = [
+            f"{i}. **{g.get('intent')}** (ID: {g.get('id')})\n   Strategies: {', '.join(g.get('strategies', [])) or 'None'}"
+            for i, g in enumerate(goals, 1)
+        ]
         return "\n\n".join(lines)
 
     def _format_foundation_for_prompt(self, foundation: dict[str, Any]) -> str:
         return f"- Vision: {foundation.get('vision', 'Not defined')}\n- Purpose: {foundation.get('purpose', 'Not defined')}\n- Core Values: {', '.join(foundation.get('coreValues', []))}"
 
     def _format_prioritization_actions(self, actions: list[dict[str, Any]]) -> str:
-        lines = [f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Current Priority: {a.get('currentPriority', 'N/A')}\n   Due Date: {a.get('dueDate', 'Not set')}\n   Status: {a.get('status', 'N/A')}" for i, a in enumerate(actions, 1)]
+        lines = [
+            f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Current Priority: {a.get('currentPriority', 'N/A')}\n   Due Date: {a.get('dueDate', 'Not set')}\n   Status: {a.get('status', 'N/A')}"
+            for i, a in enumerate(actions, 1)
+        ]
         return "\n\n".join(lines)
 
     def _format_business_context(self, context: dict[str, Any]) -> str:
         return f"- Current Goals: {', '.join(context.get('currentGoals', [])) or 'Not specified'}\n- Constraints: {', '.join(context.get('constraints', [])) or 'None'}\n- Urgent Deadlines: {', '.join(context.get('urgentDeadlines', [])) or 'None'}"
 
     def _format_scheduling_actions(self, actions: list[dict[str, Any]]) -> str:
-        lines = [f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Duration: {a.get('estimatedDuration', 'N/A')} hours\n   Priority: {a.get('priority', 'N/A')}" for i, a in enumerate(actions, 1)]
+        lines = [
+            f"{i}. **{a.get('title')}** (ID: {a.get('id')})\n   Duration: {a.get('estimatedDuration', 'N/A')} hours\n   Priority: {a.get('priority', 'N/A')}"
+            for i, a in enumerate(actions, 1)
+        ]
         return "\n\n".join(lines)
 
     def _format_constraints(self, constraints: dict[str, Any]) -> str:

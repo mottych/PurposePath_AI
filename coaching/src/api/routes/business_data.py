@@ -14,7 +14,11 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["business-data"])
 
 
-@router.get("/business-data", response_model=ApiResponse[BusinessDataSummaryResponse], status_code=status.HTTP_200_OK)
+@router.get(
+    "/business-data",
+    response_model=ApiResponse[BusinessDataSummaryResponse],
+    status_code=status.HTTP_200_OK,
+)
 async def get_business_data_summary(
     context: RequestContext = Depends(get_current_context),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
@@ -24,19 +28,39 @@ async def get_business_data_summary(
 
     try:
         if Permission.READ_BUSINESS_DATA.value not in (context.permissions or []):
-            logger.warning("business_data.permission_denied", user_id=context.user_id, tenant_id=context.tenant_id)
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission required to read business data")
+            logger.warning(
+                "business_data.permission_denied",
+                user_id=context.user_id,
+                tenant_id=context.tenant_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission required to read business data",
+            )
 
         summary = service.get_business_data_summary()
-        business_summary = BusinessDataSummaryResponse(tenant_id=context.tenant_id, business_data=dict(summary))
-        logger.info("business_data.fetch.completed", user_id=context.user_id, tenant_id=context.tenant_id)
+        business_summary = BusinessDataSummaryResponse(
+            tenant_id=context.tenant_id, business_data=dict(summary)
+        )
+        logger.info(
+            "business_data.fetch.completed", user_id=context.user_id, tenant_id=context.tenant_id
+        )
         return ApiResponse(success=True, data=business_summary)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("business_data.fetch.failed", error=str(e), user_id=context.user_id, tenant_id=context.tenant_id, exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve business data summary") from e
+        logger.error(
+            "business_data.fetch.failed",
+            error=str(e),
+            user_id=context.user_id,
+            tenant_id=context.tenant_id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve business data summary",
+        ) from e
 
 
 __all__ = ["router"]

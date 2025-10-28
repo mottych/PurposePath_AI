@@ -31,7 +31,11 @@ async def get_alignment_service() -> AlignmentAnalysisService:
     return AlignmentAnalysisService(llm_service=llm_service)
 
 
-@router.post("/alignment-explanation", response_model=AlignmentExplanationResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/alignment-explanation",
+    response_model=AlignmentExplanationResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_alignment_explanation(
     request: AlignmentExplanationRequest,
     user: UserContext = Depends(get_current_user),
@@ -39,7 +43,9 @@ async def get_alignment_explanation(
 ) -> AlignmentExplanationResponse:
     """Generate AI-powered explanation of alignment score (Issue #62)."""
     try:
-        logger.info("Generating alignment explanation", user_id=user.user_id, score=request.alignmentScore)
+        logger.info(
+            "Generating alignment explanation", user_id=user.user_id, score=request.alignmentScore
+        )
         goal_data = request.goal.model_dump()
         foundation_data = request.businessFoundation.model_dump()
         explanation = await alignment_service.get_detailed_explanation(
@@ -50,10 +56,17 @@ async def get_alignment_explanation(
         return AlignmentExplanationResponse(success=True, explanation=explanation)
     except Exception as e:
         logger.error("Alignment explanation failed", error=str(e), exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate explanation") from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate explanation",
+        ) from e
 
 
-@router.post("/alignment-suggestions", response_model=AlignmentSuggestionsResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/alignment-suggestions",
+    response_model=AlignmentSuggestionsResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_alignment_suggestions(
     request: AlignmentSuggestionsRequest,
     user: UserContext = Depends(get_current_user),
@@ -61,7 +74,9 @@ async def get_alignment_suggestions(
 ) -> AlignmentSuggestionsResponse:
     """Generate AI-powered suggestions to improve alignment (Issue #62)."""
     try:
-        logger.info("Generating alignment suggestions", user_id=user.user_id, score=request.alignmentScore)
+        logger.info(
+            "Generating alignment suggestions", user_id=user.user_id, score=request.alignmentScore
+        )
         goal_data = request.goal.model_dump()
         foundation_data = request.businessFoundation.model_dump()
         suggestions = await alignment_service.get_improvement_suggestions(
@@ -72,7 +87,10 @@ async def get_alignment_suggestions(
         return AlignmentSuggestionsResponse(success=True, suggestions=suggestions)
     except Exception as e:
         logger.error("Alignment suggestions failed", error=str(e), exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate suggestions") from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate suggestions",
+        ) from e
 
 
 __all__ = ["router"]
