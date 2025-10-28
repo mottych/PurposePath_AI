@@ -42,16 +42,16 @@ class BusinessFoundationInput(BaseModel):
 
     vision: str = Field(..., min_length=1, description="Company vision")
     purpose: str = Field(..., min_length=1, description="Company purpose")
-    core_values: list[str] = Field(..., alias="coreValues", min_items=1, description="Core values")
+    core_values: list[str] = Field(..., min_length=1, alias="coreValues", description="Core values")
 
 
 class StrategicAlignmentRequest(BaseModel):
     """Request for strategic alignment analysis."""
 
     actions: list[ActionInput] = Field(
-        ..., min_items=1, max_items=100, description="Actions to analyze"
+        ..., min_length=1, max_length=100, description="Actions to analyze"
     )
-    goals: list[GoalInput] = Field(..., min_items=1, max_items=50, description="Business goals")
+    goals: list[GoalInput] = Field(..., min_length=1, max_length=50, description="Business goals")
     business_foundation: BusinessFoundationInput = Field(
         ..., alias="businessFoundation", description="Business foundation context"
     )

@@ -11,8 +11,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = structlog.get_logger()
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware for structured logging of requests and responses."""
+class LoggingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+    """Middleware for structured logging of requests and responses.
+    
+    Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.
+    """
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]

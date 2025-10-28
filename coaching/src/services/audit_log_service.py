@@ -38,7 +38,7 @@ class AuditLogEntry(BaseModel):
 class AuditLogService:
     """Service for logging administrative actions for compliance and auditing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize audit log service."""
         logger.info("Audit log service initialized")
 
@@ -76,6 +76,7 @@ class AuditLogService:
             resource_id=f"{topic}/{version}",
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)
@@ -117,6 +118,7 @@ class AuditLogService:
             resource_id=f"{topic}/{version}",
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)
@@ -155,6 +157,7 @@ class AuditLogService:
             resource_id=f"{topic}/{version}",
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)
@@ -197,6 +200,7 @@ class AuditLogService:
             resource_id=f"{topic}/{new_version}",
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)
@@ -235,6 +239,7 @@ class AuditLogService:
             resource_id=model_id,
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)
@@ -275,6 +280,7 @@ class AuditLogService:
             resource_id=f"{topic}/{version}",
             details=details,
             ip_address=ip_address,
+            user_agent=None,
         )
 
         await self._write_log(entry)

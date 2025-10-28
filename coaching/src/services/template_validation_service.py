@@ -38,7 +38,7 @@ class TemplateValidationService:
         CoachingTopic.GOALS: ["vision", "purpose", "core_values"],
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize template validation service."""
         logger.info("Template validation service initialized")
 

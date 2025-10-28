@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - fallback for local testing
         def get_encoding(_: str) -> _FallbackEncoding:
             return _FallbackEncoding()
 
-    tiktoken = _TiktokenFallback()  # type: ignore[assignment]
+    tiktoken = _TiktokenFallback()
 
 logger = structlog.get_logger()
 

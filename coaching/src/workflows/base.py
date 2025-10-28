@@ -102,7 +102,7 @@ class BaseWorkflow(ABC):
         """Initialize workflow with configuration."""
         self.config = config
         # LangGraph prefers TypedDict but supports dict at runtime
-        self._graph: StateGraph[dict[str, Any]] | None = None  # type: ignore[type-var]
+        self._graph: StateGraph[dict[str, Any]] | None = None
         self._compiled_graph: Any = None
 
     @property
@@ -118,7 +118,7 @@ class BaseWorkflow(ABC):
         pass
 
     @abstractmethod
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:
         """Build the LangGraph workflow graph."""
         pass
 

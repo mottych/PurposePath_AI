@@ -3,7 +3,7 @@
 import pytest
 
 from shared.types import (
-    DynamoDBUserItem,
+    DynamoDBItem,
     GoogleUserInfo,
     StripeCustomer,
     UserCreateResult,
@@ -12,7 +12,7 @@ from shared.types import (
 )
 
 
-def test_domain_id_creation():
+def test_domain_id_creation() -> None:
     """Test that domain IDs can be created and maintain type safety."""
     user_id = create_user_id("user_123")
     tenant_id = create_tenant_id("tenant_456")
@@ -23,9 +23,9 @@ def test_domain_id_creation():
     assert tenant_id == "tenant_456"
 
 
-def test_dynamodb_types():
+def test_dynamodb_types() -> None:
     """Test that DynamoDB types are properly structured."""
-    user_item: DynamoDBUserItem = {
+    user_item: DynamoDBItem = {
         "PK": "USER#123",
         "SK": "USER#123",
         "type": "user",
@@ -41,7 +41,7 @@ def test_dynamodb_types():
     assert user_item["subscription_tier"] == "starter"
 
 
-def test_repository_result_types():
+def test_repository_result_types() -> None:
     """Test that repository result types work correctly."""
     success_result: UserCreateResult = {"success": True, "user_id": create_user_id("user_123")}
 
@@ -55,7 +55,7 @@ def test_repository_result_types():
     assert error_result["success"] is False
 
 
-def test_external_api_types():
+def test_external_api_types() -> None:
     """Test that external API types are properly structured."""
     google_user: GoogleUserInfo = {
         "id": "google_123",
