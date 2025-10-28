@@ -62,7 +62,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*" = ["B011", "ARG001", "S101"]
-"coaching/src/api/models/operations.py" = ["N815"]  # Pydantic fields match API contract
+"**/operations.py" = ["N815", "RUF022"]  # Pydantic fields match API contract
 
 [tool.black]
 line-length = 100
