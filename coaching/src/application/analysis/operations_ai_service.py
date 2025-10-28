@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timedelta
 from typing import Any
+
 import structlog
 from coaching.src.application.llm.llm_service import LLMApplicationService
 
@@ -24,18 +25,18 @@ class OperationsAIService:
     ) -> dict[str, Any]:
         """Analyze how well actions align with business goals and foundation."""
         logger.info("Analyzing strategic alignment", action_count=len(actions), goal_count=len(goals))
-        
+
         if not actions:
             raise ValueError("At least one action is required")
         if not goals:
             raise ValueError("At least one goal is required")
         if not business_foundation.get("vision") or not business_foundation.get("purpose"):
             raise ValueError("Business foundation must include vision and purpose")
-        
+
         actions_summary = self._format_actions_for_prompt(actions)
         goals_summary = self._format_goals_for_prompt(goals)
         foundation_summary = self._format_foundation_for_prompt(business_foundation)
-        
+
         prompt = f"""You are an expert strategic business analyst. Analyze how well the following actions align with business goals and foundation.
 
 **Business Foundation:**
@@ -48,13 +49,13 @@ class OperationsAIService:
 {actions_summary}
 
 Format your response as JSON with alignmentAnalysis (array), overallAlignment (number), and insights (array)."""
-        
+
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
             context={"actions": actions, "goals": goals, "business_foundation": business_foundation},
             temperature=0.6,
         )
-        
+
         try:
             response_text = llm_response.content.strip()
             if response_text.startswith("```json"):
@@ -80,13 +81,13 @@ Format your response as JSON with alignmentAnalysis (array), overallAlignment (n
     ) -> list[dict[str, Any]]:
         """Generate AI-powered prioritization suggestions for actions."""
         logger.info("Generating prioritization suggestions", action_count=len(actions))
-        
+
         if not actions:
             raise ValueError("At least one action is required")
-        
+
         actions_summary = self._format_prioritization_actions(actions)
         context_summary = self._format_business_context(business_context)
-        
+
         prompt = f"""You are an expert project prioritization analyst. Suggest optimal priorities for these actions.
 
 **Business Context:**
@@ -96,13 +97,13 @@ Format your response as JSON with alignmentAnalysis (array), overallAlignment (n
 {actions_summary}
 
 Format as JSON array with actionId, suggestedPriority, currentPriority, reasoning, confidence, urgencyFactors, impactFactors, recommendedAction, estimatedBusinessValue."""
-        
+
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
             context={"actions": actions, "business_context": business_context},
             temperature=0.5,
         )
-        
+
         try:
             response_text = llm_response.content.strip()
             if response_text.startswith("```json"):
@@ -124,15 +125,15 @@ Format as JSON array with actionId, suggestedPriority, currentPriority, reasonin
     ) -> list[dict[str, Any]]:
         """Generate optimized scheduling suggestions for actions."""
         logger.info("Generating scheduling suggestions", action_count=len(actions))
-        
+
         if not actions:
             raise ValueError("At least one action is required")
         if not constraints.get("teamCapacity"):
             raise ValueError("Team capacity is required")
-        
+
         actions_summary = self._format_scheduling_actions(actions)
         constraints_summary = self._format_constraints(constraints)
-        
+
         prompt = f"""You are an expert project scheduling optimizer. Suggest optimal schedules.
 
 **Constraints:**
@@ -142,13 +143,13 @@ Format as JSON array with actionId, suggestedPriority, currentPriority, reasonin
 {actions_summary}
 
 Format as JSON array with actionId, suggestedStartDate, suggestedDueDate, reasoning, confidence, dependencies, resourceConsiderations, risks, alternativeSchedules."""
-        
+
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
             context={"actions": actions, "constraints": constraints},
             temperature=0.4,
         )
-        
+
         try:
             response_text = llm_response.content.strip()
             if response_text.startswith("```json"):
@@ -171,25 +172,25 @@ Format as JSON array with actionId, suggestedStartDate, suggestedDueDate, reason
     ) -> list[dict[str, Any]]:
         """AI-powered root cause analysis method selection (Issue #64)."""
         logger.info("Suggesting root cause analysis methods")
-        
+
         if not issue.get("issueTitle") or not issue.get("issueDescription"):
             raise ValueError("Issue title and description are required")
-        
+
         issue_summary = self._format_issue_for_root_cause(issue, context)
-        
+
         prompt = f"""You are an expert problem-solving analyst. Suggest the most appropriate root cause analysis methods.
 
 **Issue:**
 {issue_summary}
 
 Suggest 1-3 methods (five_whys, fishbone, swot, pareto) with method, confidence, suggestions, and reasoning. Format as JSON array."""
-        
+
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
             context={"issue": issue, "context": context},
             temperature=0.6,
         )
-        
+
         try:
             response_text = llm_response.content.strip()
             if response_text.startswith("```json"):
@@ -212,14 +213,14 @@ Suggest 1-3 methods (five_whys, fishbone, swot, pareto) with method, confidence,
     ) -> list[dict[str, Any]]:
         """Generate actionable plan with AI insights (Issue #64)."""
         logger.info("Generating action plan suggestions")
-        
+
         if not issue.get("title") or not issue.get("description"):
             raise ValueError("Issue title and description are required")
-        
+
         issue_summary = self._format_issue_for_action_plan(issue)
         constraints_summary = self._format_action_constraints(constraints)
         context_summary = self._format_action_context(context)
-        
+
         prompt = f"""You are an expert project manager. Generate a comprehensive action plan.
 
 **Issue:**
@@ -232,13 +233,13 @@ Suggest 1-3 methods (five_whys, fishbone, swot, pareto) with method, confidence,
 {context_summary}
 
 Generate 3-5 actions with title, description, priority, estimatedDuration, estimatedCost, assignmentSuggestion, dependencies, confidence, reasoning, expectedOutcome, risks. Format as JSON array."""
-        
+
         llm_response = await self.llm_service.generate_analysis(
             analysis_prompt=prompt,
             context={"issue": issue, "constraints": constraints, "context": context},
             temperature=0.5,
         )
-        
+
         try:
             response_text = llm_response.content.strip()
             if response_text.startswith("```json"):

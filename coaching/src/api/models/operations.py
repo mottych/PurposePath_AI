@@ -2,17 +2,16 @@
 
 This module provides Pydantic models for Operations AI endpoints including:
 - Strategic alignment analysis
-- Action prioritization suggestions  
+- Action prioritization suggestions
 - Scheduling optimization suggestions
 - Root cause analysis suggestions
 - Action plan generation
 """
+# ruff: noqa: N815
 
-from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ============================================================================
 # Strategic Alignment Models (Issue #63)
