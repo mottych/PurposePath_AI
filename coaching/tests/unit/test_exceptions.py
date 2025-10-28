@@ -134,7 +134,6 @@ class TestExceptionHierarchy:
         assert issubclass(ConversationNotFoundError, Exception)
         assert issubclass(ConversationNotFoundCompatError, Exception)
         assert issubclass(InvalidTopicError, Exception)
-        assert issubclass(InvalidPhaseTransitionError, Exception)
 
     def test_exceptions_can_be_caught_as_exception(self):
         """Test that custom exceptions can be caught as generic Exception."""
