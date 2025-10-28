@@ -55,14 +55,15 @@ extend-include = ["coaching/src/**/*.py", "shared/**/*.py"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "ARG", "SIM", "RUF"]
 ignore = [
-    "E501",
-    "B008",
-] # B008: FastAPI Depends() in defaults is standard pattern
+    "E501",   # Line too long
+    "B008",   # FastAPI Depends() in defaults is standard pattern
+    "N815",   # mixedCase variables in Pydantic models (API contract)
+    "RUF022", # __all__ sorting not required (grouped by functionality)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*" = ["B011", "ARG001", "S101"]
-"**/operations.py" = ["N815", "RUF022"]  # Pydantic fields match API contract
 
 [tool.black]
 line-length = 100
