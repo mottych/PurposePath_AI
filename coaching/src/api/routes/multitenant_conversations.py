@@ -68,7 +68,7 @@ async def initiate_conversation(
         return ApiResponse(success=True, data=response)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{conversation_id}/message", response_model=MessageResponse)
@@ -105,8 +105,8 @@ async def send_message(
 
         return response
 
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied to this conversation")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail="Access denied to this conversation") from e
 
 
 @router.get("/business-data", response_model=ApiResponse[BusinessDataSummaryResponse])
@@ -154,7 +154,7 @@ async def get_conversation(
         conversation = await conversation_repo.get(conversation_id)
 
         if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found") from e
 
         # Verify tenant access
         if conversation.context.get("tenant_id") != context.tenant_id:
@@ -188,8 +188,8 @@ async def get_conversation(
             completed_at=conversation.completed_at,
         )
 
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied to this conversation")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail="Access denied to this conversation") from e
 
 
 @router.post("/{conversation_id}/complete")
@@ -226,8 +226,8 @@ async def complete_conversation(
             message="Conversation completed successfully", result=dict(result)
         )
 
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied to this conversation")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail="Access denied to this conversation") from e
 
 
 @router.post("/{conversation_id}/pause")
@@ -297,8 +297,8 @@ async def list_conversations(
     if topic:
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid topic: {topic}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid topic: {topic}") from e
 
     response = await service.list_user_conversations(
         page=page,
@@ -338,8 +338,8 @@ async def list_all_tenant_conversations(
     if topic:
         try:
             coaching_topic = CoachingTopic(topic)
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid topic: {topic}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid topic: {topic}") from e
 
     response = await service.list_user_conversations(
         page=page,
