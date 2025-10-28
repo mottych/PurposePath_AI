@@ -186,15 +186,15 @@ class TestCoachingWorkflow:
     async def test_initial_assessment_node(self, coaching_workflow, mock_llm_service, mock_conversation_service):
         """Test initial assessment node uses LLM service."""
         # Add user message to trigger LLM call
-        from coaching.src.domain.value_objects.message import Message
         from coaching.src.core.constants import MessageRole
-        
+        from coaching.src.domain.value_objects.message import Message
+
         mock_conv = mock_conversation_service.get_conversation.return_value
         mock_conv.messages = [
             Message(role=MessageRole.ASSISTANT, content="Welcome!"),
             Message(role=MessageRole.USER, content="I want to explore my values")
         ]
-        
+
         state = {
             "workflow_id": "wf_123",
             "user_id": "user_123",
