@@ -102,8 +102,8 @@ class PromptTemplate(BaseModel):
 
         try:
             return self.template_text.format(**kwargs)
-        except KeyError as e:
-            raise ValueError(f"Template contains undeclared variable: {e}")
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"Invalid template parameters: {e}") from e
 
     def deactivate(self) -> None:
         """

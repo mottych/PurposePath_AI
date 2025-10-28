@@ -59,8 +59,8 @@ class ProviderManager:
         # Convert string provider_type to enum
         try:
             provider_type_enum = ProviderType(provider_type)
-        except ValueError:
-            raise ValueError(f"Invalid provider type: {provider_type}")
+        except ValueError as e:
+            raise ValueError(f"Invalid provider type: {provider_type}") from e
 
         # Build ProviderConfig from dict
         config_data = {

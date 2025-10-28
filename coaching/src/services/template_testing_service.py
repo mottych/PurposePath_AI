@@ -224,9 +224,9 @@ class TemplateTestingService:
             # Simple string formatting (matches template syntax)
             return template_str.format(**parameters)
         except KeyError as e:
-            raise ValueError(f"Template parameter not provided: {e}")
+            raise ValueError(f"Template parameter not provided: {e}") from e
         except Exception as e:
-            raise ValueError(f"Template rendering failed: {e}")
+            raise ValueError(f"Template rendering failed: {e}") from e
 
 
 __all__ = [

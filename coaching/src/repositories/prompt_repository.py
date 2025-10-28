@@ -62,7 +62,10 @@ class PromptRepository:
             if not isinstance(yaml_data, dict):
                 raise ValueError("YAML content must be a dictionary")
 
-            template_data = PromptTemplateYamlData.model_validate(yaml_data)
+            try:
+                template_data = PromptTemplateYamlData.model_validate(yaml_data)
+            except (json.JSONDecodeError, KeyError) as e:
+                raise ValueError(f"Invalid template data: {e}") from e
 
             # Create PromptTemplate
             template = PromptTemplate.from_yaml(template_data)
@@ -74,11 +77,8 @@ class PromptRepository:
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code")
             if error_code == "NoSuchKey":
-                raise PromptTemplateNotFoundCompatError(topic, version)
-            logger.error(
-                "Error fetching prompt template", topic=topic, version=version, error=str(e)
-            )
-            raise
+                raise PromptTemplateNotFoundCompatError(topic, version) from e
+            raise ValueError(f"Failed to get template: {e.response['Error']['Message']}") from e
         except Exception as e:
             logger.error(
                 "Unexpected error loading prompt template",
@@ -86,7 +86,7 @@ class PromptRepository:
                 version=version,
                 error=str(e),
             )
-            raise PromptTemplateNotFoundCompatError(topic, version)
+            raise PromptTemplateNotFoundCompatError(topic, version) from e
 
     async def save_template(self, template: PromptTemplate, version: str | None = None) -> str:
         """Save a prompt template.
