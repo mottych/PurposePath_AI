@@ -6,7 +6,9 @@ Implements a LangGraph-based linear analysis flow with:
 - Analysis execution
 - Insight extraction
 - Response formatting
-"""
+"""Analysis workflow template implementation."""
+
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Any

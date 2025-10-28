@@ -4,6 +4,8 @@ Implements a multi-step coaching conversation using LangGraph,
 integrated with domain entities and application services.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 

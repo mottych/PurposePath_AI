@@ -5,6 +5,8 @@ Implements a single-step analysis using LangGraph,
 integrated with analysis services and domain models.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 
