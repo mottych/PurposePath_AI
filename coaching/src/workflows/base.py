@@ -4,6 +4,8 @@ Base workflow interface for LangGraph integration.
 Defines the abstract base class and common types for all workflows.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
@@ -116,7 +118,7 @@ class BaseWorkflow(ABC):
         pass
 
     @abstractmethod
-    async def build_graph(self) -> "StateGraph[dict[str, Any]]":  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         pass
 
