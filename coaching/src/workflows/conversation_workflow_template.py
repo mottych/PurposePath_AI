@@ -6,7 +6,7 @@ Implements a LangGraph-based conversational flow with:
 - Response analysis
 - Follow-up logic
 - Conditional edges based on conversation state
-"""Conversation workflow template implementation."""
+"""
 
 from __future__ import annotations
 from datetime import datetime
