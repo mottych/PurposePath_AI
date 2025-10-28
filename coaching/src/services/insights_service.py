@@ -73,6 +73,23 @@ class InsightsService:
         self.tenant_id = tenant_id
         self.user_id = user_id
 
+    async def get_insights(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        category: str | None = None,
+        priority: str | None = None,
+        status: str | None = None,
+    ) -> PaginatedResponse[InsightResponse]:
+        """Alias for generate_insights for backward compatibility."""
+        return await self.generate_insights(
+            page=page,
+            page_size=page_size,
+            category=category,
+            priority=priority,
+            status=status,
+        )
+
     async def generate_insights(
         self,
         page: int = 1,
