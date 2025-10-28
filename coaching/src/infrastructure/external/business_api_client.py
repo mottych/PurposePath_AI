@@ -516,6 +516,91 @@ class BusinessApiClient:
             )
             raise
 
+    async def get_subscription_tiers(self) -> list[dict[str, Any]]:
+        """
+        Get all available subscription tiers from Account Service.
+
+        Endpoint: GET /subscription/tiers
+        Reference: backend-integration-account-service.md (lines 480-516)
+
+        Returns:
+            List of subscription tiers with id, name, features, limits, pricing
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching subscription tiers from Account Service")
+
+            response = await self.client.get("/subscription/tiers", headers=self._get_headers())
+            response.raise_for_status()
+
+            data = response.json()
+            tiers = data.get("data", [])
+
+            if not isinstance(tiers, list):
+                tiers = []
+
+            logger.debug(
+                "Subscription tiers retrieved",
+                count=len(tiers),
+                status_code=response.status_code,
+            )
+
+            return tiers
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching subscription tiers",
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching subscription tiers", error=str(e))
+            raise
+
+    async def validate_tier(self, tier_id: str | None) -> bool:
+        """
+        Validate if tier ID exists in Account Service.
+
+        Args:
+            tier_id: Tier ID to validate (can be None)
+
+        Returns:
+            True if tier is valid, False otherwise
+
+        Note:
+            - None/null tier is always valid (applies to all tiers)
+            - If Account Service is unavailable, returns True (graceful degradation)
+        """
+        if tier_id is None:
+            return True  # null tier is always valid
+
+        try:
+            tiers = await self.get_subscription_tiers()
+            tier_ids = [t.get("id") for t in tiers if t.get("isActive")]
+
+            is_valid = tier_id in tier_ids
+            if not is_valid:
+                logger.warning(
+                    "Invalid tier ID",
+                    tier_id=tier_id,
+                    valid_tier_ids=tier_ids,
+                )
+
+            return is_valid
+
+        except Exception as e:
+            logger.warning(
+                "Could not validate tier - Account Service unavailable",
+                tier_id=tier_id,
+                error=str(e),
+            )
+            # Graceful degradation - skip validation if service down
+            return True
+
     async def close(self) -> None:
         """
         Close the HTTP client and cleanup resources.

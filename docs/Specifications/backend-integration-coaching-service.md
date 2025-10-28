@@ -1,7 +1,7 @@
 # Coaching Service Backend Integration Specifications
 
-**Version:** 3.1  
-**Last Updated:** October 27, 2025  
+**Version:** 3.2  
+**Last Updated:** October 28, 2025  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`

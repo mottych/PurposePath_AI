@@ -1,0 +1,175 @@
+"""Registry of all supported LLM models and providers.
+
+This module defines the code-based registry of supported LLM models with their
+provider implementations. Each model must have a corresponding provider
+implementation in the infrastructure layer.
+
+Design:
+    - Type-safe with dataclass and enums
+    - Code-based (requires deployment for new models)
+    - Direct reference to provider classes
+    - Capability and cost tracking
+    - Provider filtering support
+
+Architecture:
+    Core utility following Clean Architecture principles. No external dependencies.
+"""
+
+from dataclasses import dataclass
+from enum import Enum
+
+
+class LLMProvider(Enum):
+    """Supported LLM providers."""
+
+    BEDROCK = "bedrock"
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+
+
+@dataclass
+class SupportedModel:
+    """
+    LLM model definition with provider implementation reference.
+
+    Each model MUST have a corresponding provider implementation in the
+    infrastructure layer. Adding new models requires code deployment.
+
+    Attributes:
+        code: Unique model code (e.g., "CLAUDE_3_SONNET")
+        provider: LLM provider enum value
+        model_name: Actual model identifier for API calls
+        version: Model version string
+        provider_class: Reference to provider class name (string for lazy loading)
+        capabilities: List of supported capabilities
+        max_tokens: Maximum tokens supported by model
+        cost_per_1k_tokens: Cost per 1000 tokens (for tracking)
+        is_active: Whether model is currently active/available
+    """
+
+    code: str
+    provider: LLMProvider
+    model_name: str
+    version: str
+    provider_class: str  # String reference to avoid circular imports
+    capabilities: list[str]
+    max_tokens: int
+    cost_per_1k_tokens: float
+    is_active: bool = True
+
+
+# Registry of ALL supported models
+# New models require code deployment
+MODEL_REGISTRY: dict[str, SupportedModel] = {
+    "CLAUDE_3_SONNET": SupportedModel(
+        code="CLAUDE_3_SONNET",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+        version="20240229",
+        provider_class="BedrockLLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling"],
+        max_tokens=4096,
+        cost_per_1k_tokens=0.003,
+        is_active=True,
+    ),
+    "CLAUDE_3_HAIKU": SupportedModel(
+        code="CLAUDE_3_HAIKU",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-3-haiku-20240307-v1:0",
+        version="20240307",
+        provider_class="BedrockLLMProvider",
+        capabilities=["chat", "analysis", "streaming"],
+        max_tokens=4096,
+        cost_per_1k_tokens=0.00025,
+        is_active=True,
+    ),
+    "CLAUDE_3_5_SONNET": SupportedModel(
+        code="CLAUDE_3_5_SONNET",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        version="20240620",
+        provider_class="BedrockLLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling", "vision"],
+        max_tokens=8192,
+        cost_per_1k_tokens=0.003,
+        is_active=True,
+    ),
+}
+
+
+def get_model(code: str) -> SupportedModel:
+    """
+    Get model by code. Type-safe and guaranteed to exist.
+
+    Args:
+        code: Model code from MODEL_REGISTRY
+
+    Returns:
+        SupportedModel definition
+
+    Raises:
+        ValueError: If model code not found in registry
+    """
+    if code not in MODEL_REGISTRY:
+        available = sorted(MODEL_REGISTRY.keys())
+        raise ValueError(
+            f"Unknown model code: '{code}'. "
+            f"Available models: {available}. "
+            f"To add new models, update coaching/src/core/llm_models.py"
+        )
+    return MODEL_REGISTRY[code]
+
+
+def list_models(
+    provider: LLMProvider | None = None,
+    active_only: bool = True,
+    capability: str | None = None,
+) -> list[SupportedModel]:
+    """
+    List all models with optional filters.
+
+    Args:
+        provider: Optional provider filter
+        active_only: Only return active models (default: True)
+        capability: Optional capability filter (e.g., "function_calling")
+
+    Returns:
+        List of SupportedModel definitions matching filters
+    """
+    models = list(MODEL_REGISTRY.values())
+
+    if active_only:
+        models = [m for m in models if m.is_active]
+    if provider:
+        models = [m for m in models if m.provider == provider]
+    if capability:
+        models = [m for m in models if capability in m.capabilities]
+
+    return models
+
+
+def get_model_provider_class(code: str) -> str:
+    """
+    Get provider class name for model.
+
+    Args:
+        code: Model code
+
+    Returns:
+        Provider class name string for instantiation
+
+    Raises:
+        ValueError: If model not found
+    """
+    model = get_model(code)
+    return model.provider_class
+
+
+__all__ = [
+    "MODEL_REGISTRY",
+    "LLMProvider",
+    "SupportedModel",
+    "get_model",
+    "get_model_provider_class",
+    "list_models",
+]
