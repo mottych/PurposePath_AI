@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB tables for LLM configuration system (prompt templates and configurations)'
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Default: dev
+
+Resources:
+  # Table 1: Prompt Template Metadata
+  PromptTemplatesMetadataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'prompt_templates_metadata_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      AttributeDefinitions:
+        - AttributeName: template_id
+          AttributeType: S
+        - AttributeName: interaction_code
+          AttributeType: S
+        - AttributeName: template_code
+          AttributeType: S
+        - AttributeName: is_active
+          AttributeType: S
+      KeySchema:
+        - AttributeName: template_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: interaction-index
+          KeySchema:
+            - AttributeName: interaction_code
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: code-index
+          KeySchema:
+            - AttributeName: template_code
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: active-index
+          KeySchema:
+            - AttributeName: is_active
+              KeyType: HASH
+            - AttributeName: template_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: coaching-ai
+        - Key: Component
+          Value: llm-configuration
+        - Key: TableType
+          Value: prompt-templates-metadata
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # Table 2: LLM Configurations
+  LLMConfigurationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'llm_configurations_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      AttributeDefinitions:
+        - AttributeName: config_id
+          AttributeType: S
+        - AttributeName: interaction_code
+          AttributeType: S
+        - AttributeName: tier
+          AttributeType: S
+        - AttributeName: is_active
+          AttributeType: S
+      KeySchema:
+        - AttributeName: config_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: interaction-tier-index
+          KeySchema:
+            - AttributeName: interaction_code
+              KeyType: HASH
+            - AttributeName: tier
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: active-index
+          KeySchema:
+            - AttributeName: is_active
+              KeyType: HASH
+            - AttributeName: config_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: coaching-ai
+        - Key: Component
+          Value: llm-configuration
+        - Key: TableType
+          Value: llm-configurations
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  PromptTemplatesTableName:
+    Description: Name of the prompt templates metadata table
+    Value: !Ref PromptTemplatesMetadataTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PromptTemplatesTableName'
+  
+  PromptTemplatesTableArn:
+    Description: ARN of the prompt templates metadata table
+    Value: !GetAtt PromptTemplatesMetadataTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PromptTemplatesTableArn'
+  
+  PromptTemplatesStreamArn:
+    Description: Stream ARN of the prompt templates metadata table
+    Value: !GetAtt PromptTemplatesMetadataTable.StreamArn
+    Export:
+      Name: !Sub '${AWS::StackName}-PromptTemplatesStreamArn'
+  
+  ConfigurationsTableName:
+    Description: Name of the LLM configurations table
+    Value: !Ref LLMConfigurationsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigurationsTableName'
+  
+  ConfigurationsTableArn:
+    Description: ARN of the LLM configurations table
+    Value: !GetAtt LLMConfigurationsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigurationsTableArn'
+  
+  ConfigurationsStreamArn:
+    Description: Stream ARN of the LLM configurations table
+    Value: !GetAtt LLMConfigurationsTable.StreamArn
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigurationsStreamArn'
+  
+  Environment:
+    Description: Environment name
+    Value: !Ref Environment
+    Export:
+      Name: !Sub '${AWS::StackName}-Environment'
