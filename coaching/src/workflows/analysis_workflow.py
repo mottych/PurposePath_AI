@@ -66,18 +66,18 @@ class AnalysisWorkflow(BaseWorkflow):
         """Get list of workflow step names."""
         return ["start", "analysis", "completion"]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 
         # Create graph with our state schema
         # LangGraph prefers TypedDict but supports dict at runtime
-        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
+        graph = StateGraph(dict[str, Any])
 
         # Add nodes (workflow steps)
-        graph.add_node("start", self._start_node)  # type: ignore[type-var]
-        graph.add_node("analysis", self._analysis_node)  # type: ignore[type-var]
-        graph.add_node("completion", self._completion_node)  # type: ignore[type-var]
+        graph.add_node("start", self._start_node)
+        graph.add_node("analysis", self._analysis_node)
+        graph.add_node("completion", self._completion_node)
 
         # Add edges (workflow flow)
         graph.add_edge(START, "start")

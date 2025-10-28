@@ -41,18 +41,18 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:
         """Build the LangGraph workflow graph for single-shot analysis."""
         # Create StateGraph with our enhanced state type
         # LangGraph prefers TypedDict but supports dict at runtime
-        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
+        graph = StateGraph(dict[str, Any])
 
         # Add nodes for each step in the analysis
-        graph.add_node("input_validation", self.input_validation_node)  # type: ignore[type-var]
-        graph.add_node("analysis_execution", self.analysis_execution_node)  # type: ignore[type-var]
-        graph.add_node("insight_extraction", self.insight_extraction_node)  # type: ignore[type-var]
-        graph.add_node("response_formatting", self.response_formatting_node)  # type: ignore[type-var]
-        graph.add_node("completion", self.completion_node)  # type: ignore[type-var]
+        graph.add_node("input_validation", self.input_validation_node)
+        graph.add_node("analysis_execution", self.analysis_execution_node)
+        graph.add_node("insight_extraction", self.insight_extraction_node)
+        graph.add_node("response_formatting", self.response_formatting_node)
+        graph.add_node("completion", self.completion_node)
 
         # Define linear flow for single-shot analysis
         graph.set_entry_point("input_validation")

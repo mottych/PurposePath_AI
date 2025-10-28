@@ -42,19 +42,19 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:
         """Build the LangGraph workflow graph for conversational coaching."""
         # Create StateGraph with our enhanced state type
         # LangGraph prefers TypedDict but supports dict at runtime
-        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
+        graph = StateGraph(dict[str, Any])
 
         # Add nodes for each step in the conversation
-        graph.add_node("greeting", self.greeting_node)  # type: ignore[type-var]
-        graph.add_node("question_generation", self.question_generation_node)  # type: ignore[type-var]
-        graph.add_node("response_analysis", self.response_analysis_node)  # type: ignore[type-var]
-        graph.add_node("insight_extraction", self.insight_extraction_node)  # type: ignore[type-var]
-        graph.add_node("follow_up_decision", self.follow_up_decision_node)  # type: ignore[type-var]
-        graph.add_node("completion", self.completion_node)  # type: ignore[type-var]
+        graph.add_node("greeting", self.greeting_node)
+        graph.add_node("question_generation", self.question_generation_node)
+        graph.add_node("response_analysis", self.response_analysis_node)
+        graph.add_node("insight_extraction", self.insight_extraction_node)
+        graph.add_node("follow_up_decision", self.follow_up_decision_node)
+        graph.add_node("completion", self.completion_node)
 
         # Define the conversation flow with conditional edges
         graph.set_entry_point("greeting")
