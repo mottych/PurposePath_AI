@@ -14,8 +14,10 @@ class TestOnboardingService:
     def mock_llm_service(self):
         """Create mock LLM service."""
         service = AsyncMock()
-        service.generate_completion = AsyncMock(
-            return_value="1. Suggestion one\n2. Suggestion two\n3. Suggestion three"
+        service.generate_single_shot_analysis = AsyncMock(
+            return_value={
+                "response": "1. Suggestion one\n2. Suggestion two\n3. Suggestion three"
+            }
         )
         return service
 
@@ -45,7 +47,7 @@ class TestOnboardingService:
         assert "reasoning" in result
         assert isinstance(result["suggestions"], list)
         assert len(result["suggestions"]) > 0
-        mock_llm_service.generate_completion.assert_called_once()
+        mock_llm_service.generate_single_shot_analysis.assert_called_once()
 
     async def test_get_suggestions_with_current_draft(self, onboarding_service):
         """Test suggestions generation with existing draft."""
@@ -68,9 +70,9 @@ class TestOnboardingService:
     async def test_get_coaching_core_values(self, onboarding_service, mock_llm_service):
         """Test coaching for core values topic."""
         # Arrange
-        mock_llm_service.generate_completion.return_value = (
-            'Consider "Integrity" and "Innovation" as core values for your business.'
-        )
+        mock_llm_service.generate_single_shot_analysis.return_value = {
+            "response": 'Consider "Integrity" and "Innovation" as core values for your business.'
+        }
         topic = "coreValues"
         message = "How do I define core values?"
         context = {"businessName": "ValueCo"}
