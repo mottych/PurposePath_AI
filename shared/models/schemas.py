@@ -22,7 +22,7 @@ T = TypeVar("T")
 class BaseModelWithDatetime(BaseModel):
     """Base model with datetime serialization for all datetime fields."""
 
-    @field_serializer("*", when_used="json")
+    @field_serializer("*", when_used="json", check_fields=False)
     def serialize_datetime(self, value: Any) -> Any:
         """Serialize datetime objects to ISO format strings."""
         if isinstance(value, datetime):
