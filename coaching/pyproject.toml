@@ -136,19 +136,11 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-# Pragmatic MyPy config for FastAPI/Pydantic projects
-check_untyped_defs = true
-disallow_any_generics = false
-disallow_untyped_calls = false
-disallow_untyped_decorators = false
-disallow_incomplete_defs = true
-disallow_untyped_defs = false
-warn_return_any = false
-warn_unused_ignores = true
+strict = true
+warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
-no_implicit_optional = true
-strict_optional = true
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
