@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import pytest
-from coaching.src.core.constants import ConversationStatus
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.models.responses import (
     ConversationListResponse,
     ConversationResponse,
@@ -23,16 +23,16 @@ class TestConversationResponse:
             conversation_id="conv-123",
             status=ConversationStatus.ACTIVE,
             current_question="How can I help you?",
-            progress=25,
-            phase="introduction",
+            progress=0.25,
+            phase=ConversationPhase.INTRODUCTION,
         )
 
         # Assert
         assert response.conversation_id == "conv-123"
         assert response.status == ConversationStatus.ACTIVE
         assert response.current_question == "How can I help you?"
-        assert response.progress == 25
-        assert response.phase == "introduction"
+        assert response.progress == 0.25
+        assert response.phase == ConversationPhase.INTRODUCTION
 
     def test_conversation_response_with_metadata(self):
         """Test conversation response with optional metadata."""
@@ -41,12 +41,12 @@ class TestConversationResponse:
             conversation_id="conv-456",
             status=ConversationStatus.PAUSED,
             current_question="Let's continue...",
-            progress=50,
-            phase="deepening",
+            progress=0.50,
+            phase=ConversationPhase.DEEPENING,
         )
 
         # Assert
-        assert response.progress == 50
+        assert response.progress == 0.50
         assert response.status == ConversationStatus.PAUSED
 
 
@@ -58,29 +58,32 @@ class TestMessageResponse:
         """Test creating valid message response."""
         # Arrange & Act
         response = MessageResponse(
-            ai_response="Here's my coaching advice...",
-            follow_up_question="What would you like to explore next?",
-            insights=["Insight 1", "Insight 2"],
-            progress=60,
-            is_complete=False,
-            phase="synthesis",
+            ai_response="Great work! We're done.",
+            next_steps=["Review your values", "Create action plan"],
+            identified_values=["Integrity", "Growth", "Innovation"],
+            progress=1.0,
+            is_complete=True,
+            phase=ConversationPhase.COMPLETION,
         )
 
         # Assert
-        assert response.ai_response == "Here's my coaching advice..."
-        assert response.follow_up_question == "What would you like to explore next?"
-        assert len(response.insights) == 2
-        assert response.progress == 60
+        assert response.ai_response == "Great work! We're done."
+        assert response.next_steps == ["Review your values", "Create action plan"]
+        assert response.identified_values == ["Integrity", "Growth", "Innovation"]
+        assert response.progress == 1.0
+        assert response.is_complete is True
+        assert response.phase == ConversationPhase.COMPLETION
+        assert response.progress == 0.60
         assert response.is_complete is False
-        assert response.phase == "synthesis"
+        assert response.phase == ConversationPhase.SYNTHESIS
 
     def test_message_response_minimal(self):
         """Test message response with minimal fields."""
         # Arrange & Act
         response = MessageResponse(
             ai_response="Short response",
-            progress=10,
-            phase="introduction",
+            progress=0.10,
+            phase=ConversationPhase.INTRODUCTION,
         )
 
         # Assert
