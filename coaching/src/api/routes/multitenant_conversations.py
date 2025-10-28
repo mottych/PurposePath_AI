@@ -154,7 +154,7 @@ async def get_conversation(
         conversation = await conversation_repo.get(conversation_id)
 
         if not conversation:
-            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found") from e
+            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
 
         # Verify tenant access
         if conversation.context.get("tenant_id") != context.tenant_id:
