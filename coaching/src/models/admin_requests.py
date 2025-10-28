@@ -146,7 +146,7 @@ class UpdateModelConfigRequest(BaseModel):
 
 __all__ = [
     "CreateTemplateVersionRequest",
-    "UpdateTemplateRequest",
     "SetLatestVersionRequest",
     "UpdateModelConfigRequest",
+    "UpdateTemplateRequest",
 ]

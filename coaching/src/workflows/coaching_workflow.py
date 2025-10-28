@@ -164,10 +164,7 @@ class CoachingWorkflow(BaseWorkflow):
             return False
 
         # Validate conversation_id exists in context
-        if "conversation_id" not in state.workflow_context:
-            return False
-
-        return True
+        return "conversation_id" in state.workflow_context
 
     def _get_conversation_id(self, state: dict[str, Any]) -> ConversationId:
         """Extract conversation ID from state."""

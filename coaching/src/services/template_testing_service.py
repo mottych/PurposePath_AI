@@ -230,7 +230,7 @@ class TemplateTestingService:
 
 
 __all__ = [
-    "TemplateTestingService",
     "TemplateTestRequest",
     "TemplateTestResult",
+    "TemplateTestingService",
 ]

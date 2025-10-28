@@ -71,10 +71,7 @@ class PhaseTransitionService:
             return False
 
         # Check insight requirement
-        if not self._meets_insight_requirement(conversation, target_phase):
-            return False
-
-        return True
+        return self._meets_insight_requirement(conversation, target_phase)
 
     def get_next_phase(self, conversation: Conversation) -> ConversationPhase | None:
         """

@@ -302,4 +302,4 @@ class TemplateValidationService:
             )
 
 
-__all__ = ["TemplateValidationService", "TemplateValidationError"]
+__all__ = ["TemplateValidationError", "TemplateValidationService"]

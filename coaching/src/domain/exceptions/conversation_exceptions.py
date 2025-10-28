@@ -188,10 +188,10 @@ class ConversationCompletionError(DomainException):
 
 
 __all__ = [
-    "ConversationNotFound",
-    "InvalidPhaseTransition",
-    "ConversationNotActive",
-    "InvalidMessageContent",
-    "ConversationTTLExpired",
     "ConversationCompletionError",
+    "ConversationNotActive",
+    "ConversationNotFound",
+    "ConversationTTLExpired",
+    "InvalidMessageContent",
+    "InvalidPhaseTransition",
 ]

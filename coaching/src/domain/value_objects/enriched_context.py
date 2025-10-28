@@ -64,4 +64,4 @@ class EnrichedContext(BaseModel):
         return self.goal_context is not None
 
 
-__all__ = ["BusinessFoundation", "GoalContext", "EnrichedContext"]
+__all__ = ["BusinessFoundation", "EnrichedContext", "GoalContext"]

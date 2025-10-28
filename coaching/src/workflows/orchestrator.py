@@ -231,11 +231,10 @@ class WorkflowOrchestrator:
                 WorkflowStatus.COMPLETED,
                 WorkflowStatus.FAILED,
                 WorkflowStatus.CANCELLED,
-            ]:
-                if state.completed_at:
-                    completed_time = datetime.fromisoformat(state.completed_at).timestamp()
-                    if completed_time < cutoff_time:
-                        workflows_to_remove.append(workflow_id)
+            ] and state.completed_at:
+                completed_time = datetime.fromisoformat(state.completed_at).timestamp()
+                if completed_time < cutoff_time:
+                    workflows_to_remove.append(workflow_id)
 
         for workflow_id in workflows_to_remove:
             self._workflow_states.pop(workflow_id, None)

@@ -209,10 +209,10 @@ class InsufficientDataForAnalysis(DomainException):
 
 
 __all__ = [
-    "InvalidAnalysisRequest",
-    "EnrichmentFailed",
     "AnalysisNotFound",
-    "UnsupportedAnalysisType",
     "AnalysisTimeout",
+    "EnrichmentFailed",
     "InsufficientDataForAnalysis",
+    "InvalidAnalysisRequest",
+    "UnsupportedAnalysisType",
 ]

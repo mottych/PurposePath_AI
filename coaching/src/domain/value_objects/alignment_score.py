@@ -229,4 +229,4 @@ class AlignmentScore(BaseModel):
         return gaps
 
 
-__all__ = ["ComponentScores", "FoundationAlignment", "AlignmentScore"]
+__all__ = ["AlignmentScore", "ComponentScores", "FoundationAlignment"]

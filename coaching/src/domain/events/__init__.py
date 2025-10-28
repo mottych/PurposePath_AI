@@ -20,17 +20,17 @@ from coaching.src.domain.events.conversation_events import (
 )
 
 __all__ = [
-    # Base
-    "DomainEvent",
-    # Conversation Events
-    "ConversationInitiated",
-    "MessageAdded",
-    "PhaseTransitioned",
-    "ConversationCompleted",
-    "ConversationPaused",
-    "ConversationResumed",
-    # Analysis Events
-    "AnalysisRequested",
     "AnalysisCompleted",
     "AnalysisFailed",
+    # Analysis Events
+    "AnalysisRequested",
+    "ConversationCompleted",
+    # Conversation Events
+    "ConversationInitiated",
+    "ConversationPaused",
+    "ConversationResumed",
+    # Base
+    "DomainEvent",
+    "MessageAdded",
+    "PhaseTransitioned",
 ]

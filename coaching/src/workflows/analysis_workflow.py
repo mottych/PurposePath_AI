@@ -119,11 +119,7 @@ class AnalysisWorkflow(BaseWorkflow):
 
         # Validate required context fields
         required_context = ["analysis_type", "text_to_analyze"]
-        for field in required_context:
-            if field not in state.workflow_context:
-                return False
-
-        return True
+        return all(field in state.workflow_context for field in required_context)
 
     async def _start_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Start node - begin analysis."""

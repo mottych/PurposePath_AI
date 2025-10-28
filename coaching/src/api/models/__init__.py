@@ -30,27 +30,27 @@ from coaching.src.api.models.conversations import (
 )
 
 __all__ = [
-    # Auth models
-    "UserContext",
-    # Conversation models
-    "InitiateConversationRequest",
-    "MessageRequest",
-    "PauseConversationRequest",
-    "CompleteConversationRequest",
-    "ConversationResponse",
-    "MessageResponse",
-    "ConversationDetailResponse",
-    "ConversationListResponse",
     # Analysis models
     "AlignmentAnalysisRequest",
     "AlignmentAnalysisResponse",
     "AlignmentScore",
-    "StrategyAnalysisRequest",
-    "StrategyAnalysisResponse",
-    "StrategyRecommendation",
+    "CompleteConversationRequest",
+    "ConversationDetailResponse",
+    "ConversationListResponse",
+    "ConversationResponse",
+    # Conversation models
+    "InitiateConversationRequest",
     "KPIAnalysisRequest",
     "KPIAnalysisResponse",
     "KPIRecommendation",
+    "MessageRequest",
+    "MessageResponse",
     "OperationsAnalysisRequest",
     "OperationsAnalysisResponse",
+    "PauseConversationRequest",
+    "StrategyAnalysisRequest",
+    "StrategyAnalysisResponse",
+    "StrategyRecommendation",
+    # Auth models
+    "UserContext",
 ]

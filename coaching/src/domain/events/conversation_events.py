@@ -144,10 +144,10 @@ class ConversationResumed(DomainEvent):
 
 
 __all__ = [
-    "ConversationInitiated",
-    "MessageAdded",
-    "PhaseTransitioned",
     "ConversationCompleted",
+    "ConversationInitiated",
     "ConversationPaused",
     "ConversationResumed",
+    "MessageAdded",
+    "PhaseTransitioned",
 ]

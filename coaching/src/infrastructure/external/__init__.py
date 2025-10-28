@@ -7,4 +7,4 @@ from coaching.src.infrastructure.external.business_api_client import BusinessApi
 from coaching.src.infrastructure.external.client_factory import create_business_api_client
 from coaching.src.infrastructure.external.step_functions_client import StepFunctionsClient
 
-__all__ = ["BusinessApiClient", "create_business_api_client", "StepFunctionsClient"]
+__all__ = ["BusinessApiClient", "StepFunctionsClient", "create_business_api_client"]

@@ -6,8 +6,8 @@ from coaching.src.application.analysis.kpi_service import KPIAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 __all__ = [
-    "BaseAnalysisService",
     "AlignmentAnalysisService",
-    "StrategyAnalysisService",
+    "BaseAnalysisService",
     "KPIAnalysisService",
+    "StrategyAnalysisService",
 ]

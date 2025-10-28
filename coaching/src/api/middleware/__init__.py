@@ -10,4 +10,4 @@ from coaching.src.api.middleware.error_handling import ErrorHandlingMiddleware
 from coaching.src.api.middleware.logging import LoggingMiddleware
 from coaching.src.api.middleware.rate_limiting import RateLimitingMiddleware
 
-__all__ = ["LoggingMiddleware", "ErrorHandlingMiddleware", "RateLimitingMiddleware"]
+__all__ = ["ErrorHandlingMiddleware", "LoggingMiddleware", "RateLimitingMiddleware"]

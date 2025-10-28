@@ -242,7 +242,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         # Create insight summary
         insight_summary = {
             "total_insights": len(insights),
-            "categories": list(set(insight.get("category", "general") for insight in insights)),
+            "categories": list({insight.get("category", "general") for insight in insights}),
             "confidence_scores": [insight.get("confidence", 0.5) for insight in insights],
             "key_themes": self._identify_key_themes(insights),
         }

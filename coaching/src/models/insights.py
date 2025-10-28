@@ -154,12 +154,12 @@ class InsightsCacheEntry(BaseModel):
 
 
 __all__ = [
+    "BusinessDataContext",
+    "GeneratedInsights",
+    "Insight",
     "InsightCategory",
     "InsightPriority",
     "InsightStatus",
-    "SuggestedAction",
-    "Insight",
-    "BusinessDataContext",
-    "GeneratedInsights",
     "InsightsCacheEntry",
+    "SuggestedAction",
 ]

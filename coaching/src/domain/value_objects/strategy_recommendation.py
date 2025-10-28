@@ -48,4 +48,4 @@ class StrategyRecommendation(BaseModel):
         return self.priority == "low"
 
 
-__all__ = ["StrategyRecommendation", "PriorityLevel"]
+__all__ = ["PriorityLevel", "StrategyRecommendation"]

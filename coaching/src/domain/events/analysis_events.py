@@ -92,7 +92,7 @@ class AnalysisFailed(DomainEvent):
 
 
 __all__ = [
-    "AnalysisRequested",
     "AnalysisCompleted",
     "AnalysisFailed",
+    "AnalysisRequested",
 ]

@@ -23,20 +23,20 @@ from coaching.src.domain.exceptions.conversation_exceptions import (
 )
 
 __all__ = [
-    # Base
-    "DomainException",
+    "AnalysisNotFound",
+    "AnalysisTimeout",
+    "ConversationCompletionError",
+    "ConversationNotActive",
     # Conversation Exceptions
     "ConversationNotFound",
-    "InvalidPhaseTransition",
-    "ConversationNotActive",
-    "InvalidMessageContent",
     "ConversationTTLExpired",
-    "ConversationCompletionError",
+    # Base
+    "DomainException",
+    "EnrichmentFailed",
+    "InsufficientDataForAnalysis",
     # Analysis Exceptions
     "InvalidAnalysisRequest",
-    "EnrichmentFailed",
-    "AnalysisNotFound",
+    "InvalidMessageContent",
+    "InvalidPhaseTransition",
     "UnsupportedAnalysisType",
-    "AnalysisTimeout",
-    "InsufficientDataForAnalysis",
 ]

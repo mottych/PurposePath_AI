@@ -114,10 +114,10 @@ class OnboardingCoachingResponse(BaseModel):
 
 
 __all__ = [
+    "OnboardingCoachingRequest",
+    "OnboardingCoachingResponse",
     "OnboardingSuggestionRequest",
     "OnboardingSuggestionResponse",
     "WebsiteScanRequest",
     "WebsiteScanResponse",
-    "OnboardingCoachingRequest",
-    "OnboardingCoachingResponse",
 ]

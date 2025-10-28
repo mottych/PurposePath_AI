@@ -57,10 +57,7 @@ class CompletionValidator:
             return False
 
         # Check response requirements
-        if not self._meets_response_requirements(conversation):
-            return False
-
-        return True
+        return self._meets_response_requirements(conversation)
 
     def validate_completion(self, conversation: Conversation) -> tuple[bool, list[str]]:
         """

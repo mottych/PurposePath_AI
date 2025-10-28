@@ -250,18 +250,18 @@ async def get_insights_service(
 
 
 __all__ = [
-    # Repository dependencies
-    "get_conversation_repository",
-    "get_prompt_repository",
-    "get_model_config_service",
-    # Application service dependencies
-    "get_llm_service",
-    "get_conversation_service",
     # Analysis service dependencies
     "get_alignment_service",
-    "get_strategy_service",
-    "get_kpi_service",
     "get_analysis_service_by_type",
+    # Repository dependencies
+    "get_conversation_repository",
+    "get_conversation_service",
     # Insights service
     "get_insights_service",
+    "get_kpi_service",
+    # Application service dependencies
+    "get_llm_service",
+    "get_model_config_service",
+    "get_prompt_repository",
+    "get_strategy_service",
 ]

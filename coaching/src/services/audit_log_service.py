@@ -311,4 +311,4 @@ class AuditLogService:
         # 3. CloudWatch Logs with specific log group
 
 
-__all__ = ["AuditLogService", "AuditAction", "AuditLogEntry"]
+__all__ = ["AuditAction", "AuditLogEntry", "AuditLogService"]
