@@ -116,7 +116,7 @@ class BaseWorkflow(ABC):
         pass
 
     @abstractmethod
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> "StateGraph[dict[str, Any]]":  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         pass
 
