@@ -1,7 +1,6 @@
 """Configuration management for the coaching module."""
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,7 +18,7 @@ class Settings(BaseSettings):
 
     # DynamoDB
     dynamodb_table: str = "truenorth-coaching-conversations-dev"
-    dynamodb_endpoint: Optional[str] = None
+    dynamodb_endpoint: str | None = None
 
     # S3
     prompts_bucket: str = "truenorth-coaching-prompts-dev"
@@ -27,7 +26,7 @@ class Settings(BaseSettings):
     # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
-    redis_password: Optional[str] = None
+    redis_password: str | None = None
     redis_db: int = 0
     redis_ssl: bool = False
 
@@ -74,7 +73,7 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get application settings singleton."""
     return Settings()

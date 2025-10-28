@@ -2,7 +2,7 @@
 
 import json
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 import structlog
 from coaching.src.core.config import settings
@@ -27,7 +27,7 @@ class CacheService:
     def _k(self, key: str) -> str:
         return f"{self.key_prefix}{key}" if self.key_prefix else key
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from cache.
 
         Args:
@@ -45,7 +45,7 @@ class CacheService:
             logger.error("Cache get error", key=key, error=str(e))
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[timedelta] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> bool:
         """Set value in cache.
 
         Args:
@@ -79,7 +79,7 @@ class CacheService:
             logger.error("Cache delete error", key=key, error=str(e))
             return False
 
-    async def get_conversation_memory(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+    async def get_conversation_memory(self, conversation_id: str) -> dict[str, Any] | None:
         """Get conversation memory from cache.
 
         Args:
@@ -92,7 +92,7 @@ class CacheService:
         return await self.get(key)
 
     async def save_conversation_memory(
-        self, conversation_id: str, memory_data: Dict[str, Any]
+        self, conversation_id: str, memory_data: dict[str, Any]
     ) -> bool:
         """Save conversation memory to cache.
 
@@ -106,7 +106,7 @@ class CacheService:
         key = f"memory:{conversation_id}"
         return await self.set(key, memory_data)
 
-    async def get_session_data(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_data(self, conversation_id: str) -> dict[str, Any] | None:
         """Get session data from cache.
 
         Args:
@@ -118,7 +118,7 @@ class CacheService:
         key = f"session:{conversation_id}"
         return await self.get(key)
 
-    async def save_session_data(self, conversation_id: str, session_data: Dict[str, Any]) -> bool:
+    async def save_session_data(self, conversation_id: str, session_data: dict[str, Any]) -> bool:
         """Save session data to cache.
 
         Args:

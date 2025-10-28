@@ -1,6 +1,6 @@
 """Audit logging service for tracking admin actions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -24,7 +24,7 @@ class AuditAction(str, Enum):
 class AuditLogEntry(BaseModel):
     """Audit log entry model."""
 
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     action: AuditAction = Field(..., description="Action performed")
     user_id: str = Field(..., description="Admin user who performed the action")
     tenant_id: str = Field(..., description="Tenant context")

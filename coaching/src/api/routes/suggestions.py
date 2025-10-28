@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 from coaching.src.core.config_multitenant import settings
 from coaching.src.models.requests import OnboardingSuggestionRequest
@@ -33,7 +32,7 @@ def _get_jwt_secret() -> str:
         return "change-me-in-prod"
 
 
-def _authorized(auth_header: Optional[str]) -> bool:
+def _authorized(auth_header: str | None) -> bool:
     if not auth_header or not auth_header.lower().startswith("bearer "):
         return False
     token = auth_header.split(" ", 1)[1]
@@ -47,7 +46,7 @@ def _authorized(auth_header: Optional[str]) -> bool:
 
 @router.post("/onboarding", response_model=ApiResponse[OnboardingSuggestionResponse])
 async def suggest_onboarding(
-    payload: OnboardingSuggestionRequest, authorization: Optional[str] = Header(default=None)
+    payload: OnboardingSuggestionRequest, authorization: str | None = Header(default=None)
 ) -> ApiResponse[OnboardingSuggestionResponse]:
     if not _authorized(authorization):
         return ApiResponse(success=False, error="Unauthorized")

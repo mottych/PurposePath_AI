@@ -1,8 +1,8 @@
 """Data models for insights feature."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -70,19 +70,19 @@ class Insight(BaseModel):
         default=0.8, ge=0.0, le=1.0, description="AI confidence in this insight"
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="When insight was generated",
     )
     expires_at: datetime = Field(..., description="When insight expires (24hr TTL)")
-    acknowledged_at: Optional[datetime] = Field(
+    acknowledged_at: datetime | None = Field(
         default=None, description="When insight was acknowledged"
     )
-    dismissed_at: Optional[datetime] = Field(default=None, description="When insight was dismissed")
+    dismissed_at: datetime | None = Field(default=None, description="When insight was dismissed")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     def is_expired(self) -> bool:
         """Check if insight has expired."""
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(UTC) > self.expires_at
 
     def is_active(self) -> bool:
         """Check if insight is active (not dismissed/completed)."""
@@ -102,7 +102,7 @@ class BusinessDataContext(BaseModel):
     recent_actions: list[dict[str, Any]] = Field(default_factory=list, description="Recent actions")
     open_issues: list[dict[str, Any]] = Field(default_factory=list, description="Open issues")
     collected_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="When data was collected",
     )
 
@@ -131,7 +131,7 @@ class GeneratedInsights(BaseModel):
         default_factory=dict, description="Generation metadata (model, tokens, cost)"
     )
     generated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Generation timestamp",
     )
 
@@ -142,7 +142,7 @@ class InsightsCacheEntry(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     insights: list[Insight] = Field(..., description="Cached insights")
     cached_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="When cached",
     )
     expires_at: datetime = Field(..., description="Cache expiration")
@@ -150,7 +150,7 @@ class InsightsCacheEntry(BaseModel):
 
     def is_expired(self) -> bool:
         """Check if cache entry has expired."""
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(UTC) > self.expires_at
 
 
 __all__ = [

@@ -4,7 +4,7 @@ This module provides a DynamoDB-backed implementation of the conversation
 repository port interface, handling persistence and retrieval of conversations.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
@@ -210,7 +210,7 @@ class DynamoDBConversationRepository:
                 ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={
                     ":status": ConversationStatus.ABANDONED.value,
-                    ":updated_at": datetime.now(timezone.utc).isoformat(),
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -266,7 +266,7 @@ class DynamoDBConversationRepository:
             DynamoDB item dictionary
         """
         # Calculate TTL (30 days from now)
-        ttl = int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())
+        ttl = int((datetime.now(UTC) + timedelta(days=30)).timestamp())
 
         return {
             "conversation_id": conversation.conversation_id,

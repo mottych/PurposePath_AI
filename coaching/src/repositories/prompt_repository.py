@@ -2,7 +2,6 @@
 
 import json
 from datetime import datetime
-from typing import List, Optional
 
 import structlog
 import yaml
@@ -89,7 +88,7 @@ class PromptRepository:
             )
             raise PromptTemplateNotFoundCompatError(topic, version)
 
-    async def save_template(self, template: PromptTemplate, version: Optional[str] = None) -> str:
+    async def save_template(self, template: PromptTemplate, version: str | None = None) -> str:
         """Save a prompt template.
 
         Args:
@@ -137,7 +136,7 @@ class PromptRepository:
             )
             raise
 
-    async def list_templates(self, topic: Optional[str] = None) -> List[PromptTemplateMetadata]:
+    async def list_templates(self, topic: str | None = None) -> list[PromptTemplateMetadata]:
         """List available prompt templates.
 
         Args:
@@ -152,7 +151,7 @@ class PromptRepository:
 
             response = self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix)
 
-            templates: List[PromptTemplateMetadata] = []
+            templates: list[PromptTemplateMetadata] = []
             for obj in response.get("Contents", []):
                 key = obj.get("Key", "")
                 if not key:

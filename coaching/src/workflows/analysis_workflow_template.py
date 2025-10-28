@@ -9,7 +9,7 @@ Implements a LangGraph-based linear analysis flow with:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 from coaching.src.llm.providers.manager import provider_manager
@@ -29,7 +29,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         return WorkflowType.SINGLE_SHOT_ANALYSIS
 
     @property
-    def workflow_steps(self) -> List[str]:
+    def workflow_steps(self) -> list[str]:
         """Get list of workflow step names."""
         return [
             "input_validation",
@@ -66,7 +66,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         return graph
 
-    async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
+    async def create_initial_state(self, user_input: dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
         # Handle both direct input (tests) and graph_state (orchestrator)
         # If "messages" key exists, this is graph_state from orchestrator
@@ -114,7 +114,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         )
 
     # Node implementations
-    async def input_validation_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def input_validation_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Validate and prepare input for analysis."""
         logger.info("Executing input validation", workflow_id=state.get("workflow_id"))
 
@@ -169,7 +169,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         return state
 
-    async def analysis_execution_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def analysis_execution_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Execute the core analysis."""
         logger.info("Executing analysis", workflow_id=state.get("workflow_id"))
 
@@ -224,7 +224,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
-    async def insight_extraction_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def insight_extraction_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Extract structured insights from analysis."""
         logger.info("Executing insight extraction", workflow_id=state.get("workflow_id"))
 
@@ -263,7 +263,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
-    async def response_formatting_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def response_formatting_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Format the analysis results into a user-friendly response."""
         logger.info("Executing response formatting", workflow_id=state.get("workflow_id"))
 
@@ -313,7 +313,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
-    async def completion_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def completion_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Complete the analysis workflow."""
         logger.info("Executing completion", workflow_id=state.get("workflow_id"))
 
@@ -335,7 +335,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         return state
 
     # Helper methods
-    def _create_analysis_prompt(self, analysis_type: str, analysis_focus: List[str]) -> str:
+    def _create_analysis_prompt(self, analysis_type: str, analysis_focus: list[str]) -> str:
         """Create analysis prompt based on type and focus."""
         base_prompt = f"Analyze the following text with focus on {', '.join(analysis_focus)}."
 
@@ -406,7 +406,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
     def _extract_insights_by_type(
         self, analysis_type: str, analysis_result: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Extract insights based on analysis type."""
         insights = []
 
@@ -434,7 +434,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         return insights
 
-    def _identify_key_themes(self, insights: List[Dict[str, Any]]) -> List[str]:
+    def _identify_key_themes(self, insights: list[dict[str, Any]]) -> list[str]:
         """Identify key themes from insights."""
         themes = []
         categories: dict[str, list[str]] = {}
@@ -453,7 +453,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         return themes[:5]  # Top 5 themes
 
     def _format_response_by_type(
-        self, analysis_type: str, insights: List[Dict[str, Any]], summary: Dict[str, Any]
+        self, analysis_type: str, insights: list[dict[str, Any]], summary: dict[str, Any]
     ) -> str:
         """Format response based on analysis type."""
         if not insights:
@@ -494,7 +494,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         return response
 
-    def _calculate_processing_time(self, state: Dict[str, Any]) -> float:
+    def _calculate_processing_time(self, state: dict[str, Any]) -> float:
         """Calculate processing time in seconds."""
         created_at = state.get("created_at")
         completed_at = state.get("completed_at")

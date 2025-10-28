@@ -4,8 +4,8 @@ This module defines the immutable Message value object that represents
 a single message within a coaching conversation.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from coaching.src.core.constants import MessageRole
 from coaching.src.core.types import MessageId, create_message_id
@@ -46,22 +46,22 @@ class Message(BaseModel):
     role: MessageRole = Field(..., description="Role of the message sender")
     content: str = Field(..., min_length=1, max_length=10000, description="Message content")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Message creation timestamp (UTC)",
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional message metadata")
 
     # Token tracking fields for LLM usage analytics
-    tokens: Optional[dict[str, int]] = Field(
+    tokens: dict[str, int] | None = Field(
         default=None,
         description="Token usage: {'input': int, 'output': int, 'total': int}",
     )
-    cost: Optional[float] = Field(
+    cost: float | None = Field(
         default=None,
         description="Calculated cost in USD for this message",
         ge=0.0,
     )
-    model_id: Optional[str] = Field(
+    model_id: str | None = Field(
         default=None,
         description="LLM model identifier (e.g., 'anthropic.claude-3-5-sonnet-20241022-v2:0')",
     )
@@ -80,7 +80,7 @@ class Message(BaseModel):
     @classmethod
     def validate_timestamp_not_future(cls, v: datetime) -> datetime:
         """Ensure timestamp is not in the future."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if v > now:
             raise ValueError("Message timestamp cannot be in the future")
         return v

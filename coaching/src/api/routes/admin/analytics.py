@@ -124,7 +124,7 @@ async def get_usage_analytics(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to retrieve usage analytics: {str(e)}",
+            error=f"Failed to retrieve usage analytics: {e!s}",
         )
 
 
@@ -203,7 +203,7 @@ async def get_model_metrics(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to retrieve model metrics: {str(e)}",
+            error=f"Failed to retrieve model metrics: {e!s}",
         )
 
 
@@ -319,7 +319,7 @@ async def test_template(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to test template: {str(e)}",
+            error=f"Failed to test template: {e!s}",
         )
 
 

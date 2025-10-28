@@ -3,7 +3,7 @@
 This module defines the AnalysisRequest for requesting business analysis.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.core.constants import AnalysisType
@@ -35,7 +35,7 @@ class AnalysisRequest(BaseModel):
     context_data: dict[str, Any] = Field(..., description="Business context for analysis")
     goals: list[str] = Field(default_factory=list, description="Specific goals for analysis")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Request creation time",
     )
 

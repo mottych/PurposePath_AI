@@ -5,7 +5,7 @@ in the system, supporting distributed tracing and event serialization.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -45,7 +45,7 @@ class DomainEvent(BaseModel):
     aggregate_id: str = Field(..., description="ID of the aggregate that produced this event")
     aggregate_type: str = Field(..., description="Type of the aggregate root")
     occurred_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp when the event occurred",
     )
     correlation_id: str | None = Field(

@@ -10,7 +10,7 @@ Extends the base WorkflowOrchestrator with advanced LangGraph features:
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 import structlog
 from coaching.src.llm.providers.manager import provider_manager
@@ -27,21 +27,21 @@ class GraphState(TypedDict):
     workflow_id: str
     workflow_type: str
     user_id: str
-    session_id: Optional[str]
+    session_id: str | None
 
     # Conversation and messaging
-    messages: List[Dict[str, Any]]
+    messages: list[dict[str, Any]]
     current_step: str
-    step_data: Dict[str, Any]
+    step_data: dict[str, Any]
 
     # LLM and provider context
-    provider_id: Optional[str]
-    model_config: Dict[str, Any]
+    provider_id: str | None
+    model_config: dict[str, Any]
 
     # State management
     status: str
-    results: Dict[str, Any]
-    metadata: Dict[str, Any]
+    results: dict[str, Any]
+    metadata: dict[str, Any]
 
     # Timing
     created_at: str
@@ -67,7 +67,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
         logger.info("LangGraphWorkflowOrchestrator initialized")
 
     async def create_workflow_graph(
-        self, workflow_type: WorkflowType, config: Optional[WorkflowConfig] = None
+        self, workflow_type: WorkflowType, config: WorkflowConfig | None = None
     ) -> Any:
         """Create a LangGraph StateGraph for the specified workflow type.
 
@@ -92,10 +92,10 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
         self,
         workflow_type: WorkflowType,
         user_id: str,
-        initial_input: Dict[str, Any],
-        config: Optional[WorkflowConfig] = None,
-        session_id: Optional[str] = None,
-        provider_id: Optional[str] = None,
+        initial_input: dict[str, Any],
+        config: WorkflowConfig | None = None,
+        session_id: str | None = None,
+        provider_id: str | None = None,
     ) -> WorkflowState:
         """Start a new LangGraph workflow execution.
 
@@ -182,8 +182,8 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
     async def continue_workflow(
         self,
         workflow_id: str,
-        user_input: Dict[str, Any],
-        provider_id: Optional[str] = None,
+        user_input: dict[str, Any],
+        provider_id: str | None = None,
     ) -> WorkflowState:
         """Continue an existing LangGraph workflow with new user input.
 
@@ -261,11 +261,11 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
         workflow_id: str,
         workflow_type: WorkflowType,
         user_id: str,
-        session_id: Optional[str],
-        initial_input: Dict[str, Any],
-        provider_id: Optional[str],
+        session_id: str | None,
+        initial_input: dict[str, Any],
+        provider_id: str | None,
         config: WorkflowConfig,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create initial GraphState for LangGraph execution."""
         # Extract analysis type if present (for analysis workflows)
         analysis_type = initial_input.get("analysis_type")
@@ -301,7 +301,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
             "updated_at": datetime.utcnow().isoformat(),
         }
 
-    def _workflow_state_to_graph_state(self, state: WorkflowState) -> Dict[str, Any]:
+    def _workflow_state_to_graph_state(self, state: WorkflowState) -> dict[str, Any]:
         """Convert WorkflowState to GraphState format."""
         return {
             "workflow_id": state.workflow_id,
@@ -320,7 +320,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
             "updated_at": datetime.utcnow().isoformat(),
         }
 
-    def _graph_state_to_workflow_state(self, graph_state: Dict[str, Any]) -> WorkflowState:
+    def _graph_state_to_workflow_state(self, graph_state: dict[str, Any]) -> WorkflowState:
         """Convert GraphState to WorkflowState."""
         return WorkflowState(
             workflow_id=graph_state["workflow_id"],
@@ -346,7 +346,7 @@ class GraphUtilities:
     """Utilities for LangGraph construction and management."""
 
     @staticmethod
-    def create_standard_nodes() -> Dict[str, Any]:
+    def create_standard_nodes() -> dict[str, Any]:
         """Create standard node functions for common workflow patterns."""
         return {
             "greeting": GraphUtilities.greeting_node,
@@ -479,7 +479,7 @@ class AdvancedStateManager:
             cache_service: Cache service for persistence
         """
         self.cache_service = cache_service
-        self._local_state_cache: Dict[str, WorkflowState] = {}
+        self._local_state_cache: dict[str, WorkflowState] = {}
 
     async def save_state(self, workflow_id: str, state: WorkflowState) -> None:
         """Save workflow state with persistence.
@@ -501,7 +501,7 @@ class AdvancedStateManager:
                     "Failed to persist workflow state", workflow_id=workflow_id, error=str(e)
                 )
 
-    async def load_state(self, workflow_id: str) -> Optional[WorkflowState]:
+    async def load_state(self, workflow_id: str) -> WorkflowState | None:
         """Load workflow state from cache.
 
         Args:

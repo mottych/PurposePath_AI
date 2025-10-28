@@ -1,6 +1,6 @@
 """Multitenant dependency injection for API routes."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
@@ -39,7 +39,7 @@ if redis is None:
             self._store: dict[str, tuple[str, float | None]] = {}
 
         def _is_expired(self, expires_at: float | None) -> bool:
-            return expires_at is not None and datetime.now(timezone.utc).timestamp() >= expires_at
+            return expires_at is not None and datetime.now(UTC).timestamp() >= expires_at
 
         def get(self, key: str) -> str | None:
             record = self._store.get(key)
@@ -58,7 +58,7 @@ if redis is None:
                 seconds = float(ttl)
             expires_at: float | None = None
             if seconds > 0:
-                expires_at = datetime.now(timezone.utc).timestamp() + seconds
+                expires_at = datetime.now(UTC).timestamp() + seconds
             self._store[key] = (value, expires_at)
             return True
 

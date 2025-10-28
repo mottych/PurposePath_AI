@@ -1,7 +1,7 @@
 """Response models for API endpoints."""
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
@@ -15,19 +15,19 @@ class ConversationResponse(BaseModel):
     current_question: str
     progress: float = Field(ge=0.0, le=1.0)
     phase: ConversationPhase
-    session_data: Optional[Dict[str, Any]] = None
+    session_data: dict[str, Any] | None = None
 
 
 class MessageResponse(BaseModel):
     """Response for a message in conversation."""
 
     ai_response: str
-    follow_up_question: Optional[str] = None
-    insights: Optional[List[str]] = None
+    follow_up_question: str | None = None
+    insights: list[str] | None = None
     progress: float = Field(ge=0.0, le=1.0)
     is_complete: bool = False
-    next_steps: Optional[List[str]] = None
-    identified_values: Optional[List[str]] = None
+    next_steps: list[str] | None = None
+    identified_values: list[str] | None = None
     phase: ConversationPhase
 
 
@@ -46,7 +46,7 @@ class ConversationSummary(BaseModel):
 class ConversationListResponse(BaseModel):
     """Response for listing conversations."""
 
-    conversations: List[ConversationSummary]
+    conversations: list[ConversationSummary]
     total: int
     page: int = 1
 
@@ -54,25 +54,25 @@ class ConversationListResponse(BaseModel):
 class BusinessContext(BaseModel):
     """Business context data structure."""
 
-    industry: Optional[str] = Field(default=None, description="Business industry")
-    company_size: Optional[str] = Field(default=None, description="Company size")
-    goals: Optional[List[str]] = Field(default=None, description="Business goals")
-    challenges: Optional[List[str]] = Field(default=None, description="Business challenges")
-    values: Optional[List[str]] = Field(default=None, description="Business values")
-    metrics: Optional[List[str]] = Field(default=None, description="Key metrics")
+    industry: str | None = Field(default=None, description="Business industry")
+    company_size: str | None = Field(default=None, description="Company size")
+    goals: list[str] | None = Field(default=None, description="Business goals")
+    challenges: list[str] | None = Field(default=None, description="Business challenges")
+    values: list[str] | None = Field(default=None, description="Business values")
+    metrics: list[str] | None = Field(default=None, description="Key metrics")
 
 
 class UserPreferences(BaseModel):
     """User preferences data structure."""
 
-    communication_style: Optional[str] = Field(
+    communication_style: str | None = Field(
         default=None, description="Preferred communication style"
     )
-    coaching_frequency: Optional[str] = Field(
+    coaching_frequency: str | None = Field(
         default=None, description="Preferred coaching frequency"
     )
-    focus_areas: Optional[List[str]] = Field(default=None, description="Areas of focus")
-    notification_preferences: Optional[Dict[str, bool]] = Field(
+    focus_areas: list[str] | None = Field(default=None, description="Areas of focus")
+    notification_preferences: dict[str, bool] | None = Field(
         default_factory=dict, description="Notification settings"
     )
 
@@ -80,9 +80,9 @@ class UserPreferences(BaseModel):
 class SessionContextData(BaseModel):
     """Session context data structure."""
 
-    conversation_id: Optional[str] = Field(default=None, description="Conversation identifier")
+    conversation_id: str | None = Field(default=None, description="Conversation identifier")
     phase: str = Field(description="Current conversation phase")
-    context: Dict[str, str] = Field(default_factory=dict, description="Additional context")
+    context: dict[str, str] = Field(default_factory=dict, description="Additional context")
     business_context: BusinessContext = Field(
         default_factory=BusinessContext, description="Business context"
     )
@@ -105,7 +105,7 @@ class CacheSessionData(BaseModel):
     """Cache session data structure."""
 
     phase: str = Field(description="Current phase")
-    context: Dict[str, str] = Field(default_factory=dict, description="Context data")
+    context: dict[str, str] = Field(default_factory=dict, description="Context data")
     message_count: int = Field(description="Number of messages")
     template_version: str = Field(description="Template version")
     session_id: str = Field(description="Session identifier")
@@ -116,11 +116,11 @@ class AIResponseData(BaseModel):
     """AI response data structure."""
 
     response: str = Field(description="AI response text")
-    confidence: Optional[float] = Field(default=None, description="Response confidence")
-    metadata: Optional[Dict[str, str]] = Field(
+    confidence: float | None = Field(default=None, description="Response confidence")
+    metadata: dict[str, str] | None = Field(
         default_factory=dict, description="Response metadata"
     )
-    suggested_actions: Optional[List[str]] = Field(
+    suggested_actions: list[str] | None = Field(
         default=None, description="Suggested next actions"
     )
 
@@ -128,11 +128,11 @@ class AIResponseData(BaseModel):
 class SessionOutcomesData(BaseModel):
     """Session outcomes data structure."""
 
-    insights: List[str] = Field(default_factory=list, description="Generated insights")
-    action_items: List[str] = Field(default_factory=list, description="Action items")
-    key_decisions: List[str] = Field(default_factory=list, description="Key decisions made")
-    next_steps: List[str] = Field(default_factory=list, description="Next steps")
-    metrics: Dict[str, float] = Field(default_factory=dict, description="Session metrics")
+    insights: list[str] = Field(default_factory=list, description="Generated insights")
+    action_items: list[str] = Field(default_factory=list, description="Action items")
+    key_decisions: list[str] = Field(default_factory=list, description="Key decisions made")
+    next_steps: list[str] = Field(default_factory=list, description="Next steps")
+    metrics: dict[str, float] = Field(default_factory=dict, description="Session metrics")
     page_size: int = 20
 
 
@@ -143,12 +143,12 @@ class ConversationDetailResponse(BaseModel):
     user_id: str
     topic: str
     status: ConversationStatus
-    messages: List[Dict[str, Any]]
-    context: Dict[str, Any]
+    messages: list[dict[str, Any]]
+    context: dict[str, Any]
     progress: float
     created_at: datetime
     updated_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
 
 class InsightMetadata(BaseModel):
@@ -194,10 +194,10 @@ class InsightsSummaryResponse(BaseModel):
     """Summary response for insights overview."""
 
     total_insights: int = Field(ge=0, description="Total number of insights")
-    by_category: Dict[str, int] = Field(description="Count by category")
-    by_priority: Dict[str, int] = Field(description="Count by priority")
-    by_status: Dict[str, int] = Field(description="Count by status")
-    recent_activity: List[RecentActivity] = Field(description="Recent insight activities")
+    by_category: dict[str, int] = Field(description="Count by category")
+    by_priority: dict[str, int] = Field(description="Count by priority")
+    by_status: dict[str, int] = Field(description="Count by status")
+    recent_activity: list[RecentActivity] = Field(description="Recent insight activities")
 
 
 class OnboardingSuggestionResponse(BaseModel):
@@ -218,10 +218,10 @@ class WebsiteAnalysisResponse(BaseModel):
     """Response for website analysis results."""
 
     domain: str = Field(description="Domain name analyzed")
-    last_analyzed: Optional[datetime] = Field(None, description="Last analysis timestamp")
+    last_analyzed: datetime | None = Field(None, description="Last analysis timestamp")
     analysis_status: str = Field(description="Status of analysis")
-    insights: List[str] = Field(default_factory=list, description="Business insights")
-    recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+    insights: list[str] = Field(default_factory=list, description="Business insights")
+    recommendations: list[str] = Field(default_factory=list, description="Recommendations")
 
 
 class BulkScanResult(BaseModel):
@@ -229,21 +229,21 @@ class BulkScanResult(BaseModel):
 
     url: str = Field(description="Website URL")
     status: str = Field(description="Scan status")
-    data: Optional[Dict[str, Any]] = Field(None, description="Analysis data")
+    data: dict[str, Any] | None = Field(None, description="Analysis data")
 
 
 class BusinessDataSummaryResponse(BaseModel):
     """Response for business data summary."""
 
     tenant_id: str = Field(description="Tenant identifier")
-    business_data: Dict[str, Any] = Field(description="Business data summary")
+    business_data: dict[str, Any] = Field(description="Business data summary")
 
 
 class ConversationActionResponse(BaseModel):
     """Response for conversation actions (complete, pause, delete)."""
 
     message: str = Field(description="Action result message")
-    result: Optional[Dict[str, Any]] = Field(None, description="Additional result data")
+    result: dict[str, Any] | None = Field(None, description="Additional result data")
 
 
 class HealthCheckResponse(BaseModel):
@@ -277,15 +277,15 @@ class CoachingResponse(BaseModel):
 
     reply: str = Field(description="Coaching response message")
     completed: bool = Field(description="Whether coaching session is complete")
-    recommendations: List[str] = Field(default_factory=list, description="Coaching recommendations")
-    insights: List[str] = Field(default_factory=list, description="Generated insights")
-    assessments: List[str] = Field(default_factory=list, description="Assessment results")
+    recommendations: list[str] = Field(default_factory=list, description="Coaching recommendations")
+    insights: list[str] = Field(default_factory=list, description="Generated insights")
+    assessments: list[str] = Field(default_factory=list, description="Assessment results")
 
 
 class ErrorResponse(BaseModel):
     """Error response model."""
 
     error: str
-    error_code: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    error_code: str | None = None
+    details: dict[str, Any] | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

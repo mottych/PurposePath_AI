@@ -1,6 +1,6 @@
 """Unit tests for base DomainEvent."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from coaching.src.domain.events.base_event import DomainEvent
@@ -28,7 +28,7 @@ class TestDomainEventCreation:
 
     def test_create_event_with_all_fields(self) -> None:
         """Test creating event with all fields."""
-        occurred_at = datetime.now(timezone.utc)
+        occurred_at = datetime.now(UTC)
         event = DomainEvent(
             event_id="custom-event-id",
             event_type="TestEvent",

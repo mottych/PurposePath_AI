@@ -4,7 +4,7 @@ All models use snake_case fields and ISO 8601 datetime strings.
 """
 
 from datetime import datetime
-from typing import Any, Generic, List, Literal, Optional, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
@@ -27,9 +27,9 @@ class ApiResponse(BaseModelWithDatetime, Generic[T]):
     """Standard API response envelope for all endpoints."""
 
     success: bool
-    data: Optional[T] = None
-    message: Optional[str] = None
-    error: Optional[str] = None
+    data: T | None = None
+    message: str | None = None
+    error: str | None = None
 
 
 class PaginationMeta(BaseModelWithDatetime):
@@ -49,10 +49,10 @@ class PaginatedResponse(BaseModel, Generic[T]):
     """Standard paginated response envelope."""
 
     success: bool
-    data: List[T]
+    data: list[T]
     pagination: PaginationMeta
-    message: Optional[str] = None
-    error: Optional[str] = None
+    message: str | None = None
+    error: str | None = None
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -65,17 +65,17 @@ class UserProfile(BaseModelWithDatetime):
     user_id: str = Field(alias="userId")
     tenant_id: str = Field(alias="tenantId")
     email: str
-    first_name: Optional[str] = Field(default=None, alias="firstName")
-    last_name: Optional[str] = Field(default=None, alias="lastName")
-    role: Optional[str] = None
+    first_name: str | None = Field(default=None, alias="firstName")
+    last_name: str | None = Field(default=None, alias="lastName")
+    role: str | None = None
     status: str = "active"
     email_verified: bool = Field(default=False, alias="emailVerified")
-    avatar_url: Optional[str] = Field(default=None, alias="avatarUrl")
-    phone: Optional[str] = None
+    avatar_url: str | None = Field(default=None, alias="avatarUrl")
+    phone: str | None = None
     timezone: str = "UTC"
     language: str = "en"
     preferences: dict[str, Any] = Field(default_factory=dict)
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -90,7 +90,7 @@ class TenantInfo(BaseModelWithDatetime):
     tenant_id: str
     name: str
     status: str
-    subscription_tier: Optional[str] = None
+    subscription_tier: str | None = None
 
     model_config = ConfigDict(
         # Pydantic V2: datetime serialization handled automatically
@@ -103,7 +103,7 @@ class AuthResponse(BaseModelWithDatetime):
     access_token: str = Field(alias="accessToken")
     refresh_token: str = Field(alias="refreshToken")
     user: UserProfile
-    tenant: Optional[TenantInfo] = None
+    tenant: TenantInfo | None = None
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -114,7 +114,7 @@ class RegistrationVerificationPending(BaseModelWithDatetime):
     """Response when email verification is required after registration."""
 
     requires_email_verification: bool = Field(alias="requiresEmailVerification")
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -125,18 +125,18 @@ class RegistrationVerificationPending(BaseModelWithDatetime):
 class UpdateUserProfileRequest(BaseModelWithDatetime):
     """Request model for updating user profile."""
 
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    avatar_url: Optional[str] = None
-    preferences: Optional[dict[str, Any]] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    avatar_url: str | None = None
+    preferences: dict[str, Any] | None = None
 
 
 class UpdateSubscriptionRequest(BaseModelWithDatetime):
     """Request model for updating subscription."""
 
-    plan: Optional[Literal["monthly", "yearly"]] = None
-    tier: Optional[Literal["starter", "professional", "enterprise"]] = None
+    plan: Literal["monthly", "yearly"] | None = None
+    tier: Literal["starter", "professional", "enterprise"] | None = None
 
 
 class LoginRequest(BaseModelWithDatetime):
@@ -144,7 +144,7 @@ class LoginRequest(BaseModelWithDatetime):
 
     email: str
     password: str
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
 
 class RegisterRequest(BaseModelWithDatetime):
@@ -154,9 +154,9 @@ class RegisterRequest(BaseModelWithDatetime):
     password: str
     first_name: str
     last_name: str
-    tenant_name: Optional[str] = None
-    invite_token: Optional[str] = None
-    role: Optional[Literal["owner", "admin", "manager", "member", "viewer"]] = None
+    tenant_name: str | None = None
+    invite_token: str | None = None
+    role: Literal["owner", "admin", "manager", "member", "viewer"] | None = None
 
 
 class RefreshTokenRequest(BaseModelWithDatetime):
@@ -188,4 +188,4 @@ class GoogleAuthRequest(BaseModelWithDatetime):
     """Google OAuth request model."""
 
     token: str
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None

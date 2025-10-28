@@ -1,6 +1,6 @@
 """Custom exceptions for the coaching module."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class CoachingError(Exception):
@@ -9,8 +9,8 @@ class CoachingError(Exception):
     def __init__(
         self,
         message: str,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -98,7 +98,7 @@ class CoachingValidationError(CoachingError):
 class LLMProviderCompatError(LLMProviderError):
     """Backward-compatible alias for provider errors."""
 
-    def __init__(self, provider: str, message: str, *, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, provider: str, message: str, *, details: dict[str, Any] | None = None):
         merged_details = {"provider": provider}
         if details:
             merged_details.update(details)

@@ -9,7 +9,7 @@ Implements a LangGraph-based conversational flow with:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 from coaching.src.llm.providers.manager import provider_manager
@@ -29,7 +29,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         return WorkflowType.CONVERSATIONAL_COACHING
 
     @property
-    def workflow_steps(self) -> List[str]:
+    def workflow_steps(self) -> list[str]:
         """Get list of workflow step names."""
         return [
             "greeting",
@@ -85,7 +85,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return graph
 
-    async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
+    async def create_initial_state(self, user_input: dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
         # Handle both direct input (tests) and graph_state (orchestrator)
         # If "messages" key exists, this is graph_state from orchestrator
@@ -124,7 +124,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         return all(getattr(state, field, None) is not None for field in required_fields)
 
     # Node implementations
-    async def greeting_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def greeting_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Initial greeting node."""
         logger.info("Executing greeting node", workflow_id=state.get("workflow_id"))
 
@@ -146,7 +146,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return state
 
-    async def question_generation_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def question_generation_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Generate thoughtful follow-up questions."""
         logger.info("Executing question generation", workflow_id=state.get("workflow_id"))
 
@@ -199,7 +199,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
-    async def response_analysis_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def response_analysis_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Analyze user responses for insights and themes."""
         logger.info("Executing response analysis", workflow_id=state.get("workflow_id"))
 
@@ -258,7 +258,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
-    async def insight_extraction_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def insight_extraction_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Extract and accumulate insights from the conversation."""
         logger.info("Executing insight extraction", workflow_id=state.get("workflow_id"))
 
@@ -271,7 +271,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         # Extract insights from different categories
         if isinstance(analysis_result, dict):
             for category in ["values", "emotions", "goals", "challenges", "themes"]:
-                if category in analysis_result and analysis_result[category]:
+                if analysis_result.get(category):
                     insights.extend(
                         self._extract_category_insights(category, analysis_result[category])
                     )
@@ -291,7 +291,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return state
 
-    async def follow_up_decision_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def follow_up_decision_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Decide how to follow up based on conversation state."""
         logger.info("Executing follow-up decision", workflow_id=state.get("workflow_id"))
 
@@ -316,7 +316,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return state
 
-    async def completion_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def completion_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Complete the conversation workflow."""
         logger.info("Executing completion", workflow_id=state.get("workflow_id"))
 
@@ -347,7 +347,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         return state
 
     # Conditional edge functions
-    def should_continue_conversation(self, state: Dict[str, Any]) -> str:
+    def should_continue_conversation(self, state: dict[str, Any]) -> str:
         """Determine if conversation should continue or complete."""
         conversation_count = len(
             [msg for msg in state.get("messages", []) if msg.get("role") == "user"]
@@ -373,7 +373,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return "continue"
 
-    def follow_up_routing(self, state: Dict[str, Any]) -> str:
+    def follow_up_routing(self, state: dict[str, Any]) -> str:
         """Route follow-up actions."""
         # Check if we have any insights - if so, complete for testing
         insights_count = len(state.get("results", {}).get("accumulated_insights", []))
@@ -400,7 +400,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         return "complete"
 
     # Helper methods
-    def _get_conversation_context(self, state: Dict[str, Any]) -> str:
+    def _get_conversation_context(self, state: dict[str, Any]) -> str:
         """Extract conversation context for question generation."""
         messages = state.get("messages", [])
         user_messages = [msg["content"] for msg in messages if msg.get("role") == "user"]
@@ -412,7 +412,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         else:
             return "Beginning of conversation"
 
-    def _extract_category_insights(self, category: str, data: Any) -> List[str]:
+    def _extract_category_insights(self, category: str, data: Any) -> list[str]:
         """Extract insights from analysis category."""
         insights = []
 
@@ -427,7 +427,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         return insights
 
-    def _generate_conversation_summary(self, insights: List[str]) -> str:
+    def _generate_conversation_summary(self, insights: list[str]) -> str:
         """Generate a summary message for conversation completion."""
         if not insights:
             return "Thank you for sharing with me today. Every conversation is a step forward in understanding yourself better."

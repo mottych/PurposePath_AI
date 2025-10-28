@@ -1,7 +1,7 @@
 """Main FastAPI application with Phase 7 architecture."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import structlog
 from coaching.src.api.middleware import (

@@ -1,6 +1,6 @@
 """Health check routes with ApiResponse envelope."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.api.multitenant_dependencies import get_redis_client
@@ -18,7 +18,7 @@ router = APIRouter()
 async def health_check() -> ApiResponse[HealthCheckResponse]:
     """Basic health check with ApiResponse envelope."""
     health_data = HealthCheckResponse(
-        status="healthy", timestamp=datetime.now(timezone.utc).isoformat(), stage=settings.stage
+        status="healthy", timestamp=datetime.now(UTC).isoformat(), stage=settings.stage
     )
     return ApiResponse(success=True, data=health_data)
 
@@ -28,7 +28,7 @@ async def readiness_check(
     redis_client: Any = Depends(get_redis_client),
 ) -> ApiResponse[ReadinessCheckResponse]:
     """Readiness check for all dependencies with ApiResponse envelope."""
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     services: dict[str, str] = {}
 
     # Check DynamoDB
@@ -40,7 +40,7 @@ async def readiness_check(
         dynamodb.meta.client.describe_table(TableName=settings.conversations_table)
         services["dynamodb"] = "healthy"
     except Exception as e:
-        services["dynamodb"] = f"unhealthy: {str(e)}"
+        services["dynamodb"] = f"unhealthy: {e!s}"
 
     # Check S3
     try:
@@ -67,7 +67,7 @@ async def readiness_check(
         ):
             services["redis"] = "skipped"
         else:
-            services["redis"] = f"unhealthy: {str(e)}"
+            services["redis"] = f"unhealthy: {e!s}"
 
     # Check Bedrock
     try:
@@ -75,7 +75,7 @@ async def readiness_check(
         # Just check if client can be created
         services["bedrock"] = "healthy"
     except Exception as e:
-        services["bedrock"] = f"unhealthy: {str(e)}"
+        services["bedrock"] = f"unhealthy: {e!s}"
 
     # Create service status model
     service_status = ServiceStatus(

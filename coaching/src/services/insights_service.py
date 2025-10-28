@@ -3,8 +3,8 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import structlog
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
@@ -77,9 +77,9 @@ class InsightsService:
         self,
         page: int = 1,
         page_size: int = 20,
-        category: Optional[str] = None,
-        priority: Optional[str] = None,
-        status: Optional[str] = None,
+        category: str | None = None,
+        priority: str | None = None,
+        status: str | None = None,
     ) -> PaginatedResponse[InsightResponse]:
         """Generate fresh coaching insights using LLM.
 
@@ -163,11 +163,11 @@ class InsightsService:
                 pagination=PaginationMeta(page=page, limit=page_size, total=0, total_pages=0),
             )
 
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         """Get available insight categories."""
         return ["strategy", "operations", "finance", "marketing", "leadership", "technology"]
 
-    async def get_priorities(self) -> List[str]:
+    async def get_priorities(self) -> list[str]:
         """Get available insight priorities."""
         return ["critical", "high", "medium", "low"]
 
@@ -418,7 +418,7 @@ class InsightsService:
                     actions.append(action)
 
                 # Create insight
-                expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+                expires_at = datetime.now(UTC) + timedelta(hours=24)
                 insight = Insight(
                     id=str(uuid.uuid4()),
                     tenant_id=self.tenant_id,
@@ -447,9 +447,9 @@ class InsightsService:
     def _apply_filters(
         self,
         insights: list[Insight],
-        category: Optional[str],
-        priority: Optional[str],
-        status: Optional[str],
+        category: str | None,
+        priority: str | None,
+        status: str | None,
     ) -> list[Insight]:
         """Apply filters to insights list."""
         filtered = insights

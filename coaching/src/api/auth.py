@@ -1,7 +1,7 @@
 """Authentication dependencies for the coaching module."""
 
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from coaching.src.api.models.auth import UserContext
 from coaching.src.core.config_multitenant import settings
@@ -213,8 +213,8 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
 
 
 async def get_optional_context(
-    authorization: Optional[str] = Header(None),
-) -> Optional[RequestContext]:
+    authorization: str | None = Header(None),
+) -> RequestContext | None:
     """Extract request context from JWT token if provided.
 
     Args:

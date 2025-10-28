@@ -5,7 +5,7 @@ Handles lifecycle management, factory creation, and coordination of AI providers
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -19,8 +19,8 @@ class ProviderManager:
 
     def __init__(self) -> None:
         """Initialize the provider manager."""
-        self._providers: Dict[str, BaseProvider] = {}
-        self._default_provider: Optional[str] = None
+        self._providers: dict[str, BaseProvider] = {}
+        self._default_provider: str | None = None
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -47,7 +47,7 @@ class ProviderManager:
         logger.info("Provider manager initialized", provider_count=len(self._providers))
 
     async def add_provider(
-        self, provider_id: str, provider_type: str, config_dict: Dict[str, Any]
+        self, provider_id: str, provider_type: str, config_dict: dict[str, Any]
     ) -> None:
         """Add a new provider with convenience method (backward compatible).
 
@@ -137,7 +137,7 @@ class ProviderManager:
         else:
             raise ValueError(f"Unsupported provider type: {config.provider_type}")
 
-    def get_provider(self, provider_id: Optional[str] = None) -> BaseProvider:
+    def get_provider(self, provider_id: str | None = None) -> BaseProvider:
         """Get a provider by ID.
 
         Args:
@@ -161,7 +161,7 @@ class ProviderManager:
 
         return self._providers[provider_id]
 
-    def list_providers(self) -> List[str]:
+    def list_providers(self) -> list[str]:
         """Get list of registered provider IDs.
 
         Returns:
@@ -169,7 +169,7 @@ class ProviderManager:
         """
         return list(self._providers.keys())
 
-    def get_provider_info(self, provider_id: Optional[str] = None) -> Dict[str, str]:
+    def get_provider_info(self, provider_id: str | None = None) -> dict[str, str]:
         """Get information about a provider.
 
         Args:

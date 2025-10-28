@@ -1,7 +1,7 @@
 """Multitenant configuration management for the coaching module."""
 
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     application_name: str = Field(default="PurposePath")
 
     # JWT Authentication (for token validation)
-    jwt_secret_arn: Optional[str] = Field(default=None, validation_alias="JWT_SECRET_ARN")
+    jwt_secret_arn: str | None = Field(default=None, validation_alias="JWT_SECRET_ARN")
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "purposepath"
 
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     user_preferences_table: str = Field(
         default="purposepath-user-preferences-dev", validation_alias="USER_PREFERENCES_TABLE"
     )
-    dynamodb_endpoint: Optional[str] = None
+    dynamodb_endpoint: str | None = None
 
     # S3
     prompts_bucket: str = Field(
@@ -44,12 +44,12 @@ class Settings(BaseSettings):
     )
 
     # Redis/ElastiCache
-    redis_cluster_endpoint: Optional[str] = Field(
+    redis_cluster_endpoint: str | None = Field(
         default=None, validation_alias="REDIS_CLUSTER_ENDPOINT"
     )
     redis_host: str = Field(default="localhost", validation_alias="REDIS_HOST")
     redis_port: int = Field(default=6379, validation_alias="REDIS_PORT")
-    redis_password: Optional[str] = Field(default=None, validation_alias="REDIS_PASSWORD")
+    redis_password: str | None = Field(default=None, validation_alias="REDIS_PASSWORD")
     redis_db: int = 0
     redis_ssl: bool = Field(default=True, validation_alias="REDIS_SSL")
 
@@ -94,8 +94,8 @@ class Settings(BaseSettings):
     )
 
     # Provider API Keys (optional - for direct API access)
-    anthropic_api_key: Optional[str] = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
-    openai_api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
+    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
     # Memory Management
     max_conversation_memory: int = 4000
@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     outcome_confidence_threshold: float = 0.8  # AI confidence threshold for auto-updates
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get application settings singleton."""
     return Settings()

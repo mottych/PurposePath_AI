@@ -6,7 +6,7 @@ LangGraph-based workflow system, ensuring backward compatibility while enabling
 multi-provider support and advanced workflow capabilities.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
@@ -30,7 +30,7 @@ class LLMServiceAdapter:
         provider_manager: ProviderManager,
         workflow_orchestrator: WorkflowOrchestrator,
         default_provider: str = "bedrock",
-        fallback_providers: Optional[List[str]] = None,
+        fallback_providers: list[str] | None = None,
     ):
         """Initialize the LLM service adapter.
 
@@ -55,11 +55,11 @@ class LLMServiceAdapter:
         self,
         conversation_id: str,
         topic: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         system_prompt: str,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get LLM response for a conversation using new workflow system.
 
         Args:
@@ -115,9 +115,9 @@ class LLMServiceAdapter:
         conversation_id: str,
         user_response: str,
         topic: str,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze a user response for insights using workflow system.
 
         Args:
@@ -166,7 +166,7 @@ class LLMServiceAdapter:
             return {"error": str(e), "insights": [], "confidence": 0.0}
 
     async def _resolve_provider_and_model(
-        self, topic: str, model_id: Optional[str] = None, **kwargs: Any
+        self, topic: str, model_id: str | None = None, **kwargs: Any
     ) -> tuple[str, str]:
         """Resolve the provider and model to use.
 
@@ -239,8 +239,8 @@ class LLMServiceAdapter:
             return False
 
     async def _handle_fallback(
-        self, workflow_input: Dict[str, Any], original_error: Exception
-    ) -> Dict[str, Any]:
+        self, workflow_input: dict[str, Any], original_error: Exception
+    ) -> dict[str, Any]:
         """Handle fallback to alternative providers.
 
         Args:
@@ -250,7 +250,7 @@ class LLMServiceAdapter:
         Returns:
             Response from fallback provider or error response
         """
-        errors = [f"{self.default_provider}: {str(original_error)}"]
+        errors = [f"{self.default_provider}: {original_error!s}"]
 
         # Try each fallback provider
         for fallback_provider in self.fallback_providers:
@@ -287,7 +287,7 @@ class LLMServiceAdapter:
                     provider=fallback_provider,
                     error=str(e),
                 )
-                errors.append(f"{fallback_provider}: {str(e)}")
+                errors.append(f"{fallback_provider}: {e!s}")
                 continue
 
         # All providers failed
@@ -302,7 +302,7 @@ class LLMServiceAdapter:
 
     def _format_response(
         self, workflow_state: WorkflowState, provider_name: str, model_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format workflow state into legacy response format.
 
         Args:
@@ -341,7 +341,7 @@ class LLMServiceAdapter:
             ),
         }
 
-    def _format_analysis(self, workflow_state: WorkflowState) -> Dict[str, Any]:
+    def _format_analysis(self, workflow_state: WorkflowState) -> dict[str, Any]:
         """Format workflow state into analysis response.
 
         Args:
@@ -364,13 +364,13 @@ class LLMServiceAdapter:
             ),
         }
 
-    async def get_provider_status(self) -> Dict[str, Any]:
+    async def get_provider_status(self) -> dict[str, Any]:
         """Get status of all providers.
 
         Returns:
             Dictionary with provider availability and status
         """
-        status: Dict[str, Any] = {
+        status: dict[str, Any] = {
             "default_provider": self.default_provider,
             "fallback_providers": self.fallback_providers,
             "providers": {},
@@ -396,13 +396,13 @@ class LLMServiceAdapter:
 
         return status
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on the adapter and providers.
 
         Returns:
             Health check results
         """
-        health: Dict[str, Any] = {
+        health: dict[str, Any] = {
             "adapter": "healthy",
             "provider_manager": "unknown",
             "workflow_orchestrator": "unknown",
@@ -415,7 +415,7 @@ class LLMServiceAdapter:
             health["provider_manager"] = "healthy"
             health["providers"] = provider_status["providers"]
         except Exception as e:
-            health["provider_manager"] = f"unhealthy: {str(e)}"
+            health["provider_manager"] = f"unhealthy: {e!s}"
 
         # Check workflow orchestrator
         try:
@@ -423,7 +423,7 @@ class LLMServiceAdapter:
             health["workflow_orchestrator"] = "healthy"
             health["workflow_stats"] = stats
         except Exception as e:
-            health["workflow_orchestrator"] = f"unhealthy: {str(e)}"
+            health["workflow_orchestrator"] = f"unhealthy: {e!s}"
 
         # Determine overall health
         providers_dict = health.get("providers", {})
@@ -432,9 +432,7 @@ class LLMServiceAdapter:
         else:
             provider_healthy = False
 
-        if not provider_healthy:
-            health["adapter"] = "degraded"
-        elif (
+        if not provider_healthy or (
             health["provider_manager"] != "healthy" or health["workflow_orchestrator"] != "healthy"
         ):
             health["adapter"] = "degraded"

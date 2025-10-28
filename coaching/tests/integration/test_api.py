@@ -1,6 +1,6 @@
 """Integration tests for API endpoints."""
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from coaching.src.api.main import app
@@ -27,7 +27,7 @@ def test_health_endpoint(client: TestClient) -> None:
     """Test health check endpoint."""
     response = client.get("/api/v1/health/")
     assert response.status_code == 200
-    data: Dict[str, Any] = response.json()
+    data: dict[str, Any] = response.json()
     # Health uses ApiResponse envelope
     assert isinstance(data, dict)
     assert data.get("success") is True
@@ -47,7 +47,7 @@ class TestConversationEndpoints:
 
     def test_initiate_conversation_valid_request(self, client: TestClient) -> None:
         """Test conversation initiation with valid data."""
-        request_data: Dict[str, Any] = {
+        request_data: dict[str, Any] = {
             "user_id": "test-user-123",
             "topic": "core_values",
             "context": {},

@@ -1,7 +1,7 @@
 """Memory management for conversations."""
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 
@@ -33,9 +33,9 @@ class ConversationMemory:
             max_token_limit: Maximum tokens to maintain in memory
         """
         self.max_token_limit = max_token_limit
-        self.messages: List[Dict[str, str]] = []
+        self.messages: list[dict[str, str]] = []
         self.summary: str = ""
-        self.key_points: List[str] = []
+        self.key_points: list[str] = []
 
         # Initialize tokenizer
         try:
@@ -52,20 +52,20 @@ class ConversationMemory:
             content: Message content
         """
         self.messages.append(
-            {"role": role, "content": content, "timestamp": datetime.now(timezone.utc).isoformat()}
+            {"role": role, "content": content, "timestamp": datetime.now(UTC).isoformat()}
         )
 
         # Manage memory size
         self._manage_memory()
 
-    def get_messages_for_llm(self) -> List[Dict[str, str]]:
+    def get_messages_for_llm(self) -> list[dict[str, str]]:
         """Get messages formatted for LLM.
 
         Returns:
             List of message dictionaries
         """
         # Start with summary if available
-        messages: List[Dict[str, str]] = []
+        messages: list[dict[str, str]] = []
 
         if self.summary:
             messages.append(
@@ -84,7 +84,7 @@ class ConversationMemory:
         Returns:
             Context string
         """
-        context_parts: List[str] = []
+        context_parts: list[str] = []
 
         if self.summary:
             context_parts.append(f"Summary: {self.summary}")
@@ -138,7 +138,7 @@ class ConversationMemory:
 
         return total
 
-    def _create_summary(self, messages: List[Dict[str, str]]) -> str:
+    def _create_summary(self, messages: list[dict[str, str]]) -> str:
         """Create a summary of messages.
 
         Args:
@@ -152,7 +152,7 @@ class ConversationMemory:
 
         assistant_messages = [msg["content"] for msg in messages if msg["role"] == "assistant"]
 
-        summary_parts: List[str] = []
+        summary_parts: list[str] = []
 
         if user_messages:
             summary_parts.append(f"User discussed: {self._extract_topics(user_messages)}")
@@ -162,7 +162,7 @@ class ConversationMemory:
 
         return " ".join(summary_parts)
 
-    def _extract_topics(self, messages: List[str]) -> str:
+    def _extract_topics(self, messages: list[str]) -> str:
         """Extract main topics from messages.
 
         Args:
@@ -172,7 +172,7 @@ class ConversationMemory:
             Comma-separated topics
         """
         # Simple keyword extraction
-        keywords: List[str] = []
+        keywords: list[str] = []
 
         # Common coaching keywords to look for
         topic_words = [
@@ -201,7 +201,7 @@ class ConversationMemory:
 
         return ", ".join(keywords[:5]) if keywords else "various topics"
 
-    def _extract_key_points(self, messages: List[Dict[str, str]]) -> None:
+    def _extract_key_points(self, messages: list[dict[str, str]]) -> None:
         """Extract key points from messages.
 
         Args:
@@ -236,7 +236,7 @@ class ConversationMemory:
         # Keep only unique key points
         self.key_points = list(set(self.key_points[:5]))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert memory to dictionary.
 
         Returns:
@@ -250,7 +250,7 @@ class ConversationMemory:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ConversationMemory":
+    def from_dict(cls, data: dict[str, Any]) -> "ConversationMemory":
         """Create memory from dictionary.
 
         Args:

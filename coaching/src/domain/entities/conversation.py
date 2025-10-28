@@ -4,7 +4,7 @@ This module defines the Conversation entity as an aggregate root that enforces
 business rules for coaching conversations.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.core.constants import (
@@ -62,11 +62,11 @@ class Conversation(BaseModel):
         description="Conversation context",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp",
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Last update timestamp",
     )
     completed_at: datetime | None = Field(default=None, description="Completion timestamp")
@@ -107,7 +107,7 @@ class Conversation(BaseModel):
 
         # Use object.__setattr__ to modify frozen list
         object.__setattr__(self, "messages", self.messages + [message])
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
         # Update context response count for user messages
         if role == MessageRole.USER:
@@ -165,7 +165,7 @@ class Conversation(BaseModel):
         )
 
         object.__setattr__(self, "context", new_context)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def add_insight(self, insight: str) -> None:
         """
@@ -189,7 +189,7 @@ class Conversation(BaseModel):
         )
 
         object.__setattr__(self, "context", new_context)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def mark_completed(self) -> None:
         """
@@ -211,7 +211,7 @@ class Conversation(BaseModel):
                 f"Cannot complete conversation in {self.context.current_phase.value} phase"
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.COMPLETED)
         object.__setattr__(self, "completed_at", now)
         object.__setattr__(self, "updated_at", now)
@@ -225,7 +225,7 @@ class Conversation(BaseModel):
         if not self.is_active():
             raise ValueError(f"Cannot pause {self.status.value} conversation")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.PAUSED)
         object.__setattr__(self, "updated_at", now)
 
@@ -242,7 +242,7 @@ class Conversation(BaseModel):
             raise ValueError(f"Cannot resume {self.status.value} conversation, must be paused")
 
         object.__setattr__(self, "status", ConversationStatus.ACTIVE)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def is_active(self) -> bool:
         """Check if conversation is active."""

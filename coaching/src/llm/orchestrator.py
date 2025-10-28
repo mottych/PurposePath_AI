@@ -7,7 +7,7 @@ while maintaining backward compatibility.
 This module is kept for legacy compatibility but new code should use the adapter.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from coaching.src.core.constants import DEFAULT_LLM_MODELS
@@ -31,8 +31,8 @@ class LLMOrchestrator:
         self,
         bedrock_client: Any,
         cache_service: CacheService,
-        default_model: Optional[str] = None,
-        provider_manager: Optional[Any] = None,
+        default_model: str | None = None,
+        provider_manager: Any | None = None,
     ):
         """Initialize LLM orchestrator.
 
@@ -48,11 +48,11 @@ class LLMOrchestrator:
         self.provider_manager = provider_manager
 
         # Initialize providers
-        self.providers: Dict[str, LLMProvider] = {}
+        self.providers: dict[str, LLMProvider] = {}
         self._initialize_providers()
 
         # Memory store for active conversations
-        self.memory_store: Dict[str, ConversationMemory] = {}
+        self.memory_store: dict[str, ConversationMemory] = {}
 
         logger.info(
             "LLMOrchestrator initialized",
@@ -71,7 +71,7 @@ class LLMOrchestrator:
                     client=self.bedrock_client, model_id=model_id
                 )
 
-    def get_provider(self, model_id: Optional[str] = None) -> LLMProvider:
+    def get_provider(self, model_id: str | None = None) -> LLMProvider:
         """Get LLM provider for a specific model.
 
         Args:
@@ -95,11 +95,11 @@ class LLMOrchestrator:
         self,
         conversation_id: str,
         topic: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         system_prompt: str,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get LLM response for a conversation.
 
         Args:
@@ -151,8 +151,8 @@ class LLMOrchestrator:
         }
 
     async def analyze_response(
-        self, conversation_id: str, user_response: str, topic: str, model_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, conversation_id: str, user_response: str, topic: str, model_id: str | None = None
+    ) -> dict[str, Any]:
         """Analyze a user response for insights.
 
         Args:
@@ -170,7 +170,7 @@ class LLMOrchestrator:
         analysis_prompt = self._create_analysis_prompt(topic)
 
         # Analyze response
-        analysis: Dict[str, Any] = await provider.analyze_text(
+        analysis: dict[str, Any] = await provider.analyze_text(
             text=user_response, analysis_prompt=analysis_prompt
         )
 
@@ -212,15 +212,15 @@ class LLMOrchestrator:
         await self.cache_service.save_conversation_memory(conversation_id, memory.to_dict())
 
     def _prepare_messages_with_context(
-        self, messages: List[Dict[str, str]], memory: ConversationMemory, system_prompt: str
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]], memory: ConversationMemory, system_prompt: str
+    ) -> list[dict[str, str]]:
         """Prepare messages with memory context."""
         context = memory.get_context()
         enhanced_prompt = system_prompt
         if context:
             enhanced_prompt = f"{system_prompt}\n\nConversation Context:\n{context}"
 
-        messages_with_context: List[Dict[str, str]] = memory.get_messages_for_llm()
+        messages_with_context: list[dict[str, str]] = memory.get_messages_for_llm()
         if messages_with_context:
             first_message = messages_with_context[0]
             if first_message.get("role") == "system":
@@ -283,7 +283,7 @@ class LLMOrchestrator:
 
         return prompts.get(topic, prompts["core_values"])
 
-    async def extract_insights(self, response: str, topic: str, provider: LLMProvider) -> List[str]:
+    async def extract_insights(self, response: str, topic: str, provider: LLMProvider) -> list[str]:
         """Extract key insights from a response.
 
         Args:

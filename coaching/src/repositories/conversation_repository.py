@@ -1,8 +1,8 @@
 """Repository for conversation data persistence."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, TypedDict, cast
+from datetime import UTC, datetime, timedelta
+from typing import Any, TypedDict, cast
 
 import structlog
 from boto3.dynamodb.conditions import Attr, ConditionBase, Key
@@ -18,7 +18,7 @@ logger = structlog.get_logger()
 # Type aliases for conversation repository
 ConversationContextDict = JSONDict
 LLMConfigDict = JSONDict
-MessageMetadataDict = Dict[str, str]
+MessageMetadataDict = dict[str, str]
 BusinessContextDict = JSONDict
 UserPreferencesDict = JSONDict
 ProgressMarkersDict = JSONDict
@@ -37,14 +37,14 @@ class ContextItemDict(TypedDict, total=False):
     """DynamoDB context item structure"""
 
     phase: str
-    identified_values: List[str]
-    key_insights: List[str]
+    identified_values: list[str]
+    key_insights: list[str]
     progress_markers: ProgressMarkersDict
-    categories_explored: List[str]
+    categories_explored: list[str]
     response_count: int
     deepening_count: int
-    tenant_id: Optional[str]
-    session_id: Optional[str]
+    tenant_id: str | None
+    session_id: str | None
     business_context: BusinessContextDict
     user_preferences: UserPreferencesDict
     language: str
@@ -58,14 +58,14 @@ class ConversationItemDict(TypedDict):
     user_id: str
     topic: str
     status: str
-    messages: List[MessageItemDict]
+    messages: list[MessageItemDict]
     context: ContextItemDict
     llm_config: LLMConfigDict
     created_at: str
     updated_at: str
-    completed_at: Optional[str]
-    paused_at: Optional[str]
-    ttl: Optional[int]
+    completed_at: str | None
+    paused_at: str | None
+    ttl: int | None
 
 
 class ConversationRepository:
@@ -75,7 +75,7 @@ class ConversationRepository:
         self,
         dynamodb_resource: DynamoDBServiceResource,
         table_name: str,
-        tenant_id: Optional[str] = None,
+        tenant_id: str | None = None,
     ):
         """Initialize conversation repository.
 
@@ -93,8 +93,8 @@ class ConversationRepository:
         user_id: str,
         topic: str,
         initial_message: str,
-        llm_config: Optional[LLMConfigDict] = None,
-        context: Optional[ConversationContextDict] = None,
+        llm_config: LLMConfigDict | None = None,
+        context: ConversationContextDict | None = None,
     ) -> Conversation:
         """Create a new conversation.
 
@@ -109,14 +109,14 @@ class ConversationRepository:
             Created conversation
         """
         conversation_id = str(uuid.uuid4())
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         # Create conversation context with multitenant data
         conversation_context = ConversationContext()
         if context:
             # Set multitenant context fields from provided context with proper casting
-            conversation_context.tenant_id = cast(Optional[str], context.get("tenant_id"))
-            conversation_context.session_id = cast(Optional[str], context.get("session_id"))
+            conversation_context.tenant_id = cast(str | None, context.get("tenant_id"))
+            conversation_context.session_id = cast(str | None, context.get("session_id"))
             conversation_context.business_context = cast(
                 BusinessContextDict, context.get("business_context", {})
             )
@@ -151,7 +151,7 @@ class ConversationRepository:
 
         return conversation
 
-    async def get(self, conversation_id: str) -> Optional[Conversation]:
+    async def get(self, conversation_id: str) -> Conversation | None:
         """Get a conversation by ID.
 
         Args:
@@ -186,7 +186,7 @@ class ConversationRepository:
         Args:
             conversation: Conversation to update
         """
-        conversation.updated_at = datetime.now(timezone.utc)
+        conversation.updated_at = datetime.now(UTC)
 
         # Convert to DynamoDB item
         item = self._conversation_to_item(conversation)
@@ -201,10 +201,10 @@ class ConversationRepository:
         conversation_id: str,
         role: str,
         content: str,
-        metadata: Optional[Dict[str, str]] = None,
-        tokens: Optional[Dict[str, int]] = None,
-        cost: Optional[float] = None,
-        model_id: Optional[str] = None,
+        metadata: dict[str, str] | None = None,
+        tokens: dict[str, int] | None = None,
+        cost: float | None = None,
+        model_id: str | None = None,
     ) -> None:
         """Add a message to a conversation.
 
@@ -240,10 +240,10 @@ class ConversationRepository:
         self,
         user_id: str,
         limit: int = 20,
-        status: Optional[str] = None,
-        tenant_id: Optional[str] = None,
-        topic: Optional[str] = None,
-    ) -> List[Conversation]:
+        status: str | None = None,
+        tenant_id: str | None = None,
+        topic: str | None = None,
+    ) -> list[Conversation]:
         """List conversations for a user.
 
         Args:
@@ -266,7 +266,7 @@ class ConversationRepository:
             }
 
             # Build filter expressions
-            filter_expressions: List[ConditionBase] = []
+            filter_expressions: list[ConditionBase] = []
 
             if status:
                 filter_expressions.append(Attr("status").eq(status))
@@ -290,8 +290,8 @@ class ConversationRepository:
 
             response = self.table.query(**kwargs)
 
-            conversations: List[Conversation] = []
-            items = cast(List[ConversationItemDict], response["Items"])
+            conversations: list[Conversation] = []
+            items = cast(list[ConversationItemDict], response["Items"])
             for item in items:
                 conv = self._item_to_conversation(item)
                 if conv:
@@ -313,7 +313,7 @@ class ConversationRepository:
 
         if conversation:
             conversation.status = ConversationStatus.ABANDONED
-            conversation.updated_at = datetime.now(timezone.utc)
+            conversation.updated_at = datetime.now(UTC)
             await self.update(conversation)
 
     def _conversation_to_item(self, conversation: Conversation) -> ConversationItemDict:
@@ -364,7 +364,7 @@ class ConversationRepository:
             "ttl": conversation.ttl,
         }
 
-    def _item_to_conversation(self, item: ConversationItemDict) -> Optional[Conversation]:
+    def _item_to_conversation(self, item: ConversationItemDict) -> Conversation | None:
         """Convert DynamoDB item to conversation.
 
         Args:
@@ -375,7 +375,7 @@ class ConversationRepository:
         """
         try:
             # Parse messages
-            messages: List[Message] = []
+            messages: list[Message] = []
             message_list = item.get("messages", [])
             for msg_data in message_list:
                 messages.append(

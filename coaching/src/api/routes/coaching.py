@@ -1,6 +1,5 @@
 """AI coaching API routes for interactive coaching sessions."""
 
-from typing import Optional
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -28,7 +27,7 @@ class OnboardingCoachingResponse(BaseModel):
 
     reply: str
     completed: bool = False
-    value: Optional[str] = None
+    value: str | None = None
 
 
 class ConversationInitiateRequest(BaseModel):

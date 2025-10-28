@@ -2,8 +2,8 @@
 
 import json
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Any, Dict, Generic, List, Optional, TypeVar, cast
+from datetime import UTC, datetime
+from typing import Any, Generic, TypeVar, cast
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
@@ -43,18 +43,18 @@ class BaseRepository(ABC, Generic[T]):
         self.table_name = table_name
 
     @abstractmethod
-    def _item_to_model(self, item: Dict[str, Any]) -> T:
+    def _item_to_model(self, item: dict[str, Any]) -> T:
         """Convert DynamoDB item to domain model."""
         pass
 
     @abstractmethod
-    def _model_to_item(self, model: T) -> Dict[str, Any]:
+    def _model_to_item(self, model: T) -> dict[str, Any]:
         """Convert domain model to DynamoDB item."""
         pass
 
     def _ensure_tenant_isolation(
-        self, context: RequestContext, item: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, context: RequestContext, item: dict[str, Any]
+    ) -> dict[str, Any]:
         """Ensure tenant isolation by adding tenant_id filter."""
         if "tenant_id" in item and item["tenant_id"] != context.tenant_id:
             raise PermissionError("Access denied: tenant mismatch")
@@ -64,11 +64,11 @@ class BaseRepository(ABC, Generic[T]):
 class TenantRepository(BaseRepository[Tenant]):
     """Repository for tenant data management."""
 
-    def _item_to_model(self, item: Dict[str, Any]) -> Tenant:
+    def _item_to_model(self, item: dict[str, Any]) -> Tenant:
         """Convert DynamoDB item to Tenant model."""
         return Tenant(**item)
 
-    def _model_to_item(self, model: Tenant) -> Dict[str, Any]:
+    def _model_to_item(self, model: Tenant) -> dict[str, Any]:
         """Convert Tenant model to DynamoDB item."""
         return model.model_dump()
 
@@ -85,7 +85,7 @@ class TenantRepository(BaseRepository[Tenant]):
                 raise ValueError(f"Tenant with ID {tenant.tenant_id} already exists")
             raise
 
-    def get_by_id(self, tenant_id: str) -> Optional[Tenant]:
+    def get_by_id(self, tenant_id: str) -> Tenant | None:
         """Get tenant by ID."""
         try:
             response = self.table.get_item(Key={"tenant_id": tenant_id})
@@ -96,7 +96,7 @@ class TenantRepository(BaseRepository[Tenant]):
             logger.error("Failed to get tenant", tenant_id=tenant_id, error=str(e))
             raise
 
-    def get_by_domain(self, domain: str) -> Optional[Tenant]:
+    def get_by_domain(self, domain: str) -> Tenant | None:
         """Get tenant by domain name."""
         try:
             # Assuming GSI on domain
@@ -119,7 +119,7 @@ class TenantRepository(BaseRepository[Tenant]):
                 ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={
                     ":status": status,
-                    ":updated_at": datetime.now(timezone.utc).isoformat(),
+                    ":updated_at": datetime.now(UTC).isoformat(),
                     ":updated_by": updated_by,
                 },
                 ReturnValues="UPDATED_NEW",
@@ -133,11 +133,11 @@ class TenantRepository(BaseRepository[Tenant]):
 class UserRepository(BaseRepository[User]):
     """Repository for user data management with tenant isolation."""
 
-    def _item_to_model(self, item: Dict[str, Any]) -> User:
+    def _item_to_model(self, item: dict[str, Any]) -> User:
         """Convert DynamoDB item to User model."""
         return User(**item)
 
-    def _model_to_item(self, model: User) -> Dict[str, Any]:
+    def _model_to_item(self, model: User) -> dict[str, Any]:
         """Convert User model to DynamoDB item."""
         return model.model_dump()
 
@@ -155,7 +155,7 @@ class UserRepository(BaseRepository[User]):
                 raise ValueError(f"User with ID {user.user_id} already exists")
             raise
 
-    def get_by_id(self, context: RequestContext, user_id: str) -> Optional[User]:
+    def get_by_id(self, context: RequestContext, user_id: str) -> User | None:
         """Get user by ID with tenant isolation."""
         try:
             response = self.table.get_item(Key={"user_id": user_id})
@@ -167,7 +167,7 @@ class UserRepository(BaseRepository[User]):
             logger.error("Failed to get user", user_id=user_id, error=str(e))
             raise
 
-    def get_by_email(self, context: RequestContext, email: str) -> Optional[User]:
+    def get_by_email(self, context: RequestContext, email: str) -> User | None:
         """Get user by email within tenant."""
         try:
             # Assuming GSI on tenant_id-email
@@ -183,7 +183,7 @@ class UserRepository(BaseRepository[User]):
             logger.error("Failed to get user by email", email=email, error=str(e))
             raise
 
-    def list_by_tenant(self, context: RequestContext, limit: int = 50) -> List[User]:
+    def list_by_tenant(self, context: RequestContext, limit: int = 50) -> list[User]:
         """List all users in a tenant."""
         try:
             response = self.table.query(
@@ -206,7 +206,7 @@ class UserRepository(BaseRepository[User]):
                 ExpressionAttributeNames={"#role": "role"},
                 ExpressionAttributeValues={
                     ":role": new_role,
-                    ":updated_at": datetime.now(timezone.utc).isoformat(),
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
                 ReturnValues="UPDATED_NEW",
             )
@@ -219,7 +219,7 @@ class UserRepository(BaseRepository[User]):
 class BusinessDataRepository(BaseRepository[BusinessData]):
     """Repository for shared business data management."""
 
-    context: Optional[RequestContext]
+    context: RequestContext | None
 
     def __init__(self, context_or_table: Any = None, region: str = "us-east-1"):
         """Initialize repository with context or table name."""
@@ -234,15 +234,15 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
             super().__init__(table_name, region)
             self.context = None
 
-    def _item_to_model(self, item: Dict[str, Any]) -> BusinessData:
+    def _item_to_model(self, item: dict[str, Any]) -> BusinessData:
         """Convert DynamoDB item to BusinessData model."""
         return BusinessData(**item)
 
-    def _model_to_item(self, model: BusinessData) -> Dict[str, Any]:
+    def _model_to_item(self, model: BusinessData) -> dict[str, Any]:
         """Convert BusinessData model to DynamoDB item."""
         return model.model_dump()
 
-    def get_by_tenant(self, context: Optional[RequestContext] = None) -> Optional[BusinessData]:
+    def get_by_tenant(self, context: RequestContext | None = None) -> BusinessData | None:
         """Get business data for a tenant."""
         # Use stored context if not provided
         if context is None:
@@ -269,7 +269,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
         """Create or update business data for a tenant."""
         business_data.tenant_id = context.tenant_id
         business_data.business_id = context.tenant_id  # Use tenant_id as business_id
-        business_data.updated_at = datetime.now(timezone.utc)
+        business_data.updated_at = datetime.now(UTC)
 
         item = self._model_to_item(business_data)
 
@@ -297,7 +297,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
                 "field": field,
                 "value": value,
                 "updated_by": updated_by,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "source": "coaching_session",  # Can be extended for different sources
             }
 
@@ -308,7 +308,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
                 ExpressionAttributeNames={"#field": field},
                 ExpressionAttributeValues={
                     ":value": value,
-                    ":updated_at": datetime.now(timezone.utc).isoformat(),
+                    ":updated_at": datetime.now(UTC).isoformat(),
                     ":updated_by": updated_by,
                     ":empty_list": [],
                     ":change": [change_entry],
@@ -325,7 +325,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
             )
             return False
 
-    def update_business_data(self, tenant_id: str, update_data: Dict[str, Any]) -> bool:
+    def update_business_data(self, tenant_id: str, update_data: dict[str, Any]) -> bool:
         """Update business data (simplified interface for coaching service)."""
         try:
             # Build update expression
@@ -348,7 +348,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
             # Add updated_at timestamp
             update_expr_parts.append("#updated_at = :updated_at")
             expr_attr_names["#updated_at"] = "updated_at"
-            expr_attr_values[":updated_at"] = datetime.now(timezone.utc).isoformat()
+            expr_attr_values[":updated_at"] = datetime.now(UTC).isoformat()
 
             update_expr = "SET " + ", ".join(update_expr_parts)
 
@@ -369,7 +369,7 @@ class BusinessDataRepository(BaseRepository[BusinessData]):
 class CoachingSessionRepository(BaseRepository[CoachingSession]):
     """Repository for coaching session management."""
 
-    context: Optional[RequestContext]
+    context: RequestContext | None
 
     def __init__(self, context_or_table: Any = None, region: str = "us-east-1"):
         """Initialize repository with context or table name."""
@@ -384,15 +384,15 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             super().__init__(table_name, region)
             self.context = None
 
-    def _item_to_model(self, item: Dict[str, Any]) -> CoachingSession:
+    def _item_to_model(self, item: dict[str, Any]) -> CoachingSession:
         """Convert DynamoDB item to CoachingSession model."""
         return CoachingSession(**item)
 
-    def _model_to_item(self, model: CoachingSession) -> Dict[str, Any]:
+    def _model_to_item(self, model: CoachingSession) -> dict[str, Any]:
         """Convert CoachingSession model to DynamoDB item."""
         return model.model_dump()
 
-    def create(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, session_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new coaching session (simplified interface)."""
         try:
             # If initialized with context, use it to ensure tenant isolation
@@ -426,7 +426,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
                 raise ValueError(f"Session with ID {session.session_id} already exists")
             raise
 
-    def get_by_id(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_by_id(self, session_id: str) -> dict[str, Any] | None:
         """Get coaching session by ID (simplified interface)."""
         try:
             response = self.table.get_item(Key={"session_id": session_id})
@@ -441,7 +441,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             logger.error("Failed to get coaching session", session_id=session_id, error=str(e))
             return None
 
-    def get_by_id_full(self, context: RequestContext, session_id: str) -> Optional[CoachingSession]:
+    def get_by_id_full(self, context: RequestContext, session_id: str) -> CoachingSession | None:
         """Get coaching session by ID (full interface)."""
         try:
             response = self.table.get_item(Key={"session_id": session_id})
@@ -459,7 +459,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
 
     def get_active_session_by_topic(
         self, context: RequestContext, topic: CoachingTopic
-    ) -> Optional[CoachingSession]:
+    ) -> CoachingSession | None:
         """Get active coaching session for a user and topic."""
         try:
             # Query by user and topic, filter by status = 'active'
@@ -479,8 +479,8 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             raise
 
     def list_user_sessions(
-        self, context: RequestContext, user_id: Optional[str] = None, limit: int = 50
-    ) -> List[CoachingSession]:
+        self, context: RequestContext, user_id: str | None = None, limit: int = 50
+    ) -> list[CoachingSession]:
         """List coaching sessions for a user."""
         target_user_id = user_id or context.user_id
 
@@ -501,7 +501,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             raise
 
     def complete_session(
-        self, context: RequestContext, session_id: str, outcomes: Dict[str, Any]
+        self, context: RequestContext, session_id: str, outcomes: dict[str, Any]
     ) -> bool:
         """Complete a coaching session and store outcomes."""
         try:
@@ -514,8 +514,8 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
                 ExpressionAttributeValues={
                     ":status": "completed",
                     ":outcomes": outcomes,
-                    ":completed_at": datetime.now(timezone.utc).isoformat(),
-                    ":updated_at": datetime.now(timezone.utc).isoformat(),
+                    ":completed_at": datetime.now(UTC).isoformat(),
+                    ":updated_at": datetime.now(UTC).isoformat(),
                 },
                 ReturnValues="UPDATED_NEW",
             )
@@ -527,7 +527,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             logger.error("Failed to complete session", session_id=session_id, error=str(e))
             return False
 
-    def update(self, session_id: str, update_data: Dict[str, Any]) -> bool:
+    def update(self, session_id: str, update_data: dict[str, Any]) -> bool:
         """Update a coaching session (simplified interface)."""
         try:
             # Build update expression
@@ -540,10 +540,10 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
 
             # Add updated_at timestamp
             update_expr_parts.append("#updated_at = :updated_at")
-            expr_attr_values[":updated_at"] = datetime.now(timezone.utc).isoformat()
+            expr_attr_values[":updated_at"] = datetime.now(UTC).isoformat()
 
             update_expr = "SET " + ", ".join(update_expr_parts)
-            expr_attr_names = {f"#{key}": key for key in update_data.keys()}
+            expr_attr_names = {f"#{key}": key for key in update_data}
             expr_attr_names["#updated_at"] = "updated_at"
 
             self.table.update_item(
@@ -559,7 +559,7 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             logger.error("Failed to update coaching session", session_id=session_id, error=str(e))
             return False
 
-    def get_by_user_and_topic(self, user_id: str, topic: str) -> List[Dict[str, Any]]:
+    def get_by_user_and_topic(self, user_id: str, topic: str) -> list[dict[str, Any]]:
         """Get sessions by user and topic (simplified interface)."""
         try:
             # If we have context, add tenant filter
@@ -589,28 +589,28 @@ class InvitationRepository(BaseRepository[Invitation]):
     def __init__(self, table_name: str, region: str = "us-east-1"):
         super().__init__(table_name, region)
 
-    def _item_to_model(self, item: Dict[str, Any]) -> Invitation:
+    def _item_to_model(self, item: dict[str, Any]) -> Invitation:
         """Convert DynamoDB item to Invitation model."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # Parse datetime fields with proper defaults
         expires_at = item.get("expires_at")
         if isinstance(expires_at, str):
             expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
         elif expires_at is None:
-            expires_at = datetime.now(timezone.utc)
+            expires_at = datetime.now(UTC)
 
         created_at = item.get("created_at")
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
         elif created_at is None:
-            created_at = datetime.now(timezone.utc)
+            created_at = datetime.now(UTC)
 
         updated_at = item.get("updated_at")
         if isinstance(updated_at, str):
             updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
         elif updated_at is None:
-            updated_at = datetime.now(timezone.utc)
+            updated_at = datetime.now(UTC)
 
         return Invitation(
             invitation_id=item.get("invitation_id") or f"inv_{item.get('token', 'unknown')[:12]}",
@@ -629,7 +629,7 @@ class InvitationRepository(BaseRepository[Invitation]):
             updated_at=updated_at,
         )
 
-    def _model_to_item(self, model: Invitation) -> Dict[str, Any]:
+    def _model_to_item(self, model: Invitation) -> dict[str, Any]:
         """Convert Invitation model to DynamoDB item."""
         return {
             "invitation_id": model.invitation_id,
@@ -648,7 +648,7 @@ class InvitationRepository(BaseRepository[Invitation]):
             "updated_at": model.updated_at,
         }
 
-    def get_by_token(self, token: str) -> Optional[Invitation]:
+    def get_by_token(self, token: str) -> Invitation | None:
         """Get invitation by token."""
         try:
             response = self.table.query(
@@ -668,16 +668,16 @@ class SubscriptionRepository(BaseRepository[Subscription]):
     def __init__(self, table_name: str, region: str = "us-east-1"):
         super().__init__(table_name, region)
 
-    def _item_to_model(self, item: Dict[str, Any]) -> Subscription:
+    def _item_to_model(self, item: dict[str, Any]) -> Subscription:
         """Convert DynamoDB item to Subscription model."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # Parse datetime fields with proper defaults
         def parse_datetime(dt_val: Any) -> datetime:
             if isinstance(dt_val, str):
                 return datetime.fromisoformat(dt_val.replace("Z", "+00:00"))
             elif dt_val is None:
-                return datetime.now(timezone.utc)
+                return datetime.now(UTC)
             return cast(datetime, dt_val)
 
         return Subscription(
@@ -700,7 +700,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             updated_at=parse_datetime(item.get("updated_at")),
         )
 
-    def _model_to_item(self, model: Subscription) -> Dict[str, Any]:
+    def _model_to_item(self, model: Subscription) -> dict[str, Any]:
         """Convert Subscription model to DynamoDB item."""
         return {
             "subscription_id": model.subscription_id,
@@ -721,7 +721,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
             "updated_at": model.updated_at,
         }
 
-    def get_by_tenant(self, tenant_id: str) -> Optional[Subscription]:
+    def get_by_tenant(self, tenant_id: str) -> Subscription | None:
         """Get subscription for a tenant."""
         try:
             response = self.table.query(
@@ -738,7 +738,7 @@ class SubscriptionRepository(BaseRepository[Subscription]):
 class UserPreferencesRepository(BaseRepository[UserPreferences]):
     """Repository for user preferences management."""
 
-    context: Optional[RequestContext]
+    context: RequestContext | None
 
     def __init__(self, context_or_table: Any = None, region: str = "us-east-1"):
         """Initialize repository with context or table name."""
@@ -753,16 +753,16 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
             super().__init__(table_name, region)
             self.context = None
 
-    def _item_to_model(self, item: Dict[str, Any]) -> UserPreferences:
+    def _item_to_model(self, item: dict[str, Any]) -> UserPreferences:
         """Convert DynamoDB item to UserPreferences model."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # Parse datetime fields with proper defaults
         def parse_datetime(dt_val: Any) -> datetime:
             if isinstance(dt_val, str):
                 return datetime.fromisoformat(dt_val.replace("Z", "+00:00"))
             elif dt_val is None:
-                return datetime.now(timezone.utc)
+                return datetime.now(UTC)
             return cast(datetime, dt_val)
 
         return UserPreferences(
@@ -790,7 +790,7 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
             updated_at=parse_datetime(item.get("updated_at")),
         )
 
-    def _model_to_item(self, model: UserPreferences) -> Dict[str, Any]:
+    def _model_to_item(self, model: UserPreferences) -> dict[str, Any]:
         """Convert UserPreferences model to DynamoDB item."""
         return {
             "user_id": model.user_id,
@@ -807,7 +807,7 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
             "updated_at": model.updated_at,
         }
 
-    def get_by_user(self, tenant_id: str, user_id: str) -> Optional[UserPreferences]:
+    def get_by_user(self, tenant_id: str, user_id: str) -> UserPreferences | None:
         """Get preferences for a user."""
         try:
             response = self.table.query(
@@ -821,7 +821,7 @@ class UserPreferencesRepository(BaseRepository[UserPreferences]):
             logger.error("Failed to get user preferences", user_id=user_id, error=str(e))
             return None
 
-    def get_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+    def get_by_user_id(self, user_id: str) -> dict[str, Any] | None:
         """Get preferences for a user by user_id only (simplified for coaching service)."""
         try:
             response = self.table.scan(FilterExpression=Attr("user_id").eq(user_id))
@@ -848,20 +848,20 @@ class SharedDataService:
         self.business_repo = BusinessDataRepository("purposepath-business-data-dev", region)
         self.session_repo = CoachingSessionRepository("purposepath-coaching-sessions-dev", region)
 
-    def get_tenant_info(self, tenant_id: str) -> Optional[Tenant]:
+    def get_tenant_info(self, tenant_id: str) -> Tenant | None:
         """Get tenant information."""
         return self.tenant_repo.get_by_id(tenant_id)
 
-    def get_user_profile(self, context: RequestContext, user_id: str) -> Optional[User]:
+    def get_user_profile(self, context: RequestContext, user_id: str) -> User | None:
         """Get user profile information."""
         return self.user_repo.get_by_id(context, user_id)
 
-    def get_business_data(self, context: RequestContext) -> Optional[BusinessData]:
+    def get_business_data(self, context: RequestContext) -> BusinessData | None:
         """Get shared business data for tenant."""
         return self.business_repo.get_by_tenant(context)
 
     def update_business_data_from_coaching(
-        self, context: RequestContext, topic: CoachingTopic, outcomes: Dict[str, Any]
+        self, context: RequestContext, topic: CoachingTopic, outcomes: dict[str, Any]
     ) -> bool:
         """Update business data based on coaching session outcomes."""
         logger.info("Updating business data from coaching", topic=topic, user_id=context.user_id)
@@ -885,7 +885,7 @@ class SharedDataService:
 
         return False
 
-    def check_subscription_limits(self, context: RequestContext, action: str) -> Dict[str, Any]:
+    def check_subscription_limits(self, context: RequestContext, action: str) -> dict[str, Any]:
         """Check subscription limits for various actions."""
         # This would integrate with subscription repository
         # For now, return a placeholder

@@ -1,8 +1,8 @@
 """Multitenant conversation service with shared business data integration."""
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, cast
+from datetime import UTC, datetime
+from typing import Any, cast
 
 import structlog
 
@@ -88,7 +88,7 @@ class MultitenantConversationService:
     async def initiate_conversation(
         self,
         topic: SharedCoachingTopic,
-        context_data: Optional[Dict[str, str]] = None,
+        context_data: dict[str, str] | None = None,
         language: str = "en",
     ) -> ConversationResponse:
         """Initiate a new coaching conversation.
@@ -109,7 +109,7 @@ class MultitenantConversationService:
         business_data = business_data_obj.model_dump() if business_data_obj else None
 
         # Get user preferences with proper typing
-        user_prefs: Optional[UserPreferencesDict] = self.user_prefs_repo.get_by_user_id(
+        user_prefs: UserPreferencesDict | None = self.user_prefs_repo.get_by_user_id(
             self.context.user_id
         )
 
@@ -127,14 +127,14 @@ class MultitenantConversationService:
             if coaching_prefs and isinstance(coaching_prefs, dict):
                 user_preferences_data = UserPreferences(
                     communication_style=cast(
-                        Optional[str], coaching_prefs.get("communication_style")
+                        str | None, coaching_prefs.get("communication_style")
                     ),
                     coaching_frequency=cast(
-                        Optional[str], coaching_prefs.get("coaching_frequency")
+                        str | None, coaching_prefs.get("coaching_frequency")
                     ),
-                    focus_areas=cast(Optional[List[str]], coaching_prefs.get("focus_areas", [])),
+                    focus_areas=cast(list[str] | None, coaching_prefs.get("focus_areas", [])),
                     notification_preferences=cast(
-                        Optional[Dict[str, bool]],
+                        dict[str, bool] | None,
                         coaching_prefs.get("notification_preferences", {}),
                     ),
                 )
@@ -151,7 +151,7 @@ class MultitenantConversationService:
         session_data: SessionData = {
             "conversation_id": None,
             "phase": "introduction",
-            "context": cast(Dict[str, Any], context_data) if context_data else {},
+            "context": cast(dict[str, Any], context_data) if context_data else {},
             "business_context": business_context_dict,
             "user_preferences": user_preferences_data.model_dump(),
         }
@@ -164,7 +164,7 @@ class MultitenantConversationService:
             "status": "active",
             "session_data": session_data,
             "outcomes": None,
-            "started_at": datetime.now(timezone.utc),
+            "started_at": datetime.now(UTC),
             "model_used": settings.bedrock_model_id,
             "total_tokens": 0,
             "session_cost": 0.0,
@@ -173,7 +173,7 @@ class MultitenantConversationService:
         session: CoachingSessionDict = self.coaching_session_repo.create(session_create_data)
 
         # Create typed conversation context for the conversation repository
-        conversation_context_dict: Dict[str, Any] = {
+        conversation_context_dict: dict[str, Any] = {
             "session_id": session["session_id"],
             "tenant_id": self.context.tenant_id,
             "business_context": (
@@ -206,7 +206,7 @@ class MultitenantConversationService:
         updated_session_data: SessionData = {
             "conversation_id": conversation.conversation_id,
             "phase": "introduction",
-            "context": cast(Dict[str, Any], updated_session_context.context),
+            "context": cast(dict[str, Any], updated_session_context.context),
             "business_context": updated_session_context.business_context.model_dump(),
             "user_preferences": updated_session_context.user_preferences.model_dump(),
         }
@@ -242,7 +242,7 @@ class MultitenantConversationService:
         self,
         conversation_id: str,
         user_message: str,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: dict[str, str] | None = None,
     ) -> MessageResponse:
         """Process a user message in a conversation with business data integration.
 
@@ -265,8 +265,8 @@ class MultitenantConversationService:
 
         # Get typed session data
         session_data_raw = await self.cache_service.get_session_data(conversation_id)
-        session_data: Optional[CacheSessionData] = None
-        session_id: Optional[str] = None
+        session_data: CacheSessionData | None = None
+        session_id: str | None = None
         if session_data_raw:
             business_ctx_raw = session_data_raw.get("business_context", {})
             business_ctx = (
@@ -311,8 +311,8 @@ class MultitenantConversationService:
         )
 
         # Extract token usage and calculate cost
-        tokens_dict: Optional[Dict[str, int]] = None
-        cost: Optional[float] = None
+        tokens_dict: dict[str, int] | None = None
+        cost: float | None = None
 
         if isinstance(ai_response_raw.token_usage, dict):
             tokens_dict = ai_response_raw.token_usage
@@ -386,8 +386,8 @@ class MultitenantConversationService:
     async def complete_conversation(
         self,
         conversation_id: str,
-        feedback: Optional[str] = None,
-        rating: Optional[int] = None,
+        feedback: str | None = None,
+        rating: int | None = None,
     ) -> CompletionSummary:
         """Mark a conversation as complete and process outcomes.
 
@@ -412,12 +412,12 @@ class MultitenantConversationService:
         await self.conversation_repo.update(conversation)
 
         # Get session data
-        session_data: Optional[Dict[str, Any]] = await self.cache_service.get_session_data(
+        session_data: dict[str, Any] | None = await self.cache_service.get_session_data(
             conversation_id
         )
-        session_id: Optional[str] = session_data.get("session_id") if session_data else None
+        session_id: str | None = session_data.get("session_id") if session_data else None
 
-        completion_time = datetime.now(timezone.utc)
+        completion_time = datetime.now(UTC)
 
         if session_id:
             # Complete the coaching session
@@ -428,7 +428,7 @@ class MultitenantConversationService:
             self.coaching_session_repo.update(session_id, completion_update)
 
             # Extract final outcomes if not already done
-            session_record: Optional[CoachingSessionDict] = self.coaching_session_repo.get_by_id(
+            session_record: CoachingSessionDict | None = self.coaching_session_repo.get_by_id(
                 session_id
             )
             if session_record and not session_record.get("outcomes"):
@@ -436,7 +436,7 @@ class MultitenantConversationService:
 
             # Get updated business data summary
             business_data_obj = self.business_data_repo.get_by_tenant()
-            business_data: Optional[Dict[str, Any]] = (
+            business_data: dict[str, Any] | None = (
                 business_data_obj.model_dump() if business_data_obj else None
             )
 
@@ -466,8 +466,8 @@ class MultitenantConversationService:
         self,
         page: int = 1,
         page_size: int = 20,
-        status: Optional[str] = None,
-        topic: Optional[SharedCoachingTopic] = None,
+        status: str | None = None,
+        topic: SharedCoachingTopic | None = None,
     ) -> ConversationListResponse:
         """List conversations for the current user with tenant isolation.
 
@@ -510,7 +510,7 @@ class MultitenantConversationService:
         if not business_data_obj:
             return BusinessDataSummary()
 
-        business_data: Dict[str, Any] = business_data_obj.model_dump()
+        business_data: dict[str, Any] = business_data_obj.model_dump()
         summary: BusinessDataSummary = {
             "core_values": business_data.get("core_values", []),
             "purpose": business_data.get("purpose"),
@@ -523,17 +523,17 @@ class MultitenantConversationService:
 
     async def _check_session_limits(self, topic: SharedCoachingTopic) -> None:
         """Check if user has reached session limits for the topic."""
-        topic_config: Dict[str, Any] = settings.coaching_topics.get(topic.value, {})
+        topic_config: dict[str, Any] = settings.coaching_topics.get(topic.value, {})
         max_sessions = int(topic_config.get("max_sessions_per_user", 0))
 
         if max_sessions > 0:
             # Count active/completed sessions for this user and topic
             # Repository now returns properly typed CoachingSessionDict
-            user_sessions: List[CoachingSessionDict] = (
+            user_sessions: list[CoachingSessionDict] = (
                 self.coaching_session_repo.get_by_user_and_topic(self.context.user_id, topic.value)
             )
 
-            active_sessions: List[CoachingSessionDict] = [
+            active_sessions: list[CoachingSessionDict] = [
                 s for s in user_sessions if s.get("status") in ["active", "completed"]
             ]
 
@@ -541,8 +541,8 @@ class MultitenantConversationService:
                 raise ValueError(f"Maximum {max_sessions} sessions allowed for {topic.value}")
 
     def _extract_business_context(
-        self, business_data: Optional[Dict[str, Any]], topic: SharedCoachingTopic
-    ) -> Dict[str, Any]:
+        self, business_data: dict[str, Any] | None, topic: SharedCoachingTopic
+    ) -> dict[str, Any]:
         """Extract relevant business context for the coaching topic."""
         if not business_data:
             return {
@@ -550,10 +550,10 @@ class MultitenantConversationService:
                 "tenant_id": self.context.tenant_id,
             }
 
-        topic_config: Dict[str, Any] = settings.coaching_topics.get(topic.value, {})
-        business_field: Optional[str] = topic_config.get("business_data_field")
+        topic_config: dict[str, Any] = settings.coaching_topics.get(topic.value, {})
+        business_field: str | None = topic_config.get("business_data_field")
 
-        business_context: Dict[str, Any] = {
+        business_context: dict[str, Any] = {
             "has_existing_data": business_field and business_data.get(business_field) is not None,
             "tenant_id": self.context.tenant_id,
         }
@@ -572,7 +572,7 @@ class MultitenantConversationService:
         self,
         session_id: str,
         conversation: Conversation,
-        ai_response: Optional[Dict[str, Any]] = None,
+        ai_response: dict[str, Any] | None = None,
     ) -> None:
         """Extract outcomes from conversation and update business data."""
         try:
@@ -604,12 +604,12 @@ class MultitenantConversationService:
             )  # Exception string boundary
 
     async def _update_business_data_from_outcomes(
-        self, outcomes: Dict[str, Any], topic: str
+        self, outcomes: dict[str, Any], topic: str
     ) -> None:
         """Update shared business data based on session outcomes."""
         # Get topic configuration with proper typing
-        topic_config: Dict[str, Any] = settings.coaching_topics.get(topic, {})
-        business_field: Optional[str] = topic_config.get("business_data_field")
+        topic_config: dict[str, Any] = settings.coaching_topics.get(topic, {})
+        business_field: str | None = topic_config.get("business_data_field")
 
         if not business_field or not outcomes.get("extracted_data"):
             return
@@ -617,18 +617,18 @@ class MultitenantConversationService:
         try:
             # Get current business data
             current_data_obj = self.business_data_repo.get_by_tenant()
-            current_data: Dict[str, Any] = current_data_obj.model_dump() if current_data_obj else {}
+            current_data: dict[str, Any] = current_data_obj.model_dump() if current_data_obj else {}
 
             # Update the specific field
-            update_data: Dict[str, Any] = {
+            update_data: dict[str, Any] = {
                 business_field: outcomes["extracted_data"],
                 "last_updated_by": self.context.user_id,
                 "version": str(float(current_data.get("version", "1.0")) + 0.1),
             }
 
             # Add to change history
-            change_entry: Dict[str, Any] = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+            change_entry: dict[str, Any] = {
+                "timestamp": datetime.now(UTC).isoformat(),
                 "user_id": self.context.user_id,
                 "field": business_field,
                 "previous_value": current_data.get(business_field),
@@ -637,7 +637,7 @@ class MultitenantConversationService:
                 "confidence": outcomes.get("confidence", 0),
             }
 
-            change_history: List[Dict[str, Any]] = current_data.get("change_history", [])
+            change_history: list[dict[str, Any]] = current_data.get("change_history", [])
             change_history.append(change_entry)
             update_data["change_history"] = change_history
 
@@ -656,17 +656,17 @@ class MultitenantConversationService:
             )  # Exception string boundary
 
     def _format_business_data_summary(
-        self, business_data: Optional[Dict[str, Any]], topic: SharedCoachingTopic
-    ) -> Dict[str, Any]:
+        self, business_data: dict[str, Any] | None, topic: SharedCoachingTopic
+    ) -> dict[str, Any]:
         """Format business data summary for response."""
         if not business_data:
             return {"message": "No business data available"}
 
         # Get topic configuration with proper typing
-        topic_config: Dict[str, Any] = settings.coaching_topics.get(topic.value, {})
-        business_field: Optional[str] = topic_config.get("business_data_field")
+        topic_config: dict[str, Any] = settings.coaching_topics.get(topic.value, {})
+        business_field: str | None = topic_config.get("business_data_field")
 
-        summary: Dict[str, Any] = {
+        summary: dict[str, Any] = {
             "field_updated": business_field,
             "current_value": business_data.get(business_field) if business_field else None,
             "last_updated": business_data.get("updated_at"),

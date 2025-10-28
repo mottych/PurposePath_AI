@@ -6,7 +6,7 @@ Defines the abstract base class and common types for all AI providers.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -27,13 +27,13 @@ class ProviderConfig(BaseModel):
     provider_type: ProviderType = Field(..., description="Type of provider")
     model_name: str = Field(..., description="Model identifier")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Response creativity")
-    max_tokens: Optional[int] = Field(default=None, gt=0, description="Max response length")
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Nucleus sampling")
+    max_tokens: int | None = Field(default=None, gt=0, description="Max response length")
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0, description="Nucleus sampling")
 
     # Provider-specific configurations
-    region_name: Optional[str] = Field(default=None, description="AWS region for Bedrock")
-    api_key: Optional[str] = Field(default=None, description="Direct API key")
-    base_url: Optional[str] = Field(default=None, description="Custom API endpoint")
+    region_name: str | None = Field(default=None, description="AWS region for Bedrock")
+    api_key: str | None = Field(default=None, description="Direct API key")
+    base_url: str | None = Field(default=None, description="Custom API endpoint")
 
     # Advanced settings
     streaming: bool = Field(default=False, description="Enable streaming responses")
@@ -52,7 +52,7 @@ class BaseProvider(ABC):
     def __init__(self, config: ProviderConfig):
         """Initialize provider with configuration."""
         self.config = config
-        self._client: Optional[BaseChatModel] = None
+        self._client: BaseChatModel | None = None
 
     @property
     @abstractmethod
@@ -62,7 +62,7 @@ class BaseProvider(ABC):
 
     @property
     @abstractmethod
-    def supported_models(self) -> List[str]:
+    def supported_models(self) -> list[str]:
         """Get list of supported model names."""
         pass
 
@@ -77,12 +77,12 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    async def invoke(self, messages: List[BaseMessage]) -> str:
+    async def invoke(self, messages: list[BaseMessage]) -> str:
         """Invoke the model with messages and return response."""
         pass
 
     @abstractmethod
-    async def stream(self, messages: List[BaseMessage]) -> Any:
+    async def stream(self, messages: list[BaseMessage]) -> Any:
         """Stream model responses."""
         pass
 
@@ -92,7 +92,7 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
         pass
 
@@ -114,7 +114,7 @@ class LLMProvider(BaseProvider):
 
     async def generate_response(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         system_prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 2000,
@@ -124,7 +124,7 @@ class LLMProvider(BaseProvider):
         # Convert to LangChain format and delegate to new interface
         from langchain_core.messages import HumanMessage, SystemMessage
 
-        lc_messages: List[BaseMessage] = []
+        lc_messages: list[BaseMessage] = []
         if system_prompt:
             lc_messages.append(SystemMessage(content=system_prompt))
 
@@ -133,7 +133,7 @@ class LLMProvider(BaseProvider):
 
         return await self.invoke(lc_messages)
 
-    async def analyze_text(self, text: str, analysis_prompt: str, **kwargs: Any) -> Dict[str, Any]:
+    async def analyze_text(self, text: str, analysis_prompt: str, **kwargs: Any) -> dict[str, Any]:
         """Analyze text using the LLM (legacy interface)."""
         from langchain_core.messages import HumanMessage
 
@@ -149,8 +149,8 @@ class LLMProvider(BaseProvider):
         return int(len(text.split()) * 1.3)  # Rough token estimation
 
     def format_messages(
-        self, messages: List[Dict[str, str]], system_prompt: str
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]], system_prompt: str
+    ) -> list[dict[str, str]]:
         """Format messages for the provider (legacy interface)."""
         formatted = []
 

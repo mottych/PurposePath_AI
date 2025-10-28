@@ -1,6 +1,6 @@
 """Main conversation service orchestrating the coaching flow."""
 
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from coaching.src.core.constants import CoachingTopic
@@ -48,7 +48,7 @@ class ConversationService:
         self,
         user_id: str,
         topic: CoachingTopic,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
         language: str = "en",
     ) -> ConversationResponse:
         """Initiate a new coaching conversation.
@@ -95,7 +95,7 @@ class ConversationService:
         self,
         conversation_id: str,
         user_message: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MessageResponse:
         """Process a user message in a conversation.
 
@@ -124,8 +124,8 @@ class ConversationService:
         )
 
         # Extract token usage and calculate cost
-        tokens_dict: Optional[dict[str, int]] = None
-        cost: Optional[float] = None
+        tokens_dict: dict[str, int] | None = None
+        cost: float | None = None
 
         if isinstance(ai_response.token_usage, dict):
             tokens_dict = ai_response.token_usage
@@ -169,7 +169,7 @@ class ConversationService:
             phase=conversation.context.phase,
         )
 
-    async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
+    async def get_conversation(self, conversation_id: str) -> Conversation | None:
         """Get a conversation by ID.
 
         Args:
@@ -180,7 +180,7 @@ class ConversationService:
         """
         return await self.conversation_repo.get(conversation_id)
 
-    async def pause_conversation(self, conversation_id: str, reason: Optional[str] = None) -> None:
+    async def pause_conversation(self, conversation_id: str, reason: str | None = None) -> None:
         """Pause a conversation.
 
         Args:
@@ -226,8 +226,8 @@ class ConversationService:
     async def complete_conversation(
         self,
         conversation_id: str,
-        feedback: Optional[str] = None,
-        rating: Optional[int] = None,
+        feedback: str | None = None,
+        rating: int | None = None,
     ) -> None:
         """Mark a conversation as complete.
 
@@ -256,7 +256,7 @@ class ConversationService:
         user_id: str,
         page: int = 1,
         page_size: int = 20,
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> ConversationListResponse:
         """List conversations for a user.
 

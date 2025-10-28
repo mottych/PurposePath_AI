@@ -1,6 +1,6 @@
 """Unit tests for conversation domain events."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from coaching.src.core.constants import CoachingTopic, ConversationPhase, MessageRole
@@ -214,7 +214,7 @@ class TestConversationResumed:
 
     def test_create_resumed_event(self) -> None:
         """Test creating conversation resumed event."""
-        paused_time = datetime(2025, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
+        paused_time = datetime(2025, 10, 9, 12, 0, 0, tzinfo=UTC)
 
         event = ConversationResumed(
             aggregate_id="conv-123",

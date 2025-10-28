@@ -1,7 +1,7 @@
 """LLM service for AI coaching interactions."""
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
@@ -27,10 +27,10 @@ class LLMService:
         provider_manager: ProviderManager,
         workflow_orchestrator: WorkflowOrchestrator,
         prompt_service: PromptService,
-        tenant_id: Optional[str] = None,
-        user_id: Optional[str] = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
         default_provider: str = "bedrock",
-        fallback_providers: Optional[List[str]] = None,
+        fallback_providers: list[str] | None = None,
     ):
         """Initialize LLM service.
 
@@ -69,8 +69,8 @@ class LLMService:
         conversation_id: str,
         topic: str,
         user_message: str,
-        conversation_history: List[Dict[str, str]],
-        business_context: Optional[Dict[str, Any]] = None,
+        conversation_history: list[dict[str, str]],
+        business_context: dict[str, Any] | None = None,
     ) -> LLMResponse:
         """Generate a coaching response with business context.
 
@@ -165,9 +165,9 @@ class LLMService:
 
     async def extract_session_outcomes(
         self,
-        conversation_history: List[Dict[str, str]],
+        conversation_history: list[dict[str, str]],
         topic: str,
-        ai_response: Optional[Dict[str, Any]] = None,
+        ai_response: dict[str, Any] | None = None,
     ) -> SessionOutcomes:
         """Extract actionable outcomes from a completed coaching session.
 
@@ -247,9 +247,9 @@ class LLMService:
         self,
         topic: str,
         user_input: str,
-        business_context: Optional[Dict[str, Any]] = None,
+        business_context: dict[str, Any] | None = None,
         analysis_type: str = "general",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a single-shot analysis without conversation context.
 
         Args:
@@ -317,7 +317,7 @@ class LLMService:
         except Exception as e:
             logger.error(f"Error generating single-shot analysis: {e}")
             return {
-                "analysis": f"Error: {str(e)}",
+                "analysis": f"Error: {e!s}",
                 "insights": [],
                 "recommendations": [],
                 "confidence_score": 0.0,
@@ -330,7 +330,7 @@ class LLMService:
         self,
         base_prompt: str,
         analysis_type: str,
-        business_context: Optional[Dict[str, Any]] = None,
+        business_context: dict[str, Any] | None = None,
     ) -> str:
         """Create system prompt for single-shot analysis.
 
@@ -414,20 +414,20 @@ class LLMService:
 
         return token_count * cost_per_token
 
-    async def get_service_health(self) -> Dict[str, Any]:
+    async def get_service_health(self) -> dict[str, Any]:
         """Get health status of the LLM service and providers.
 
         Returns:
             Health check results
         """
-        health: Dict[str, Any] = await self.adapter.health_check()
+        health: dict[str, Any] = await self.adapter.health_check()
         return health
 
-    async def get_provider_status(self) -> Dict[str, Any]:
+    async def get_provider_status(self) -> dict[str, Any]:
         """Get status of all available providers.
 
         Returns:
             Provider availability and status information
         """
-        status: Dict[str, Any] = await self.adapter.get_provider_status()
+        status: dict[str, Any] = await self.adapter.get_provider_status()
         return status

@@ -1,9 +1,9 @@
 """Shared multitenant data models for PurposePath."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -80,8 +80,8 @@ class Permission(str, Enum):
 class TimestampMixin(BaseModel):
     """Mixin for common timestamp fields."""
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class TenantScopedMixin(BaseModel):
@@ -100,14 +100,14 @@ class Tenant(TimestampMixin):
 
     tenant_id: str = Field(default_factory=lambda: f"tenant_{uuid.uuid4().hex[:12]}")
     name: str = Field(..., min_length=1, max_length=100, description="Organization name")
-    domain: Optional[str] = Field(None, max_length=100, description="Organization domain")
+    domain: str | None = Field(None, max_length=100, description="Organization domain")
     owner_user_id: str = Field(..., description="User ID of the tenant owner")
     status: TenantStatus = Field(default=TenantStatus.TRIAL)
-    settings: Dict[str, Any] = Field(default_factory=dict, description="Tenant-specific settings")
+    settings: dict[str, Any] = Field(default_factory=dict, description="Tenant-specific settings")
 
     # Metadata
-    industry: Optional[str] = Field(None, max_length=100)
-    company_size: Optional[str] = Field(None)
+    industry: str | None = Field(None, max_length=100)
+    company_size: str | None = Field(None)
     timezone: str = Field(default="UTC")
 
 
@@ -124,18 +124,18 @@ class User(TimestampMixin, TenantScopedMixin):
     status: UserStatus = Field(default=UserStatus.PENDING)
 
     # Authentication fields
-    password_hash: Optional[str] = Field(None, description="Hashed password")
+    password_hash: str | None = Field(None, description="Hashed password")
     email_verified: bool = Field(default=False)
-    last_login: Optional[datetime] = Field(None)
+    last_login: datetime | None = Field(None)
 
     # Profile information
-    avatar_url: Optional[str] = Field(None)
-    phone: Optional[str] = Field(None)
+    avatar_url: str | None = Field(None)
+    phone: str | None = Field(None)
     timezone: str = Field(default="UTC")
     language: str = Field(default="en")
 
     # User preferences and settings
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         default_factory=dict, description="User-specific preferences and settings"
     )
 
@@ -160,19 +160,19 @@ class Subscription(TimestampMixin, TenantScopedMixin):
     currency: str = Field(default="USD")
 
     # Subscription dates
-    trial_ends_at: Optional[datetime] = Field(None)
-    current_period_start: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    current_period_end: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    cancelled_at: Optional[datetime] = Field(None)
+    trial_ends_at: datetime | None = Field(None)
+    current_period_start: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    current_period_end: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    cancelled_at: datetime | None = Field(None)
 
     # Usage limits and tracking
-    limits: Dict[str, int] = Field(
+    limits: dict[str, int] = Field(
         default_factory=dict, description="Subscription limits (max_users, max_sessions, etc.)"
     )
-    usage: Dict[str, int] = Field(default_factory=dict, description="Current usage tracking")
+    usage: dict[str, int] = Field(default_factory=dict, description="Current usage tracking")
 
     # External billing system integration
-    external_subscription_id: Optional[str] = Field(None, description="ID from billing provider")
+    external_subscription_id: str | None = Field(None, description="ID from billing provider")
 
 
 class Invitation(TimestampMixin, TenantScopedMixin):
@@ -189,13 +189,13 @@ class Invitation(TimestampMixin, TenantScopedMixin):
     # Invitation details
     token: str = Field(default_factory=lambda: uuid.uuid4().hex)
     expires_at: datetime = Field(..., description="When invitation expires")
-    accepted_at: Optional[datetime] = Field(None)
-    message: Optional[str] = Field(None, max_length=500, description="Personal message")
+    accepted_at: datetime | None = Field(None)
+    message: str | None = Field(None, max_length=500, description="Personal message")
 
     # Tracking
-    email_sent_at: Optional[datetime] = Field(None)
+    email_sent_at: datetime | None = Field(None)
     reminders_sent: int = Field(default=0)
-    accepted_user_id: Optional[str] = Field(None, description="User ID when accepted")
+    accepted_user_id: str | None = Field(None, description="User ID when accepted")
 
 
 # Shared Business Data Models
@@ -209,28 +209,28 @@ class BusinessData(TimestampMixin, TenantScopedMixin):
     business_id: str = Field(..., description="Business data identifier (typically tenant_id)")
 
     # Core business elements (shared across tenant)
-    core_values: Optional[List[str]] = Field(None, description="Organization's core values")
-    purpose: Optional[str] = Field(None, description="Organization's purpose statement")
-    vision: Optional[str] = Field(None, description="Organization's vision statement")
-    goals: Optional[List[Dict[str, Any]]] = Field(
+    core_values: list[str] | None = Field(None, description="Organization's core values")
+    purpose: str | None = Field(None, description="Organization's purpose statement")
+    vision: str | None = Field(None, description="Organization's vision statement")
+    goals: list[dict[str, Any]] | None = Field(
         None, description="Organization's strategic goals"
     )
 
     # Additional business information
-    mission: Optional[str] = Field(None, description="Organization's mission statement")
-    culture_attributes: Optional[List[str]] = Field(None, description="Cultural attributes")
-    strategic_priorities: Optional[List[str]] = Field(
+    mission: str | None = Field(None, description="Organization's mission statement")
+    culture_attributes: list[str] | None = Field(None, description="Cultural attributes")
+    strategic_priorities: list[str] | None = Field(
         None, description="Current strategic priorities"
     )
 
     # Metadata
     version: str = Field(default="1.0", description="Version of business data")
     last_updated_by: str = Field(..., description="User who last updated the data")
-    approved_by: Optional[str] = Field(None, description="User who approved the data")
-    approval_date: Optional[datetime] = Field(None)
+    approved_by: str | None = Field(None, description="User who approved the data")
+    approval_date: datetime | None = Field(None)
 
     # Change tracking
-    change_history: List[Dict[str, Any]] = Field(
+    change_history: list[dict[str, Any]] = Field(
         default_factory=list, description="History of changes made to business data"
     )
 
@@ -246,24 +246,24 @@ class CoachingSession(TimestampMixin, TenantScopedMixin):
     status: str = Field(default="active", description="Session status")
 
     # Session data (private to user)
-    session_data: Dict[str, Any] = Field(
+    session_data: dict[str, Any] = Field(
         default_factory=dict, description="Private session conversation data"
     )
 
     # Outcomes (shared with tenant business data)
-    outcomes: Optional[Dict[str, Any]] = Field(
+    outcomes: dict[str, Any] | None = Field(
         None, description="Session outcomes to be shared with business data"
     )
 
     # Session metadata
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = Field(None)
-    paused_at: Optional[datetime] = Field(None)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = Field(None)
+    paused_at: datetime | None = Field(None)
 
     # AI/LLM metadata
-    model_used: Optional[str] = Field(None, description="AI model used for coaching")
-    total_tokens: Optional[int] = Field(None, description="Total tokens consumed")
-    session_cost: Optional[float] = Field(None, description="Cost of the session")
+    model_used: str | None = Field(None, description="AI model used for coaching")
+    total_tokens: int | None = Field(None, description="Total tokens consumed")
+    session_cost: float | None = Field(None, description="Cost of the session")
 
 
 class UserPreferences(TimestampMixin, TenantScopedMixin):
@@ -281,7 +281,7 @@ class UserPreferences(TimestampMixin, TenantScopedMixin):
     time_format: str = Field(default="24h")  # 12h, 24h
 
     # Notification preferences
-    email_notifications: Dict[str, bool] = Field(
+    email_notifications: dict[str, bool] = Field(
         default_factory=lambda: {
             "coaching_reminders": True,
             "team_updates": True,
@@ -291,7 +291,7 @@ class UserPreferences(TimestampMixin, TenantScopedMixin):
     )
 
     # Coaching preferences
-    coaching_preferences: Dict[str, Any] = Field(
+    coaching_preferences: dict[str, Any] = Field(
         default_factory=lambda: {
             "preferred_session_length": 30,  # minutes
             "reminder_frequency": "weekly",
@@ -300,7 +300,7 @@ class UserPreferences(TimestampMixin, TenantScopedMixin):
     )
 
     # Dashboard and view preferences
-    dashboard_layout: Dict[str, Any] = Field(
+    dashboard_layout: dict[str, Any] = Field(
         default_factory=dict, description="User's dashboard layout preferences"
     )
 
@@ -314,7 +314,7 @@ class RequestContext(BaseModel):
     user_id: str
     tenant_id: str
     role: UserRole
-    permissions: List[str] = []
+    permissions: list[str] = []
     subscription_tier: SubscriptionTier = SubscriptionTier.STARTER
     is_owner: bool = False
 
@@ -323,9 +323,9 @@ class TenantCreateRequest(BaseModel):
     """Request model for creating a new tenant."""
 
     name: str = Field(..., min_length=1, max_length=100)
-    domain: Optional[str] = Field(None, max_length=100)
-    industry: Optional[str] = Field(None, max_length=100)
-    company_size: Optional[str] = Field(None)
+    domain: str | None = Field(None, max_length=100)
+    industry: str | None = Field(None, max_length=100)
+    company_size: str | None = Field(None)
     timezone: str = Field(default="UTC")
 
 
@@ -334,16 +334,16 @@ class UserInviteRequest(BaseModel):
 
     email: str = Field(..., description="Email address of the user to invite")
     role: UserRole = Field(default=UserRole.MEMBER)
-    message: Optional[str] = Field(None, max_length=500)
+    message: str | None = Field(None, max_length=500)
 
 
 class BusinessDataUpdateRequest(BaseModel):
     """Request model for updating shared business data."""
 
-    core_values: Optional[List[str]] = None
-    purpose: Optional[str] = None
-    vision: Optional[str] = None
-    goals: Optional[List[Dict[str, Any]]] = None
-    mission: Optional[str] = None
-    culture_attributes: Optional[List[str]] = None
-    strategic_priorities: Optional[List[str]] = None
+    core_values: list[str] | None = None
+    purpose: str | None = None
+    vision: str | None = None
+    goals: list[dict[str, Any]] | None = None
+    mission: str | None = None
+    culture_attributes: list[str] | None = None
+    strategic_priorities: list[str] | None = None

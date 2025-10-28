@@ -4,7 +4,7 @@ This module defines the PromptTemplate entity for managing dynamic prompts
 with variables and versioning.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from coaching.src.core.constants import CoachingTopic, ConversationPhase
 from coaching.src.core.types import TemplateId
@@ -46,11 +46,11 @@ class PromptTemplate(BaseModel):
     version: int = Field(default=1, ge=1, description="Template version")
     is_active: bool = Field(default=True, description="Whether template is active")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp",
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Last update timestamp",
     )
 
@@ -115,7 +115,7 @@ class PromptTemplate(BaseModel):
             raise ValueError("Template is already inactive")
 
         object.__setattr__(self, "is_active", False)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def activate(self) -> None:
         """
@@ -127,7 +127,7 @@ class PromptTemplate(BaseModel):
             raise ValueError("Template is already active")
 
         object.__setattr__(self, "is_active", True)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def create_new_version(self, new_text: str, new_variables: list[str]) -> None:
         """
@@ -145,7 +145,7 @@ class PromptTemplate(BaseModel):
         object.__setattr__(self, "template_text", new_text.strip())
         object.__setattr__(self, "variables", new_variables)
         object.__setattr__(self, "version", self.version + 1)
-        object.__setattr__(self, "updated_at", datetime.now(timezone.utc))
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def get_variable_placeholders(self) -> list[str]:
         """

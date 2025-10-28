@@ -1,7 +1,7 @@
 """Prompt template models."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,8 +10,8 @@ class QuestionBank(BaseModel):
     """Bank of questions for a specific category."""
 
     category: str
-    questions: List[str]
-    follow_ups: Optional[List[str]] = None
+    questions: list[str]
+    follow_ups: list[str] | None = None
 
 
 class EvaluationCriteria(BaseModel):
@@ -38,18 +38,18 @@ class PromptTemplateYamlData(BaseModel):
     version: str = Field(description="Template version")
     system_prompt: str = Field(description="System prompt")
     initial_message: str = Field(description="Initial message")
-    question_bank: Optional[List[Dict[str, Any]]] = Field(
+    question_bank: list[dict[str, Any]] | None = Field(
         default=None, description="Question bank data"
     )
-    evaluation_criteria: Optional[Dict[str, Any]] = Field(
+    evaluation_criteria: dict[str, Any] | None = Field(
         default=None, description="Evaluation criteria"
     )
-    completion_criteria: Optional[Dict[str, Any]] = Field(
+    completion_criteria: dict[str, Any] | None = Field(
         default=None, description="Completion criteria"
     )
-    llm_config: Optional[Dict[str, Any]] = Field(default=None, description="LLM configuration")
-    value_indicators: Optional[Dict[str, Any]] = Field(default=None, description="Value indicators")
-    phase_prompts: Optional[Dict[str, Any]] = Field(default=None, description="Phase prompts")
+    llm_config: dict[str, Any] | None = Field(default=None, description="LLM configuration")
+    value_indicators: dict[str, Any] | None = Field(default=None, description="Value indicators")
+    phase_prompts: dict[str, Any] | None = Field(default=None, description="Phase prompts")
     min_conversation_time_minutes: int = 15
 
 
@@ -69,14 +69,14 @@ class PromptTemplate(BaseModel):
     version: str
     system_prompt: str
     initial_message: str
-    question_bank: List[QuestionBank]
+    question_bank: list[QuestionBank]
     evaluation_criteria: EvaluationCriteria
     completion_criteria: CompletionCriteria
     llm_config: LLMConfig
-    value_indicators: Optional[Dict[str, List[str]]] = None
-    phase_prompts: Optional[Dict[str, str]] = None
+    value_indicators: dict[str, list[str]] | None = None
+    phase_prompts: dict[str, str] | None = None
 
-    def to_yaml_dict(self) -> Dict[str, Any]:
+    def to_yaml_dict(self) -> dict[str, Any]:
         """Convert PromptTemplate to YAML-serializable dict."""
         return {
             "topic": self.topic,

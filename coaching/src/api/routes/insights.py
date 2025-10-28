@@ -1,6 +1,5 @@
 """Insights API routes for coaching recommendations and analytics."""
 
-from typing import List, Optional
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -24,9 +23,9 @@ router = APIRouter()
 async def generate_coaching_insights(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    priority: Optional[str] = Query(None, description="Filter by priority"),
-    status: Optional[str] = Query(None, description="Filter by status"),
+    category: str | None = Query(None, description="Filter by category"),
+    priority: str | None = Query(None, description="Filter by priority"),
+    status: str | None = Query(None, description="Filter by status"),
     context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
 ) -> PaginatedResponse[InsightResponse]:
@@ -69,11 +68,11 @@ async def generate_coaching_insights(
         raise HTTPException(status_code=500, detail="Failed to generate coaching insights")
 
 
-@router.get("/categories", response_model=ApiResponse[List[str]])
+@router.get("/categories", response_model=ApiResponse[list[str]])
 async def get_insight_categories(
     context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
-) -> ApiResponse[List[str]]:
+) -> ApiResponse[list[str]]:
     """Get available insight categories."""
     try:
         categories = await service.get_categories()
@@ -83,11 +82,11 @@ async def get_insight_categories(
         return ApiResponse(success=False, error="Failed to retrieve categories", data=[])
 
 
-@router.get("/priorities", response_model=ApiResponse[List[str]])
+@router.get("/priorities", response_model=ApiResponse[list[str]])
 async def get_insight_priorities(
     context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
-) -> ApiResponse[List[str]]:
+) -> ApiResponse[list[str]]:
     """Get available insight priorities."""
     try:
         priorities = await service.get_priorities()

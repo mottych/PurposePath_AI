@@ -4,7 +4,7 @@ OpenAI provider implementation for LangChain integration.
 Integration with OpenAI's GPT models through LangChain.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 from langchain_core.language_models import BaseChatModel
@@ -37,7 +37,7 @@ class OpenAIProvider(BaseProvider):
         return ProviderType.OPENAI
 
     @property
-    def supported_models(self) -> List[str]:
+    def supported_models(self) -> list[str]:
         """Get list of supported model names."""
         return self.SUPPORTED_MODELS.copy()
 
@@ -52,7 +52,7 @@ class OpenAIProvider(BaseProvider):
             from pydantic import SecretStr
 
             # Build kwargs only for non-None values
-            kwargs: Dict[str, Any] = {
+            kwargs: dict[str, Any] = {
                 "model": self.config.model_name or "gpt-3.5-turbo",  # Using alias
             }
 
@@ -85,7 +85,7 @@ class OpenAIProvider(BaseProvider):
             raise RuntimeError("Failed to initialize OpenAI client")
         return self._client
 
-    async def invoke(self, messages: List[BaseMessage]) -> str:
+    async def invoke(self, messages: list[BaseMessage]) -> str:
         """Invoke the model with messages and return response."""
         try:
             client = await self.get_client()
@@ -109,7 +109,7 @@ class OpenAIProvider(BaseProvider):
             logger.error("Error invoking OpenAI model", error=str(e), model=self.config.model_name)
             raise
 
-    async def stream(self, messages: List[BaseMessage]) -> Any:
+    async def stream(self, messages: list[BaseMessage]) -> Any:
         """Stream model responses."""
         try:
             client = await self.get_client()
@@ -135,7 +135,7 @@ class OpenAIProvider(BaseProvider):
             from pydantic import SecretStr
 
             # Build kwargs only for non-None values
-            kwargs: Dict[str, Any] = {"model": model_name}  # Using alias
+            kwargs: dict[str, Any] = {"model": model_name}  # Using alias
             if self.config.api_key:
                 kwargs["api_key"] = SecretStr(self.config.api_key)  # Using alias
             if self.config.base_url:
@@ -152,7 +152,7 @@ class OpenAIProvider(BaseProvider):
             logger.warning("Unable to validate OpenAI model", model=model_name, error=str(e))
             return False
 
-    async def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
         return {
             "model_id": self.config.model_name,

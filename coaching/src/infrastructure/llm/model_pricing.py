@@ -4,7 +4,7 @@ This module provides pricing information for different LLM models
 and utilities to calculate costs based on token usage.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 # Pricing per 1,000 tokens in USD (as of October 2024)
 # Source: https://aws.amazon.com/bedrock/pricing/
@@ -90,7 +90,7 @@ def get_available_models() -> list[str]:
     return list(MODEL_PRICING.keys())
 
 
-def get_model_info(model_id: str) -> Optional[dict[str, Any]]:
+def get_model_info(model_id: str) -> dict[str, Any] | None:
     """
     Get detailed information about a model.
 

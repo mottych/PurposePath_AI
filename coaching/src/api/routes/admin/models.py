@@ -274,7 +274,7 @@ async def update_model_configuration(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to update model configuration: {str(e)}",
+            error=f"Failed to update model configuration: {e!s}",
         )
 
 

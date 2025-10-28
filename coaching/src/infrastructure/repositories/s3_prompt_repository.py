@@ -161,7 +161,7 @@ class S3PromptRepository:
             # Sort by last modified (newest first)
             versions_with_dates = [
                 (v, obj["LastModified"])
-                for v, obj in zip(versions, response["Contents"])
+                for v, obj in zip(versions, response["Contents"], strict=False)
                 if obj["Key"].endswith(".yaml")
             ]
             versions_with_dates.sort(key=lambda x: x[1], reverse=True)

@@ -1,6 +1,6 @@
 """Unit tests for AuditLogService."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from coaching.src.services.audit_log_service import (
@@ -52,7 +52,7 @@ class TestAuditLogEntry:
     def test_create_audit_log_entry_with_all_fields(self):
         """Test creating audit log entry with all fields."""
         # Arrange
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         # Act
         entry = AuditLogEntry(

@@ -156,7 +156,7 @@ class TemplateTestingService:
                 )
                 return TemplateTestResult(
                     success=False,
-                    error=f"LLM execution failed: {str(llm_error)}",
+                    error=f"LLM execution failed: {llm_error!s}",
                     rendered_prompt=rendered_prompt,
                 )
 
@@ -169,7 +169,7 @@ class TemplateTestingService:
             )
             return TemplateTestResult(
                 success=False,
-                error=f"Test execution failed: {str(e)}",
+                error=f"Test execution failed: {e!s}",
             )
 
     def _validate_test_parameters(

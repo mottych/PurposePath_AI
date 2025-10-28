@@ -1,7 +1,7 @@
 """AWS Bedrock LLM provider implementation with LangChain integration."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 import boto3
 import structlog
@@ -80,7 +80,7 @@ class BedrockProvider(BaseProvider):
         return ProviderType.BEDROCK
 
     @property
-    def supported_models(self) -> List[str]:
+    def supported_models(self) -> list[str]:
         """Get list of supported model names."""
         return self.SUPPORTED_MODELS.copy()
 
@@ -116,7 +116,7 @@ class BedrockProvider(BaseProvider):
             raise RuntimeError("Failed to initialize Bedrock client")
         return self._client
 
-    async def invoke(self, messages: List[BaseMessage]) -> str:
+    async def invoke(self, messages: list[BaseMessage]) -> str:
         """Invoke the model with messages and return response."""
         try:
             client = await self.get_client()
@@ -140,7 +140,7 @@ class BedrockProvider(BaseProvider):
             logger.error("Error invoking Bedrock model", error=str(e), model=self.config.model_name)
             raise
 
-    async def stream(self, messages: List[BaseMessage]) -> Any:
+    async def stream(self, messages: list[BaseMessage]) -> Any:
         """Stream model responses."""
         try:
             client = await self.get_client()
@@ -173,7 +173,7 @@ class BedrockProvider(BaseProvider):
             logger.warning("Unable to validate Bedrock model", model=model_name, error=str(e))
             return False
 
-    async def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
         try:
             session = boto3.Session(region_name=self.config.region_name or "us-east-1")
@@ -283,7 +283,7 @@ class BedrockProviderLegacy(LLMProvider):
 
     async def generate_response(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         system_prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 2000,
@@ -360,7 +360,7 @@ class BedrockProviderLegacy(LLMProvider):
         text: str,
         analysis_prompt: str,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze text using Bedrock."""
         # Construct analysis message
         messages = [{"role": "user", "content": f"{analysis_prompt}\n\nText to analyze:\n{text}"}]
@@ -397,15 +397,15 @@ class BedrockProviderLegacy(LLMProvider):
 
     def _prepare_anthropic_request(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
         top_p: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Prepare request body for Anthropic models."""
         # Extract system message if present
         system_message = ""
-        conversation_messages: List[Dict[str, str]] = []
+        conversation_messages: list[dict[str, str]] = []
 
         for message in messages:
             if message["role"] == "system":
@@ -431,11 +431,11 @@ class BedrockProviderLegacy(LLMProvider):
 
     def _prepare_meta_request(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
         top_p: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Prepare request body for Meta Llama models."""
         # Combine messages into a single prompt
         prompt = ""

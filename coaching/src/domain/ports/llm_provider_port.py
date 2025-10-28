@@ -5,7 +5,8 @@ allowing different implementations (Bedrock, Anthropic, OpenAI, etc.)
 to be used interchangeably via the Strategy pattern.
 """
 
-from typing import AsyncIterator, Protocol
+from collections.abc import AsyncIterator
+from typing import Protocol
 
 from pydantic import BaseModel
 

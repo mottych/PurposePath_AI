@@ -1,6 +1,6 @@
 """Admin API routes for prompt template management."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -97,8 +97,8 @@ async def list_template_versions(
             version_info = TemplateVersionInfo(
                 version=version,
                 isLatest=(version == latest_version),
-                createdAt=datetime.now(timezone.utc),  # Placeholder
-                lastModified=datetime.now(timezone.utc),  # Placeholder
+                createdAt=datetime.now(UTC),  # Placeholder
+                lastModified=datetime.now(UTC),  # Placeholder
                 sizeBytes=0,  # Placeholder
             )
             version_infos.append(version_info)
@@ -198,8 +198,8 @@ async def get_template_content(
             model=template.model,
             parameters=template.parameters,
             metadata=template.metadata,
-            createdAt=datetime.now(timezone.utc),  # Placeholder
-            lastModified=datetime.now(timezone.utc),  # Placeholder
+            createdAt=datetime.now(UTC),  # Placeholder
+            lastModified=datetime.now(UTC),  # Placeholder
         )
 
         logger.info(
@@ -387,8 +387,8 @@ async def create_template_version(
             model=template.model,
             parameters=template.parameters,
             metadata=template.metadata,
-            createdAt=datetime.now(timezone.utc),
-            lastModified=datetime.now(timezone.utc),
+            createdAt=datetime.now(UTC),
+            lastModified=datetime.now(UTC),
         )
 
         logger.info(
@@ -413,7 +413,7 @@ async def create_template_version(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to create template version: {str(e)}",
+            error=f"Failed to create template version: {e!s}",
         )
 
 
@@ -570,8 +570,8 @@ async def update_template(
             model=updated_template.model,
             parameters=updated_template.parameters,
             metadata=updated_template.metadata,
-            createdAt=datetime.now(timezone.utc),
-            lastModified=datetime.now(timezone.utc),
+            createdAt=datetime.now(UTC),
+            lastModified=datetime.now(UTC),
         )
 
         logger.info(
@@ -597,7 +597,7 @@ async def update_template(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to update template: {str(e)}",
+            error=f"Failed to update template: {e!s}",
         )
 
 
@@ -703,7 +703,7 @@ async def set_latest_version(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to set latest version: {str(e)}",
+            error=f"Failed to set latest version: {e!s}",
         )
 
 
@@ -811,7 +811,7 @@ async def delete_template_version(
         return ApiResponse(
             success=False,
             data=None,
-            error=f"Failed to delete template version: {str(e)}",
+            error=f"Failed to delete template version: {e!s}",
         )
 
 

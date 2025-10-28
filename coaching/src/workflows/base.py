@@ -6,7 +6,7 @@ Defines the abstract base class and common types for all workflows.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
@@ -42,24 +42,24 @@ class WorkflowState(BaseModel):
 
     # User context
     user_id: str = Field(..., description="User identifier")
-    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    session_id: str | None = Field(default=None, description="Session identifier")
 
     # Workflow data
-    conversation_history: List[Dict[str, Any]] = Field(
+    conversation_history: list[dict[str, Any]] = Field(
         default_factory=list, description="Message history"
     )
     current_step: str = Field(default="start", description="Current workflow step")
-    step_data: Dict[str, Any] = Field(default_factory=dict, description="Step-specific data")
-    workflow_context: Dict[str, Any] = Field(default_factory=dict, description="Workflow context")
+    step_data: dict[str, Any] = Field(default_factory=dict, description="Step-specific data")
+    workflow_context: dict[str, Any] = Field(default_factory=dict, description="Workflow context")
 
     # Results and metadata
-    results: Dict[str, Any] = Field(default_factory=dict, description="Workflow results")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    results: dict[str, Any] = Field(default_factory=dict, description="Workflow results")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     # Timing
-    created_at: Optional[str] = Field(default=None, description="Creation timestamp")
-    updated_at: Optional[str] = Field(default=None, description="Last update timestamp")
-    completed_at: Optional[str] = Field(default=None, description="Completion timestamp")
+    created_at: str | None = Field(default=None, description="Creation timestamp")
+    updated_at: str | None = Field(default=None, description="Last update timestamp")
+    completed_at: str | None = Field(default=None, description="Completion timestamp")
 
     class Config:
         """Pydantic configuration."""
@@ -71,11 +71,11 @@ class WorkflowConfig(BaseModel):
     """Configuration for workflow execution."""
 
     workflow_type: WorkflowType = Field(..., description="Type of workflow to execute")
-    provider_id: Optional[str] = Field(default=None, description="AI provider to use")
+    provider_id: str | None = Field(default=None, description="AI provider to use")
 
     # LLM settings
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Response creativity")
-    max_tokens: Optional[int] = Field(default=None, gt=0, description="Max response length")
+    max_tokens: int | None = Field(default=None, gt=0, description="Max response length")
 
     # Workflow settings
     max_steps: int = Field(default=20, gt=0, description="Maximum workflow steps")
@@ -83,7 +83,7 @@ class WorkflowConfig(BaseModel):
     enable_checkpoints: bool = Field(default=True, description="Enable state checkpointing")
 
     # Custom configuration
-    custom_config: Dict[str, Any] = Field(
+    custom_config: dict[str, Any] = Field(
         default_factory=dict, description="Workflow-specific config"
     )
 
@@ -100,7 +100,7 @@ class BaseWorkflow(ABC):
         """Initialize workflow with configuration."""
         self.config = config
         # LangGraph prefers TypedDict but supports dict at runtime
-        self._graph: Optional[StateGraph[Dict[str, Any]]] = None  # type: ignore[type-var]
+        self._graph: StateGraph[dict[str, Any]] | None = None  # type: ignore[type-var]
         self._compiled_graph: Any = None
 
     @property
@@ -111,17 +111,17 @@ class BaseWorkflow(ABC):
 
     @property
     @abstractmethod
-    def workflow_steps(self) -> List[str]:
+    def workflow_steps(self) -> list[str]:
         """Get list of workflow step names."""
         pass
 
     @abstractmethod
-    async def build_graph(self) -> StateGraph[Dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
         """Build the LangGraph workflow graph."""
         pass
 
     @abstractmethod
-    async def create_initial_state(self, user_input: Dict[str, Any]) -> WorkflowState:
+    async def create_initial_state(self, user_input: dict[str, Any]) -> WorkflowState:
         """Create initial workflow state from user input."""
         pass
 
@@ -136,7 +136,7 @@ class BaseWorkflow(ABC):
             self._graph = await self.build_graph()
             self._compiled_graph = self._graph.compile()
 
-    async def execute(self, initial_input: Dict[str, Any]) -> WorkflowState:
+    async def execute(self, initial_input: dict[str, Any]) -> WorkflowState:
         """Execute the workflow with initial input."""
         await self.initialize()
 
@@ -150,7 +150,7 @@ class BaseWorkflow(ABC):
         # Convert back to WorkflowState
         return WorkflowState(**final_state)
 
-    async def resume(self, state: WorkflowState, user_input: Dict[str, Any]) -> WorkflowState:
+    async def resume(self, state: WorkflowState, user_input: dict[str, Any]) -> WorkflowState:
         """Resume workflow execution from a given state."""
         await self.initialize()
 
@@ -164,7 +164,7 @@ class BaseWorkflow(ABC):
 
         return WorkflowState(**final_state)
 
-    async def get_next_input_prompt(self, state: WorkflowState) -> Optional[str]:
+    async def get_next_input_prompt(self, state: WorkflowState) -> str | None:
         """Get the prompt for the next user input."""
         if state.status != WorkflowStatus.WAITING_INPUT:
             return None

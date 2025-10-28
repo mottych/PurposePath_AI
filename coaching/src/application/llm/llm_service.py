@@ -4,7 +4,7 @@ This service orchestrates LLM interactions, abstracting provider details
 and providing use-case specific methods for different LLM operations.
 """
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import (

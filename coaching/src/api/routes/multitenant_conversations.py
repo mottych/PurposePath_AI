@@ -1,6 +1,6 @@
 """Multitenant conversation API routes with business data integration."""
 
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from coaching.src.api.auth import get_current_context, require_permission
@@ -195,7 +195,7 @@ async def get_conversation(
 @router.post("/{conversation_id}/complete")
 async def complete_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: Optional[CompleteConversationRequest] = None,
+    request: CompleteConversationRequest | None = None,
     context: RequestContext = Depends(get_current_context),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationActionResponse:
@@ -233,7 +233,7 @@ async def complete_conversation(
 @router.post("/{conversation_id}/pause")
 async def pause_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: Optional[PauseConversationRequest] = None,
+    request: PauseConversationRequest | None = None,
     context: RequestContext = Depends(get_current_context),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationActionResponse:
@@ -277,8 +277,8 @@ async def delete_conversation(
 async def list_conversations(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    topic: Optional[str] = Query(None, description="Filter by topic"),
+    status: str | None = Query(None, description="Filter by status"),
+    topic: str | None = Query(None, description="Filter by topic"),
     context: RequestContext = Depends(get_current_context),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationListResponse:
@@ -314,9 +314,9 @@ async def list_conversations(
 async def list_all_tenant_conversations(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    topic: Optional[str] = Query(None, description="Filter by topic"),
-    user_id: Optional[str] = Query(None, description="Filter by user ID"),
+    status: str | None = Query(None, description="Filter by status"),
+    topic: str | None = Query(None, description="Filter by topic"),
+    user_id: str | None = Query(None, description="Filter by user ID"),
     context: RequestContext = Depends(require_permission(Permission.VIEW_ALL_SESSIONS)),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationListResponse:

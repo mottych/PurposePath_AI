@@ -5,7 +5,8 @@ port interface, supporting Claude and other Bedrock models.
 """
 
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse

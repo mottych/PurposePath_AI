@@ -6,7 +6,7 @@ Handles workflow lifecycle, state persistence, and coordination.
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -25,9 +25,9 @@ class WorkflowOrchestrator:
             provider_manager: Provider manager for AI integrations
             cache_service: Cache service for state persistence
         """
-        self._active_workflows: Dict[str, BaseWorkflow] = {}
-        self._workflow_states: Dict[str, WorkflowState] = {}
-        self._workflow_registry: Dict[WorkflowType, type] = {}
+        self._active_workflows: dict[str, BaseWorkflow] = {}
+        self._workflow_states: dict[str, WorkflowState] = {}
+        self._workflow_registry: dict[WorkflowType, type] = {}
         self.provider_manager = provider_manager
         self.cache_service = cache_service
 
@@ -49,9 +49,9 @@ class WorkflowOrchestrator:
         self,
         workflow_type: WorkflowType,
         user_id: str,
-        initial_input: Dict[str, Any],
-        config: Optional[WorkflowConfig] = None,
-        session_id: Optional[str] = None,
+        initial_input: dict[str, Any],
+        config: WorkflowConfig | None = None,
+        session_id: str | None = None,
     ) -> WorkflowState:
         """Start a new workflow execution.
 
@@ -119,7 +119,7 @@ class WorkflowOrchestrator:
     async def continue_workflow(
         self,
         workflow_id: str,
-        user_input: Dict[str, Any],
+        user_input: dict[str, Any],
     ) -> WorkflowState:
         """Continue an existing workflow with new user input.
 
@@ -178,7 +178,7 @@ class WorkflowOrchestrator:
             self._workflow_states[workflow_id] = current_state
             raise
 
-    async def get_workflow_state(self, workflow_id: str) -> Optional[WorkflowState]:
+    async def get_workflow_state(self, workflow_id: str) -> WorkflowState | None:
         """Get current state of a workflow.
 
         Args:
@@ -247,7 +247,7 @@ class WorkflowOrchestrator:
 
         return cleaned_count
 
-    def list_active_workflows(self, user_id: Optional[str] = None) -> List[str]:
+    def list_active_workflows(self, user_id: str | None = None) -> list[str]:
         """List active workflow IDs.
 
         Args:
@@ -265,7 +265,7 @@ class WorkflowOrchestrator:
             if state.user_id == user_id and workflow_id in self._active_workflows
         ]
 
-    def get_workflow_statistics(self) -> Dict[str, Any]:
+    def get_workflow_statistics(self) -> dict[str, Any]:
         """Get workflow execution statistics.
 
         Returns:

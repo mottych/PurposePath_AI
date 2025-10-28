@@ -1,6 +1,6 @@
 """Unit tests for Message value object."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from coaching.src.core.constants import MessageRole
@@ -26,7 +26,7 @@ class TestMessageCreation:
     def test_create_message_with_all_fields(self) -> None:
         """Test creating a message with all fields specified."""
         # Arrange
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         metadata = {"source": "web", "user_agent": "Mozilla"}
 
         # Act
@@ -57,13 +57,13 @@ class TestMessageCreation:
     def test_create_message_auto_generates_timestamp(self) -> None:
         """Test that timestamp is auto-generated if not provided."""
         # Arrange
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
 
         # Act
         message = Message(role=MessageRole.USER, content="Test message")
 
         # Assert
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
         assert before <= message.timestamp <= after
 
     def test_create_message_strips_whitespace_from_content(self) -> None:
@@ -95,7 +95,7 @@ class TestMessageValidation:
     def test_create_message_with_future_timestamp_raises_error(self) -> None:
         """Test that future timestamp raises ValidationError."""
         # Arrange
-        future = datetime.now(timezone.utc) + timedelta(hours=1)
+        future = datetime.now(UTC) + timedelta(hours=1)
 
         # Act & Assert
         with pytest.raises(ValidationError):
@@ -227,7 +227,7 @@ class TestMessageEquality:
     def test_messages_with_same_values_are_equal(self) -> None:
         """Test that messages with identical values are equal."""
         # Arrange
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         message1 = Message(
             role=MessageRole.USER,
             content="Test",

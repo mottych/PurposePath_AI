@@ -4,7 +4,7 @@ Anthropic provider implementation for LangChain integration.
 Direct integration with Anthropic's Claude API through LangChain.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 from langchain_anthropic import ChatAnthropic
@@ -35,7 +35,7 @@ class AnthropicProvider(BaseProvider):
         return ProviderType.ANTHROPIC
 
     @property
-    def supported_models(self) -> List[str]:
+    def supported_models(self) -> list[str]:
         """Get list of supported model names."""
         return self.SUPPORTED_MODELS.copy()
 
@@ -50,7 +50,7 @@ class AnthropicProvider(BaseProvider):
             from pydantic import SecretStr
 
             # Build kwargs only for non-None values
-            kwargs: Dict[str, Any] = {
+            kwargs: dict[str, Any] = {
                 "model_name": self.config.model_name or "claude-3-sonnet-20240229",
             }
 
@@ -83,7 +83,7 @@ class AnthropicProvider(BaseProvider):
             raise RuntimeError("Failed to initialize Anthropic client")
         return self._client
 
-    async def invoke(self, messages: List[BaseMessage]) -> str:
+    async def invoke(self, messages: list[BaseMessage]) -> str:
         """Invoke the model with messages and return response."""
         try:
             client = await self.get_client()
@@ -109,7 +109,7 @@ class AnthropicProvider(BaseProvider):
             )
             raise
 
-    async def stream(self, messages: List[BaseMessage]) -> Any:
+    async def stream(self, messages: list[BaseMessage]) -> Any:
         """Stream model responses."""
         try:
             client = await self.get_client()
@@ -135,7 +135,7 @@ class AnthropicProvider(BaseProvider):
             from pydantic import SecretStr
 
             # Build kwargs only for non-None values
-            kwargs: Dict[str, Any] = {"model_name": model_name}
+            kwargs: dict[str, Any] = {"model_name": model_name}
             if self.config.api_key:
                 kwargs["api_key"] = SecretStr(self.config.api_key)
             if self.config.base_url:
@@ -152,7 +152,7 @@ class AnthropicProvider(BaseProvider):
             logger.warning("Unable to validate Anthropic model", model=model_name, error=str(e))
             return False
 
-    async def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
         return {
             "model_id": self.config.model_name,

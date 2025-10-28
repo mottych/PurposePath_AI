@@ -4,7 +4,7 @@ This service orchestrates conversation-related use cases, coordinating
 domain entities, repositories, and infrastructure services.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -82,7 +82,7 @@ class ConversationApplicationService:
 
             # Create new conversation
             conv_id = ConversationId(
-                f"conv_{user_id}_{int(datetime.now(timezone.utc).timestamp())}"
+                f"conv_{user_id}_{int(datetime.now(UTC).timestamp())}"
             )
             conversation = Conversation(
                 conversation_id=conv_id,
