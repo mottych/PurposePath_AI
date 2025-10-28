@@ -4,7 +4,7 @@ This service encapsulates the business logic for calculating alignment scores
 between business context and various alignment dimensions.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 from coaching.src.domain.value_objects.alignment_score import (
     AlignmentScore,
@@ -29,14 +29,14 @@ class AlignmentCalculator:
     """
 
     # Weight factors for overall score calculation
-    COMPONENT_WEIGHTS = {
+    COMPONENT_WEIGHTS: ClassVar[dict[str, float]] = {
         "vision": 0.25,
         "strategy": 0.30,
         "operations": 0.25,
         "culture": 0.20,
     }
 
-    FOUNDATION_WEIGHTS = {
+    FOUNDATION_WEIGHTS: ClassVar[dict[str, float]] = {
         "purpose": 0.40,
         "values": 0.35,
         "mission": 0.25,

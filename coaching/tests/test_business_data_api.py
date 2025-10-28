@@ -113,11 +113,11 @@ class TestBusinessDataEndpoint:
         assert "Failed to retrieve" in data["error"]
 
     def test_business_data_response_schema_consistency(self, mock_context, auth_headers):
-        test_scenarios = [{}, {"total_users": 0}, {"nested": {"value": 1}}]
-        for scenario_data in test_scenarios:
+        scenarios = {"scenario1": {}, "scenario2": {"total_users": 0}, "scenario3": {"nested": {"value": 1}}}
+        for scenario_name, scenario_data in scenarios.items():
             mock_service = Mock()
             app.dependency_overrides[get_current_context] = lambda: mock_context
-            app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
+            app.dependency_overrides[get_multitenant_conversation_service] = lambda svc=mock_service: svc
             mock_service.get_business_data_summary.return_value = scenario_data
             response = client.get(
                 "/api/v1/multitenant/conversations/business-data",

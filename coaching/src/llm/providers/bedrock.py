@@ -1,7 +1,7 @@
 """AWS Bedrock LLM provider implementation with LangChain integration."""
 
 import json
-from typing import Any
+from typing import Any, ClassVar
 
 import boto3
 import structlog
@@ -44,7 +44,7 @@ class BedrockProvider(BaseProvider):
     """AWS Bedrock provider using LangChain integration."""
 
     # Supported Bedrock models
-    SUPPORTED_MODELS = [
+    SUPPORTED_MODELS: ClassVar[list[str]] = [
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-3-5-haiku-20241022-v1:0",

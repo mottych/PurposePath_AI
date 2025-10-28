@@ -4,7 +4,7 @@ Anthropic provider implementation for LangChain integration.
 Direct integration with Anthropic's Claude API through LangChain.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from langchain_anthropic import ChatAnthropic
@@ -20,7 +20,7 @@ class AnthropicProvider(BaseProvider):
     """Anthropic provider using LangChain integration."""
 
     # Supported Anthropic models
-    SUPPORTED_MODELS = [
+    SUPPORTED_MODELS: ClassVar[list[str]] = [
         "claude-3-5-sonnet-20241022",
         "claude-3-5-sonnet-20240620",
         "claude-3-5-haiku-20241022",

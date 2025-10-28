@@ -1,7 +1,7 @@
 """Template validation service for admin template operations."""
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from coaching.src.core.constants import CoachingTopic
@@ -31,7 +31,7 @@ class TemplateValidationService:
     PARAMETER_PATTERN = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 
     # Reserved parameters that must be present in certain templates
-    REQUIRED_PARAMETERS = {
+    REQUIRED_PARAMETERS: ClassVar[dict[CoachingTopic, list[str]]] = {
         CoachingTopic.CORE_VALUES: ["user_input", "context"],
         CoachingTopic.PURPOSE: ["core_values", "context"],
         CoachingTopic.VISION: ["purpose", "core_values"],

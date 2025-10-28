@@ -1,10 +1,10 @@
 """
-OpenAI provider implementation for LangChain integration.
+OpenAI provider implementation.
 
-Integration with OpenAI's GPT models through LangChain.
+Direct integration with OpenAI's GPT models through LangChain.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from langchain_core.language_models import BaseChatModel
@@ -20,7 +20,7 @@ class OpenAIProvider(BaseProvider):
     """OpenAI provider using LangChain integration."""
 
     # Supported OpenAI models
-    SUPPORTED_MODELS = [
+    SUPPORTED_MODELS: ClassVar[list[str]] = [
         "gpt-4o",
         "gpt-4o-mini",
         "gpt-4-turbo",

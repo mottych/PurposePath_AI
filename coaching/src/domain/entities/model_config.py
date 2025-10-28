@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ModelPricing(BaseModel):
@@ -31,6 +31,7 @@ class ModelConfig(BaseModel):
         metadata: Additional configuration data
     """
 
+
     model_id: str = Field(..., description="Unique model identifier")
     provider: str = Field(..., description="Model provider name")
     display_name: str = Field(..., description="Human-readable model name")
@@ -41,11 +42,9 @@ class ModelConfig(BaseModel):
     supports_streaming: bool = Field(default=False, description="Whether model supports streaming")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
-    class Config:
-        """Pydantic model configuration."""
-
-        frozen = False  # Allow updates
-        json_schema_extra = {
+    model_config = ConfigDict(
+        frozen=False,
+        json_schema_extra={
             "example": {
                 "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0",
                 "provider": "anthropic",
@@ -60,7 +59,8 @@ class ModelConfig(BaseModel):
                 "supports_streaming": True,
                 "metadata": {"description": "Latest Claude 3.5 Sonnet model"},
             }
-        }
+        },
+    )
 
 
 __all__ = ["ModelConfig", "ModelPricing"]

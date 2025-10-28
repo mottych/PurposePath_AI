@@ -3,6 +3,8 @@
 This service manages conversation phase transitions according to business rules.
 """
 
+from typing import ClassVar
+
 from coaching.src.core.constants import (
     ConversationPhase,
 )
@@ -18,13 +20,12 @@ class PhaseTransitionService:
 
     Business Rules:
         - Phases must progress in order (no backward transitions)
-        - Each phase has minimum requirements
         - Response counts must meet thresholds
         - Insights must be gathered before advancing
     """
 
     # Minimum response requirements per phase
-    MIN_RESPONSES = {
+    MIN_RESPONSES: ClassVar[dict[ConversationPhase, int]] = {
         ConversationPhase.INTRODUCTION: 1,
         ConversationPhase.EXPLORATION: 3,
         ConversationPhase.DEEPENING: 5,
@@ -34,7 +35,7 @@ class PhaseTransitionService:
     }
 
     # Minimum insight requirements per phase
-    MIN_INSIGHTS = {
+    MIN_INSIGHTS: ClassVar[dict[ConversationPhase, int]] = {
         ConversationPhase.INTRODUCTION: 0,
         ConversationPhase.EXPLORATION: 2,
         ConversationPhase.DEEPENING: 4,

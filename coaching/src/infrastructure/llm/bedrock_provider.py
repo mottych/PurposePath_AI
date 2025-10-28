@@ -6,7 +6,7 @@ port interface, supporting Claude and other Bedrock models.
 
 import json
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, ClassVar
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
@@ -29,7 +29,7 @@ class BedrockLLMProvider:
     """
 
     # Supported Bedrock model IDs
-    SUPPORTED_MODELS = [
+    SUPPORTED_MODELS: ClassVar[list[str]] = [
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",

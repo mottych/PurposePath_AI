@@ -391,11 +391,11 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         decision_factors = metrics.get("decision_factors", {})
 
         # Ask another question if conversation can continue
-        if not decision_factors.get("max_turns_reached", False):
-            if not decision_factors.get("sufficient_depth", False) or not decision_factors.get(
-                "meaningful_insights", False
-            ):
-                return "ask_question"
+        if not decision_factors.get("max_turns_reached", False) and (
+            not decision_factors.get("sufficient_depth", False)
+            or not decision_factors.get("meaningful_insights", False)
+        ):
+            return "ask_question"
 
         return "complete"
 

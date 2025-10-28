@@ -203,10 +203,12 @@ class LLMServiceAdapter:
             )
             # Try fallback providers
             for fallback in self.fallback_providers:
-                if await self.provider_manager.is_provider_available(fallback):  # type: ignore[attr-defined]
-                    if await self._can_provider_handle_model(fallback, model_id):
-                        provider_name = fallback
-                        break
+                if (
+                    await self.provider_manager.is_provider_available(fallback)  # type: ignore[attr-defined]
+                    and await self._can_provider_handle_model(fallback, model_id)
+                ):
+                    provider_name = fallback
+                    break
 
         return provider_name, model_id
 
