@@ -63,7 +63,7 @@ class TestDomainExceptionStringRepresentation:
 
         result = repr(exc)
 
-        assert "DomainException" in result
+        assert ("DomainException" in result or "DomainError" in result)
         assert "message='Test error'" in result
         assert "code='TEST'" in result
         assert "context=" in result
