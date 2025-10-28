@@ -7,7 +7,7 @@ supporting structured error handling and context propagation.
 from typing import Any
 
 
-class DomainException(Exception):
+class DomainError(Exception):
     """
     Base class for all domain exceptions.
 
@@ -77,4 +77,7 @@ class DomainException(Exception):
         }
 
 
-__all__ = ["DomainException"]
+__all__ = ["DomainError"]
+
+# Backwards compatibility alias (deprecated)
+DomainException = DomainError

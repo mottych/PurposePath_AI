@@ -90,9 +90,7 @@ class PromptTemplateDetail(BaseModel):
         ..., description="User prompt template", alias="userPromptTemplate"
     )
     model: str = Field(..., description="Target AI model")
-    parameters: dict[str, Any] = Field(
-        default_factory=dict, description="Template parameters"
-    )
+    parameters: dict[str, Any] = Field(default_factory=dict, description="Template parameters")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     created_at: datetime = Field(..., description="Creation timestamp", alias="createdAt")
     last_modified: datetime = Field(..., description="Last modification time", alias="lastModified")

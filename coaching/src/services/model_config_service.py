@@ -154,9 +154,7 @@ class ModelConfigService:
                 if "input_cost_per_1k_tokens" in updates:
                     pricing_dict["input_cost_per_1k_tokens"] = updates["input_cost_per_1k_tokens"]
                 if "output_cost_per_1k_tokens" in updates:
-                    pricing_dict["output_cost_per_1k_tokens"] = updates[
-                        "output_cost_per_1k_tokens"
-                    ]
+                    pricing_dict["output_cost_per_1k_tokens"] = updates["output_cost_per_1k_tokens"]
                 config_dict["pricing"] = pricing_dict
 
             # Apply other updates

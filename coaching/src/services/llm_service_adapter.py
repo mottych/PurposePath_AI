@@ -180,11 +180,8 @@ class LLMServiceAdapter:
         """
         # Check for explicit provider override
         provider_override = kwargs.get("provider")
-        if (
+        if provider_override and await self.provider_manager.is_provider_available(  # type: ignore[attr-defined]
             provider_override
-            and await self.provider_manager.is_provider_available(  # type: ignore[attr-defined]
-                provider_override
-            )
         ):
             provider_name = provider_override
         else:

@@ -1,6 +1,5 @@
 """Admin API routes for conversation monitoring."""
 
-
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_conversation_repository

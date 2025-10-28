@@ -317,9 +317,9 @@ class TestDefaultLLMModels:
         # Arrange & Act
         for topic, model in DEFAULT_LLM_MODELS.items():
             # Assert - Bedrock model IDs typically start with provider name
-            assert (
-                "anthropic" in model.lower() or "claude" in model.lower()
-            ), f"Model for {topic} doesn't appear to be a valid Bedrock model ID: {model}"
+            assert "anthropic" in model.lower() or "claude" in model.lower(), (
+                f"Model for {topic} doesn't appear to be a valid Bedrock model ID: {model}"
+            )
 
 
 class TestBusinessRulesConsistency:
@@ -330,9 +330,9 @@ class TestBusinessRulesConsistency:
         # Arrange & Act
         for phase in PHASE_REQUIREMENTS.keys():
             # Assert
-            assert (
-                phase in PHASE_PROGRESS_WEIGHTS
-            ), f"Phase {phase} has requirements but no progress weight"
+            assert phase in PHASE_PROGRESS_WEIGHTS, (
+                f"Phase {phase} has requirements but no progress weight"
+            )
 
     def test_all_enums_are_complete(self) -> None:
         """Test that all enums have at least one value."""

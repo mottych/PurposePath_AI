@@ -88,23 +88,18 @@ class CompletionValidator:
         # Check message count
         total_messages = conversation.get_message_count()
         if total_messages < self.MIN_TOTAL_MESSAGES:
-            reasons.append(
-                f"Need {self.MIN_TOTAL_MESSAGES} total messages, " f"have {total_messages}"
-            )
+            reasons.append(f"Need {self.MIN_TOTAL_MESSAGES} total messages, have {total_messages}")
 
         # Check user responses
         user_messages = conversation.get_user_message_count()
         if user_messages < self.MIN_USER_RESPONSES:
-            reasons.append(
-                f"Need {self.MIN_USER_RESPONSES} user responses, " f"have {user_messages}"
-            )
+            reasons.append(f"Need {self.MIN_USER_RESPONSES} user responses, have {user_messages}")
 
         # Check assistant messages
         assistant_messages = conversation.get_assistant_message_count()
         if assistant_messages < self.MIN_ASSISTANT_MESSAGES:
             reasons.append(
-                f"Need {self.MIN_ASSISTANT_MESSAGES} assistant messages, "
-                f"have {assistant_messages}"
+                f"Need {self.MIN_ASSISTANT_MESSAGES} assistant messages, have {assistant_messages}"
             )
 
         # Check insights

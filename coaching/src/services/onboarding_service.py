@@ -48,28 +48,28 @@ class OnboardingService:
         prompts = {
             "niche": f"""Generate 3-5 professional niche descriptions for a business.
 
-Business Name: {business_name or 'Not provided'}
-Industry: {industry or 'Not provided'}
-Products/Services: {', '.join(products) if products else 'Not provided'}
-Current Draft: {current or 'None'}
+Business Name: {business_name or "Not provided"}
+Industry: {industry or "Not provided"}
+Products/Services: {", ".join(products) if products else "Not provided"}
+Current Draft: {current or "None"}
 
 Provide clear, specific niche descriptions that define the target market and unique positioning.
 Each should be 1-2 sentences.""",
             "ica": f"""Generate 3-5 Ideal Customer Avatar (ICA) descriptions for a business.
 
-Business Name: {business_name or 'Not provided'}
-Industry: {industry or 'Not provided'}
-Products/Services: {', '.join(products) if products else 'Not provided'}
-Current Draft: {current or 'None'}
+Business Name: {business_name or "Not provided"}
+Industry: {industry or "Not provided"}
+Products/Services: {", ".join(products) if products else "Not provided"}
+Current Draft: {current or "None"}
 
 Describe the perfect customer in detail: demographics, psychographics, pain points, goals.
 Each should be specific and actionable.""",
             "valueProposition": f"""Generate 3-5 value proposition statements for a business.
 
-Business Name: {business_name or 'Not provided'}
-Industry: {industry or 'Not provided'}
-Products/Services: {', '.join(products) if products else 'Not provided'}
-Current Draft: {current or 'None'}
+Business Name: {business_name or "Not provided"}
+Industry: {industry or "Not provided"}
+Products/Services: {", ".join(products) if products else "Not provided"}
+Current Draft: {current or "None"}
 
 Create compelling value propositions that clearly state what makes this business unique.
 Each should be concise and customer-focused.""",
@@ -153,7 +153,7 @@ Each should be concise and customer-focused.""",
 
 Business: {business_name}
 Industry: {industry}
-Current Draft: {current_draft or 'None yet'}
+Current Draft: {current_draft or "None yet"}
 
 User Question: {message}
 
@@ -165,7 +165,7 @@ Also suggest 4-6 potential core values they might consider.""",
 
 Business: {business_name}
 Industry: {industry}
-Current Draft: {current_draft or 'None yet'}
+Current Draft: {current_draft or "None yet"}
 
 User Question: {message}
 
@@ -177,7 +177,7 @@ Suggest 2-3 purpose statement examples they could refine.""",
 
 Business: {business_name}
 Industry: {industry}
-Current Draft: {current_draft or 'None yet'}
+Current Draft: {current_draft or "None yet"}
 
 User Question: {message}
 

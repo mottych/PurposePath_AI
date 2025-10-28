@@ -151,8 +151,7 @@ class Conversation(BaseModel):
         # Can only move forward or stay in same phase
         if new_index < current_index:
             raise ValueError(
-                f"Cannot move backward from {self.context.current_phase.value} "
-                f"to {new_phase.value}"
+                f"Cannot move backward from {self.context.current_phase.value} to {new_phase.value}"
             )
 
         # Update context with new phase and progress

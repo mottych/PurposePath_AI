@@ -42,12 +42,8 @@ class SuggestedAction(BaseModel):
 
     title: str = Field(..., description="Action title")
     description: str = Field(..., description="Detailed action description")
-    effort: str = Field(
-        ..., description="Effort level: low, medium, high"
-    )
-    impact: str = Field(
-        ..., description="Expected impact: low, medium, high"
-    )
+    effort: str = Field(..., description="Effort level: low, medium, high")
+    impact: str = Field(..., description="Expected impact: low, medium, high")
     order: int = Field(default=1, description="Display order", ge=1)
 
 
@@ -62,9 +58,7 @@ class Insight(BaseModel):
     )
     category: InsightCategory = Field(..., description="Insight category")
     priority: InsightPriority = Field(..., description="Priority level")
-    status: InsightStatus = Field(
-        default=InsightStatus.ACTIVE, description="Current status"
-    )
+    status: InsightStatus = Field(default=InsightStatus.ACTIVE, description="Current status")
     suggested_actions: list[SuggestedAction] = Field(
         default_factory=list, description="List of suggested actions"
     )
@@ -83,12 +77,8 @@ class Insight(BaseModel):
     acknowledged_at: Optional[datetime] = Field(
         default=None, description="When insight was acknowledged"
     )
-    dismissed_at: Optional[datetime] = Field(
-        default=None, description="When insight was dismissed"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    dismissed_at: Optional[datetime] = Field(default=None, description="When insight was dismissed")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     def is_expired(self) -> bool:
         """Check if insight has expired."""
@@ -103,24 +93,14 @@ class BusinessDataContext(BaseModel):
     """Aggregated business data for insight generation."""
 
     tenant_id: str = Field(..., description="Tenant identifier")
-    foundation: dict[str, Any] = Field(
-        default_factory=dict, description="Business foundation data"
-    )
-    goals: list[dict[str, Any]] = Field(
-        default_factory=list, description="Goals data"
-    )
-    goal_stats: dict[str, Any] = Field(
-        default_factory=dict, description="Goal statistics"
-    )
+    foundation: dict[str, Any] = Field(default_factory=dict, description="Business foundation data")
+    goals: list[dict[str, Any]] = Field(default_factory=list, description="Goals data")
+    goal_stats: dict[str, Any] = Field(default_factory=dict, description="Goal statistics")
     performance_score: dict[str, Any] = Field(
         default_factory=dict, description="Performance metrics"
     )
-    recent_actions: list[dict[str, Any]] = Field(
-        default_factory=list, description="Recent actions"
-    )
-    open_issues: list[dict[str, Any]] = Field(
-        default_factory=list, description="Open issues"
-    )
+    recent_actions: list[dict[str, Any]] = Field(default_factory=list, description="Recent actions")
+    open_issues: list[dict[str, Any]] = Field(default_factory=list, description="Open issues")
     collected_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When data was collected",

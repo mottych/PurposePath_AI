@@ -518,12 +518,8 @@ class PlanResponse(BaseResponseModel):
 
     goal_id: str = Field(..., description="Goal identifier")
     # Pylance has intermittent resolution issues with these types despite proper definition
-    milestones: list[MilestoneResponse] = Field(
-        default_factory=list, description="Plan milestones"
-    )  # pyright: ignore[reportUnknownVariableType]
-    actions: list[ActionResponse] = Field(
-        default_factory=list, description="Plan actions"
-    )  # pyright: ignore[reportUnknownVariableType]
+    milestones: list[MilestoneResponse] = Field(default_factory=list, description="Plan milestones")  # pyright: ignore[reportUnknownVariableType]
+    actions: list[ActionResponse] = Field(default_factory=list, description="Plan actions")  # pyright: ignore[reportUnknownVariableType]
     total_milestones: int = Field(default=0, description="Total milestone count")
     total_actions: int = Field(default=0, description="Total action count")
     completion_percentage: float = Field(default=0.0, description="Overall completion percentage")

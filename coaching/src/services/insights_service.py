@@ -122,9 +122,7 @@ class InsightsService:
             insights_list = await self._generate_insights_with_llm(business_data)
 
             # Apply filters
-            filtered_insights = self._apply_filters(
-                insights_list, category, priority, status
-            )
+            filtered_insights = self._apply_filters(insights_list, category, priority, status)
 
             # Paginate
             total = len(filtered_insights)
@@ -241,7 +239,6 @@ class InsightsService:
                 recent_activity=[],
             )
 
-
     async def _fetch_business_data(self) -> BusinessDataContext:
         """Fetch business data from all .NET API endpoints in parallel."""
         logger.info("Fetching business data", tenant_id=self.tenant_id)
@@ -293,7 +290,9 @@ class InsightsService:
 
         return business_data
 
-    async def _generate_insights_with_llm(self, business_data: BusinessDataContext) -> list[Insight]:
+    async def _generate_insights_with_llm(
+        self, business_data: BusinessDataContext
+    ) -> list[Insight]:
         """Generate insights using LLM with business data context."""
         logger.info("Generating insights with LLM", tenant_id=self.tenant_id)
 
@@ -351,9 +350,7 @@ class InsightsService:
         prompt_parts.append("")
         prompt_parts.append("## Goals Overview")
         if business_data.goal_stats:
-            prompt_parts.append(
-                f"Total Goals: {business_data.goal_stats.get('total_goals', 0)}"
-            )
+            prompt_parts.append(f"Total Goals: {business_data.goal_stats.get('total_goals', 0)}")
             prompt_parts.append(
                 f"Completion Rate: {business_data.goal_stats.get('completion_rate', 0)}%"
             )
@@ -427,9 +424,7 @@ class InsightsService:
                     tenant_id=self.tenant_id,
                     title=insight_dict.get("title", ""),
                     description=insight_dict.get("description", ""),
-                    category=InsightCategory(
-                        insight_dict.get("category", "operations")
-                    ),
+                    category=InsightCategory(insight_dict.get("category", "operations")),
                     priority=InsightPriority(insight_dict.get("priority", "medium")),
                     status=InsightStatus.ACTIVE,
                     suggested_actions=actions,

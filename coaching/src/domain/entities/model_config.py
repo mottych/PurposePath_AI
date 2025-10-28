@@ -8,12 +8,8 @@ from pydantic import BaseModel, Field
 class ModelPricing(BaseModel):
     """Pricing information for a model."""
 
-    input_cost_per_1k_tokens: float = Field(
-        ..., description="Cost per 1000 input tokens in USD"
-    )
-    output_cost_per_1k_tokens: float = Field(
-        ..., description="Cost per 1000 output tokens in USD"
-    )
+    input_cost_per_1k_tokens: float = Field(..., description="Cost per 1000 input tokens in USD")
+    output_cost_per_1k_tokens: float = Field(..., description="Cost per 1000 output tokens in USD")
 
 
 class ModelConfig(BaseModel):
@@ -42,12 +38,8 @@ class ModelConfig(BaseModel):
     context_window: int = Field(..., description="Maximum context window size", gt=0)
     max_tokens: int = Field(..., description="Maximum output tokens", gt=0)
     is_active: bool = Field(default=True, description="Whether model is active")
-    supports_streaming: bool = Field(
-        default=False, description="Whether model supports streaming"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    supports_streaming: bool = Field(default=False, description="Whether model supports streaming")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         """Pydantic model configuration."""

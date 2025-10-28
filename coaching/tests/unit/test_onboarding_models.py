@@ -464,9 +464,9 @@ class TestOnboardingModelsEdgeCases:
         """Test CoachingRequest with multiline message."""
         # Arrange
         multiline_message = """This is a multiline message.
-        
+
         It has multiple paragraphs.
-        
+
         And different sections."""
 
         # Act

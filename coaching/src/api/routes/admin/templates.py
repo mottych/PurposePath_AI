@@ -485,9 +485,7 @@ async def update_template(
 
         # Apply updates
         updated_system_prompt = request.system_prompt or existing_template.system_prompt
-        updated_user_prompt = (
-            request.user_prompt_template or existing_template.user_prompt_template
-        )
+        updated_user_prompt = request.user_prompt_template or existing_template.user_prompt_template
         updated_model = request.model or existing_template.model
         updated_parameters = (
             request.parameters if request.parameters is not None else existing_template.parameters
