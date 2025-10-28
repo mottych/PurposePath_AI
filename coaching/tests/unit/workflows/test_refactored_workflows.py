@@ -183,7 +183,9 @@ class TestCoachingWorkflow:
         assert not await coaching_workflow.validate_state(invalid_state)
 
     @pytest.mark.asyncio
-    async def test_initial_assessment_node(self, coaching_workflow, mock_llm_service, mock_conversation_service):
+    async def test_initial_assessment_node(
+        self, coaching_workflow, mock_llm_service, mock_conversation_service
+    ):
         """Test initial assessment node uses LLM service."""
         # Add user message to trigger LLM call
         from coaching.src.core.constants import MessageRole
@@ -192,7 +194,7 @@ class TestCoachingWorkflow:
         mock_conv = mock_conversation_service.get_conversation.return_value
         mock_conv.messages = [
             Message(role=MessageRole.ASSISTANT, content="Welcome!"),
-            Message(role=MessageRole.USER, content="I want to explore my values")
+            Message(role=MessageRole.USER, content="I want to explore my values"),
         ]
 
         state = {
