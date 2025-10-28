@@ -377,7 +377,7 @@ class LLMServiceAdapter:
         }
 
         # Check all known providers
-        all_providers = [self.default_provider] + self.fallback_providers
+        all_providers = [self.default_provider, *self.fallback_providers]
         for provider_name in all_providers:
             try:
                 is_available = await self.provider_manager.is_provider_available(provider_name)  # type: ignore[attr-defined]

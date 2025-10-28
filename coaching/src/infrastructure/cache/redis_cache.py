@@ -87,10 +87,7 @@ class RedisCache:
             serialized = json.dumps(value)
 
             # Determine TTL
-            if ttl_delta:
-                ttl_seconds = int(ttl_delta.total_seconds())
-            else:
-                ttl_seconds = ttl or self.default_ttl
+            ttl_seconds = int(ttl_delta.total_seconds()) if ttl_delta else ttl or self.default_ttl
 
             # Set with TTL
             self.redis.setex(full_key, ttl_seconds, serialized)

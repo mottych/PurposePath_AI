@@ -106,7 +106,7 @@ class Conversation(BaseModel):
         message = Message(role=role, content=content, metadata=metadata or {})
 
         # Use object.__setattr__ to modify frozen list
-        object.__setattr__(self, "messages", self.messages + [message])
+        object.__setattr__(self, "messages", [*self.messages, message])
         object.__setattr__(self, "updated_at", datetime.now(UTC))
 
         # Update context response count for user messages
@@ -179,7 +179,7 @@ class Conversation(BaseModel):
         if not insight.strip():
             raise ValueError("Insight cannot be empty")
 
-        new_insights = self.context.insights + [insight.strip()]
+        new_insights = [*self.context.insights, insight.strip()]
         new_context = ConversationContext(
             current_phase=self.context.current_phase,
             insights=new_insights,

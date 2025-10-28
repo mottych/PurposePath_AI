@@ -233,9 +233,9 @@ async def complete_conversation(
 @router.post("/{conversation_id}/pause")
 async def pause_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
-    request: PauseConversationRequest | None = None,
+    _request: PauseConversationRequest | None = None,
     context: RequestContext = Depends(get_current_context),
-    service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
+    _service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationActionResponse:
     """Pause an active conversation."""
     logger.info(
@@ -257,7 +257,7 @@ async def pause_conversation(
 async def delete_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     context: RequestContext = Depends(get_current_context),
-    service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
+    _service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationActionResponse:
     """Delete (abandon) a conversation."""
     logger.info(

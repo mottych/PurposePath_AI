@@ -233,7 +233,7 @@ class ProviderManager:
 
         # Update default if necessary
         if self._default_provider == provider_id:
-            self._default_provider = list(self._providers.keys())[0] if self._providers else None
+            self._default_provider = next(iter(self._providers.keys())) if self._providers else None
 
         logger.info("Provider removed", provider_id=provider_id)
 

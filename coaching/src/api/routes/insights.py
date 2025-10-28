@@ -70,7 +70,7 @@ async def generate_coaching_insights(
 
 @router.get("/categories", response_model=ApiResponse[list[str]])
 async def get_insight_categories(
-    context: RequestContext = Depends(get_current_context),
+    _context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
 ) -> ApiResponse[list[str]]:
     """Get available insight categories."""
@@ -84,7 +84,7 @@ async def get_insight_categories(
 
 @router.get("/priorities", response_model=ApiResponse[list[str]])
 async def get_insight_priorities(
-    context: RequestContext = Depends(get_current_context),
+    _context: RequestContext = Depends(get_current_context),
     service: InsightsService = Depends(get_insights_service),
 ) -> ApiResponse[list[str]]:
     """Get available insight priorities."""

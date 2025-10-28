@@ -102,7 +102,7 @@ class LLMService:
                 enhanced_system_prompt += context_enhancement
 
         # Prepare messages from conversation history
-        messages = conversation_history + [{"role": "user", "content": user_message}]
+        messages = [*conversation_history, {"role": "user", "content": user_message}]
 
         # Use adapter for multi-provider support with fallback
         adapter_response = await self.adapter.get_response(

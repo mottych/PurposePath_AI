@@ -77,10 +77,7 @@ class InMemoryCache:
             True (always successful in memory)
         """
         # Determine TTL
-        if ttl_delta:
-            ttl_seconds = int(ttl_delta.total_seconds())
-        else:
-            ttl_seconds = ttl or self.default_ttl
+        ttl_seconds = int(ttl_delta.total_seconds()) if ttl_delta else ttl or self.default_ttl
 
         # Calculate expiry time
         expiry = time.time() + ttl_seconds
@@ -140,7 +137,7 @@ class InMemoryCache:
         pattern_re = re.compile(f"^{regex_pattern}$")
 
         # Find matching keys
-        matching_keys = [key for key in self._cache.keys() if pattern_re.match(key)]
+        matching_keys = [key for key in self._cache if pattern_re.match(key)]
 
         # Delete matching keys
         for key in matching_keys:

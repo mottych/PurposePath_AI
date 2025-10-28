@@ -44,7 +44,7 @@ async def initiate_conversation(
     request: InitiateConversationRequest,
     user: UserContext = Depends(get_current_user),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
-    llm_service: LLMApplicationService = Depends(get_llm_service),
+    _llm_service: LLMApplicationService = Depends(get_llm_service),
 ) -> ConversationResponse:
     """Initiate a new coaching conversation.
 

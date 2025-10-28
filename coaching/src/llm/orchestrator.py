@@ -63,7 +63,7 @@ class LLMOrchestrator:
     def _initialize_providers(self) -> None:
         """Initialize available LLM providers."""
         # Initialize Bedrock providers for different models
-        for topic, model_id in DEFAULT_LLM_MODELS.items():
+        for _topic, model_id in DEFAULT_LLM_MODELS.items():
             provider_key = f"bedrock_{model_id}"
             if provider_key not in self.providers:
                 # Legacy interface - orchestrator is deprecated, use LLMServiceAdapter instead

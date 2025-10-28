@@ -70,7 +70,7 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
                 algorithms=[settings.jwt_algorithm],
                 options={
                     "verify_aud": False,
-                    "verify_iss": False if settings.stage == "dev" else True,
+                    "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
             )
@@ -164,7 +164,7 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 algorithms=[settings.jwt_algorithm],
                 options={
                     "verify_aud": False,
-                    "verify_iss": False if settings.stage == "dev" else True,
+                    "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
             )

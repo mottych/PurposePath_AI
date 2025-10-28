@@ -367,7 +367,7 @@ async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     # Note: Operations analysis might use different services based on type
-    alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
+    _alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
 ) -> OperationsAnalysisResponse:
     """Perform operational analysis (SWOT, root cause, action plan).
 

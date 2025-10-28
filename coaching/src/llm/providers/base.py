@@ -4,6 +4,7 @@ Base provider interface for LangChain integration.
 Defines the abstract base class and common types for all AI providers.
 """
 
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
@@ -97,9 +98,10 @@ class BaseProvider(ABC):
         pass
 
     async def cleanup(self) -> None:
-        """Clean up provider resources."""
-        # Default implementation - override if needed
-        pass
+        """Clean up provider resources.
+        
+        Default implementation does nothing. Override if cleanup is needed.
+        """
 
     def __repr__(self) -> str:
         """String representation of provider."""

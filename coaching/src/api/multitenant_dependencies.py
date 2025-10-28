@@ -52,10 +52,7 @@ if redis is None:
             return value
 
         def setex(self, key: str, ttl: Any, value: str) -> bool:
-            if isinstance(ttl, timedelta):
-                seconds = ttl.total_seconds()
-            else:
-                seconds = float(ttl)
+            seconds = ttl.total_seconds() if isinstance(ttl, timedelta) else float(ttl)
             expires_at: float | None = None
             if seconds > 0:
                 expires_at = datetime.now(UTC).timestamp() + seconds
@@ -161,7 +158,7 @@ async def get_cache_service(context: RequestContext = Depends(get_current_contex
 
 
 async def get_provider_manager(
-    context: RequestContext = Depends(get_current_context),
+    _context: RequestContext = Depends(get_current_context),
 ) -> ProviderManager:
     """Get provider manager with tenant context."""
     bedrock_client = get_bedrock_client()

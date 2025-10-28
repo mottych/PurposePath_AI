@@ -94,7 +94,7 @@ async def coaching_onboarding(
 
 @router.post("/strategic-planning", response_model=ApiResponse[CoachingResponse])
 async def strategic_planning_coaching(
-    request: CoachingRequest,
+    _request: CoachingRequest,
     context: RequestContext = Depends(get_current_context),
 ) -> ApiResponse[CoachingResponse]:
     """
@@ -128,7 +128,7 @@ async def strategic_planning_coaching(
 
 @router.post("/performance-coaching", response_model=ApiResponse[CoachingResponse])
 async def performance_coaching(
-    request: CoachingRequest,
+    _request: CoachingRequest,
     context: RequestContext = Depends(get_current_context),
 ) -> ApiResponse[CoachingResponse]:
     """
@@ -162,7 +162,7 @@ async def performance_coaching(
 
 @router.post("/leadership-coaching", response_model=ApiResponse[CoachingResponse])
 async def leadership_coaching(
-    request: CoachingRequest,
+    _request: CoachingRequest,
     context: RequestContext = Depends(get_current_context),
 ) -> ApiResponse[CoachingResponse]:
     """
