@@ -406,7 +406,9 @@ class CoachingSessionRepository(BaseRepository[CoachingSession]):
             return session_data
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                raise ValueError(f"Session with ID {session_data.get('session_id')} already exists") from e
+                raise ValueError(
+                    f"Session with ID {session_data.get('session_id')} already exists"
+                ) from e
             raise
 
     def create_full(self, context: RequestContext, session: CoachingSession) -> CoachingSession:

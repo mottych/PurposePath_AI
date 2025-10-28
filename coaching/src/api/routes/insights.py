@@ -1,6 +1,5 @@
 """Insights API routes for coaching recommendations and analytics."""
 
-
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_insights_service

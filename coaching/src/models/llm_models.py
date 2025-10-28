@@ -22,9 +22,7 @@ class LLMResponse(BaseModel):
     conversation_id: str | None = Field(default=None, description="Conversation identifier")
 
     # Coaching-specific fields
-    follow_up_question: str | None = Field(
-        default=None, description="Suggested follow-up question"
-    )
+    follow_up_question: str | None = Field(default=None, description="Suggested follow-up question")
     insights: list[str] | None = Field(default=None, description="Generated insights")
     is_complete: bool = Field(default=False, description="Whether conversation is complete")
 

@@ -283,7 +283,9 @@ class LLMOrchestrator:
 
         return prompts.get(topic, prompts["core_values"])
 
-    async def extract_insights(self, response: str, _topic: str, _provider: LLMProvider) -> list[str]:
+    async def extract_insights(
+        self, response: str, _topic: str, _provider: LLMProvider
+    ) -> list[str]:
         """Extract key insights from a response.
 
         Args:

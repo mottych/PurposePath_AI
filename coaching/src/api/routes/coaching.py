@@ -1,6 +1,5 @@
 """AI coaching API routes for interactive coaching sessions."""
 
-
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.models.requests import CoachingRequest

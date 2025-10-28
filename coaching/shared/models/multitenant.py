@@ -212,16 +212,12 @@ class BusinessData(TimestampMixin, TenantScopedMixin):
     core_values: list[str] | None = Field(None, description="Organization's core values")
     purpose: str | None = Field(None, description="Organization's purpose statement")
     vision: str | None = Field(None, description="Organization's vision statement")
-    goals: list[dict[str, Any]] | None = Field(
-        None, description="Organization's strategic goals"
-    )
+    goals: list[dict[str, Any]] | None = Field(None, description="Organization's strategic goals")
 
     # Additional business information
     mission: str | None = Field(None, description="Organization's mission statement")
     culture_attributes: list[str] | None = Field(None, description="Cultural attributes")
-    strategic_priorities: list[str] | None = Field(
-        None, description="Current strategic priorities"
-    )
+    strategic_priorities: list[str] | None = Field(None, description="Current strategic priorities")
 
     # Metadata
     version: str = Field(default="1.0", description="Version of business data")

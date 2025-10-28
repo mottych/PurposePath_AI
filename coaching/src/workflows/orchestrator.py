@@ -227,11 +227,15 @@ class WorkflowOrchestrator:
 
         workflows_to_remove = []
         for workflow_id, state in self._workflow_states.items():
-            if state.status in [
-                WorkflowStatus.COMPLETED,
-                WorkflowStatus.FAILED,
-                WorkflowStatus.CANCELLED,
-            ] and state.completed_at:
+            if (
+                state.status
+                in [
+                    WorkflowStatus.COMPLETED,
+                    WorkflowStatus.FAILED,
+                    WorkflowStatus.CANCELLED,
+                ]
+                and state.completed_at
+            ):
                 completed_time = datetime.fromisoformat(state.completed_at).timestamp()
                 if completed_time < cutoff_time:
                     workflows_to_remove.append(workflow_id)

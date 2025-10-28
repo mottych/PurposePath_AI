@@ -97,6 +97,7 @@ async def list_ai_models(
         logger.error("Error listing AI models", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to list AI models") from e
 
+
 @router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
 async def list_coaching_topics(
     context: RequestContext = Depends(get_current_context),

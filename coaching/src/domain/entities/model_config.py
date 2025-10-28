@@ -31,7 +31,6 @@ class ModelConfig(BaseModel):
         metadata: Additional configuration data
     """
 
-
     model_id: str = Field(..., description="Unique model identifier")
     provider: str = Field(..., description="Model provider name")
     display_name: str = Field(..., description="Human-readable model name")

@@ -159,7 +159,10 @@ class ModelConfigService:
 
             # Apply other updates
             for key, value in updates.items():
-                if key not in ["input_cost_per_1k_tokens", "output_cost_per_1k_tokens"] and key in config_dict:
+                if (
+                    key not in ["input_cost_per_1k_tokens", "output_cost_per_1k_tokens"]
+                    and key in config_dict
+                ):
                     config_dict[key] = value
 
             # Create updated config

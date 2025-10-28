@@ -81,9 +81,7 @@ class ConversationApplicationService:
                 )
 
             # Create new conversation
-            conv_id = ConversationId(
-                f"conv_{user_id}_{int(datetime.now(UTC).timestamp())}"
-            )
+            conv_id = ConversationId(f"conv_{user_id}_{int(datetime.now(UTC).timestamp())}")
             conversation = Conversation(
                 conversation_id=conv_id,
                 user_id=user_id,

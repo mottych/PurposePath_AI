@@ -126,12 +126,8 @@ class MultitenantConversationService:
             coaching_prefs = user_prefs.get("coaching_preferences", {})
             if coaching_prefs and isinstance(coaching_prefs, dict):
                 user_preferences_data = UserPreferences(
-                    communication_style=cast(
-                        str | None, coaching_prefs.get("communication_style")
-                    ),
-                    coaching_frequency=cast(
-                        str | None, coaching_prefs.get("coaching_frequency")
-                    ),
+                    communication_style=cast(str | None, coaching_prefs.get("communication_style")),
+                    coaching_frequency=cast(str | None, coaching_prefs.get("coaching_frequency")),
                     focus_areas=cast(list[str] | None, coaching_prefs.get("focus_areas", [])),
                     notification_preferences=cast(
                         dict[str, bool] | None,
