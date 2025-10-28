@@ -64,8 +64,8 @@ async def generate_coaching_insights(
         return response
 
     except Exception as e:
-        logger.error(f"Error generating coaching insights: {e}")
-        raise HTTPException(status_code=500, detail="Failed to generate coaching insights")
+        logger.error("Error retrieving insights", user_id=context.user_id, error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve insights") from e
 
 
 @router.get("/categories", response_model=ApiResponse[list[str]])

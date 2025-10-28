@@ -231,16 +231,16 @@ async def send_message(
             next_steps=None,
         )
 
-    except ConversationNotFound:
+    except ConversationNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
-        )
+        ) from e
     except ConversationNotActive as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Conversation is not active: {e}",
-        )
+        ) from e
     except Exception as e:
         logger.error(
             "Failed to process message",
@@ -321,11 +321,11 @@ async def get_conversation(
             metadata=conversation.metadata,
         )
 
-    except ConversationNotFound:
+    except ConversationNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
-        )
+        ) from e
     except Exception as e:
         logger.error(
             "Failed to fetch conversation",
@@ -460,11 +460,12 @@ async def pause_conversation(
 
         logger.info("Conversation paused successfully", conversation_id=conversation_id)
 
-    except ConversationNotFound:
+    except ConversationNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
-        )
+        ) from e
+
     except Exception as e:
         logger.error(
             "Failed to pause conversation",
@@ -523,11 +524,12 @@ async def complete_conversation(
 
         logger.info("Conversation completed successfully", conversation_id=conversation_id)
 
-    except ConversationNotFound:
+    except ConversationNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
-        )
+        ) from e
+
     except Exception as e:
         logger.error(
             "Failed to complete conversation",
