@@ -42,7 +42,7 @@ class BusinessFoundationInput(BaseModel):
 
     vision: str = Field(..., min_length=1, description="Company vision")
     purpose: str = Field(..., min_length=1, description="Company purpose")
-    coreValues: list[str] = Field(..., min_items=1, description="Core values")
+    core_values: list[str] = Field(..., alias="coreValues", min_items=1, description="Core values")
 
 
 class StrategicAlignmentRequest(BaseModel):
@@ -52,8 +52,8 @@ class StrategicAlignmentRequest(BaseModel):
         ..., min_items=1, max_items=100, description="Actions to analyze"
     )
     goals: list[GoalInput] = Field(..., min_items=1, max_items=50, description="Business goals")
-    businessFoundation: BusinessFoundationInput = Field(
-        ..., description="Business foundation context"
+    business_foundation: BusinessFoundationInput = Field(
+        ..., alias="businessFoundation", description="Business foundation context"
     )
 
     @field_validator("actions")
@@ -68,18 +68,18 @@ class StrategicAlignmentRequest(BaseModel):
 class StrategicConnection(BaseModel):
     """Connection between action and goal."""
 
-    goalId: str = Field(..., description="Goal identifier")
-    goalTitle: str = Field(..., description="Goal title/intent")
-    alignmentScore: int = Field(..., ge=0, le=100, description="Alignment score (0-100)")
+    goal_id: str = Field(..., alias="goalId", description="Goal identifier")
+    goal_title: str = Field(..., alias="goalTitle", description="Goal title/intent")
+    alignment_score: int = Field(..., alias="alignmentScore", ge=0, le=100, description="Alignment score (0-100)")
     impact: Literal["low", "medium", "high", "critical"] = Field(..., description="Impact level")
 
 
 class ActionAlignmentAnalysis(BaseModel):
     """Alignment analysis for a single action."""
 
-    actionId: str = Field(..., description="Action identifier")
-    alignmentScore: int = Field(..., ge=0, le=100, description="Overall alignment score")
-    strategicConnections: list[StrategicConnection] = Field(..., description="Connections to goals")
+    action_id: str = Field(..., alias="actionId", description="Action identifier")
+    alignment_score: int = Field(..., alias="alignmentScore", ge=0, le=100, description="Overall alignment score")
+    strategic_connections: list[StrategicConnection] = Field(..., alias="strategicConnections", description="Connections to goals")
     recommendations: list[str] = Field(..., description="Improvement recommendations")
 
 
@@ -100,22 +100,22 @@ class PrioritizationActionInput(BaseModel):
 
     id: str = Field(..., description="Unique action identifier")
     title: str = Field(..., min_length=1, description="Action title")
-    currentPriority: Literal["low", "medium", "high", "critical"] = Field(
-        ..., description="Current priority"
+    current_priority: Literal["low", "medium", "high", "critical"] = Field(
+        ..., alias="currentPriority", description="Current priority"
     )
-    dueDate: str | None = Field(None, description="Due date (ISO format)")
+    due_date: str | None = Field(None, alias="dueDate", description="Due date (ISO format)")
     impact: str | None = Field(None, description="Expected impact description")
     effort: str | None = Field(None, description="Required effort description")
     status: str = Field(..., description="Current status")
-    linkedGoals: list[str] = Field(default_factory=list, description="Linked goal IDs")
+    linked_goals: list[str] = Field(alias="linkedGoals", default_factory=list, description="Linked goal IDs")
 
 
 class BusinessContext(BaseModel):
     """Business context for prioritization."""
 
-    currentGoals: list[str] = Field(default_factory=list, description="Current business goals")
+    current_goals: list[str] = Field(alias="currentGoals", default_factory=list, description="Current business goals")
     constraints: list[str] = Field(default_factory=list, description="Business constraints")
-    urgentDeadlines: list[str] = Field(default_factory=list, description="Urgent deadlines")
+    urgent_deadlines: list[str] = Field(alias="urgentDeadlines", default_factory=list, description="Urgent deadlines")
 
 
 class PrioritizationRequest(BaseModel):
@@ -124,28 +124,28 @@ class PrioritizationRequest(BaseModel):
     actions: list[PrioritizationActionInput] = Field(
         ..., min_items=1, max_items=200, description="Actions to prioritize"
     )
-    businessContext: BusinessContext = Field(..., description="Business context for prioritization")
+    business_context: BusinessContext = Field(..., alias="businessContext", description="Business context for prioritization")
 
 
 class PrioritizationSuggestion(BaseModel):
     """Prioritization suggestion for an action."""
 
-    actionId: str = Field(..., description="Action identifier")
-    suggestedPriority: Literal["low", "medium", "high", "critical"] = Field(
-        ..., description="Suggested priority level"
+    action_id: str = Field(..., alias="actionId", description="Action identifier")
+    suggested_priority: Literal["low", "medium", "high", "critical"] = Field(
+        ..., alias="suggestedPriority", description="Suggested priority level"
     )
-    currentPriority: Literal["low", "medium", "high", "critical"] = Field(
-        ..., description="Current priority level"
+    current_priority: Literal["low", "medium", "high", "critical"] = Field(
+        ..., alias="currentPriority", description="Current priority level"
     )
     reasoning: str = Field(..., description="Reasoning for suggestion")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0-1)")
-    urgencyFactors: list[str] = Field(..., description="Factors contributing to urgency")
-    impactFactors: list[str] = Field(..., description="Factors contributing to impact")
-    recommendedAction: Literal["escalate", "maintain", "de-prioritize"] = Field(
-        ..., description="Recommended action"
+    urgency_factors: list[str] = Field(..., alias="urgencyFactors", description="Factors contributing to urgency")
+    impact_factors: list[str] = Field(..., alias="impactFactors", description="Factors contributing to impact")
+    recommended_action: Literal["escalate", "maintain", "de-prioritize"] = Field(
+        ..., alias="recommendedAction", description="Recommended action"
     )
-    estimatedBusinessValue: int | None = Field(
-        None, description="Estimated business value in currency units"
+    estimated_business_value: int | None = Field(
+        None, alias="estimatedBusinessValue", description="Estimated business value in currency units"
     )
 
 
@@ -166,11 +166,11 @@ class SchedulingActionInput(BaseModel):
 
     id: str = Field(..., description="Unique action identifier")
     title: str = Field(..., min_length=1, description="Action title")
-    estimatedDuration: int = Field(..., gt=0, description="Estimated duration in hours")
+    estimated_duration: int = Field(..., alias="estimatedDuration", gt=0, description="Estimated duration in hours")
     dependencies: list[str] = Field(default_factory=list, description="Action IDs this depends on")
-    assignedTo: str | None = Field(None, description="Assigned person/team ID")
-    currentStartDate: str | None = Field(None, description="Current start date")
-    currentDueDate: str | None = Field(None, description="Current due date")
+    assigned_to: str | None = Field(None, alias="assignedTo", description="Assigned person/team ID")
+    current_start_date: str | None = Field(None, alias="currentStartDate", description="Current start date")
+    current_due_date: str | None = Field(None, alias="currentDueDate", description="Current due date")
     priority: Literal["low", "medium", "high", "critical"] = Field(
         ..., description="Priority level"
     )
@@ -186,22 +186,22 @@ class CriticalDeadline(BaseModel):
 class TeamAvailability(BaseModel):
     """Team member availability."""
 
-    personId: str = Field(..., description="Person/team member identifier")
-    hoursPerWeek: int = Field(..., gt=0, le=168, description="Available hours per week")
-    unavailableDates: list[str] = Field(
-        default_factory=list, description="Unavailable dates (ISO format)"
+    person_id: str = Field(..., alias="personId", description="Person/team member identifier")
+    hours_per_week: int = Field(..., alias="hoursPerWeek", gt=0, le=168, description="Available hours per week")
+    unavailable_dates: list[str] = Field(
+        default_factory=list, alias="unavailableDates", description="Unavailable dates (ISO format)"
     )
 
 
 class SchedulingConstraints(BaseModel):
     """Scheduling constraints."""
 
-    teamCapacity: int = Field(..., gt=0, description="Total team capacity in hours")
-    criticalDeadlines: list[CriticalDeadline] = Field(
-        default_factory=list, description="Critical deadlines"
+    team_capacity: int = Field(..., alias="teamCapacity", gt=0, description="Total team capacity in hours")
+    critical_deadlines: list[CriticalDeadline] = Field(
+        default_factory=list, alias="criticalDeadlines", description="Critical deadlines"
     )
-    teamAvailability: list[TeamAvailability] = Field(
-        default_factory=list, description="Team availability"
+    team_availability: list[TeamAvailability] = Field(
+        default_factory=list, alias="teamAvailability", description="Team availability"
     )
 
 
@@ -217,23 +217,25 @@ class SchedulingRequest(BaseModel):
 class AlternativeSchedule(BaseModel):
     """Alternative schedule option."""
 
-    startDate: str = Field(..., description="Alternative start date")
-    dueDate: str = Field(..., description="Alternative due date")
+    start_date: str = Field(..., alias="startDate", description="Alternative start date")
+    due_date: str = Field(..., alias="dueDate", description="Alternative due date")
     rationale: str = Field(..., description="Rationale for this alternative")
 
 
 class SchedulingSuggestion(BaseModel):
     """Scheduling suggestion for an action."""
 
-    actionId: str = Field(..., description="Action identifier")
-    suggestedStartDate: str = Field(..., description="Suggested start date")
-    suggestedDueDate: str = Field(..., description="Suggested due date")
+    action_id: str = Field(..., alias="actionId", description="Action identifier")
+    suggested_start_date: str = Field(..., alias="suggestedStartDate", description="Suggested start date")
+    suggested_due_date: str = Field(..., alias="suggestedDueDate", description="Suggested due date")
     reasoning: str = Field(..., description="Reasoning for schedule")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0-1)")
     dependencies: list[str] = Field(..., description="Dependencies that influenced schedule")
-    resourceConsiderations: list[str] = Field(..., description="Resource considerations")
+    resource_considerations: list[str] = Field(
+        ..., alias="resourceConsiderations", description="Resource considerations"
+    )
     risks: list[str] = Field(..., description="Identified risks")
-    alternativeSchedules: list[AlternativeSchedule] = Field(
+    alternative_schedules: list[AlternativeSchedule] = Field(
         default_factory=list, description="Alternative scheduling options"
     )
 
@@ -253,20 +255,20 @@ class SchedulingResponse(BaseModel):
 class IssueContext(BaseModel):
     """Context for an issue requiring root cause analysis."""
 
-    reportedBy: str | None = Field(None, description="Person who reported the issue")
-    dateReported: str | None = Field(None, description="Date issue was reported")
-    relatedActions: list[str] = Field(default_factory=list, description="Related action IDs")
-    affectedAreas: list[str] = Field(default_factory=list, description="Business areas affected")
+    reported_by: str | None = Field(None, alias="reportedBy", description="Person who reported the issue")
+    date_reported: str | None = Field(None, alias="dateReported", description="Date issue was reported")
+    related_actions: list[str] = Field(alias="relatedActions", default_factory=list, description="Related action IDs")
+    affected_areas: list[str] = Field(alias="affectedAreas", default_factory=list, description="Business areas affected")
 
 
 class RootCauseRequest(BaseModel):
     """Request for root cause analysis suggestions."""
 
-    issueTitle: str = Field(..., min_length=1, max_length=200, description="Issue title")
-    issueDescription: str = Field(
+    issue_title: str = Field(..., alias="issueTitle", min_length=1, max_length=200, description="Issue title")
+    issue_description: str = Field(
         ..., min_length=10, max_length=5000, description="Detailed issue description"
     )
-    businessImpact: Literal["low", "medium", "high", "critical"] = Field(
+    business_impact: Literal["low", "medium", "high", "critical"] = Field(
         ..., description="Business impact level"
     )
     context: IssueContext = Field(
@@ -305,7 +307,7 @@ class ActionIssue(BaseModel):
     title: str = Field(..., min_length=1, description="Issue title")
     description: str = Field(..., min_length=10, description="Issue description")
     impact: Literal["low", "medium", "high", "critical"] = Field(..., description="Business impact")
-    rootCause: str | None = Field(None, description="Identified root cause")
+    root_cause: str | None = Field(None, alias="rootCause", description="Identified root cause")
 
 
 class ActionConstraints(BaseModel):
@@ -313,15 +315,15 @@ class ActionConstraints(BaseModel):
 
     timeline: str | None = Field(None, description="Timeline constraint")
     budget: int | None = Field(None, ge=0, description="Budget constraint")
-    availableResources: list[str] = Field(default_factory=list, description="Available resources")
+    available_resources: list[str] = Field(alias="availableResources", default_factory=list, description="Available resources")
 
 
 class ActionPlanContext(BaseModel):
     """Context for action plan generation."""
 
-    relatedGoals: list[str] = Field(default_factory=list, description="Related business goals")
-    currentActions: list[str] = Field(default_factory=list, description="Current ongoing actions")
-    businessPriorities: list[str] = Field(
+    related_goals: list[str] = Field(alias="relatedGoals", default_factory=list, description="Related business goals")
+    current_actions: list[str] = Field(alias="currentActions", default_factory=list, description="Current ongoing actions")
+    business_priorities: list[str] = Field(
         default_factory=list, description="Current business priorities"
     )
 
@@ -346,15 +348,15 @@ class ActionSuggestion(BaseModel):
     priority: Literal["low", "medium", "high", "critical"] = Field(
         ..., description="Action priority"
     )
-    estimatedDuration: int = Field(..., gt=0, description="Estimated hours")
-    estimatedCost: int | None = Field(None, ge=0, description="Estimated cost")
-    assignmentSuggestion: str | None = Field(None, description="Who should be assigned")
+    estimated_duration: int = Field(..., alias="estimatedDuration", gt=0, description="Estimated hours")
+    estimated_cost: int | None = Field(None, alias="estimatedCost", ge=0, description="Estimated cost")
+    assignment_suggestion: str | None = Field(None, alias="assignmentSuggestion", description="Who should be assigned")
     dependencies: list[str] = Field(
         default_factory=list, description="Dependencies on other actions"
     )
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in this action")
     reasoning: str = Field(..., description="Why this action is recommended")
-    expectedOutcome: str = Field(..., description="Expected result")
+    expected_outcome: str = Field(..., alias="expectedOutcome", description="Expected result")
     risks: list[str] = Field(default_factory=list, description="Identified risks")
 
 
