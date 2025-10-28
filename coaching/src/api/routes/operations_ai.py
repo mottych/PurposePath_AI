@@ -20,6 +20,7 @@ from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.config_multitenant import settings
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()

@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+
 from shared.observability.performance import measure_time
 
 

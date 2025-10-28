@@ -8,9 +8,9 @@ from coaching.src.core.config_multitenant import settings
 from fastapi import Depends, Header, HTTPException
 from jose import JWTError, jwt
 from mypy_boto3_secretsmanager import SecretsManagerClient
-from shared.services.aws_helpers import get_secretsmanager_client
 
 from shared.models.multitenant import Permission, RequestContext, SubscriptionTier, UserRole
+from shared.services.aws_helpers import get_secretsmanager_client
 
 logger = logging.getLogger(__name__)
 

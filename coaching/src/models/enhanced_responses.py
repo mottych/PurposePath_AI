@@ -5,6 +5,7 @@ from typing import Any
 
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
+
 from shared.models.base import BaseResponseModel
 
 

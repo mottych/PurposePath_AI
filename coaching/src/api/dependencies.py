@@ -28,13 +28,13 @@ from coaching.src.infrastructure.repositories.s3_prompt_repository import S3Prom
 from coaching.src.services.insights_service import InsightsService
 from fastapi import Depends
 from mypy_boto3_dynamodb import DynamoDBServiceResource
+
+from shared.models.multitenant import RequestContext
 from shared.services.aws_helpers import (
     get_bedrock_client,
     get_dynamodb_resource,
     get_s3_client,
 )
-
-from shared.models.multitenant import RequestContext
 
 logger = structlog.get_logger()
 

@@ -30,6 +30,16 @@ from coaching.src.services.cache_service import CacheService
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.prompt_service import PromptService
 
+from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
+from shared.models.multitenant import RequestContext
+
+# Import shared data access
+from shared.services.data_access import (
+    BusinessDataRepository,
+    CoachingSessionRepository,
+    UserPreferencesRepository,
+)
+
 # Import typed models for proper type safety
 from shared.types.coaching_models import (
     BusinessDataSummary,
@@ -40,16 +50,6 @@ from shared.types.coaching_models import (
 )
 from shared.types.coaching_models import CoachingSession as CoachingSessionDict
 from shared.types.coaching_models import UserPreferences as UserPreferencesDict
-
-from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
-from shared.models.multitenant import RequestContext
-
-# Import shared data access
-from shared.services.data_access import (
-    BusinessDataRepository,
-    CoachingSessionRepository,
-    UserPreferencesRepository,
-)
 
 logger = structlog.get_logger()  # Third-party logging boundary
 

@@ -7,9 +7,9 @@ from coaching.src.models.requests import OnboardingSuggestionRequest
 from coaching.src.models.responses import OnboardingSuggestionResponse
 from fastapi import APIRouter, Header
 from jose import JWTError, jwt
-from shared.services.aws_helpers import get_secretsmanager_client
 
 from shared.models.schemas import ApiResponse
+from shared.services.aws_helpers import get_secretsmanager_client
 
 router = APIRouter()
 

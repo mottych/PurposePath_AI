@@ -10,7 +10,6 @@ from boto3.dynamodb.conditions import Attr, Key
 from botocore.exceptions import ClientError
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 from mypy_boto3_dynamodb.service_resource import Table
-from shared.services.aws_helpers import get_dynamodb_resource
 
 from shared.models.multitenant import (
     BusinessData,
@@ -27,6 +26,7 @@ from shared.models.multitenant import (
     UserPreferences,
     UserRole,
 )
+from shared.services.aws_helpers import get_dynamodb_resource
 
 logger = structlog.get_logger(__name__)
 
