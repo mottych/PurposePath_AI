@@ -5,6 +5,7 @@ Defines the abstract base class and common types for all AI providers.
 """
 
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
@@ -99,9 +100,11 @@ class BaseProvider(ABC):
 
     async def cleanup(self) -> None:
         """Clean up provider resources.
-        
+
         Default implementation does nothing. Override if cleanup is needed.
         """
+        # Concrete default implementation - subclasses can override
+        return None
 
     def __repr__(self) -> str:
         """String representation of provider."""
