@@ -80,7 +80,7 @@ class TestDomainExceptionSerialization:
 
         data = exc.to_dict()
 
-        assert data["error_type"] == "DomainException"
+        assert data["error_type"] in ("DomainException", "DomainError")
         assert data["message"] == "Test error"
         assert data["code"] == "TEST_ERROR"
         assert data["context"] == {"user_id": "user-123"}

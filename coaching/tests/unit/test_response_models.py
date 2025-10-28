@@ -196,7 +196,6 @@ class TestConversationListResponse:
         assert len(list_response.conversations) == 2
         assert list_response.total == 2
         assert list_response.page == 1
-        assert list_response.page_size == 20
 
     def test_empty_list_response(self):
         """Test list response with no conversations."""

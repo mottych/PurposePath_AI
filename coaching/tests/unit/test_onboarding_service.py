@@ -149,7 +149,7 @@ class TestOnboardingServiceEdgeCases:
     def onboarding_service(self):
         """Create service with mocked LLM."""
         mock_llm = AsyncMock()
-        mock_llm.generate_completion = AsyncMock(return_value="")
+        mock_llm.generate_single_shot_analysis = AsyncMock(return_value={"response": ""})
         return OnboardingService(llm_service=mock_llm)
 
     async def test_empty_llm_response_has_fallback(self, onboarding_service):
