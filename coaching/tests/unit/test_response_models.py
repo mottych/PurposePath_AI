@@ -58,21 +58,18 @@ class TestMessageResponse:
         """Test creating valid message response."""
         # Arrange & Act
         response = MessageResponse(
-            ai_response="Great work! We're done.",
-            next_steps=["Review your values", "Create action plan"],
-            identified_values=["Integrity", "Growth", "Innovation"],
-            progress=1.0,
-            is_complete=True,
-            phase=ConversationPhase.COMPLETION,
+            ai_response="Here's my coaching advice...",
+            follow_up_question="What would you like to explore next?",
+            insights=["Insight 1", "Insight 2"],
+            progress=0.60,
+            is_complete=False,
+            phase=ConversationPhase.SYNTHESIS,
         )
 
         # Assert
-        assert response.ai_response == "Great work! We're done."
-        assert response.next_steps == ["Review your values", "Create action plan"]
-        assert response.identified_values == ["Integrity", "Growth", "Innovation"]
-        assert response.progress == 1.0
-        assert response.is_complete is True
-        assert response.phase == ConversationPhase.COMPLETION
+        assert response.ai_response == "Here's my coaching advice..."
+        assert response.follow_up_question == "What would you like to explore next?"
+        assert len(response.insights) == 2
         assert response.progress == 0.60
         assert response.is_complete is False
         assert response.phase == ConversationPhase.SYNTHESIS
@@ -97,14 +94,18 @@ class TestMessageResponse:
         # Arrange & Act
         response = MessageResponse(
             ai_response="Great work! We're done.",
-            progress=100,
+            next_steps=["Review your values", "Create action plan"],
+            identified_values=["Integrity", "Growth", "Innovation"],
+            progress=1.0,
             is_complete=True,
-            phase="completion",
+            phase=ConversationPhase.COMPLETION,
         )
 
         # Assert
         assert response.is_complete is True
-        assert response.progress == 100
+        assert response.progress == 1.0
+        assert len(response.next_steps) == 2
+        assert len(response.identified_values) == 3
 
 
 @pytest.mark.unit
@@ -121,7 +122,7 @@ class TestConversationSummary:
             conversation_id="conv-789",
             topic="strategy",
             status=ConversationStatus.ACTIVE,
-            progress=40,
+            progress=0.40,
             created_at=now,
             updated_at=now,
             message_count=5,
@@ -131,7 +132,7 @@ class TestConversationSummary:
         assert summary.conversation_id == "conv-789"
         assert summary.topic == "strategy"
         assert summary.status == ConversationStatus.ACTIVE
-        assert summary.progress == 40
+        assert summary.progress == 0.40
         assert summary.message_count == 5
         assert summary.created_at == now
 
@@ -204,7 +205,6 @@ class TestConversationListResponse:
             conversations=[],
             total=0,
             page=1,
-            page_size=20,
         )
 
         # Assert
@@ -218,10 +218,8 @@ class TestConversationListResponse:
             conversations=[],
             total=100,
             page=5,
-            page_size=10,
         )
 
         # Assert
         assert list_response.page == 5
-        assert list_response.page_size == 10
         assert list_response.total == 100
