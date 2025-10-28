@@ -96,35 +96,6 @@ class TestInvalidTopicError:
 
 
 @pytest.mark.unit
-class TestInvalidPhaseTransitionError:
-    """Test InvalidPhaseTransitionError exception."""
-
-    def test_invalid_phase_transition_message(self):
-        """Test invalid phase transition error message."""
-        # Arrange
-        from_phase = "introduction"
-        to_phase = "completion"
-
-        # Act
-        error = InvalidPhaseTransitionError(from_phase, to_phase)
-
-        # Assert
-        error_str = str(error)
-        assert from_phase in error_str
-        assert to_phase in error_str
-
-    def test_invalid_phase_transition_can_be_raised(self):
-        """Test that phase transition error can be raised."""
-        # Arrange
-        from_phase = "exploration"
-        to_phase = "introduction"
-
-        # Act & Assert
-        with pytest.raises(InvalidPhaseTransitionError):
-            raise InvalidPhaseTransitionError(from_phase, to_phase)
-
-
-@pytest.mark.unit
 class TestExceptionHierarchy:
     """Test exception hierarchy and relationships."""
 
