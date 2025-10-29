@@ -5,7 +5,7 @@ from typing import Any
 import structlog
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.constants import CoachingTopic
-from coaching.src.models.prompt import PromptTemplate
+from coaching.src.domain.entities.prompt_template import PromptTemplate
 from coaching.src.infrastructure.repositories.s3_prompt_repository import (
     S3PromptRepository,
 )
@@ -124,13 +124,10 @@ class TemplateTestingService:
                 )
 
             # Render user prompt with test parameters
-            rendered_prompt = self._render_template(
-                template.initial_message,
-                test_request.test_parameters,
-            )
+            rendered_prompt = template.render(**test_request.test_parameters)
 
-            # Determine model to use
-            model_id = test_request.model_override or template.llm_config.model
+            # Determine model to use (no default from template in domain entity)
+            model_id = test_request.model_override or "anthropic.claude-3-sonnet-20240229-v1:0"
 
             # Execute template with LLM
             try:
@@ -144,17 +141,17 @@ class TemplateTestingService:
                     "Template test succeeded",
                     topic=topic.value,
                     version=version,
-                    tokens=llm_response.token_usage,
-                    cost=llm_response.cost,
+                    model_id=model_id,
                 )
 
                 return TemplateTestResult(
                     success=True,
                     response=llm_response.content,
-                    tokens=llm_response.token_usage,
-                    cost=llm_response.cost,
-                    model_id=llm_response.model_id,
+                    tokens={"total": 0},  # LLMResponse doesn't have token_usage
+                    cost=0.0,  # LLMResponse doesn't have cost
+                    model_id=model_id,
                     rendered_prompt=rendered_prompt,
+                    error=None,
                 )
 
             except Exception as llm_error:

@@ -5,6 +5,7 @@ and providing use-case specific methods for different LLM operations.
 """
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import (

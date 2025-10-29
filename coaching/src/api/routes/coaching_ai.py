@@ -1,15 +1,20 @@
 """Coaching AI API routes for strategic planning assistance (Issue #62)."""
 
+import uuid
+from datetime import UTC, datetime
+
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
+    AlignmentScore,
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.config_multitenant import settings
+from coaching.src.core.constants import AnalysisType
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -52,7 +57,24 @@ async def get_alignment_explanation(
                 **request.context,
             }
         )
-        return AlignmentAnalysisResponse(success=True, data=analysis_result)
+        
+        # Transform service result to response model
+        return AlignmentAnalysisResponse(
+            analysis_id=f"anls_{uuid.uuid4().hex[:12]}",
+            analysis_type=AnalysisType.ALIGNMENT,
+            scores=AlignmentScore(
+                overall_score=float(analysis_result.get("alignment_score", 0)),
+                purpose_alignment=float(analysis_result.get("alignment_score", 0)),
+                values_alignment=float(analysis_result.get("alignment_score", 0)),
+                goals_alignment=float(analysis_result.get("alignment_score", 0)),
+            ),
+            overall_assessment=analysis_result.get("overall_assessment", ""),
+            strengths=analysis_result.get("strengths", []),
+            misalignments=[m.get("area", "") for m in analysis_result.get("misalignments", [])],
+            recommendations=analysis_result.get("recommendations", []),
+            created_at=datetime.now(UTC),
+            metadata={"user_id": user.user_id},
+        )
     except Exception as e:
         logger.error("Alignment explanation failed", error=str(e), exc_info=True)
         raise HTTPException(
@@ -83,7 +105,24 @@ async def get_alignment_suggestions(
                 **request.context,
             }
         )
-        return AlignmentAnalysisResponse(success=True, data=analysis_result)
+        
+        # Transform service result to response model
+        return AlignmentAnalysisResponse(
+            analysis_id=f"anls_{uuid.uuid4().hex[:12]}",
+            analysis_type=AnalysisType.ALIGNMENT,
+            scores=AlignmentScore(
+                overall_score=float(analysis_result.get("alignment_score", 0)),
+                purpose_alignment=float(analysis_result.get("alignment_score", 0)),
+                values_alignment=float(analysis_result.get("alignment_score", 0)),
+                goals_alignment=float(analysis_result.get("alignment_score", 0)),
+            ),
+            overall_assessment=analysis_result.get("overall_assessment", ""),
+            strengths=analysis_result.get("strengths", []),
+            misalignments=[m.get("area", "") for m in analysis_result.get("misalignments", [])],
+            recommendations=analysis_result.get("recommendations", []),
+            created_at=datetime.now(UTC),
+            metadata={"user_id": user.user_id},
+        )
     except Exception as e:
         logger.error("Alignment suggestions failed", error=str(e), exc_info=True)
         raise HTTPException(

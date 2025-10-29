@@ -576,7 +576,7 @@ class MultitenantConversationService:
             session_outcomes: SessionOutcomes = await self.llm_service.extract_session_outcomes(
                 conversation_history=conversation.get_conversation_history(),
                 topic=conversation.topic,
-                ai_response=ai_response,
+                _ai_response=ai_response,
             )
 
             if (
