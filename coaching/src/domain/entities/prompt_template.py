@@ -22,7 +22,8 @@ class PromptTemplate(BaseModel):
         name: Template name
         topic: Coaching topic this template is for
         phase: Conversation phase this template is for
-        template_text: The actual template with {variable} placeholders
+        system_prompt: System prompt that sets LLM context/role
+        template_text: The actual user prompt template with {variable} placeholders
         variables: List of variable names used in template
         version: Template version number
         is_active: Whether this template is currently active
@@ -33,14 +34,22 @@ class PromptTemplate(BaseModel):
         - Template text must contain all declared variables
         - Variables must be valid Python identifiers
         - Cannot deactivate without having another active template
+        - System prompt sets the LLM's behavior and context
+
+    Architecture Note:
+        - Model selection comes from LLMConfiguration, not stored here
+        - Template focuses on prompt content, config handles runtime parameters
     """
 
     template_id: TemplateId = Field(..., description="Unique template ID")
     name: str = Field(..., min_length=3, max_length=100, description="Template name")
     topic: CoachingTopic = Field(..., description="Coaching topic")
     phase: ConversationPhase = Field(..., description="Conversation phase")
+    system_prompt: str = Field(
+        ..., min_length=10, max_length=5000, description="System prompt for LLM context/role"
+    )
     template_text: str = Field(
-        ..., min_length=10, max_length=5000, description="Template text with variables"
+        ..., min_length=10, max_length=5000, description="User prompt template with variables"
     )
     variables: list[str] = Field(default_factory=list, description="Variable names in template")
     version: int = Field(default=1, ge=1, description="Template version")
@@ -62,6 +71,14 @@ class PromptTemplate(BaseModel):
         """Ensure name is not just whitespace."""
         if not v.strip():
             raise ValueError("Template name cannot be empty or whitespace only")
+        return v.strip()
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt_not_empty(cls, v: str) -> str:
+        """Ensure system prompt is not just whitespace."""
+        if not v.strip():
+            raise ValueError("System prompt cannot be empty or whitespace only")
         return v.strip()
 
     @field_validator("template_text")
