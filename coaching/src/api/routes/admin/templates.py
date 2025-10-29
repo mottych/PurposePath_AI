@@ -24,7 +24,7 @@ from coaching.src.services.template_validation_service import (
     TemplateValidationError,
     TemplateValidationService,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
@@ -189,17 +189,18 @@ async def get_template_content(
             )
 
         # Convert to response format
+        # Map domain entity to admin response model
         response_data = PromptTemplateDetail(
             templateId=template.template_id,
             topic=template.topic.value,
             version=version,
-            systemPrompt=template.system_prompt,
-            userPromptTemplate=template.user_prompt_template,
-            model=template.model,
-            parameters=template.parameters,
-            metadata=template.metadata,
-            createdAt=datetime.now(UTC),  # Placeholder
-            lastModified=datetime.now(UTC),  # Placeholder
+            systemPrompt="",  # Domain entity doesn't have system_prompt
+            userPromptTemplate=template.template_text,
+            model="default-model",  # Domain entity doesn't store model
+            parameters={var: "" for var in template.variables},
+            metadata={"phase": template.phase.value, "name": template.name},
+            createdAt=template.created_at,
+            lastModified=template.updated_at,
         )
 
         logger.info(
@@ -236,7 +237,7 @@ async def get_template_content(
 )
 async def create_template_version(
     topic: str = Path(..., description="Coaching topic identifier"),
-    request: CreateTemplateVersionRequest = ...,
+    request: CreateTemplateVersionRequest = Body(...),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
@@ -327,14 +328,16 @@ async def create_template_version(
                 ) from e
 
             # Create new template entity
+            # Map admin request to domain entity
+            from coaching.src.core.constants import ConversationPhase
             template = PromptTemplate(
                 template_id=f"{topic}_{request.version}",
+                name=f"{topic}_template",
                 topic=coaching_topic,
-                system_prompt=request.system_prompt,
-                user_prompt_template=request.user_prompt_template,
-                model=request.model,
-                parameters=request.parameters,
-                metadata=request.metadata,
+                phase=ConversationPhase.INITIAL_ASSESSMENT,  # Default phase
+                template_text=request.user_prompt_template or "",
+                variables=list(request.parameters.keys()) if request.parameters else [],
+                version=1,
             )
 
             # Save to repository
@@ -378,17 +381,18 @@ async def create_template_version(
             )
 
         # Build response
+        # Map domain entity to admin response model
         response_data = PromptTemplateDetail(
             templateId=template.template_id,
             topic=template.topic.value,
             version=request.version,
-            systemPrompt=template.system_prompt,
-            userPromptTemplate=template.user_prompt_template,
-            model=template.model,
-            parameters=template.parameters,
-            metadata=template.metadata,
-            createdAt=datetime.now(UTC),
-            lastModified=datetime.now(UTC),
+            systemPrompt="",  # Domain entity doesn't have system_prompt
+            userPromptTemplate=template.template_text,
+            model="default-model",  # Domain entity doesn't store model
+            parameters={var: "" for var in template.variables},
+            metadata={"phase": template.phase.value, "name": template.name},
+            createdAt=template.created_at,
+            lastModified=template.updated_at,
         )
 
         logger.info(
