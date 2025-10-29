@@ -2,8 +2,9 @@
 
 import structlog
 from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_conversation_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.core.constants import ConversationStatus
+from coaching.src.core.types import create_conversation_id, create_tenant_id, create_user_id
+from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
@@ -69,8 +70,8 @@ async def list_conversations(
         # If user_id is provided, we can use the existing get_by_user method
         if user_id:
             user_conversations = await conversation_repo.get_by_user(
-                user_id=user_id,
-                tenant_id=tenant_id,
+                user_id=create_user_id(user_id),
+                tenant_id=create_tenant_id(tenant_id) if tenant_id else None,
                 limit=page_size * page,  # Get enough for pagination
                 active_only=(status == "active") if status else False,
             )
@@ -169,11 +170,8 @@ async def get_conversation_details(
     )
 
     try:
-        # Retrieve conversation (without tenant restriction for admin)
-        conversation = await conversation_repo.get_by_id(
-            conversation_id=conversation_id,
-            tenant_id=None,  # Admin can view any tenant's conversations
-        )
+        # Fetch conversation
+        conversation = await conversation_repo.get_by_id(create_conversation_id(conversation_id))
 
         if not conversation:
             raise HTTPException(

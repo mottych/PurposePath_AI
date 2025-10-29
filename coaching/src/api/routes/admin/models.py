@@ -15,7 +15,7 @@ from coaching.src.models.admin_responses import (
 )
 from coaching.src.services.audit_log_service import AuditLogService
 from coaching.src.services.model_config_service import ModelConfigService
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
@@ -162,14 +162,14 @@ async def list_coaching_topics(
         )
 
 
-@router.put("/models/{model_id}", response_model=ApiResponse[dict[str, str]])
+@router.put("/models/{model_id}", response_model=ApiResponse[dict[str, Any]])
 async def update_model_configuration(
     model_id: str = Path(..., description="Unique model identifier"),
-    request: UpdateModelConfigRequest = ...,
+    request: UpdateModelConfigRequest = Body(...),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     model_config_service: ModelConfigService = Depends(get_model_config_service),
-) -> ApiResponse[dict[str, str]]:
+) -> ApiResponse[dict[str, Any]]:
     """
     Update configuration for a specific AI model.
 

@@ -330,11 +330,12 @@ async def create_template_version(
             # Create new template entity
             # Map admin request to domain entity
             from coaching.src.core.constants import ConversationPhase
+            from coaching.src.core.types import TemplateId
             template = PromptTemplate(
-                template_id=f"{topic}_{request.version}",
+                template_id=TemplateId(f"{topic}_{request.version}"),
                 name=f"{topic}_template",
                 topic=coaching_topic,
-                phase=ConversationPhase.INITIAL_ASSESSMENT,  # Default phase
+                phase=ConversationPhase.INTRODUCTION,  # Default phase
                 template_text=request.user_prompt_template or "",
                 variables=list(request.parameters.keys()) if request.parameters else [],
                 version=1,
@@ -428,7 +429,7 @@ async def create_template_version(
 async def update_template(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Template version"),
-    request: UpdateTemplateRequest = ...,
+    request: UpdateTemplateRequest = Body(...),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
@@ -612,7 +613,7 @@ async def update_template(
 async def set_latest_version(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Version to set as latest"),
-    request: SetLatestVersionRequest = ...,
+    request: SetLatestVersionRequest = Body(...),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
