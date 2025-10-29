@@ -1,4 +1,6 @@
-"""Admin API routes for AI model management."""
+"""Admin API routes for AI model and topic management."""
+
+from typing import Any
 
 import structlog
 from coaching.src.api.auth import get_current_context

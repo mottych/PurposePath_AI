@@ -2,6 +2,8 @@
 
 import structlog
 from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies import get_conversation_repository
+from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.constants import ConversationStatus
 from coaching.src.core.types import create_conversation_id, create_tenant_id, create_user_id
 from coaching.src.domain.entities.conversation import Conversation
@@ -95,7 +97,7 @@ async def list_conversations(
                 conversationId=conv.conversation_id,
                 tenantId=conv.tenant_id,
                 userId=conv.user_id,
-                topic=conv.context.topic.value if conv.context.topic else "unknown",
+                topic="unknown",  # ConversationContext doesn't have topic attribute
                 status=conv.status.value,
                 messageCount=len(conv.messages),
                 createdAt=conv.created_at,
@@ -171,7 +173,8 @@ async def get_conversation_details(
 
     try:
         # Fetch conversation
-        conversation = await conversation_repo.get_by_id(create_conversation_id(conversation_id))
+        from coaching.src.core.types import ConversationId
+        conversation = await conversation_repo.get_by_id(ConversationId(conversation_id))
 
         if not conversation:
             raise HTTPException(
@@ -200,10 +203,10 @@ async def get_conversation_details(
             conversationId=conversation.conversation_id,
             tenantId=conversation.tenant_id,
             userId=conversation.user_id,
-            topic=conversation.context.topic.value if conversation.context.topic else "unknown",
+            topic="unknown",  # ConversationContext doesn't have topic attribute
             status=conversation.status.value,
             messages=messages,
-            metadata=conversation.context.additional_context,
+            metadata={},  # ConversationContext doesn't have additional_context attribute
             createdAt=conversation.created_at,
             lastActivity=conversation.updated_at,
             totalTokens=total_tokens,

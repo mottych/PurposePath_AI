@@ -3,10 +3,6 @@
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.models.auth import UserContext
-from coaching.src.api.models.conversations import ConversationMetricsResponse
-from coaching.src.services.multitenant_conversation_service import (
-    MultitenantConversationService,
-)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Any, Generic, TypeVar

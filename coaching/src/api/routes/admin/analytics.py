@@ -29,7 +29,7 @@ from coaching.src.services.usage_analytics_service import (
     UsageAnalyticsService,
     UsageMetrics,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 
 from shared.models.multitenant import RequestContext
@@ -211,7 +211,7 @@ async def get_model_metrics(
 async def test_template(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Template version to test"),
-    request: TemplateTestRequest = ...,
+    request: TemplateTestRequest = Body(...),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
