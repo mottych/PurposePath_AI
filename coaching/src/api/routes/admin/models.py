@@ -7,13 +7,12 @@ from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_model_config_service
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.constants import CoachingTopic
+from coaching.src.core.llm_models import LLMProvider, list_models
 from coaching.src.models.admin_requests import UpdateModelConfigRequest
 from coaching.src.models.admin_responses import (
-    AIModelInfo,
-    AIModelsResponse,
-    AIProviderInfo,
     CoachingTopicInfo,
-    ModelCostInfo,
+    LLMModelInfo,
+    LLMModelsResponse,
 )
 from coaching.src.services.audit_log_service import AuditLogService
 from coaching.src.services.model_config_service import ModelConfigService
@@ -26,78 +25,99 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-@router.get("/models", response_model=ApiResponse[AIModelsResponse])
+@router.get("/models", response_model=ApiResponse[LLMModelsResponse])
 async def list_ai_models(
+    provider: str | None = None,
+    active_only: bool = True,
+    capability: str | None = None,
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
-) -> ApiResponse[AIModelsResponse]:
+) -> ApiResponse[LLMModelsResponse]:
     """
-    Get all supported LLM providers and their available models.
+    Get all supported LLM models from MODEL_REGISTRY.
 
     This endpoint returns configuration for all AI models available in the system,
-    including pricing, capabilities, and active status.
+    including pricing, capabilities, and active status. Data is sourced from
+    MODEL_REGISTRY in coaching/src/core/llm_models.py.
 
     **Permissions Required:** ADMIN_ACCESS
 
+    **Query Parameters:**
+    - provider: Filter by provider (bedrock, anthropic, openai)
+    - active_only: Only return active models (default: true)
+    - capability: Filter by capability (chat, analysis, streaming, function_calling, vision)
+
     **Returns:**
-    - List of providers with their models
-    - Default provider and model configuration
-    - Model capabilities and pricing information
+    - List of available LLM models
+    - List of unique providers
+    - Total count of models
     """
-    logger.info("Fetching AI models list", admin_user_id=context.user_id)
+    logger.info(
+        "Fetching LLM models from MODEL_REGISTRY",
+        admin_user_id=context.user_id,
+        provider=provider,
+        active_only=active_only,
+        capability=capability,
+    )
 
     try:
-        # Define available models (in production, this could come from config/database)
-        models = [
-            AIModelInfo(
-                id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-                name="Claude 3.5 Sonnet",
-                provider="Anthropic",
-                version="20241022-v2",
-                capabilities=["text_generation", "conversation", "analysis"],
-                maxTokens=200000,
-                costPer1kTokens=ModelCostInfo(input=0.003, output=0.015),
-                isActive=True,
-                isDefault=True,
-            ),
-            AIModelInfo(
-                id="anthropic.claude-3-haiku-20240307-v1:0",
-                name="Claude 3 Haiku",
-                provider="Anthropic",
-                version="20240307-v1",
-                capabilities=["text_generation", "conversation"],
-                maxTokens=200000,
-                costPer1kTokens=ModelCostInfo(input=0.00025, output=0.00125),
-                isActive=True,
-                isDefault=False,
-            ),
-        ]
+        # Convert provider string to enum if provided
+        provider_enum = None
+        if provider:
+            try:
+                provider_enum = LLMProvider(provider.lower())
+            except ValueError:
+                valid_providers = [p.value for p in LLMProvider]
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid provider '{provider}'. Valid providers: {valid_providers}",
+                ) from None
 
-        provider = AIProviderInfo(
-            name="bedrock",
-            displayName="Amazon Bedrock",
-            isActive=True,
-            models=models,
+        # Get models from MODEL_REGISTRY
+        registry_models = list_models(
+            provider=provider_enum,
+            active_only=active_only,
+            capability=capability,
         )
 
-        response_data = AIModelsResponse(
-            providers=[provider],
-            defaultProvider="bedrock",
-            defaultModel="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        # Convert to response format
+        model_infos = [
+            LLMModelInfo(
+                code=model.code,
+                provider=model.provider.value,
+                modelName=model.model_name,
+                version=model.version,
+                capabilities=model.capabilities,
+                maxTokens=model.max_tokens,
+                costPer1kTokens=model.cost_per_1k_tokens,
+                isActive=model.is_active,
+            )
+            for model in registry_models
+        ]
+
+        # Get unique providers
+        unique_providers = sorted({model.provider.value for model in registry_models})
+
+        response_data = LLMModelsResponse(
+            models=model_infos,
+            providers=unique_providers,
+            totalCount=len(model_infos),
         )
 
         logger.info(
-            "AI models list retrieved",
+            "LLM models retrieved from MODEL_REGISTRY",
             admin_user_id=context.user_id,
-            provider_count=1,
-            model_count=len(models),
+            total_count=len(model_infos),
+            providers=unique_providers,
         )
 
         return ApiResponse(success=True, data=response_data)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Error listing AI models", error=str(e))
-        raise HTTPException(status_code=500, detail="Failed to list AI models") from e
+        logger.error("Error listing LLM models", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to list LLM models") from e
 
 
 @router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])

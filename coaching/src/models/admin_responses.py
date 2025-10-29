@@ -44,8 +44,37 @@ class AIProviderInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class LLMModelInfo(BaseModel):
+    """Information about an LLM model from MODEL_REGISTRY."""
+
+    code: str = Field(..., description="Unique model code")
+    provider: str = Field(..., description="Provider name")
+    model_name: str = Field(
+        ..., description="Full model identifier for API calls", alias="modelName"
+    )
+    version: str = Field(..., description="Model version")
+    capabilities: list[str] = Field(..., description="Model capabilities")
+    max_tokens: int = Field(..., description="Maximum tokens supported", alias="maxTokens")
+    cost_per_1k_tokens: float = Field(
+        ..., description="Cost per 1K tokens (USD)", alias="costPer1kTokens"
+    )
+    is_active: bool = Field(..., description="Whether model is active", alias="isActive")
+
+    model_config = {"populate_by_name": True}
+
+
+class LLMModelsResponse(BaseModel):
+    """Response for listing LLM models from MODEL_REGISTRY."""
+
+    models: list[LLMModelInfo] = Field(..., description="Available LLM models")
+    providers: list[str] = Field(..., description="List of unique providers")
+    total_count: int = Field(..., description="Total number of models", alias="totalCount")
+
+    model_config = {"populate_by_name": True}
+
+
 class AIModelsResponse(BaseModel):
-    """Response for listing AI models."""
+    """Response for listing AI models (deprecated - use LLMModelsResponse)."""
 
     providers: list[AIProviderInfo] = Field(..., description="Available AI providers")
     default_provider: str = Field(..., description="Default provider", alias="defaultProvider")
@@ -159,14 +188,76 @@ class CoachingTopicInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# LLM Interactions Responses
+
+
+class LLMInteractionInfo(BaseModel):
+    """Information about an LLM interaction."""
+
+    code: str = Field(..., description="Unique interaction code")
+    description: str = Field(..., description="Human-readable description")
+    category: str = Field(..., description="Interaction category")
+    required_parameters: list[str] = Field(
+        ..., description="Required parameters for this interaction", alias="requiredParameters"
+    )
+    optional_parameters: list[str] = Field(
+        ..., description="Optional parameters for this interaction", alias="optionalParameters"
+    )
+    handler_class: str = Field(
+        ..., description="Service class that handles this interaction", alias="handlerClass"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ActiveConfigurationInfo(BaseModel):
+    """Information about an active configuration."""
+
+    config_id: str = Field(..., description="Configuration identifier", alias="configId")
+    template_id: str = Field(..., description="Template identifier", alias="templateId")
+    template_name: str = Field(..., description="Template name", alias="templateName")
+    model_code: str = Field(..., description="Model code", alias="modelCode")
+    tier: str | None = Field(None, description="Tier restriction (null = all tiers)")
+    is_active: bool = Field(..., description="Whether configuration is active", alias="isActive")
+
+    model_config = {"populate_by_name": True}
+
+
+class LLMInteractionDetail(LLMInteractionInfo):
+    """Detailed LLM interaction information including active configurations."""
+
+    active_configurations: list[ActiveConfigurationInfo] = Field(
+        default_factory=list,
+        description="Active configurations for this interaction",
+        alias="activeConfigurations",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class LLMInteractionsResponse(BaseModel):
+    """Response for listing LLM interactions."""
+
+    interactions: list[LLMInteractionInfo] = Field(..., description="Available LLM interactions")
+    total_count: int = Field(..., description="Total number of interactions", alias="totalCount")
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
     "AIModelInfo",
     "AIModelsResponse",
     "AIProviderInfo",
+    "ActiveConfigurationInfo",
     "CoachingTopicInfo",
     "ConversationDetail",
     "ConversationMessage",
     "ConversationSummary",
+    "LLMInteractionDetail",
+    "LLMInteractionInfo",
+    "LLMInteractionsResponse",
+    "LLMModelInfo",
+    "LLMModelsResponse",
     "ModelCostInfo",
     "PromptTemplateDetail",
     "PromptTemplateVersionsResponse",
