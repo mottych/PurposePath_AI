@@ -18,6 +18,7 @@ class TestPromptTemplateCreation:
             name="Core Values Introduction",
             topic=CoachingTopic.CORE_VALUES,
             phase=ConversationPhase.INTRODUCTION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="Hello {name}, let's explore your core values.",
             variables=["name"],
         )
@@ -38,6 +39,7 @@ class TestPromptTemplateCreation:
             name="Static Template",
             topic=CoachingTopic.PURPOSE,
             phase=ConversationPhase.EXPLORATION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="This is a static template with no variables.",
         )
 
@@ -57,6 +59,7 @@ class TestPromptTemplateValidation:
                 name="",
                 topic=CoachingTopic.CORE_VALUES,
                 phase=ConversationPhase.INTRODUCTION,
+                system_prompt="You are an AI coaching assistant.",
                 template_text="Test template",
             )
 
@@ -71,6 +74,7 @@ class TestPromptTemplateValidation:
                 name="   ",
                 topic=CoachingTopic.CORE_VALUES,
                 phase=ConversationPhase.INTRODUCTION,
+                system_prompt="You are an AI coaching assistant.",
                 template_text="Test template",
             )
 
@@ -85,6 +89,7 @@ class TestPromptTemplateValidation:
                 name="Test Template",
                 topic=CoachingTopic.CORE_VALUES,
                 phase=ConversationPhase.INTRODUCTION,
+                system_prompt="You are an AI coaching assistant.",
                 template_text="Hello {user-name}",
                 variables=["user-name"],  # Invalid identifier
             )
@@ -101,6 +106,7 @@ class TestPromptTemplateRendering:
             name="Personalized Greeting",
             topic=CoachingTopic.CORE_VALUES,
             phase=ConversationPhase.INTRODUCTION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="Hello {name}, welcome to {topic} coaching!",
             variables=["name", "topic"],
         )
@@ -129,6 +135,7 @@ class TestPromptTemplateRendering:
             name="Static",
             topic=CoachingTopic.PURPOSE,
             phase=ConversationPhase.EXPLORATION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="This has no variables.",
         )
 
@@ -150,6 +157,7 @@ class TestPromptTemplateActivation:
             name="Test Template",
             topic=CoachingTopic.CORE_VALUES,
             phase=ConversationPhase.INTRODUCTION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="Test {var}",
             variables=["var"],
         )
@@ -203,6 +211,7 @@ class TestPromptTemplateVersioning:
             name="Versioned Template",
             topic=CoachingTopic.GOALS,
             phase=ConversationPhase.DEEPENING,
+            system_prompt="You are an AI coaching assistant.",
             template_text="Original text with {var}",
             variables=["var"],
         )
@@ -248,6 +257,7 @@ class TestPromptTemplateUtilityMethods:
             name="Test",
             topic=CoachingTopic.VISION,
             phase=ConversationPhase.SYNTHESIS,
+            system_prompt="You are an AI coaching assistant.",
             template_text="Test {name} and {value}",
             variables=["name", "value"],
         )
@@ -266,6 +276,7 @@ class TestPromptTemplateUtilityMethods:
             name="Static",
             topic=CoachingTopic.PURPOSE,
             phase=ConversationPhase.EXPLORATION,
+            system_prompt="You are an AI coaching assistant.",
             template_text="No variables here",
         )
 
