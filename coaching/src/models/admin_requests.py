@@ -144,9 +144,48 @@ class UpdateModelConfigRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ValidateTemplateRequest(BaseModel):
+    """Request to validate a template before saving."""
+
+    system_prompt: str = Field(
+        ..., description="System prompt content", min_length=10, max_length=5000
+    )
+    user_prompt_template: str = Field(
+        ..., description="User prompt template", min_length=10, max_length=5000
+    )
+    parameters: dict[str, dict[str, str]] = Field(
+        ...,
+        description="Template parameters with display_name and description",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TestTemplateRequest(BaseModel):
+    """Request to test a template with sample parameter values."""
+
+    parameters: dict[str, str] = Field(..., description="Parameter values for testing")
+
+    model_config = {"populate_by_name": True}
+
+
+class ValidateConfigurationRequest(BaseModel):
+    """Request to validate a configuration before creation."""
+
+    interaction_code: str = Field(..., description="Interaction code")
+    template_id: str = Field(..., description="Template ID")
+    model_code: str = Field(..., description="Model code")
+    tier: str | None = Field(None, description="Optional tier restriction")
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
     "CreateTemplateVersionRequest",
     "SetLatestVersionRequest",
+    "TestTemplateRequest",
     "UpdateModelConfigRequest",
     "UpdateTemplateRequest",
+    "ValidateConfigurationRequest",
+    "ValidateTemplateRequest",
 ]

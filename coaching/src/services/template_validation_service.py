@@ -301,5 +301,163 @@ class TemplateValidationService:
                 field="version",
             )
 
+    def extract_parameters_from_prompts(
+        self,
+        system_prompt: str,
+        user_prompt_template: str,
+    ) -> tuple[list[str], list[str], list[str]]:
+        """
+        Extract parameter names from system and user prompts.
+
+        Args:
+            system_prompt: System prompt content
+            user_prompt_template: User prompt template
+
+        Returns:
+            Tuple of (used_in_system, used_in_user, all_unique)
+        """
+        system_params = list(self.PARAMETER_PATTERN.findall(system_prompt))
+        user_params = list(self.PARAMETER_PATTERN.findall(user_prompt_template))
+        all_unique = sorted(set(system_params + user_params))
+
+        return system_params, user_params, all_unique
+
+    def validate_template_inline(
+        self,
+        system_prompt: str,
+        user_prompt_template: str,
+        parameters: dict[str, dict[str, str]],
+    ) -> tuple[bool, list[str], list[str], dict[str, list[str]]]:
+        """
+        Validate template without requiring topic (design-time validation).
+
+        Args:
+            system_prompt: System prompt content
+            user_prompt_template: User prompt template
+            parameters: Template parameters with metadata
+
+        Returns:
+            Tuple of (is_valid, errors, warnings, parameter_analysis)
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # Validate prompt lengths
+        if len(system_prompt) < 10:
+            errors.append("System prompt must be at least 10 characters")
+        if len(system_prompt) > 5000:
+            errors.append("System prompt must not exceed 5000 characters")
+        if len(user_prompt_template) < 10:
+            errors.append("User prompt template must be at least 10 characters")
+        if len(user_prompt_template) > 5000:
+            errors.append("User prompt template must not exceed 5000 characters")
+
+        # Check parameter syntax
+        try:
+            self._check_parameter_syntax(system_prompt)
+            self._check_parameter_syntax(user_prompt_template)
+        except TemplateValidationError as e:
+            errors.append(e.message)
+
+        # Extract parameters from prompts
+        system_params, user_params, all_used = self.extract_parameters_from_prompts(
+            system_prompt, user_prompt_template
+        )
+
+        # Get declared parameters
+        declared_params = set(parameters.keys())
+
+        # Check for undeclared parameters
+        undeclared = set(all_used) - declared_params
+        if undeclared:
+            errors.append(f"Template uses undeclared parameters: {sorted(undeclared)}")
+
+        # Check for unused parameters
+        unused = declared_params - set(all_used)
+        if unused:
+            warnings.append(f"Declared parameters not used in template: {sorted(unused)}")
+
+        parameter_analysis = {
+            "declared_parameters": sorted(declared_params),
+            "used_in_system_prompt": system_params,
+            "used_in_user_prompt": user_params,
+            "unused_parameters": sorted(unused),
+            "undeclared_but_used": sorted(undeclared),
+        }
+
+        is_valid = len(errors) == 0
+
+        return is_valid, errors, warnings, parameter_analysis
+
+    def render_template(
+        self,
+        system_prompt: str,
+        user_prompt_template: str,
+        parameter_values: dict[str, str],
+    ) -> tuple[str, str, list[str], list[str], list[str]]:
+        """
+        Render template with parameter values for testing.
+
+        Args:
+            system_prompt: System prompt template
+            user_prompt_template: User prompt template
+            parameter_values: Parameter values to substitute
+
+        Returns:
+            Tuple of (rendered_system, rendered_user, used_params, unused_params, missing_params)
+        """
+        # Extract all parameters from templates
+        system_params, user_params, all_params = self.extract_parameters_from_prompts(
+            system_prompt, user_prompt_template
+        )
+
+        # Determine which parameters were actually used
+        all_params_set = set(all_params)
+        provided_params_set = set(parameter_values.keys())
+
+        used_params = sorted(all_params_set & provided_params_set)
+        unused_params = sorted(provided_params_set - all_params_set)
+        missing_params = sorted(all_params_set - provided_params_set)
+
+        # Render system prompt
+        rendered_system = system_prompt
+        for param, value in parameter_values.items():
+            rendered_system = rendered_system.replace(f"{{{param}}}", value)
+
+        # Render user prompt
+        rendered_user = user_prompt_template
+        for param, value in parameter_values.items():
+            rendered_user = rendered_user.replace(f"{{{param}}}", value)
+
+        return (
+            rendered_system,
+            rendered_user,
+            used_params,
+            unused_params,
+            missing_params,
+        )
+
+    def estimate_tokens(self, text: str) -> int:
+        """
+        Estimate token count for text.
+
+        Simple estimation: ~4 characters per token (rough approximation).
+        For accurate counting, integrate tiktoken library in future.
+
+        Args:
+            text: Text to estimate tokens for
+
+        Returns:
+            Estimated token count
+        """
+        # Simple estimation: average 4 characters per token
+        # This is a rough approximation. For better accuracy, use tiktoken
+        char_count = len(text)
+        estimated_tokens = max(1, char_count // 4)
+
+        logger.debug("Estimated tokens", char_count=char_count, estimated_tokens=estimated_tokens)
+
+        return estimated_tokens
+
 
 __all__ = ["TemplateValidationError", "TemplateValidationService"]

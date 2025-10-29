@@ -188,6 +188,181 @@ class CoachingTopicInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# Template Validation Responses
+
+
+class ValidationError(BaseModel):
+    """A single validation error."""
+
+    field: str = Field(..., description="Field that has error")
+    message: str = Field(..., description="Error message")
+    code: str = Field(..., description="Error code")
+
+    model_config = {"populate_by_name": True}
+
+
+class ParameterAnalysis(BaseModel):
+    """Analysis of parameter usage in a template."""
+
+    declared_parameters: list[str] = Field(
+        ..., description="Parameters declared in template", alias="declaredParameters"
+    )
+    used_in_system_prompt: list[str] = Field(
+        ..., description="Parameters used in system prompt", alias="usedInSystemPrompt"
+    )
+    used_in_user_prompt: list[str] = Field(
+        ..., description="Parameters used in user prompt", alias="usedInUserPrompt"
+    )
+    unused_parameters: list[str] = Field(
+        ..., description="Declared but unused parameters", alias="unusedParameters"
+    )
+    undeclared_but_used: list[str] = Field(
+        ..., description="Used but not declared parameters", alias="undeclaredButUsed"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TemplateValidationResponse(BaseModel):
+    """Response for template validation."""
+
+    is_valid: bool = Field(..., description="Whether template is valid", alias="isValid")
+    errors: list[str] = Field(default_factory=list, description="Validation errors")
+    warnings: list[str] = Field(default_factory=list, description="Validation warnings")
+    parameter_analysis: ParameterAnalysis = Field(
+        ..., description="Parameter usage analysis", alias="parameterAnalysis"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ParameterUsage(BaseModel):
+    """Parameter usage information for template testing."""
+
+    used_parameters: list[str] = Field(
+        ..., description="Parameters that were used", alias="usedParameters"
+    )
+    unused_parameters: list[str] = Field(
+        ..., description="Parameters that were not used", alias="unusedParameters"
+    )
+    missing_required_parameters: list[str] = Field(
+        ..., description="Required parameters that are missing", alias="missingRequiredParameters"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TemplateTestResponse(BaseModel):
+    """Response for template testing with sample values."""
+
+    rendered_system_prompt: str = Field(
+        ..., description="Rendered system prompt", alias="renderedSystemPrompt"
+    )
+    rendered_user_prompt: str = Field(
+        ..., description="Rendered user prompt", alias="renderedUserPrompt"
+    )
+    estimated_tokens: int = Field(..., description="Estimated token count", alias="estimatedTokens")
+    validation_errors: list[str] = Field(
+        default_factory=list, description="Validation errors", alias="validationErrors"
+    )
+    parameter_usage: ParameterUsage = Field(
+        ..., description="Parameter usage info", alias="parameterUsage"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ParameterAnalysisResponse(BaseModel):
+    """Response for template parameter analysis."""
+
+    declared_parameters: list[str] = Field(
+        ..., description="Declared parameters", alias="declaredParameters"
+    )
+    used_in_system_prompt: list[str] = Field(
+        ..., description="Used in system prompt", alias="usedInSystemPrompt"
+    )
+    used_in_user_prompt: list[str] = Field(
+        ..., description="Used in user prompt", alias="usedInUserPrompt"
+    )
+    unused_parameters: list[str] = Field(
+        ..., description="Unused parameters", alias="unusedParameters"
+    )
+    undeclared_but_used: list[str] = Field(
+        ..., description="Undeclared but used", alias="undeclaredButUsed"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+# Configuration Validation Responses
+
+
+class ConfigurationConflict(BaseModel):
+    """A configuration conflict."""
+
+    type: str = Field(..., description="Conflict type")
+    message: str = Field(..., description="Conflict message")
+    existing_config_id: str | None = Field(
+        None, description="Existing config ID", alias="existingConfigId"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ConfigurationDependencies(BaseModel):
+    """Configuration dependency checks."""
+
+    template_exists: bool = Field(..., description="Template exists", alias="templateExists")
+    model_exists: bool = Field(..., description="Model exists", alias="modelExists")
+    interaction_exists: bool = Field(
+        ..., description="Interaction exists", alias="interactionExists"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ParameterCompatibility(BaseModel):
+    """Parameter compatibility analysis."""
+
+    template_parameters: list[str] = Field(
+        ..., description="Template parameters", alias="templateParameters"
+    )
+    interaction_required: list[str] = Field(
+        ..., description="Interaction required params", alias="interactionRequired"
+    )
+    interaction_optional: list[str] = Field(
+        ..., description="Interaction optional params", alias="interactionOptional"
+    )
+    missing_required: list[str] = Field(
+        ..., description="Missing required params", alias="missingRequired"
+    )
+    undeclared_used: list[str] = Field(
+        ..., description="Undeclared but used params", alias="undeclaredUsed"
+    )
+    extra_parameters: list[str] = Field(
+        ..., description="Extra template parameters", alias="extraParameters"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ConfigurationValidationResponse(BaseModel):
+    """Response for configuration validation."""
+
+    is_valid: bool = Field(..., description="Whether configuration is valid", alias="isValid")
+    warnings: list[str] = Field(default_factory=list, description="Validation warnings")
+    errors: list[str] = Field(default_factory=list, description="Validation errors")
+    conflicts: list[ConfigurationConflict] = Field(
+        default_factory=list, description="Configuration conflicts"
+    )
+    dependencies: ConfigurationDependencies = Field(..., description="Dependency checks")
+    parameter_compatibility: ParameterCompatibility = Field(
+        ..., description="Parameter compatibility analysis", alias="parameterCompatibility"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 # LLM Interactions Responses
 
 
@@ -250,6 +425,9 @@ __all__ = [
     "AIProviderInfo",
     "ActiveConfigurationInfo",
     "CoachingTopicInfo",
+    "ConfigurationConflict",
+    "ConfigurationDependencies",
+    "ConfigurationValidationResponse",
     "ConversationDetail",
     "ConversationMessage",
     "ConversationSummary",
@@ -259,7 +437,14 @@ __all__ = [
     "LLMModelInfo",
     "LLMModelsResponse",
     "ModelCostInfo",
+    "ParameterAnalysis",
+    "ParameterAnalysisResponse",
+    "ParameterCompatibility",
+    "ParameterUsage",
     "PromptTemplateDetail",
     "PromptTemplateVersionsResponse",
+    "TemplateTestResponse",
+    "TemplateValidationResponse",
     "TemplateVersionInfo",
+    "ValidationError",
 ]
