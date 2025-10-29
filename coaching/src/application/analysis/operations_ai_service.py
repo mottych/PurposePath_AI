@@ -75,7 +75,7 @@ Format your response as JSON with alignmentAnalysis (array), overallAlignment (n
                 "Strategic alignment analysis completed",
                 overall_score=analysis.get("overallAlignment"),
             )
-            return analysis
+            return dict(analysis)
         except json.JSONDecodeError:
             return {
                 "alignmentAnalysis": [
@@ -131,7 +131,7 @@ Format as JSON array with actionId, suggestedPriority, currentPriority, reasonin
                 response_text = response_text[:-3]
             suggestions = json.loads(response_text.strip())
             logger.info("Prioritization suggestions generated", suggestions_count=len(suggestions))
-            return suggestions
+            return list(suggestions)
         except json.JSONDecodeError:
             return [
                 {
@@ -190,7 +190,7 @@ Format as JSON array with actionId, suggestedStartDate, suggestedDueDate, reason
                 response_text = response_text[:-3]
             schedules = json.loads(response_text.strip())
             logger.info("Scheduling suggestions generated", schedules_count=len(schedules))
-            return schedules
+            return list(schedules)
         except json.JSONDecodeError:
             today = datetime.now().date()
             return [
@@ -246,7 +246,7 @@ Suggest 1-3 methods (five_whys, fishbone, swot, pareto) with method, confidence,
             logger.info(
                 "Root cause method suggestions generated", suggestions_count=len(suggestions)
             )
-            return suggestions
+            return list(suggestions)
         except json.JSONDecodeError:
             return [
                 {
@@ -310,7 +310,7 @@ Generate 3-5 actions with title, description, priority, estimatedDuration, estim
                 response_text = response_text[:-3]
             actions = json.loads(response_text.strip())
             logger.info("Action plan generated", actions_count=len(actions))
-            return actions
+            return list(actions)
         except json.JSONDecodeError:
             return [
                 {
