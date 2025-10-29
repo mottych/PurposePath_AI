@@ -30,6 +30,9 @@ from coaching.src.infrastructure.repositories.dynamodb_conversation_repository i
 from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
     LLMConfigurationRepository,
 )
+from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
+    TemplateMetadataRepository,
+)
 from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
 from coaching.src.services.insights_service import InsightsService
 from fastapi import Depends
@@ -114,6 +117,22 @@ async def get_llm_configuration_repository() -> LLMConfigurationRepository:
     # For now, using a default name - this should be in settings
     table_name = getattr(settings, "llm_config_table", "llm_configurations")
     return LLMConfigurationRepository(
+        dynamodb_resource=dynamodb,
+        table_name=table_name,
+    )
+
+
+async def get_template_metadata_repository() -> TemplateMetadataRepository:
+    """Get template metadata repository.
+
+    Returns:
+        TemplateMetadataRepository instance configured with settings
+    """
+    dynamodb = get_dynamodb_resource_singleton()
+    # Use a dedicated table for template metadata
+    # For now, using a default name - this should be in settings
+    table_name = getattr(settings, "template_metadata_table", "prompt_templates_metadata")
+    return TemplateMetadataRepository(
         dynamodb_resource=dynamodb,
         table_name=table_name,
     )
@@ -283,4 +302,5 @@ __all__ = [
     "get_model_config_service",
     "get_prompt_repository",
     "get_strategy_service",
+    "get_template_metadata_repository",
 ]
