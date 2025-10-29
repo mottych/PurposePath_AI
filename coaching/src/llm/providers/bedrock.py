@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover - fallback for local testing
         def get_encoding(_: str) -> _FallbackEncoding:
             return _FallbackEncoding()
 
-    tiktoken = _TiktokenFallback()  # type: ignore[assignment]
+    tiktoken = _TiktokenFallback()
 
 from botocore.exceptions import ClientError
 
@@ -91,7 +91,7 @@ class BedrockProvider(BaseProvider):
 
             # Create LangChain Bedrock client
             # Note: LangChain's ChatBedrock signature may vary by version
-            self._client = ChatBedrock(  # type: ignore[call-arg]
+            self._client = ChatBedrock(
                 model_id=self.config.model_name,
                 region_name=self.config.region_name or "us-east-1",
                 model_kwargs={
@@ -285,29 +285,29 @@ class BedrockProviderLegacy(LLMProvider):
         self,
         messages: list[dict[str, str]],
         system_prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 2000,
-        **kwargs: Any,
+        _temperature: float = 0.7,
+        _max_tokens: int = 2000,
+        **_kwargs: Any,
     ) -> str:
         """Generate response using Bedrock."""
         try:
             # Format messages for the provider
             formatted_messages = self.format_messages(messages, system_prompt)
-            top_p = float(kwargs.get("top_p", 0.9))
+            top_p = float(_kwargs.get("top_p", 0.9))
 
             # Prepare request based on provider
             if self.provider == "anthropic":
                 request_body = self._prepare_anthropic_request(
                     formatted_messages,
-                    temperature,
-                    max_tokens,
+                    _temperature,
+                    _max_tokens,
                     top_p,
                 )
             elif self.provider == "meta":
                 request_body = self._prepare_meta_request(
                     formatted_messages,
-                    temperature,
-                    max_tokens,
+                    _temperature,
+                    _max_tokens,
                     top_p,
                 )
             else:

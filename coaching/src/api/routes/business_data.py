@@ -3,8 +3,8 @@
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.models.auth import Permission, RequestContext
-from coaching.src.api.models.responses import ApiResponse, BusinessDataSummaryResponse
-from coaching.src.application.multitenant.conversation_service import (
+from coaching.src.models.responses import ApiResponse, BusinessDataSummaryResponse
+from coaching.src.services.multitenant_conversation_service import (
     MultitenantConversationService,
     get_multitenant_conversation_service,
 )

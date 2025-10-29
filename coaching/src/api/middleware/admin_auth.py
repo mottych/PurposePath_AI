@@ -26,7 +26,7 @@ def require_admin_access(context: RequestContext) -> RequestContext:
             "Admin access denied",
             user_id=context.user_id,
             tenant_id=context.tenant_id,
-            permissions=[p.value for p in context.permissions],
+            permissions=context.permissions,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

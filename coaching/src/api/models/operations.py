@@ -134,7 +134,7 @@ class PrioritizationRequest(BaseModel):
     """Request for action prioritization suggestions."""
 
     actions: list[PrioritizationActionInput] = Field(
-        ..., min_items=1, max_items=200, description="Actions to prioritize"
+        ..., min_length=1, max_length=200, description="Actions to prioritize"
     )
     business_context: BusinessContext = Field(
         ..., alias="businessContext", description="Business context for prioritization"
@@ -239,7 +239,7 @@ class SchedulingRequest(BaseModel):
     """Request for scheduling suggestions."""
 
     actions: list[SchedulingActionInput] = Field(
-        ..., min_items=1, max_items=100, description="Actions to schedule"
+        ..., min_length=1, max_length=100, description="Actions to schedule"
     )
     constraints: SchedulingConstraints = Field(..., description="Scheduling constraints")
 
@@ -314,7 +314,7 @@ class RootCauseRequest(BaseModel):
         ..., description="Business impact level"
     )
     context: IssueContext = Field(
-        default_factory=lambda: IssueContext(), description="Additional context"
+        default_factory=lambda: IssueContext(reportedBy=None, dateReported=None), description="Additional context"
     )
 
 
@@ -381,7 +381,7 @@ class ActionPlanRequest(BaseModel):
 
     issue: ActionIssue = Field(..., description="Issue to address")
     constraints: ActionConstraints = Field(
-        default_factory=lambda: ActionConstraints(), description="Constraints"
+        default_factory=lambda: ActionConstraints(timeline=None, budget=None), description="Constraints"
     )
     context: ActionPlanContext = Field(
         default_factory=lambda: ActionPlanContext(), description="Business context"

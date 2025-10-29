@@ -20,8 +20,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = structlog.get_logger()
 
 
-class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+class ErrorHandlingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """Middleware to handle exceptions and return appropriate HTTP responses.
+    
+    Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.
 
     This middleware catches exceptions raised during request processing
     and converts them to structured JSON error responses with appropriate

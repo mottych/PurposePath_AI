@@ -5,7 +5,7 @@ from typing import Any
 import structlog
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.constants import CoachingTopic
-from coaching.src.domain.entities.prompt_template import PromptTemplate
+from coaching.src.models.prompt import PromptTemplate
 from coaching.src.infrastructure.repositories.s3_prompt_repository import (
     S3PromptRepository,
 )
@@ -99,6 +99,11 @@ class TemplateTestingService:
             if not template:
                 return TemplateTestResult(
                     success=False,
+                    response=None,
+                    tokens=None,
+                    cost=None,
+                    model_id=None,
+                    rendered_prompt=None,
                     error=f"Template not found: {topic.value}/{version}",
                 )
 
@@ -110,17 +115,22 @@ class TemplateTestingService:
             if validation_error:
                 return TemplateTestResult(
                     success=False,
+                    response=None,
+                    tokens=None,
+                    cost=None,
+                    model_id=None,
+                    rendered_prompt=None,
                     error=validation_error,
                 )
 
             # Render user prompt with test parameters
             rendered_prompt = self._render_template(
-                template.user_prompt_template,
+                template.initial_message,
                 test_request.test_parameters,
             )
 
             # Determine model to use
-            model_id = test_request.model_override or template.model
+            model_id = test_request.model_override or template.llm_config.model
 
             # Execute template with LLM
             try:
@@ -156,8 +166,12 @@ class TemplateTestingService:
                 )
                 return TemplateTestResult(
                     success=False,
-                    error=f"LLM execution failed: {llm_error!s}",
+                    response=None,
+                    tokens=None,
+                    cost=None,
+                    model_id=None,
                     rendered_prompt=rendered_prompt,
+                    error=f"LLM execution failed: {llm_error!s}",
                 )
 
         except Exception as e:
@@ -169,6 +183,11 @@ class TemplateTestingService:
             )
             return TemplateTestResult(
                 success=False,
+                response=None,
+                tokens=None,
+                cost=None,
+                model_id=None,
+                rendered_prompt=None,
                 error=f"Test execution failed: {e!s}",
             )
 

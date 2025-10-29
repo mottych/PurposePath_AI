@@ -55,7 +55,7 @@ async def analyze_strategic_alignment(
         )
         actions = [action.model_dump() for action in request.actions]
         goals = [goal.model_dump() for goal in request.goals]
-        business_foundation = request.businessFoundation.model_dump()
+        business_foundation = request.business_foundation.model_dump()
         analysis = await operations_service.analyze_strategic_alignment(
             actions, goals, business_foundation
         )

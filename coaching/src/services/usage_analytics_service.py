@@ -92,9 +92,9 @@ class UsageAnalyticsService:
             # Get conversations based on filters
             conversations = await self._get_filtered_conversations(
                 tenant_id=tenant_id,
-                start_date=start_date,
-                end_date=end_date,
-                topic=topic,
+                _start_date=start_date,
+                _end_date=end_date,
+                _topic=topic,
             )
 
             # Extract and aggregate metrics from messages
@@ -203,8 +203,8 @@ class UsageAnalyticsService:
             # Get conversations
             conversations = await self._get_filtered_conversations(
                 tenant_id=tenant_id,
-                start_date=start_date,
-                end_date=end_date,
+                _start_date=start_date,
+                _end_date=end_date,
             )
 
             # Group by dimension

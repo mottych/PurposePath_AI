@@ -1,5 +1,7 @@
 """Test the shared types module to ensure proper functionality."""
 
+from typing import Any
+
 import pytest
 
 from shared.types import (
@@ -25,7 +27,8 @@ def test_domain_id_creation() -> None:
 
 def test_dynamodb_types() -> None:
     """Test that DynamoDB types are properly structured."""
-    user_item: DynamoDBItem = {
+    # DynamoDBItem is generic - cast to dict[str, Any] for testing
+    user_item: dict[str, Any] = {
         "PK": "USER#123",
         "SK": "USER#123",
         "type": "user",

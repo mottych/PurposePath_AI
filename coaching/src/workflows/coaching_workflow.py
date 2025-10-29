@@ -78,22 +78,22 @@ class CoachingWorkflow(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:  # type: ignore[type-var]
+    async def build_graph(self) -> StateGraph[dict[str, Any]]:
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 
         # Create graph with our state schema
         # LangGraph prefers TypedDict but supports dict at runtime
-        graph = StateGraph(dict[str, Any])  # type: ignore[type-var]
+        graph = StateGraph(dict[str, Any])
 
         # Add nodes (workflow steps)
-        graph.add_node("start", self._start_node)  # type: ignore[type-var]
-        graph.add_node("initial_assessment", self._initial_assessment_node)  # type: ignore[type-var]
-        graph.add_node("goal_exploration", self._goal_exploration_node)  # type: ignore[type-var]
-        graph.add_node("action_planning", self._action_planning_node)  # type: ignore[type-var]
-        graph.add_node("reflection", self._reflection_node)  # type: ignore[type-var]
-        graph.add_node("next_steps", self._next_steps_node)  # type: ignore[type-var]
-        graph.add_node("completion", self._completion_node)  # type: ignore[type-var]
+        graph.add_node("start", self._start_node)
+        graph.add_node("initial_assessment", self._initial_assessment_node)
+        graph.add_node("goal_exploration", self._goal_exploration_node)
+        graph.add_node("action_planning", self._action_planning_node)
+        graph.add_node("reflection", self._reflection_node)
+        graph.add_node("next_steps", self._next_steps_node)
+        graph.add_node("completion", self._completion_node)
 
         # Add edges (workflow flow)
         graph.add_edge(START, "start")

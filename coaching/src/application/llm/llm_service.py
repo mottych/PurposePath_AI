@@ -196,11 +196,11 @@ class LLMApplicationService:
             logger.info("Starting streaming generation", model=model)
 
             async for token in self.provider.generate_stream(
-                messages=messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                system_prompt=system_prompt,
+                _messages=messages,
+                _model=model,
+                _temperature=temperature,
+                _max_tokens=max_tokens,
+                _system_prompt=system_prompt,
             ):
                 yield token
 
