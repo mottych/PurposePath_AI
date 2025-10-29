@@ -109,7 +109,7 @@ class LLMApplicationService:
     async def generate_analysis(
         self,
         analysis_prompt: str,
-        context: dict[str, str] | None = None,
+        context: dict[str, Any] | None = None,
         model: str | None = None,
         temperature: float = 0.3,
         max_tokens: int | None = None,

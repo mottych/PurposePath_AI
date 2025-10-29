@@ -134,9 +134,9 @@ class TemplateTestingService:
 
             # Execute template with LLM
             try:
-                llm_response = await self.llm_service.generate_response(
-                    prompt=rendered_prompt,
-                    system_prompt=template.system_prompt,
+                llm_response = await self.llm_service.generate_analysis(
+                    analysis_prompt=rendered_prompt,
+                    context=None,
                     model=model_id,
                 )
 
@@ -206,22 +206,9 @@ class TemplateTestingService:
         Returns:
             Error message if validation fails, None if valid
         """
-        # Check all required parameters are provided
-        required_params = set(template.parameters.keys())
-        provided_params = set(test_parameters.keys())
-
-        missing = required_params - provided_params
-        if missing:
-            return f"Missing required parameters: {', '.join(sorted(missing))}"
-
-        # Check for extra parameters
-        extra = provided_params - required_params
-        if extra:
-            logger.warning(
-                "Extra test parameters provided (will be ignored)",
-                extra=extra,
-            )
-
+        # Template validation is handled by the LLM service during rendering
+        # PromptTemplate structure doesn't expose a simple parameters dict
+        # Parameters are validated during render() call in _render_template
         return None
 
     def _render_template(

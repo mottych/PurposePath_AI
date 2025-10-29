@@ -3,10 +3,8 @@
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.models.analysis import (
-    AlignmentExplanationRequest,
-    AlignmentExplanationResponse,
-    AlignmentSuggestionsRequest,
-    AlignmentSuggestionsResponse,
+    AlignmentAnalysisRequest,
+    AlignmentAnalysisResponse,
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
@@ -34,27 +32,27 @@ async def get_alignment_service() -> AlignmentAnalysisService:
 
 @router.post(
     "/alignment-explanation",
-    response_model=AlignmentExplanationResponse,
+    response_model=AlignmentAnalysisResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_alignment_explanation(
-    request: AlignmentExplanationRequest,
+    request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
-) -> AlignmentExplanationResponse:
-    """Generate AI-powered explanation of alignment score (Issue #62)."""
+) -> AlignmentAnalysisResponse:
+    """Generate AI-powered alignment analysis (Issue #62)."""
     try:
         logger.info(
-            "Generating alignment explanation", user_id=user.user_id, score=request.alignmentScore
+            "Generating alignment analysis", user_id=user.user_id
         )
-        goal_data = request.goal.model_dump()
-        foundation_data = request.businessFoundation.model_dump()
-        explanation = await alignment_service.get_detailed_explanation(
-            alignment_score=request.alignmentScore,
-            goal=goal_data,
-            business_foundation=foundation_data,
+        analysis_result = await alignment_service.analyze(
+            context={
+                "user_id": user.user_id,
+                "current_actions": request.text_to_analyze,
+                **request.context,
+            }
         )
-        return AlignmentExplanationResponse(success=True, explanation=explanation)
+        return AlignmentAnalysisResponse(success=True, data=analysis_result)
     except Exception as e:
         logger.error("Alignment explanation failed", error=str(e), exc_info=True)
         raise HTTPException(
@@ -65,27 +63,27 @@ async def get_alignment_explanation(
 
 @router.post(
     "/alignment-suggestions",
-    response_model=AlignmentSuggestionsResponse,
+    response_model=AlignmentAnalysisResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_alignment_suggestions(
-    request: AlignmentSuggestionsRequest,
+    request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
-) -> AlignmentSuggestionsResponse:
-    """Generate AI-powered suggestions to improve alignment (Issue #62)."""
+) -> AlignmentAnalysisResponse:
+    """Generate AI-powered alignment analysis with suggestions (Issue #62)."""
     try:
         logger.info(
-            "Generating alignment suggestions", user_id=user.user_id, score=request.alignmentScore
+            "Generating alignment analysis with suggestions", user_id=user.user_id
         )
-        goal_data = request.goal.model_dump()
-        foundation_data = request.businessFoundation.model_dump()
-        suggestions = await alignment_service.get_improvement_suggestions(
-            alignment_score=request.alignmentScore,
-            goal=goal_data,
-            business_foundation=foundation_data,
+        analysis_result = await alignment_service.analyze(
+            context={
+                "user_id": user.user_id,
+                "current_actions": request.text_to_analyze,
+                **request.context,
+            }
         )
-        return AlignmentSuggestionsResponse(success=True, suggestions=suggestions)
+        return AlignmentAnalysisResponse(success=True, data=analysis_result)
     except Exception as e:
         logger.error("Alignment suggestions failed", error=str(e), exc_info=True)
         raise HTTPException(

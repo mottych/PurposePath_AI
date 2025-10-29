@@ -85,7 +85,7 @@ async def suggest_prioritization(
             "Generating prioritization", user_id=user.user_id, action_count=len(request.actions)
         )
         actions = [action.model_dump() for action in request.actions]
-        business_context = request.businessContext.model_dump()
+        business_context = request.business_context.model_dump()
         suggestions = await operations_service.suggest_prioritization(actions, business_context)
         return PrioritizationResponse(success=True, data=suggestions)
     except ValueError as e:
@@ -136,7 +136,7 @@ async def suggest_root_cause_methods(
     """Suggest root cause analysis methods with AI guidance (Issue #64)."""
     try:
         logger.info(
-            "Suggesting root cause methods", user_id=user.user_id, issue_title=request.issueTitle
+            "Suggesting root cause methods", user_id=user.user_id, issue_title=request.issue_title
         )
         issue = request.model_dump(exclude={"context"})
         context = request.context.model_dump()
