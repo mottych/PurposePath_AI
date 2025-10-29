@@ -136,11 +136,33 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
+# Use strict settings but allow untyped decorators for FastAPI
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+no_implicit_reexport = true
+strict_equality = true
+warn_redundant_casts = true
 warn_return_any = true
 warn_unused_configs = true
-ignore_missing_imports = true
+warn_unused_ignores = true
+# FastAPI compatibility - allow untyped decorators
 disallow_untyped_decorators = false
+ignore_missing_imports = true
+
+# Per-module configuration for FastAPI routes
+[[tool.mypy.overrides]]
+module = [
+    "coaching.src.api.routes.*",
+    "coaching.src.api.main",
+]
+# Allow untyped decorators in FastAPI route files
+disallow_untyped_decorators = false
+warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

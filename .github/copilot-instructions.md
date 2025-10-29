@@ -19,6 +19,22 @@
 
 ## 🎯 Core Development Philosophy
 
+### Development Workflow(Mandatory)
+- Always work within a GitGib Issue. If one doesn't exist - ask me to create one.
+- Make sure virtual environment is active
+- Always work on a feature branch related to the issue or group of issues (epic/feature) being worked on.
+- Mark the Issue on GitHub as "In Progress" when starting work.
+- Report your progress using the issue comments.
+- After development is complete, create test fixture for new or modified fixture
+- To complete the issue:
+-- Make sure there sare no errors or warning  in the code, including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors.
+-- Issue ios not considered complete until all tests pass, and trhere are absolutioly no errors or warnings, regardless if those are related to the issue or not.
+-- Update the issue with the comnpletion state and mark it as "Done" on GitHub.
+-- Update any related documents that may have been modified as a result of the issue.
+-- Delete any tempporary files created during development, including scripts, settings files, etc.
+-- commit your changes to the feature branch. 
+-- If there are more issues related to this branch, merge the branch to dev, push the dev branch to remote and delete the feature branch.
+
 ### Quality First Principles
 
 **Ask Before Acting**: "What is the right way to do this?" and "What would an expert do?"
