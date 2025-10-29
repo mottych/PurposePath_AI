@@ -86,7 +86,8 @@ async def suggest_prioritization(
         )
         actions = [action.model_dump() for action in request.actions]
         business_context = request.business_context.model_dump()
-        suggestions = await operations_service.suggest_prioritization(actions, business_context)
+        suggestions_dicts = await operations_service.suggest_prioritization(actions, business_context)
+        suggestions = [PrioritizationSuggestion.model_validate(s) for s in suggestions_dicts]
         return PrioritizationResponse(success=True, data=suggestions)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -113,8 +114,9 @@ async def suggest_scheduling(
         )
         actions = [action.model_dump() for action in request.actions]
         constraints = request.constraints.model_dump()
-        schedules = await operations_service.optimize_scheduling(actions, constraints)
-        return SchedulingResponse(success=True, data=schedules)
+        suggestions_dicts = await operations_service.optimize_scheduling(actions, constraints)
+        suggestions = [SchedulingSuggestion.model_validate(s) for s in suggestions_dicts]
+        return SchedulingResponse(success=True, data=suggestions)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
@@ -140,7 +142,8 @@ async def suggest_root_cause_methods(
         )
         issue = request.model_dump(exclude={"context"})
         context = request.context.model_dump()
-        suggestions = await operations_service.suggest_root_cause_methods(issue, context)
+        suggestions_dicts = await operations_service.suggest_root_cause_methods(issue, context)
+        suggestions = [RootCauseMethodSuggestion.model_validate(s) for s in suggestions_dicts]
         return RootCauseResponse(success=True, data=suggestions)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -166,8 +169,9 @@ async def generate_action_plan(
         issue = request.issue.model_dump()
         constraints = request.constraints.model_dump()
         context = request.context.model_dump()
-        actions = await operations_service.generate_action_plan(issue, constraints, context)
-        return ActionPlanResponse(success=True, data=actions)
+        suggestions_dicts = await operations_service.generate_action_plan(issue, constraints, context)
+        suggestions = [ActionSuggestion.model_validate(s) for s in suggestions_dicts]
+        return ActionPlanResponse(success=True, data=suggestions)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:

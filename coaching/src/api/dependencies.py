@@ -97,7 +97,7 @@ async def get_prompt_repository() -> S3PromptRepository:
     )
 
 
-async def get_model_config_service():
+async def get_model_config_service() -> "ModelConfigService":
     """Get model configuration service (Phase 3).
 
     Returns:
