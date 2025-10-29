@@ -210,8 +210,8 @@ async def complete_conversation(
     try:
         result = await service.complete_conversation(
             conversation_id=conversation_id,
-            feedback=request.feedback if request else None,
-            rating=request.rating if request else None,
+            _feedback=request.feedback if request else None,
+            _rating=request.rating if request else None,
         )
 
         logger.info(

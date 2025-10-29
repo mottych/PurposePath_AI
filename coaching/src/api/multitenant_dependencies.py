@@ -13,7 +13,7 @@ from shared.services.aws_helpers import get_s3_client as get_s3_client_helper
 try:
     import redis
 except ImportError:  # pragma: no cover - fallback for tests
-    redis = None  # type: ignore[assignment]
+    redis = None
 
 from coaching.src.api.auth import get_current_context
 from coaching.src.core.config_multitenant import settings
