@@ -1,3 +1,5 @@
 """LLM Configuration repositories."""
 
-__all__ = []
+from .llm_configuration_repository import LLMConfigurationRepository
+
+__all__ = ["LLMConfigurationRepository"]

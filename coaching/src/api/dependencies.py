@@ -6,7 +6,7 @@ that integrate with the domain layer (Phase 1-3) and implement business logic.
 These dependencies replace the old service dependencies with the new architecture.
 """
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -26,6 +26,9 @@ from coaching.src.infrastructure.external.business_api_client import BusinessApi
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
+)
+from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+    LLMConfigurationRepository,
 )
 from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
 from coaching.src.services.insights_service import InsightsService
@@ -97,6 +100,22 @@ async def get_prompt_repository() -> S3PromptRepository:
     return S3PromptRepository(
         s3_client=s3_client,
         bucket_name=settings.prompts_bucket,
+    )
+
+
+async def get_llm_configuration_repository() -> LLMConfigurationRepository:
+    """Get LLM configuration repository.
+
+    Returns:
+        LLMConfigurationRepository instance configured with settings
+    """
+    dynamodb = get_dynamodb_resource_singleton()
+    # Use a dedicated table for LLM configurations
+    # For now, using a default name - this should be in settings
+    table_name = getattr(settings, "llm_config_table", "llm_configurations")
+    return LLMConfigurationRepository(
+        dynamodb_resource=dynamodb,
+        table_name=table_name,
     )
 
 
@@ -253,16 +272,13 @@ async def get_insights_service(
 
 
 __all__ = [
-    # Analysis service dependencies
     "get_alignment_service",
     "get_analysis_service_by_type",
-    # Repository dependencies
     "get_conversation_repository",
     "get_conversation_service",
-    # Insights service
     "get_insights_service",
     "get_kpi_service",
-    # Application service dependencies
+    "get_llm_configuration_repository",
     "get_llm_service",
     "get_model_config_service",
     "get_prompt_repository",

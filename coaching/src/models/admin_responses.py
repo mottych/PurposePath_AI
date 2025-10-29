@@ -419,6 +419,58 @@ class LLMInteractionsResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# Configuration Management Responses
+
+
+class ConfigurationDetail(BaseModel):
+    """Detailed configuration information."""
+
+    config_id: str = Field(..., description="Configuration identifier", alias="configId")
+    interaction_code: str = Field(..., description="Interaction code", alias="interactionCode")
+    template_id: str = Field(..., description="Template ID", alias="templateId")
+    model_code: str = Field(..., description="Model code", alias="modelCode")
+    tier: str | None = Field(None, description="Tier restriction (null = all tiers)")
+    temperature: float = Field(..., description="LLM temperature parameter")
+    max_tokens: int = Field(..., description="Maximum output tokens", alias="maxTokens")
+    top_p: float = Field(..., description="Top-p sampling parameter", alias="topP")
+    frequency_penalty: float = Field(..., description="Frequency penalty", alias="frequencyPenalty")
+    presence_penalty: float = Field(..., description="Presence penalty", alias="presencePenalty")
+    is_active: bool = Field(..., description="Whether configuration is active", alias="isActive")
+    effective_from: str = Field(..., description="Effective from date (ISO)", alias="effectiveFrom")
+    effective_until: str | None = Field(
+        None, description="Effective until date (ISO)", alias="effectiveUntil"
+    )
+    created_at: str = Field(..., description="Creation timestamp (ISO)", alias="createdAt")
+    updated_at: str = Field(..., description="Last update timestamp (ISO)", alias="updatedAt")
+    created_by: str = Field(..., description="Creator user ID", alias="createdBy")
+
+    model_config = {"populate_by_name": True}
+
+
+class ConfigurationSummary(BaseModel):
+    """Summary configuration information for list views."""
+
+    config_id: str = Field(..., description="Configuration identifier", alias="configId")
+    interaction_code: str = Field(..., description="Interaction code", alias="interactionCode")
+    template_id: str = Field(..., description="Template ID", alias="templateId")
+    model_code: str = Field(..., description="Model code", alias="modelCode")
+    tier: str | None = Field(None, description="Tier restriction")
+    is_active: bool = Field(..., description="Whether configuration is active", alias="isActive")
+    created_at: str = Field(..., description="Creation timestamp (ISO)", alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class ConfigurationsListResponse(BaseModel):
+    """Response for listing configurations."""
+
+    configurations: list[ConfigurationSummary] = Field(..., description="List of configurations")
+    total_count: int = Field(..., description="Total number of configurations", alias="totalCount")
+    filtered_count: int = Field(..., description="Number after filters", alias="filteredCount")
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
     "AIModelInfo",
     "AIModelsResponse",
@@ -427,7 +479,10 @@ __all__ = [
     "CoachingTopicInfo",
     "ConfigurationConflict",
     "ConfigurationDependencies",
+    "ConfigurationDetail",
+    "ConfigurationSummary",
     "ConfigurationValidationResponse",
+    "ConfigurationsListResponse",
     "ConversationDetail",
     "ConversationMessage",
     "ConversationSummary",
