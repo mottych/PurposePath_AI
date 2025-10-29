@@ -6,7 +6,7 @@ that integrate with the domain layer (Phase 1-3) and implement business logic.
 These dependencies replace the old service dependencies with the new architecture.
 """
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -14,6 +14,9 @@ from coaching.src.application.analysis.alignment_service import AlignmentAnalysi
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
 from coaching.src.application.analysis.kpi_service import KPIAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
+
+if TYPE_CHECKING:
+    from coaching.src.services.model_config_service import ModelConfigService
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )

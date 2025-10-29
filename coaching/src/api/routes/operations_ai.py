@@ -6,12 +6,16 @@ from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.operations import (
     ActionPlanRequest,
     ActionPlanResponse,
+    ActionSuggestion,
     PrioritizationRequest,
     PrioritizationResponse,
+    PrioritizationSuggestion,
+    RootCauseMethodSuggestion,
     RootCauseRequest,
     RootCauseResponse,
     SchedulingRequest,
     SchedulingResponse,
+    SchedulingSuggestion,
     StrategicAlignmentRequest,
     StrategicAlignmentResponse,
 )
