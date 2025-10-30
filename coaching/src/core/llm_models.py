@@ -152,7 +152,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=128000,
         cost_per_1k_tokens=0.02,
-        is_active=True,
+        is_active=False,  # Requires different API endpoint (/v1/responses)
     ),
     "GPT_5": SupportedModel(
         code="GPT_5",
@@ -170,7 +170,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=128000,
         cost_per_1k_tokens=0.015,
-        is_active=True,
+        is_active=False,  # Not yet tested with E2E
     ),
     "GPT_5_MINI": SupportedModel(
         code="GPT_5_MINI",

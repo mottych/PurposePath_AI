@@ -147,24 +147,50 @@ class OpenAILLMProvider:
                 temperature=temperature,
             )
 
-            # Use max_completion_tokens for newer models (GPT-5), max_tokens for older
+            # Build API parameters based on model requirements
             params = {
                 "model": model,
                 "messages": api_messages,
-                "temperature": temperature,
             }
 
-            # GPT-5 models use max_completion_tokens
+            # GPT-5 models have special requirements
             if model.startswith("gpt-5") or model.startswith("o1"):
+                # Use max_completion_tokens instead of max_tokens
                 params["max_completion_tokens"] = max_tokens
+
+                # GPT-5 Mini only supports temperature=1.0 (default)
+                if model == "gpt-5-mini":
+                    # Don't set temperature - use default
+                    pass
+                else:
+                    params["temperature"] = temperature
             else:
+                # Older models use max_tokens and support custom temperature
                 params["max_tokens"] = max_tokens
+                params["temperature"] = temperature
 
             response = await client.chat.completions.create(**params)
 
             # Extract response
-            content = response.choices[0].message.content or ""
+            message = response.choices[0].message
+            content = message.content or ""
+
+            # For newer models, check for refusal field
+            if hasattr(message, "refusal") and message.refusal:
+                logger.warning("OpenAI model refused request", refusal=message.refusal, model=model)
+                content = f"[Model refused: {message.refusal}]"
+
             finish_reason = response.choices[0].finish_reason or "stop"
+
+            # Debug log for empty responses
+            if not content and response.usage and response.usage.completion_tokens > 0:
+                logger.warning(
+                    "OpenAI returned empty content despite completion tokens",
+                    model=model,
+                    completion_tokens=response.usage.completion_tokens,
+                    finish_reason=finish_reason,
+                    message_dict=message.model_dump() if hasattr(message, "model_dump") else str(message),
+                )
 
             # Extract usage metrics
             usage = {
