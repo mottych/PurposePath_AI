@@ -135,12 +135,20 @@ class OpenAILLMProvider:
                 temperature=temperature,
             )
 
-            response = await client.chat.completions.create(
-                model=model,
-                messages=api_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            # Use max_completion_tokens for newer models (GPT-5), max_tokens for older
+            params = {
+                "model": model,
+                "messages": api_messages,
+                "temperature": temperature,
+            }
+
+            # GPT-5 models use max_completion_tokens
+            if model.startswith("gpt-5") or model.startswith("o1"):
+                params["max_completion_tokens"] = max_tokens
+            else:
+                params["max_tokens"] = max_tokens
+
+            response = await client.chat.completions.create(**params)
 
             # Extract response
             content = response.choices[0].message.content or ""
