@@ -144,9 +144,104 @@ class UpdateModelConfigRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ValidateTemplateRequest(BaseModel):
+    """Request to validate a template before saving."""
+
+    system_prompt: str = Field(
+        ..., description="System prompt content", min_length=10, max_length=5000
+    )
+    user_prompt_template: str = Field(
+        ..., description="User prompt template", min_length=10, max_length=5000
+    )
+    parameters: dict[str, dict[str, str]] = Field(
+        ...,
+        description="Template parameters with display_name and description",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TestTemplateRequest(BaseModel):
+    """Request to test a template with sample parameter values."""
+
+    parameters: dict[str, str] = Field(..., description="Parameter values for testing")
+
+    model_config = {"populate_by_name": True}
+
+
+class ValidateConfigurationRequest(BaseModel):
+    """Request to validate a configuration before creation."""
+
+    interaction_code: str = Field(..., description="Interaction code")
+    template_id: str = Field(..., description="Template ID")
+    model_code: str = Field(..., description="Model code")
+    tier: str | None = Field(None, description="Optional tier restriction")
+
+    model_config = {"populate_by_name": True}
+
+
+class CreateConfigurationRequest(BaseModel):
+    """Request to create a new LLM configuration."""
+
+    interaction_code: str = Field(..., description="Interaction code", alias="interactionCode")
+    template_id: str = Field(
+        ..., description="Template ID (format: topic/version)", alias="templateId"
+    )
+    model_code: str = Field(..., description="Model code", alias="modelCode")
+    tier: str | None = Field(None, description="Optional tier restriction")
+    temperature: float = Field(0.7, description="LLM temperature (0.0-2.0)", ge=0.0, le=2.0)
+    max_tokens: int = Field(2000, description="Max output tokens", gt=0, alias="maxTokens")
+    top_p: float = Field(1.0, description="Top-p sampling (0.0-1.0)", ge=0.0, le=1.0, alias="topP")
+    frequency_penalty: float = Field(
+        0.0, description="Frequency penalty (-2.0-2.0)", ge=-2.0, le=2.0, alias="frequencyPenalty"
+    )
+    presence_penalty: float = Field(
+        0.0, description="Presence penalty (-2.0-2.0)", ge=-2.0, le=2.0, alias="presencePenalty"
+    )
+    effective_from: str | None = Field(
+        None, description="Effective from date (ISO format)", alias="effectiveFrom"
+    )
+    effective_until: str | None = Field(
+        None, description="Effective until date (ISO format)", alias="effectiveUntil"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class UpdateConfigurationRequest(BaseModel):
+    """Request to update an existing configuration."""
+
+    template_id: str | None = Field(
+        None, description="Template ID (topic/version)", alias="templateId"
+    )
+    model_code: str | None = Field(None, description="Model code", alias="modelCode")
+    temperature: float | None = Field(None, description="LLM temperature", ge=0.0, le=2.0)
+    max_tokens: int | None = Field(None, description="Max output tokens", gt=0, alias="maxTokens")
+    top_p: float | None = Field(None, description="Top-p sampling", ge=0.0, le=1.0, alias="topP")
+    frequency_penalty: float | None = Field(
+        None, description="Frequency penalty", ge=-2.0, le=2.0, alias="frequencyPenalty"
+    )
+    presence_penalty: float | None = Field(
+        None, description="Presence penalty", ge=-2.0, le=2.0, alias="presencePenalty"
+    )
+    effective_from: str | None = Field(
+        None, description="Effective from date", alias="effectiveFrom"
+    )
+    effective_until: str | None = Field(
+        None, description="Effective until date", alias="effectiveUntil"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
+    "CreateConfigurationRequest",
     "CreateTemplateVersionRequest",
     "SetLatestVersionRequest",
+    "TestTemplateRequest",
+    "UpdateConfigurationRequest",
     "UpdateModelConfigRequest",
     "UpdateTemplateRequest",
+    "ValidateConfigurationRequest",
+    "ValidateTemplateRequest",
 ]

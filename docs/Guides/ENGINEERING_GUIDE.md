@@ -282,6 +282,7 @@ async def get_current_user(
 Before submitting a PR, ensure:
 
 ### Code Quality
+
 - [ ] All functions have type hints
 - [ ] No `TODO` comments in production code
 - [ ] Error handling follows established patterns
@@ -289,24 +290,28 @@ Before submitting a PR, ensure:
 - [ ] No hardcoded values (use configuration)
 
 ### Testing
+
 - [ ] Unit tests cover new functionality
 - [ ] Integration tests pass
 - [ ] Edge cases are tested
 - [ ] Mocking is done at appropriate boundaries
 
 ### Security
+
 - [ ] Input validation is implemented
 - [ ] Authentication/authorization is enforced
 - [ ] No sensitive data in logs
 - [ ] SQL injection protection (use parameterized queries)
 
 ### Documentation
+
 - [ ] API endpoints have comprehensive docstrings
 - [ ] Complex business logic is documented
 - [ ] Configuration changes are documented
 - [ ] Breaking changes are noted
 
 ### Performance
+
 - [ ] Database queries are optimized
 - [ ] N+1 query problems are avoided
 - [ ] Appropriate caching is implemented
@@ -317,6 +322,7 @@ Before submitting a PR, ensure:
 ## 🛠️ Tools and Standards
 
 ### Development Tools
+
 - **Code Formatting**: Black (line length 100)
 - **Linting**: Ruff with aggressive settings
 - **Type Checking**: mypy in strict mode
@@ -361,14 +367,17 @@ When facing technical decisions, use this framework:
 ### Common Decision Points
 
 **Should I use a dictionary or a Pydantic model?**
+
 - Use Pydantic models for structured data with validation
 - Use dictionaries only for truly dynamic key-value data
 
 **Should I create a new service or extend existing?**
+
 - Create new if it's a distinct business domain
 - Extend existing if it's closely related functionality
 
 **How should I handle errors?**
+
 - Use specific exception types
 - Include enough context for debugging
 - Follow the established error response format

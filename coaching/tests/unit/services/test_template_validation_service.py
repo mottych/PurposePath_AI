@@ -500,3 +500,268 @@ class TestValidateTemplate:
 
         assert "not defined in parameters dict" in exc_info.value.message
         assert "undefined_param" in exc_info.value.message
+
+
+@pytest.mark.unit
+class TestValidateTemplateInline:
+    """Test inline template validation (Phase 2 addition)."""
+
+    @pytest.fixture
+    def service(self):
+        """Create validation service."""
+        return TemplateValidationService()
+
+    def test_validate_template_inline_valid(self, service):
+        """Test that valid template passes inline validation."""
+        # Arrange
+        system_prompt = "You are an AI coach helping users set goals."
+        user_prompt = "Help set goals based on: {vision}, {purpose}, {core_values}"
+        parameters = {
+            "vision": {"type": "string"},
+            "purpose": {"type": "string"},
+            "core_values": {"type": "string"},
+        }
+
+        # Act
+        is_valid, errors, warnings, analysis = service.validate_template_inline(
+            system_prompt, user_prompt, parameters
+        )
+
+        # Assert
+        assert is_valid is True
+        assert len(errors) == 0
+
+    def test_validate_template_inline_invalid_system_prompt(self, service):
+        """Test that invalid system prompt fails inline validation."""
+        # Arrange
+        system_prompt = ""  # Empty
+        user_prompt = "Help set goals for the user"
+        parameters = {}
+
+        # Act
+        is_valid, errors, warnings, analysis = service.validate_template_inline(
+            system_prompt, user_prompt, parameters
+        )
+
+        # Assert
+        assert is_valid is False
+        assert len(errors) > 0
+
+    def test_validate_template_inline_undefined_parameter(self, service):
+        """Test that undefined parameter fails inline validation."""
+        # Arrange
+        system_prompt = "You are an AI coach helping users."
+        user_prompt = "Analyze {goal} and {undefined_param}"
+        parameters = {"goal": {"type": "string"}}  # Missing 'undefined_param'
+
+        # Act
+        is_valid, errors, warnings, analysis = service.validate_template_inline(
+            system_prompt, user_prompt, parameters
+        )
+
+        # Assert
+        assert is_valid is False
+        assert "undeclared" in " ".join(errors).lower()
+
+
+@pytest.mark.unit
+class TestExtractParametersFromPrompts:
+    """Test parameter extraction (Phase 2 addition)."""
+
+    @pytest.fixture
+    def service(self):
+        """Create validation service."""
+        return TemplateValidationService()
+
+    def test_extract_parameters_from_both_prompts(self, service):
+        """Test extracting parameters from both system and user prompts."""
+        # Arrange
+        system_prompt = "You are an AI coach. Context: {company_name}"
+        user_prompt = "Analyze {goal} with {purpose}"
+
+        # Act
+        system_params, user_params, all_params = service.extract_parameters_from_prompts(
+            system_prompt, user_prompt
+        )
+
+        # Assert
+        assert system_params == ["company_name"]
+        assert sorted(user_params) == ["goal", "purpose"]
+        assert sorted(all_params) == ["company_name", "goal", "purpose"]
+
+    def test_extract_parameters_no_duplicates(self, service):
+        """Test that duplicate parameters are not repeated."""
+        # Arrange
+        system_prompt = "Context: {goal}"
+        user_prompt = "Analyze {goal} and {vision}"
+
+        # Act
+        system_params, user_params, all_params = service.extract_parameters_from_prompts(
+            system_prompt, user_prompt
+        )
+
+        # Assert
+        assert system_params == ["goal"]
+        assert sorted(user_params) == ["goal", "vision"]
+        assert sorted(all_params) == ["goal", "vision"]  # No duplicates
+
+    def test_extract_parameters_empty_prompts(self, service):
+        """Test extracting from prompts with no parameters."""
+        # Arrange
+        system_prompt = "You are an AI coach."
+        user_prompt = "Help the user."
+
+        # Act
+        system_params, user_params, all_params = service.extract_parameters_from_prompts(
+            system_prompt, user_prompt
+        )
+
+        # Assert
+        assert system_params == []
+        assert user_params == []
+        assert all_params == []
+
+
+@pytest.mark.unit
+class TestRenderTemplate:
+    """Test template rendering (Phase 2 addition)."""
+
+    @pytest.fixture
+    def service(self):
+        """Create validation service."""
+        return TemplateValidationService()
+
+    def test_render_template_all_parameters_provided(self, service):
+        """Test rendering with all parameters provided."""
+        # Arrange
+        system_prompt = "You are coaching {company_name}."
+        user_prompt = "Analyze {goal} with {purpose}"
+        parameter_values = {
+            "company_name": "Acme Corp",
+            "goal": "Increase revenue",
+            "purpose": "Help customers succeed",
+        }
+
+        # Act
+        (
+            rendered_system,
+            rendered_user,
+            used_params,
+            unused_params,
+            missing_params,
+        ) = service.render_template(system_prompt, user_prompt, parameter_values)
+
+        # Assert
+        assert rendered_system == "You are coaching Acme Corp."
+        assert rendered_user == "Analyze Increase revenue with Help customers succeed"
+        assert sorted(used_params) == ["company_name", "goal", "purpose"]
+        assert unused_params == []
+        assert missing_params == []
+
+    def test_render_template_missing_parameters(self, service):
+        """Test rendering with missing parameters."""
+        # Arrange
+        system_prompt = "Context: {company_name}"
+        user_prompt = "Analyze {goal} with {purpose}"
+        parameter_values = {"goal": "Increase revenue"}  # Missing company_name, purpose
+
+        # Act
+        (
+            rendered_system,
+            rendered_user,
+            used_params,
+            unused_params,
+            missing_params,
+        ) = service.render_template(system_prompt, user_prompt, parameter_values)
+
+        # Assert
+        assert "{company_name}" in rendered_system  # Not replaced
+        assert "{purpose}" in rendered_user  # Not replaced
+        assert "Increase revenue" in rendered_user  # This one replaced
+        assert used_params == ["goal"]
+        assert sorted(missing_params) == ["company_name", "purpose"]
+
+    def test_render_template_unused_parameters(self, service):
+        """Test rendering with extra unused parameters."""
+        # Arrange
+        system_prompt = "You are an AI coach."
+        user_prompt = "Analyze {goal}"
+        parameter_values = {
+            "goal": "Increase revenue",
+            "extra_param": "Not used",
+            "another_extra": "Also not used",
+        }
+
+        # Act
+        (
+            rendered_system,
+            rendered_user,
+            used_params,
+            unused_params,
+            missing_params,
+        ) = service.render_template(system_prompt, user_prompt, parameter_values)
+
+        # Assert
+        assert "Increase revenue" in rendered_user
+        assert used_params == ["goal"]
+        assert sorted(unused_params) == ["another_extra", "extra_param"]
+        assert missing_params == []
+
+
+@pytest.mark.unit
+class TestEstimateTokens:
+    """Test token estimation (Phase 2 addition)."""
+
+    @pytest.fixture
+    def service(self):
+        """Create validation service."""
+        return TemplateValidationService()
+
+    def test_estimate_tokens_short_text(self, service):
+        """Test token estimation for short text."""
+        # Arrange
+        text = "Hello world"  # 11 chars
+
+        # Act
+        tokens = service.estimate_tokens(text)
+
+        # Assert
+        # Approximate 4 chars per token = ~3 tokens
+        assert tokens >= 2
+        assert tokens <= 5
+
+    def test_estimate_tokens_long_text(self, service):
+        """Test token estimation for longer text."""
+        # Arrange
+        text = "This is a longer text that should have more tokens. " * 10  # ~520 chars
+
+        # Act
+        tokens = service.estimate_tokens(text)
+
+        # Assert
+        # Approximate 4 chars per token = ~130 tokens
+        assert tokens >= 100
+        assert tokens <= 150
+
+    def test_estimate_tokens_empty_text(self, service):
+        """Test token estimation for empty text."""
+        # Arrange
+        text = ""
+
+        # Act
+        tokens = service.estimate_tokens(text)
+
+        # Assert
+        # Implementation always returns at least 1 token
+        assert tokens == 1
+
+    def test_estimate_tokens_whitespace_only(self, service):
+        """Test token estimation for whitespace."""
+        # Arrange
+        text = "   \n\t  "
+
+        # Act
+        tokens = service.estimate_tokens(text)
+
+        # Assert
+        assert tokens <= 5  # Should be very low
