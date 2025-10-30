@@ -101,6 +101,10 @@ class Settings(BaseSettings):
     openai_api_key_secret: str | None = Field(
         default="purposepath/openai-api-key", validation_alias="OPENAI_API_KEY_SECRET"
     )
+    google_vertex_credentials_secret: str | None = Field(
+        default="purposepath/google-vertex-credentials",
+        validation_alias="GOOGLE_VERTEX_CREDENTIALS_SECRET",
+    )
 
     # Google Vertex AI Configuration (optional)
     google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
@@ -173,6 +177,48 @@ def get_openai_api_key() -> str | None:
             response = client.get_secret_value(SecretId=settings.openai_api_key_secret)
             secret_value = response.get("SecretString")
             return secret_value if secret_value else None
+        except Exception:
+            # Log error but don't fail - allow None to be returned
+            return None
+
+    return None
+
+
+def get_google_vertex_credentials() -> dict[str, Any] | None:
+    """
+    Get Google Vertex AI credentials from AWS Secrets Manager.
+
+    Returns:
+        Credentials dict (service account JSON) or None if not configured
+    """
+    import json
+
+    settings = get_settings()
+
+    # Check if GOOGLE_APPLICATION_CREDENTIALS env var is set (local dev)
+    import os
+
+    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        # Let Google SDK handle it
+        return None
+
+    # Retrieve from Secrets Manager if configured
+    if settings.google_vertex_credentials_secret:
+        try:
+            from mypy_boto3_secretsmanager import SecretsManagerClient
+
+            from shared.services.aws_helpers import get_secretsmanager_client
+
+            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
+            secret_value = response.get("SecretString")
+
+            if secret_value:
+                # Parse JSON credentials
+                credentials_dict = json.loads(secret_value)
+                return credentials_dict
+
+            return None
         except Exception:
             # Log error but don't fail - allow None to be returned
             return None

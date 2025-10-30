@@ -38,7 +38,7 @@ class GoogleVertexLLMProvider:
 
     def __init__(
         self,
-        project_id: str,
+        project_id: str | None = None,
         location: str = "us-central1",
         credentials: Any | None = None,
     ):
@@ -46,9 +46,9 @@ class GoogleVertexLLMProvider:
         Initialize Google Vertex AI LLM provider.
 
         Args:
-            project_id: GCP project ID
+            project_id: GCP project ID (optional - will retrieve from config/secrets if not provided)
             location: GCP location/region (default: us-central1)
-            credentials: Optional GCP credentials object
+            credentials: Optional GCP credentials object (will retrieve from Secrets Manager if not provided)
         """
         self.project_id = project_id
         self.location = location
@@ -75,6 +75,7 @@ class GoogleVertexLLMProvider:
         if self._client is None:
             try:
                 from google.cloud import aiplatform
+                from google.oauth2 import service_account
                 from vertexai.generative_models import GenerativeModel
             except ImportError as e:
                 raise ImportError(
@@ -82,15 +83,48 @@ class GoogleVertexLLMProvider:
                     "Install with: pip install google-cloud-aiplatform>=1.40.0"
                 ) from e
 
+            # Get project_id and credentials from Secrets Manager if not provided
+            project_id = self.project_id
+            credentials = self.credentials
+
+            if not project_id or not credentials:
+                from coaching.src.core.config_multitenant import (
+                    get_google_vertex_credentials,
+                    get_settings,
+                )
+
+                settings = get_settings()
+
+                # Get project_id from config if not provided
+                if not project_id:
+                    project_id = settings.google_project_id
+
+                # Get credentials from Secrets Manager if not provided
+                if not credentials:
+                    creds_dict = get_google_vertex_credentials()
+                    if creds_dict:
+                        credentials = service_account.Credentials.from_service_account_info(
+                            creds_dict
+                        )
+                        # Update project_id from credentials if still not set
+                        if not project_id:
+                            project_id = creds_dict.get("project_id")
+
+            if not project_id:
+                raise ValueError(
+                    "Google Cloud project_id not configured. "
+                    "Set GOOGLE_PROJECT_ID environment variable or configure in AWS Secrets Manager"
+                )
+
             # Initialize Vertex AI
             aiplatform.init(
-                project=self.project_id,
+                project=project_id,
                 location=self.location,
-                credentials=self.credentials,
+                credentials=credentials,
             )
 
             self._client = GenerativeModel
-            logger.info("Vertex AI client initialized")
+            logger.info("Vertex AI client initialized", project_id=project_id)
         return self._client
 
     async def generate(
