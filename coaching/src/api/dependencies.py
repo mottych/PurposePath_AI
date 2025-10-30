@@ -34,7 +34,10 @@ from coaching.src.infrastructure.repositories.llm_config.template_metadata_repos
     TemplateMetadataRepository,
 )
 from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from coaching.src.services.cache_service import CacheService
 from coaching.src.services.insights_service import InsightsService
+from coaching.src.services.llm_configuration_service import LLMConfigurationService
+from coaching.src.services.llm_template_service import LLMTemplateService
 from fastapi import Depends
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 
@@ -51,6 +54,7 @@ logger = structlog.get_logger()
 _dynamodb_resource = None
 _s3_client = None
 _bedrock_client = None
+_redis_client = None
 
 
 def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
@@ -75,6 +79,27 @@ def get_bedrock_client_singleton() -> Any:
     if _bedrock_client is None:
         _bedrock_client = get_bedrock_client(settings.bedrock_region)
     return _bedrock_client
+
+
+def get_redis_client_singleton() -> Any:
+    """Get Redis client singleton."""
+    global _redis_client
+    if _redis_client is None:
+        try:
+            import redis
+
+            _redis_client = redis.Redis(
+                host=getattr(settings, "redis_host", "localhost"),
+                port=getattr(settings, "redis_port", 6379),
+                db=0,
+                decode_responses=False,
+            )
+        except ImportError:
+            # Fallback to in-memory for testing
+            from coaching.src.api.multitenant_dependencies import _InMemoryRedis
+
+            _redis_client = _InMemoryRedis()
+    return _redis_client
 
 
 # Repository dependencies
@@ -150,6 +175,54 @@ async def get_model_config_service() -> "ModelConfigService":
     return ModelConfigService(
         s3_client=s3_client,
         bucket_name=settings.prompts_bucket,  # Use same bucket, different path
+    )
+
+
+async def get_cache_service() -> CacheService:
+    """Get cache service.
+
+    Returns:
+        CacheService instance with Redis client
+    """
+    redis_client = get_redis_client_singleton()
+    return CacheService(
+        redis_client=redis_client,
+        key_prefix="llm:",  # Namespace for LLM-related caching
+    )
+
+
+async def get_llm_configuration_service() -> LLMConfigurationService:
+    """Get LLM configuration service.
+
+    Returns:
+        LLMConfigurationService instance with repositories and caching
+    """
+    config_repo = await get_llm_configuration_repository()
+    cache_service = await get_cache_service()
+
+    return LLMConfigurationService(
+        configuration_repository=config_repo,
+        cache_service=cache_service,
+    )
+
+
+async def get_llm_template_service() -> LLMTemplateService:
+    """Get LLM template service.
+
+    Returns:
+        LLMTemplateService instance with repositories, S3, and caching
+    """
+    template_repo = await get_template_metadata_repository()
+    s3_client = get_s3_client_singleton()
+    cache_service = await get_cache_service()
+
+    # Use the prompts bucket for template storage
+    s3_bucket = settings.prompts_bucket
+
+    return LLMTemplateService(
+        template_repository=template_repo,
+        s3_client=s3_client,
+        cache_service=cache_service,
     )
 
 
@@ -293,12 +366,15 @@ async def get_insights_service(
 __all__ = [
     "get_alignment_service",
     "get_analysis_service_by_type",
+    "get_cache_service",
     "get_conversation_repository",
     "get_conversation_service",
     "get_insights_service",
     "get_kpi_service",
     "get_llm_configuration_repository",
+    "get_llm_configuration_service",
     "get_llm_service",
+    "get_llm_template_service",
     "get_model_config_service",
     "get_prompt_repository",
     "get_strategy_service",
