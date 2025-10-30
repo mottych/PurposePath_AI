@@ -88,24 +88,53 @@ def aws_region() -> str:
 @pytest.fixture(scope="session")
 def check_aws_credentials() -> None:
     """Verify AWS credentials are configured."""
-    if not os.getenv("AWS_PROFILE") and not (
-        os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")
-    ):
-        pytest.skip("AWS credentials not configured. Set AWS_PROFILE or AWS credentials.")
+    # Try to get credentials using boto3 (works with env vars, config files, and IAM roles)
+    try:
+        import boto3
+        sts = boto3.client("sts")
+        sts.get_caller_identity()
+        # If we get here, credentials are valid
+    except Exception:
+        pytest.skip("AWS credentials not configured or invalid. Configure AWS CLI or set credentials.")
 
 
 @pytest.fixture(scope="session")
 def check_openai_credentials() -> None:
     """Verify OpenAI credentials are configured."""
-    if not os.getenv("OPENAI_API_KEY"):
-        pytest.skip("OPENAI_API_KEY not configured")
+    # Try to get from environment variable first
+    if os.getenv("OPENAI_API_KEY"):
+        return
+
+    # Try to get from AWS Secrets Manager
+    try:
+        from coaching.src.core.config_multitenant import get_openai_api_key
+        api_key = get_openai_api_key()
+        if api_key:
+            os.environ["OPENAI_API_KEY"] = api_key
+            return
+    except Exception:
+        pass
+
+    pytest.skip("OPENAI_API_KEY not configured. Set environment variable or configure in AWS Secrets Manager.")
 
 
 @pytest.fixture(scope="session")
 def check_google_credentials() -> None:
     """Verify Google Cloud credentials are configured."""
-    if not os.getenv("GOOGLE_PROJECT_ID"):
-        pytest.skip("GOOGLE_PROJECT_ID not configured for Vertex AI")
+    # Try environment variables first
+    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("GOOGLE_PROJECT_ID"):
+        return
+
+    # Try to get from AWS Secrets Manager
+    try:
+        from coaching.src.core.config_multitenant import get_google_vertex_credentials
+        creds_dict = get_google_vertex_credentials()
+        if creds_dict and creds_dict.get("project_id"):
+            return
+    except Exception:
+        pass
+
+    pytest.skip("Google Cloud credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or configure in AWS Secrets Manager.")
 
 
 __all__ = [
