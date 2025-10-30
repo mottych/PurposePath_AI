@@ -97,6 +97,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
+    # Secrets Manager ARNs/Names for API Keys
+    openai_api_key_secret: str | None = Field(
+        default="purposepath/openai-api-key", validation_alias="OPENAI_API_KEY_SECRET"
+    )
+
     # Google Vertex AI Configuration (optional)
     google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
     google_vertex_location: str = Field(
@@ -138,6 +143,41 @@ class Settings(BaseSettings):
     auto_update_business_data: bool = True
     require_outcome_approval: bool = False  # Set to True for enterprise customers
     outcome_confidence_threshold: float = 0.8  # AI confidence threshold for auto-updates
+
+
+def get_openai_api_key() -> str | None:
+    """
+    Get OpenAI API key from environment or AWS Secrets Manager.
+
+    Priority:
+    1. OPENAI_API_KEY environment variable
+    2. AWS Secrets Manager (using configured secret name)
+
+    Returns:
+        API key string or None if not configured
+    """
+    settings = get_settings()
+
+    # Check environment variable first
+    if settings.openai_api_key:
+        return settings.openai_api_key
+
+    # Retrieve from Secrets Manager if configured
+    if settings.openai_api_key_secret:
+        try:
+            from mypy_boto3_secretsmanager import SecretsManagerClient
+
+            from shared.services.aws_helpers import get_secretsmanager_client
+
+            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            response = client.get_secret_value(SecretId=settings.openai_api_key_secret)
+            secret_value = response.get("SecretString")
+            return secret_value if secret_value else None
+        except Exception:
+            # Log error but don't fail - allow None to be returned
+            return None
+
+    return None
 
 
 @lru_cache

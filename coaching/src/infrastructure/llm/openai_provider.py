@@ -39,12 +39,12 @@ class OpenAILLMProvider:
         "gpt-5-chat",
     ]
 
-    def __init__(self, api_key: str, organization: str | None = None):
+    def __init__(self, api_key: str | None = None, organization: str | None = None):
         """
         Initialize OpenAI LLM provider.
 
         Args:
-            api_key: OpenAI API key
+            api_key: OpenAI API key (optional - will retrieve from Secrets Manager if not provided)
             organization: Optional organization ID
         """
         self.api_key = api_key
@@ -73,8 +73,20 @@ class OpenAILLMProvider:
                     "Install with: pip install openai>=1.0.0"
                 ) from e
 
+            # Get API key from Secrets Manager if not provided
+            api_key = self.api_key
+            if not api_key:
+                from coaching.src.core.config_multitenant import get_openai_api_key
+
+                api_key = get_openai_api_key()
+                if not api_key:
+                    raise ValueError(
+                        "OpenAI API key not configured. "
+                        "Set OPENAI_API_KEY environment variable or configure AWS secret"
+                    )
+
             self._client = AsyncOpenAI(
-                api_key=self.api_key,
+                api_key=api_key,
                 organization=self.organization,
             )
             logger.info("OpenAI client initialized")
