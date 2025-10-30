@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from coaching.src.core.interaction_codes import COACHING_RESPONSE
 from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
-from coaching.src.models.llm_models import LLMResponse
+from coaching.src.models.llm_models import BusinessContextForLLM, LLMResponse
 from coaching.src.services.llm_configuration_service import ConfigurationNotFoundError
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.llm_template_service import TemplateNotFoundError
@@ -352,10 +352,11 @@ async def test_generate_with_config_with_business_context(
     config_no_template = sample_config.model_copy(update={"template_id": None})
     mock_config_service.resolve_configuration.return_value = config_no_template
 
-    business_context = {
-        "purpose": "Help entrepreneurs",
-        "values": ["integrity", "growth"],
-    }
+    business_context = BusinessContextForLLM(
+        purpose="Help entrepreneurs",
+        core_values=["integrity", "growth"],
+        tenant_id="tenant_123",
+    )
 
     with patch("coaching.src.services.llm_service.get_model") as mock_get_model:
         mock_model = MagicMock()
@@ -372,9 +373,8 @@ async def test_generate_with_config_with_business_context(
         )
 
     assert isinstance(result, LLMResponse)
-    # Should use business context for system prompt
-    call_args = mock_adapter.get_response.call_args
-    assert call_args is not None
+    # Verify adapter was called (business context integrated)
+    assert mock_adapter.get_response.called
 
 
 @pytest.mark.asyncio
@@ -409,7 +409,8 @@ async def test_generate_with_config_fallback_to_legacy(
                 conversation_id="conv_123",
                 tenant_id="tenant_123",
                 user_id="user_456",
-            )
+                metadata={},
+            ),
         ),
     ) as mock_generate:
         result = await llm_service_with_config._generate_with_config(
@@ -488,17 +489,16 @@ async def test_generate_coaching_response_uses_legacy_path_when_no_interaction_c
     mock_template.llm_config.max_tokens = 1000
     mock_prompt_service.get_template = AsyncMock(return_value=mock_template)
 
-    with patch("coaching.src.services.llm_service.DEFAULT_LLM_MODELS", {"coaching": "test-model"}):
-        result = await llm_service_with_config.generate_coaching_response(
-            conversation_id="conv_123",
-            topic="coaching",
-            user_message="Help me",
-            conversation_history=[],
-            # No interaction_code provided - should use legacy
-        )
+    result = await llm_service_with_config.generate_coaching_response(
+        conversation_id="conv_123",
+        topic="core_values",
+        user_message="Help me",
+        conversation_history=[],
+        # No interaction_code provided - should use legacy
+    )
 
     assert isinstance(result, LLMResponse)
-    mock_prompt_service.get_template.assert_called_once_with("coaching")
+    mock_prompt_service.get_template.assert_called_once_with("core_values")
     mock_adapter.get_response.assert_called_once()
 
 
@@ -515,15 +515,14 @@ async def test_generate_coaching_response_no_config_service(
     mock_template.llm_config.max_tokens = 1000
     mock_prompt_service.get_template = AsyncMock(return_value=mock_template)
 
-    with patch("coaching.src.services.llm_service.DEFAULT_LLM_MODELS", {"coaching": "test-model"}):
-        result = await llm_service_no_config.generate_coaching_response(
-            conversation_id="conv_123",
-            topic="coaching",
-            user_message="Help me",
-            conversation_history=[],
-            interaction_code=COACHING_RESPONSE,  # Even with interaction code
-            user_tier="premium",
-        )
+    result = await llm_service_no_config.generate_coaching_response(
+        conversation_id="conv_123",
+        topic="core_values",
+        user_message="Help me",
+        conversation_history=[],
+        interaction_code=COACHING_RESPONSE,  # Even with interaction code
+        user_tier="premium",
+    )
 
     assert isinstance(result, LLMResponse)
     # Should still use legacy because config_service is None
@@ -556,14 +555,13 @@ async def test_generate_coaching_response_feature_flag_disabled(
     mock_template.llm_config.max_tokens = 1000
     mock_prompt_service.get_template = AsyncMock(return_value=mock_template)
 
-    with patch("coaching.src.services.llm_service.DEFAULT_LLM_MODELS", {"coaching": "test-model"}):
-        result = await service.generate_coaching_response(
-            conversation_id="conv_123",
-            topic="coaching",
-            user_message="Help me",
-            conversation_history=[],
-            interaction_code=COACHING_RESPONSE,  # Provided but flag is off
-        )
+    result = await service.generate_coaching_response(
+        conversation_id="conv_123",
+        topic="core_values",
+        user_message="Help me",
+        conversation_history=[],
+        interaction_code=COACHING_RESPONSE,  # Provided but flag is off
+    )
 
     assert isinstance(result, LLMResponse)
     # Should use legacy path despite having interaction_code
