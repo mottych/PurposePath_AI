@@ -1,0 +1,165 @@
+# Sample LLM Configuration File
+# 
+# This file demonstrates how to configure LLM interactions, templates, and models.
+# Copy this file and customize for your environment:
+#   cp configs/llm_configs_sample.yaml configs/llm_configs_dev.yaml
+#
+# Required fields for each configuration:
+#   - interaction_code: Must exist in INTERACTION_REGISTRY (coaching/src/core/llm_interactions.py)
+#   - template_id: Must exist in template_metadata table (format: {INTERACTION_CODE}_V{version}_{ENV})
+#   - model_code: Must exist in MODEL_REGISTRY (coaching/src/core/llm_models.py)
+#   - temperature: Float between 0.0 and 2.0
+#   - max_tokens: Integer > 0
+#
+# Optional fields:
+#   - tier: Subscription tier (null = applies to all tiers)
+#   - top_p: Float between 0.0 and 1.0 (default: 1.0)
+#   - frequency_penalty: Float between -2.0 and 2.0 (default: 0.0)
+#   - presence_penalty: Float between -2.0 and 2.0 (default: 0.0)
+
+configurations:
+  # === ANALYSIS INTERACTIONS ===
+  
+  - interaction_code: "ALIGNMENT_ANALYSIS"
+    template_id: "ALIGNMENT_ANALYSIS_V1_DEV"
+    model_code: "CLAUDE_3_5_SONNET"
+    tier: null  # Applies to all tiers
+    temperature: 0.7
+    max_tokens: 4096
+    top_p: 1.0
+    frequency_penalty: 0.0
+    presence_penalty: 0.0
+
+  - interaction_code: "STRATEGY_ANALYSIS"
+    template_id: "STRATEGY_ANALYSIS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.8
+    max_tokens: 4096
+
+  - interaction_code: "KPI_ANALYSIS"
+    template_id: "KPI_ANALYSIS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.7
+    max_tokens: 3000
+
+  # === COACHING INTERACTIONS ===
+  
+  - interaction_code: "COACHING_RESPONSE"
+    template_id: "COACHING_RESPONSE_V1_DEV"
+    model_code: "CLAUDE_3_5_SONNET"
+    tier: "premium"  # Premium tier gets best model
+    temperature: 0.7
+    max_tokens: 4096
+
+  - interaction_code: "COACHING_RESPONSE"
+    template_id: "COACHING_RESPONSE_V1_DEV"
+    model_code: "CLAUDE_3_HAIKU"
+    tier: "basic"  # Basic tier gets faster, cheaper model
+    temperature: 0.7
+    max_tokens: 2048
+
+  - interaction_code: "ALIGNMENT_EXPLANATION"
+    template_id: "ALIGNMENT_EXPLANATION_V1_DEV"
+    model_code: "CLAUDE_3_5_SONNET"
+    tier: null
+    temperature: 0.6
+    max_tokens: 3000
+
+  - interaction_code: "ALIGNMENT_SUGGESTIONS"
+    template_id: "ALIGNMENT_SUGGESTIONS_V1_DEV"
+    model_code: "CLAUDE_3_5_SONNET"
+    tier: null
+    temperature: 0.8  # Higher for creative suggestions
+    max_tokens: 3000
+
+  # === OPERATIONS INTERACTIONS ===
+  
+  - interaction_code: "STRATEGIC_ALIGNMENT"
+    template_id: "STRATEGIC_ALIGNMENT_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.7
+    max_tokens: 4096
+
+  - interaction_code: "ROOT_CAUSE_ANALYSIS"
+    template_id: "ROOT_CAUSE_ANALYSIS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.7
+    max_tokens: 3000
+
+  - interaction_code: "ACTION_SUGGESTIONS"
+    template_id: "ACTION_SUGGESTIONS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.8
+    max_tokens: 3000
+
+  - interaction_code: "PRIORITIZATION_SUGGESTIONS"
+    template_id: "PRIORITIZATION_SUGGESTIONS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.6  # Lower for systematic prioritization
+    max_tokens: 2500
+
+  - interaction_code: "SCHEDULING_SUGGESTIONS"
+    template_id: "SCHEDULING_SUGGESTIONS_V1_DEV"
+    model_code: "CLAUDE_3_HAIKU"  # Fast model for scheduling
+    tier: null
+    temperature: 0.5
+    max_tokens: 2500
+
+  # === INSIGHTS INTERACTIONS ===
+  
+  - interaction_code: "INSIGHTS_GENERATION"
+    template_id: "INSIGHTS_GENERATION_V1_DEV"
+    model_code: "CLAUDE_3_5_SONNET"
+    tier: null
+    temperature: 0.7
+    max_tokens: 4096
+
+  # === ONBOARDING INTERACTIONS ===
+  
+  - interaction_code: "ONBOARDING_SUGGESTIONS"
+    template_id: "ONBOARDING_SUGGESTIONS_V1_DEV"
+    model_code: "CLAUDE_3_SONNET"
+    tier: null
+    temperature: 0.7
+    max_tokens: 3000
+
+  - interaction_code: "WEBSITE_SCAN"
+    template_id: "WEBSITE_SCAN_V1_DEV"
+    model_code: "CLAUDE_3_HAIKU"  # Fast model for extraction
+    tier: null
+    temperature: 0.5  # Lower for factual extraction
+    max_tokens: 4096
+
+# Configuration Notes:
+# 
+# 1. Temperature Guidelines:
+#    - 0.3-0.5: Factual extraction, analysis, structured output
+#    - 0.6-0.7: Balanced responses, coaching, explanations
+#    - 0.8-1.0: Creative suggestions, brainstorming, ideation
+#
+# 2. Model Selection Guidelines:
+#    - CLAUDE_3_5_SONNET: Best quality, complex reasoning, premium features
+#    - CLAUDE_3_SONNET: Balanced quality/cost, general purpose
+#    - CLAUDE_3_HAIKU: Fast & cheap, simple tasks, high volume
+#
+# 3. Tier-Based Configuration:
+#    - Use tier: null for features available to all users
+#    - Create tier-specific configs for premium features
+#    - Only one active config per interaction+tier combination
+#
+# 4. Template ID Convention:
+#    - Format: {INTERACTION_CODE}_V{version}_{ENVIRONMENT}
+#    - Example: ALIGNMENT_ANALYSIS_V1_DEV
+#    - Must match template metadata in database
+#
+# 5. Validation:
+#    - Run: python scripts/llm_config/validate_configuration.py --environment dev
+#    - All interaction_codes must exist in INTERACTION_REGISTRY
+#    - All model_codes must exist in MODEL_REGISTRY
+#    - All template_ids must exist in template metadata table
