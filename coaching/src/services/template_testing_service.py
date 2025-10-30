@@ -190,15 +190,15 @@ class TemplateTestingService:
 
     def _validate_test_parameters(
         self,
-        template: PromptTemplate,
-        test_parameters: dict[str, Any],
+        _template: PromptTemplate,
+        _test_parameters: dict[str, Any],
     ) -> str | None:
         """
         Validate test parameters against template requirements.
 
         Args:
-            template: Template to validate against
-            test_parameters: Test parameters provided
+            _template: Template to validate against (unused, validation handled by LLM service)
+            _test_parameters: Test parameters provided (unused, validation during rendering)
 
         Returns:
             Error message if validation fails, None if valid

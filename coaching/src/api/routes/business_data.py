@@ -1,11 +1,12 @@
 """Business data and metrics API routes (Issue #65)."""
 
+from typing import Any, Generic, TypeVar
+
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.models.auth import UserContext
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from typing import Any, Generic, TypeVar
+from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["business-data"])

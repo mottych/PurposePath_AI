@@ -465,7 +465,6 @@ async def update_template(
         admin_user_id=context.user_id,
     )
 
-    validation_service = TemplateValidationService()
     audit_service = AuditLogService()
 
     try:
@@ -493,11 +492,11 @@ async def update_template(
         # Domain entity has: system_prompt, template_text, variables, name, phase
         # Admin API has: system_prompt, user_prompt_template, model, parameters, metadata
         # Model comes from LLMConfiguration, not stored in template
-        
+
         updated_system_prompt = request.system_prompt or existing_template.system_prompt
         updated_template_text = request.user_prompt_template or existing_template.template_text
         updated_variables = (
-            list(request.parameters.keys()) if request.parameters is not None 
+            list(request.parameters.keys()) if request.parameters is not None
             else existing_template.variables
         )
 

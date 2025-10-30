@@ -4,9 +4,7 @@ import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_conversation_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.constants import ConversationStatus
-from coaching.src.core.types import create_conversation_id, create_tenant_id, create_user_id
-from coaching.src.domain.entities.conversation import Conversation
+from coaching.src.core.types import create_tenant_id, create_user_id
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )

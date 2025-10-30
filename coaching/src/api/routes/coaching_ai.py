@@ -57,7 +57,7 @@ async def get_alignment_explanation(
                 **request.context,
             }
         )
-        
+
         # Transform service result to response model
         return AlignmentAnalysisResponse(
             analysis_id=f"anls_{uuid.uuid4().hex[:12]}",
@@ -105,7 +105,7 @@ async def get_alignment_suggestions(
                 **request.context,
             }
         )
-        
+
         # Transform service result to response model
         return AlignmentAnalysisResponse(
             analysis_id=f"anls_{uuid.uuid4().hex[:12]}",

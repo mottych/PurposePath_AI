@@ -22,7 +22,7 @@ logger = structlog.get_logger()
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """Middleware to handle exceptions and return appropriate HTTP responses.
-    
+
     Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.
 
     This middleware catches exceptions raised during request processing

@@ -69,7 +69,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
 
     Rate limits are applied per user (extracted from auth token).
     Different endpoints can have different rate limits.
-    
+
     Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.
     """
 

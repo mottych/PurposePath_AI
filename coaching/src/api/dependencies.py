@@ -216,9 +216,6 @@ async def get_llm_template_service() -> LLMTemplateService:
     s3_client = get_s3_client_singleton()
     cache_service = await get_cache_service()
 
-    # Use the prompts bucket for template storage
-    s3_bucket = settings.prompts_bucket
-
     return LLMTemplateService(
         template_repository=template_repo,
         s3_client=s3_client,

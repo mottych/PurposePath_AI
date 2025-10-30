@@ -13,7 +13,7 @@ logger = structlog.get_logger()
 
 class LoggingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """Middleware for structured logging of requests and responses.
-    
+
     Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.
     """
 
