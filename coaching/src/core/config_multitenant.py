@@ -97,6 +97,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
+    # Google Vertex AI Configuration (optional)
+    google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
+    google_vertex_location: str = Field(
+        default="us-central1", validation_alias="GOOGLE_VERTEX_LOCATION"
+    )
+
     # Memory Management
     max_conversation_memory: int = 4000
 
