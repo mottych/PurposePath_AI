@@ -2,7 +2,6 @@
 
 import pytest
 from coaching.src.domain.services.alignment_calculator import AlignmentCalculator
-from coaching.src.domain.value_objects.alignment_score import AlignmentScore
 
 
 class TestAlignmentCalculatorBasics:
