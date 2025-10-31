@@ -1,8 +1,6 @@
 name: Deploy Dev
 
 on:
-  push:
-    branches: [ dev ]
   workflow_dispatch: {}
 
 jobs:
@@ -33,6 +31,10 @@ jobs:
       - name: Build Coaching Service
         working-directory: coaching
         run: sam build --template template.yaml --parallel --cached
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Deploy Coaching Service
         working-directory: coaching
