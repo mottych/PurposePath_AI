@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ${LAMBDA_TASK_ROOT}/src
 COPY shared ${LAMBDA_TASK_ROOT}/shared
 
+# Ensure src is a proper Python package
+RUN touch ${LAMBDA_TASK_ROOT}/src/__init__.py
+
 # Use handler directly from main.py
 CMD ["src.api.main.handler"]
 
