@@ -4,12 +4,12 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import structlog
-from coaching.src.api.middleware import (
+from src.api.middleware import (
     ErrorHandlingMiddleware,
     LoggingMiddleware,
     RateLimitingMiddleware,
 )
-from coaching.src.api.routes import (
+from src.api.routes import (
     admin,
     analysis,
     business_data,
@@ -21,7 +21,7 @@ from coaching.src.api.routes import (
     onboarding,
     operations_ai,
 )
-from coaching.src.core.config_multitenant import settings
+from src.core.config_multitenant import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
