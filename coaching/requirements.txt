@@ -20,6 +20,7 @@ passlib[bcrypt]==1.7.4
 # AI/LLM dependencies - Latest compatible
 tiktoken==0.11.0
 openai==1.109.1
+numpy<2.0  # Pin to avoid compilation in Lambda
 google-cloud-aiplatform==1.74.0
 
 # Redis - Latest version
