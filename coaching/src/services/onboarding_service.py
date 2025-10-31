@@ -1,6 +1,7 @@
 """Onboarding service for AI-powered onboarding assistance."""
 
 import structlog
+
 from src.services.llm_service import LLMService
 
 logger = structlog.get_logger()

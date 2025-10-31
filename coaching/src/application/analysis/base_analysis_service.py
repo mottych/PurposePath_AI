@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import structlog
+
 from src.application.llm.llm_service import LLMApplicationService
 from src.core.constants import AnalysisType
 

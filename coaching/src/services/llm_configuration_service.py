@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import cast
 
 import structlog
+
 from src.core.llm_interactions import get_interaction
 from src.core.llm_models import get_model
 from src.domain.entities.llm_config.llm_configuration import LLMConfiguration

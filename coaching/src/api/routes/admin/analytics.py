@@ -3,6 +3,11 @@
 from datetime import datetime
 
 import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from pydantic import BaseModel
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
 from src.api.auth import get_current_context
 from src.api.dependencies import (
     get_conversation_repository,
@@ -29,11 +34,6 @@ from src.services.usage_analytics_service import (
     UsageAnalyticsService,
     UsageMetrics,
 )
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-from pydantic import BaseModel
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

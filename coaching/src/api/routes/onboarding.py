@@ -3,6 +3,8 @@
 from typing import cast
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from src.api.auth import get_current_user
 from src.api.models.auth import UserContext
 from src.api.models.onboarding import (
@@ -15,7 +17,6 @@ from src.api.models.onboarding import (
 )
 from src.api.multitenant_dependencies import get_onboarding_service
 from src.services.onboarding_service import OnboardingService
-from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = structlog.get_logger()
 router = APIRouter(tags=["onboarding", "ai"])

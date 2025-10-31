@@ -4,6 +4,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import structlog
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
 from src.api.middleware import (
     ErrorHandlingMiddleware,
     LoggingMiddleware,
@@ -22,9 +26,6 @@ from src.api.routes import (
     operations_ai,
 )
 from src.core.config_multitenant import settings
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
 
 structlog.configure(
     processors=[

@@ -3,6 +3,10 @@
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+
+from shared.models.multitenant import CoachingTopic, RequestContext, UserRole
+from shared.models.schemas import ApiResponse
 from src.api.auth import get_current_context, require_admin
 from src.api.dependencies import get_conversation_repository
 from src.api.multitenant_dependencies import get_multitenant_conversation_service
@@ -21,10 +25,6 @@ from src.models.responses import (
     MessageResponse,
 )
 from src.services.multitenant_conversation_service import MultitenantConversationService
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-
-from shared.models.multitenant import CoachingTopic, RequestContext, UserRole
-from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

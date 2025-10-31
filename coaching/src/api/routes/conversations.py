@@ -5,6 +5,8 @@ integrating with the Phase 4-6 application services and domain layer.
 """
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+
 from src.api.auth import get_current_user
 from src.api.dependencies import (
     get_conversation_service,
@@ -33,7 +35,6 @@ from src.domain.exceptions.conversation_exceptions import (
     ConversationNotFound,
 )
 from src.domain.ports.llm_provider_port import LLMMessage
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/conversations", tags=["conversations"])

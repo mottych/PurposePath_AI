@@ -9,6 +9,7 @@ These dependencies replace the old service dependencies with the new architectur
 from typing import TYPE_CHECKING, Any
 
 import structlog
+
 from src.api.auth import get_current_context
 from src.application.analysis.alignment_service import AlignmentAnalysisService
 from src.application.analysis.base_analysis_service import BaseAnalysisService
@@ -17,6 +18,15 @@ from src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
     from src.services.model_config_service import ModelConfigService
+from fastapi import Depends
+from mypy_boto3_dynamodb import DynamoDBServiceResource
+
+from shared.models.multitenant import RequestContext
+from shared.services.aws_helpers import (
+    get_bedrock_client,
+    get_dynamodb_resource,
+    get_s3_client,
+)
 from src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
@@ -38,15 +48,6 @@ from src.services.cache_service import CacheService
 from src.services.insights_service import InsightsService
 from src.services.llm_configuration_service import LLMConfigurationService
 from src.services.llm_template_service import LLMTemplateService
-from fastapi import Depends
-from mypy_boto3_dynamodb import DynamoDBServiceResource
-
-from shared.models.multitenant import RequestContext
-from shared.services.aws_helpers import (
-    get_bedrock_client,
-    get_dynamodb_resource,
-    get_s3_client,
-)
 
 logger = structlog.get_logger()
 

@@ -1,6 +1,9 @@
 """Operations AI API routes for strategic planning (Issues #63 & #64)."""
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from shared.services.aws_helpers import get_bedrock_client
 from src.api.auth import get_current_user
 from src.api.models.auth import UserContext
 from src.api.models.operations import (
@@ -23,9 +26,6 @@ from src.application.analysis.operations_ai_service import OperationsAIService
 from src.application.llm.llm_service import LLMApplicationService
 from src.core.config_multitenant import settings
 from src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/operations", tags=["operations", "ai"])

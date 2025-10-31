@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
+
+from shared.models.schemas import PaginatedResponse, PaginationMeta
 from src.infrastructure.external.business_api_client import BusinessApiClient
 from src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
@@ -24,8 +26,6 @@ from src.models.responses import (
     InsightResponse,
     InsightsSummaryResponse,
 )
-
-from shared.models.schemas import PaginatedResponse, PaginationMeta
 
 logger = structlog.get_logger()
 

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from src.core.config_multitenant import settings
-from src.models.requests import OnboardingSuggestionRequest
-from src.models.responses import OnboardingSuggestionResponse
 from fastapi import APIRouter, Header
 from jose import JWTError, jwt
 
 from shared.models.schemas import ApiResponse
 from shared.services.aws_helpers import get_secretsmanager_client
+from src.core.config_multitenant import settings
+from src.models.requests import OnboardingSuggestionRequest
+from src.models.responses import OnboardingSuggestionResponse
 
 router = APIRouter()
 

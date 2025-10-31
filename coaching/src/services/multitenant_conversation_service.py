@@ -6,6 +6,27 @@ from typing import Any, cast
 
 import structlog
 
+from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
+from shared.models.multitenant import RequestContext
+
+# Import shared data access
+from shared.services.data_access import (
+    BusinessDataRepository,
+    CoachingSessionRepository,
+    UserPreferencesRepository,
+)
+
+# Import typed models for proper type safety
+from shared.types.coaching_models import (
+    BusinessDataSummary,
+    CompletionSummary,
+    SessionCreateData,
+    SessionData,
+    SessionUpdateData,
+)
+from shared.types.coaching_models import CoachingSession as CoachingSessionDict
+from shared.types.coaching_models import UserPreferences as UserPreferencesDict
+
 # Enhanced with shared types for better type safety
 from src.core.config_multitenant import settings
 from src.core.exceptions import ConversationNotFoundCompatError
@@ -29,27 +50,6 @@ from src.repositories.conversation_repository import ConversationRepository
 from src.services.cache_service import CacheService
 from src.services.llm_service import LLMService
 from src.services.prompt_service import PromptService
-
-from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
-from shared.models.multitenant import RequestContext
-
-# Import shared data access
-from shared.services.data_access import (
-    BusinessDataRepository,
-    CoachingSessionRepository,
-    UserPreferencesRepository,
-)
-
-# Import typed models for proper type safety
-from shared.types.coaching_models import (
-    BusinessDataSummary,
-    CompletionSummary,
-    SessionCreateData,
-    SessionData,
-    SessionUpdateData,
-)
-from shared.types.coaching_models import CoachingSession as CoachingSessionDict
-from shared.types.coaching_models import UserPreferences as UserPreferencesDict
 
 logger = structlog.get_logger()  # Third-party logging boundary
 

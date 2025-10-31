@@ -3,13 +3,14 @@
 from typing import Any
 
 import structlog
+from pydantic import BaseModel, Field
+
 from src.application.llm.llm_service import LLMApplicationService
 from src.core.constants import CoachingTopic
 from src.domain.entities.prompt_template import PromptTemplate
 from src.infrastructure.repositories.s3_prompt_repository import (
     S3PromptRepository,
 )
-from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 

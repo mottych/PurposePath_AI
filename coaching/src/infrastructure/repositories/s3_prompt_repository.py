@@ -9,6 +9,7 @@ from typing import Any
 import structlog
 import yaml
 from botocore.exceptions import ClientError
+
 from src.core.constants import CoachingTopic
 from src.core.types import PromptTemplateId
 from src.domain.entities.prompt_template import PromptTemplate

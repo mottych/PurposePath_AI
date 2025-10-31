@@ -10,6 +10,7 @@ This module is kept for legacy compatibility but new code should use the adapter
 from typing import Any
 
 import structlog
+
 from src.core.constants import DEFAULT_LLM_MODELS
 from src.llm.memory import ConversationMemory
 from src.llm.providers.base import LLMProvider

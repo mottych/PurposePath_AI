@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import structlog
+
 from src.domain.ports.llm_provider_port import (
     LLMMessage,
     LLMProviderPort,

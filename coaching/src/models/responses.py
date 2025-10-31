@@ -3,8 +3,9 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
+
+from src.core.constants import ConversationPhase, ConversationStatus
 
 
 class ConversationResponse(BaseModel):

@@ -15,6 +15,7 @@ try:
 except ImportError:  # pragma: no cover - fallback for tests
     redis = None
 
+from shared.models.multitenant import RequestContext
 from src.api.auth import get_current_context
 from src.core.config_multitenant import settings
 from src.llm.providers.manager import ProviderManager
@@ -28,8 +29,6 @@ from src.services.multitenant_conversation_service import MultitenantConversatio
 from src.services.onboarding_service import OnboardingService
 from src.services.prompt_service import PromptService
 from src.workflows.orchestrator import WorkflowOrchestrator
-
-from shared.models.multitenant import RequestContext
 
 logger = structlog.get_logger()
 

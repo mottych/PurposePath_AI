@@ -11,6 +11,8 @@ from datetime import datetime
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from src.api.auth import get_current_user
 from src.api.dependencies import (
     get_alignment_service,
@@ -36,7 +38,6 @@ from src.application.analysis.kpi_service import KPIAnalysisService
 from src.application.analysis.strategy_service import StrategyAnalysisService
 from src.core.constants import AnalysisType
 from src.core.types import AnalysisRequestId
-from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/analysis", tags=["analysis"])

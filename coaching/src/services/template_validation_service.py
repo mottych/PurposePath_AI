@@ -4,6 +4,7 @@ import re
 from typing import Any, ClassVar
 
 import structlog
+
 from src.core.constants import CoachingTopic
 
 logger = structlog.get_logger()

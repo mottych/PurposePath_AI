@@ -5,6 +5,7 @@ from typing import Any
 import structlog
 import yaml
 from botocore.exceptions import ClientError
+
 from src.domain.entities.model_config import ModelConfig
 
 logger = structlog.get_logger()

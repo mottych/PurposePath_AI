@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
+
 from src.application.llm.llm_service import LLMApplicationService
 
 logger = structlog.get_logger()

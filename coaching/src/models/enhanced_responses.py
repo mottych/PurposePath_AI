@@ -3,10 +3,10 @@
 from datetime import datetime
 from typing import Any
 
-from src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
 
 from shared.models.base import BaseResponseModel
+from src.core.constants import ConversationPhase, ConversationStatus
 
 
 # Proper message model instead of Dict[str, Any]

@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 import structlog
+
 from src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
 from src.core.llm_models import get_model
 from src.domain.entities.llm_config.llm_configuration import LLMConfiguration

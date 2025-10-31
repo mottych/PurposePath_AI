@@ -1,6 +1,10 @@
 """Insights API routes for coaching recommendations and analytics."""
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse, PaginatedResponse
 from src.api.auth import get_current_context
 from src.api.dependencies import get_insights_service
 from src.models.responses import (
@@ -9,10 +13,6 @@ from src.models.responses import (
     InsightsSummaryResponse,
 )
 from src.services.insights_service import InsightsService
-from fastapi import APIRouter, Depends, HTTPException, Query
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse, PaginatedResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

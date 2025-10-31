@@ -6,9 +6,10 @@ with variables and versioning.
 
 from datetime import UTC, datetime
 
+from pydantic import BaseModel, Field, field_validator
+
 from src.core.constants import CoachingTopic, ConversationPhase
 from src.core.types import TemplateId
-from pydantic import BaseModel, Field, field_validator
 
 
 class PromptTemplate(BaseModel):

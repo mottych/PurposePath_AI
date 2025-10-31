@@ -11,10 +11,11 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from src.application.analysis.base_analysis_service import BaseAnalysisService
-from src.core.constants import AnalysisType
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
+
+from src.application.analysis.base_analysis_service import BaseAnalysisService
+from src.core.constants import AnalysisType
 
 from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 

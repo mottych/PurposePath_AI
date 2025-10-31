@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import structlog
 from boto3.dynamodb.conditions import Attr
+
 from src.domain.entities.llm_config.llm_configuration import LLMConfiguration
 
 logger = structlog.get_logger()

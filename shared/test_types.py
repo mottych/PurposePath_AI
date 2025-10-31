@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 from shared.types import (
-    DynamoDBItem,
     GoogleUserInfo,
     StripeCustomer,
     UserCreateResult,

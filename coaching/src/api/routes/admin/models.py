@@ -3,6 +3,10 @@
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
 from src.api.auth import get_current_context
 from src.api.dependencies import get_model_config_service
 from src.api.middleware.admin_auth import require_admin_access
@@ -16,10 +20,6 @@ from src.models.admin_responses import (
 )
 from src.services.audit_log_service import AuditLogService
 from src.services.model_config_service import ModelConfigService
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

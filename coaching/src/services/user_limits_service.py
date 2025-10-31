@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 import structlog
+
 from src.core.config_multitenant import get_settings
 
 logger = structlog.get_logger(__name__)

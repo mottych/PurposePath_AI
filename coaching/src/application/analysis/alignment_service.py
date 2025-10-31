@@ -8,6 +8,7 @@ import json
 from typing import Any
 
 import structlog
+
 from src.application.analysis.base_analysis_service import BaseAnalysisService
 from src.core.constants import AnalysisType
 

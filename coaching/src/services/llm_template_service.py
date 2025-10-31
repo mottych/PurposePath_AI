@@ -9,13 +9,14 @@ from typing import Any, cast
 
 import structlog
 from botocore.exceptions import ClientError
+from jinja2 import Template as Jinja2Template
+from jinja2 import TemplateSyntaxError as Jinja2SyntaxError
+
 from src.domain.entities.llm_config.template_metadata import TemplateMetadata
 from src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
 from src.services.cache_service import CacheService
-from jinja2 import Template as Jinja2Template
-from jinja2 import TemplateSyntaxError as Jinja2SyntaxError
 
 logger = structlog.get_logger()
 

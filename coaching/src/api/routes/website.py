@@ -1,13 +1,13 @@
 """Website analysis API routes for extracting business insights from websites."""
 
 import structlog
-from src.api.auth import get_current_context
-from src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, HttpUrl
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
+from src.api.auth import get_current_context
+from src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

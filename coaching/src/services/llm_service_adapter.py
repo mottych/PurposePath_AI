@@ -9,6 +9,7 @@ multi-provider support and advanced workflow capabilities.
 from typing import Any
 
 import structlog
+
 from src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
 from src.llm.providers.manager import ProviderManager
 from src.workflows.base import WorkflowState, WorkflowType

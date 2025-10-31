@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
+
 from src.core.constants import CoachingTopic, ConversationStatus, MessageRole
 from src.core.types import ConversationId, TenantId, UserId
 from src.domain.entities.conversation import Conversation

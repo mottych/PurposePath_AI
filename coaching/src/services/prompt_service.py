@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 import structlog
+
 from src.models.prompt import PromptTemplate
 from src.repositories.prompt_repository import PromptRepository
 from src.services.cache_service import CacheService
