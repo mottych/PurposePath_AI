@@ -180,8 +180,8 @@ Resources:
   CoachingApiFunction:
     Type: AWS::Serverless::Function
     Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: .
+      Dockerfile: coaching/Dockerfile
+      DockerContext: ..
       DockerTag: dev
     Properties:
       PackageType: Image

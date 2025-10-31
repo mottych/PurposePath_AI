@@ -2,16 +2,12 @@ FROM public.ecr.aws/lambda/python:3.11
 
 # Install system deps if needed
 
-COPY requirements.txt ./
+COPY coaching/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code directly to task root  
-COPY src ${LAMBDA_TASK_ROOT}/src
+COPY coaching/src ${LAMBDA_TASK_ROOT}/src
 COPY shared ${LAMBDA_TASK_ROOT}/shared
-
-# Ensure both src and shared are proper Python packages
-RUN touch ${LAMBDA_TASK_ROOT}/src/__init__.py && \
-    touch ${LAMBDA_TASK_ROOT}/shared/__init__.py
 
 # Use handler directly from main.py
 CMD ["src.api.main.handler"]
