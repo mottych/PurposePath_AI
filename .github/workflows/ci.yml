@@ -104,19 +104,47 @@ jobs:
           safety check --json
         continue-on-error: true
 
-  deploy-ready:
-    name: Deployment Ready Check
+  deploy-dev:
+    name: Deploy to Dev
     runs-on: ubuntu-latest
     needs: [lint-and-test, security-scan]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/dev'
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Deployment Status
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build Coaching Service
+        working-directory: coaching
+        run: sam build --template template.yaml --parallel --cached
+      
+      - name: Deploy Coaching Service
+        working-directory: coaching
         run: |
-          echo "✅ All checks passed!"
-          echo "🚀 Ready for deployment to production"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
+          sam deploy \
+            --template-file .aws-sam/build/template.yaml \
+            --stack-name purposepath-coaching-api-dev \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app \
+            --region us-east-1 --resolve-s3 --resolve-image-repos --no-confirm-changeset
