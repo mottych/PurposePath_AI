@@ -55,7 +55,7 @@ class TestAlignmentCalculatorBasics:
 
         # Assert
         assert result is not None
-        assert hasattr(result, 'overall_score')
+        assert hasattr(result, "overall_score")
         assert 0 <= result.overall_score <= 100
         assert result.confidence_level > 80  # Should be high with complete data
 
@@ -301,7 +301,7 @@ class TestAlignmentCalculatorEdgeCases:
 
         # Assert
         assert result is not None
-        assert hasattr(result, 'overall_score')
+        assert hasattr(result, "overall_score")
         assert result.overall_score >= 0
         assert result.confidence_level >= 50  # Minimum confidence
 
