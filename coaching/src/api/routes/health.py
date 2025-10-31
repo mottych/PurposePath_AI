@@ -3,9 +3,9 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from coaching.src.api.multitenant_dependencies import get_redis_client
-from coaching.src.core.config_multitenant import settings
-from coaching.src.models.responses import HealthCheckResponse, ReadinessCheckResponse, ServiceStatus
+from src.api.multitenant_dependencies import get_redis_client
+from src.core.config_multitenant import settings
+from src.models.responses import HealthCheckResponse, ReadinessCheckResponse, ServiceStatus
 from fastapi import APIRouter, Depends
 
 from shared.models.schemas import ApiResponse

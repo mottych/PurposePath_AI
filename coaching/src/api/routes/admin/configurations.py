@@ -3,18 +3,18 @@
 from datetime import datetime
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_llm_configuration_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
-from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_llm_configuration_repository
+from src.api.middleware.admin_auth import require_admin_access
+from src.domain.entities.llm_config.llm_configuration import LLMConfiguration
+from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
     LLMConfigurationRepository,
 )
-from coaching.src.models.admin_requests import (
+from src.models.admin_requests import (
     CreateConfigurationRequest,
     UpdateConfigurationRequest,
 )
-from coaching.src.models.admin_responses import (
+from src.models.admin_responses import (
     ConfigurationDetail,
     ConfigurationsListResponse,
     ConfigurationSummary,

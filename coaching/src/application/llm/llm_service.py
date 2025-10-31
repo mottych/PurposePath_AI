@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import structlog
-from coaching.src.domain.ports.llm_provider_port import (
+from src.domain.ports.llm_provider_port import (
     LLMMessage,
     LLMProviderPort,
     LLMResponse,

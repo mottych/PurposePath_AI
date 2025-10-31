@@ -11,13 +11,13 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies import (
+from src.api.auth import get_current_user
+from src.api.dependencies import (
     get_alignment_service,
     get_kpi_service,
     get_strategy_service,
 )
-from coaching.src.api.models.analysis import (
+from src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
     AlignmentScore,
@@ -30,12 +30,12 @@ from coaching.src.api.models.analysis import (
     StrategyAnalysisResponse,
     StrategyRecommendation,
 )
-from coaching.src.api.models.auth import UserContext
-from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
-from coaching.src.application.analysis.kpi_service import KPIAnalysisService
-from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
-from coaching.src.core.constants import AnalysisType
-from coaching.src.core.types import AnalysisRequestId
+from src.api.models.auth import UserContext
+from src.application.analysis.alignment_service import AlignmentAnalysisService
+from src.application.analysis.kpi_service import KPIAnalysisService
+from src.application.analysis.strategy_service import StrategyAnalysisService
+from src.core.constants import AnalysisType
+from src.core.types import AnalysisRequestId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = structlog.get_logger()

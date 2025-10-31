@@ -6,8 +6,8 @@ from datetime import datetime
 import structlog
 import yaml
 from botocore.exceptions import ClientError
-from coaching.src.core.exceptions import PromptTemplateNotFoundCompatError
-from coaching.src.models.prompt import (
+from src.core.exceptions import PromptTemplateNotFoundCompatError
+from src.models.prompt import (
     PromptTemplate,
     PromptTemplateMetadata,
     PromptTemplateYamlData,

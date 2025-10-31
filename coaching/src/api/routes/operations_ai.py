@@ -1,9 +1,9 @@
 """Operations AI API routes for strategic planning (Issues #63 & #64)."""
 
 import structlog
-from coaching.src.api.auth import get_current_user
-from coaching.src.api.models.auth import UserContext
-from coaching.src.api.models.operations import (
+from src.api.auth import get_current_user
+from src.api.models.auth import UserContext
+from src.api.models.operations import (
     ActionPlanRequest,
     ActionPlanResponse,
     ActionSuggestion,
@@ -19,10 +19,10 @@ from coaching.src.api.models.operations import (
     StrategicAlignmentRequest,
     StrategicAlignmentResponse,
 )
-from coaching.src.application.analysis.operations_ai_service import OperationsAIService
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.config_multitenant import settings
-from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from src.application.analysis.operations_ai_service import OperationsAIService
+from src.application.llm.llm_service import LLMApplicationService
+from src.core.config_multitenant import settings
+from src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from shared.services.aws_helpers import get_bedrock_client

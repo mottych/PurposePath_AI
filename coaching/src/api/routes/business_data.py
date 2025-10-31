@@ -3,8 +3,8 @@
 from typing import Any, Generic, TypeVar
 
 import structlog
-from coaching.src.api.auth import get_current_user
-from coaching.src.api.models.auth import UserContext
+from src.api.auth import get_current_user
+from src.api.models.auth import UserContext
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 

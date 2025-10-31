@@ -3,9 +3,9 @@
 from datetime import timedelta
 
 import structlog
-from coaching.src.models.prompt import PromptTemplate
-from coaching.src.repositories.prompt_repository import PromptRepository
-from coaching.src.services.cache_service import CacheService
+from src.models.prompt import PromptTemplate
+from src.repositories.prompt_repository import PromptRepository
+from src.services.cache_service import CacheService
 
 logger = structlog.get_logger()
 

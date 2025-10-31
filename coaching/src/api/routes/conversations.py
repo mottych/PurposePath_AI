@@ -5,13 +5,13 @@ integrating with the Phase 4-6 application services and domain layer.
 """
 
 import structlog
-from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies import (
+from src.api.auth import get_current_user
+from src.api.dependencies import (
     get_conversation_service,
     get_llm_service,
 )
-from coaching.src.api.models.auth import UserContext
-from coaching.src.api.models.conversations import (
+from src.api.models.auth import UserContext
+from src.api.models.conversations import (
     CompleteConversationRequest,
     ConversationDetailResponse,
     ConversationListResponse,
@@ -22,17 +22,17 @@ from coaching.src.api.models.conversations import (
     MessageResponse,
     PauseConversationRequest,
 )
-from coaching.src.application.conversation.conversation_service import (
+from src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.constants import MessageRole
-from coaching.src.core.types import ConversationId, TenantId, UserId
-from coaching.src.domain.exceptions.conversation_exceptions import (
+from src.application.llm.llm_service import LLMApplicationService
+from src.core.constants import MessageRole
+from src.core.types import ConversationId, TenantId, UserId
+from src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
 )
-from coaching.src.domain.ports.llm_provider_port import LLMMessage
+from src.domain.ports.llm_provider_port import LLMMessage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 logger = structlog.get_logger()

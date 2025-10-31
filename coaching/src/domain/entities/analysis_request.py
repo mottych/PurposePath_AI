@@ -6,8 +6,8 @@ This module defines the AnalysisRequest for requesting business analysis.
 from datetime import UTC, datetime
 from typing import Any
 
-from coaching.src.core.constants import AnalysisType
-from coaching.src.core.types import AnalysisRequestId, ConversationId, UserId
+from src.core.constants import AnalysisType
+from src.core.types import AnalysisRequestId, ConversationId, UserId
 from pydantic import BaseModel, Field
 
 

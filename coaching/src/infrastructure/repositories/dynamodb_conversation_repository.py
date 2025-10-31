@@ -9,11 +9,11 @@ from typing import Any
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
-from coaching.src.core.constants import ConversationStatus
-from coaching.src.core.types import ConversationId, TenantId, UserId
-from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.value_objects.conversation_context import ConversationContext
-from coaching.src.domain.value_objects.message import Message
+from src.core.constants import ConversationStatus
+from src.core.types import ConversationId, TenantId, UserId
+from src.domain.entities.conversation import Conversation
+from src.domain.value_objects.conversation_context import ConversationContext
+from src.domain.value_objects.message import Message
 
 logger = structlog.get_logger()
 

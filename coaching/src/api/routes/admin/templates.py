@@ -3,24 +3,24 @@
 from datetime import UTC, datetime
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_prompt_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.constants import CoachingTopic
-from coaching.src.domain.entities.prompt_template import PromptTemplate
-from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
-from coaching.src.models.admin_requests import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_prompt_repository
+from src.api.middleware.admin_auth import require_admin_access
+from src.core.constants import CoachingTopic
+from src.domain.entities.prompt_template import PromptTemplate
+from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from src.models.admin_requests import (
     CreateTemplateVersionRequest,
     SetLatestVersionRequest,
     UpdateTemplateRequest,
 )
-from coaching.src.models.admin_responses import (
+from src.models.admin_responses import (
     PromptTemplateDetail,
     PromptTemplateVersionsResponse,
     TemplateVersionInfo,
 )
-from coaching.src.services.audit_log_service import AuditLogService
-from coaching.src.services.template_validation_service import (
+from src.services.audit_log_service import AuditLogService
+from src.services.template_validation_service import (
     TemplateValidationError,
     TemplateValidationService,
 )
@@ -329,8 +329,8 @@ async def create_template_version(
 
             # Create new template entity
             # Map admin request to domain entity
-            from coaching.src.core.constants import ConversationPhase
-            from coaching.src.core.types import TemplateId
+            from src.core.constants import ConversationPhase
+            from src.core.types import TemplateId
             template = PromptTemplate(
                 template_id=TemplateId(f"{topic}_{request.version}"),
                 name=f"{topic}_template",

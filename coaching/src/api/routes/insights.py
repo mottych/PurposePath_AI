@@ -1,14 +1,14 @@
 """Insights API routes for coaching recommendations and analytics."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_insights_service
-from coaching.src.models.responses import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_insights_service
+from src.models.responses import (
     InsightActionResponse,
     InsightResponse,
     InsightsSummaryResponse,
 )
-from coaching.src.services.insights_service import InsightsService
+from src.services.insights_service import InsightsService
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from shared.models.multitenant import RequestContext

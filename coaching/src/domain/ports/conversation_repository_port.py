@@ -7,8 +7,8 @@ to be used interchangeably.
 
 from typing import Protocol
 
-from coaching.src.core.types import ConversationId, TenantId, UserId
-from coaching.src.domain.entities.conversation import Conversation
+from src.core.types import ConversationId, TenantId, UserId
+from src.domain.entities.conversation import Conversation
 
 
 class ConversationRepositoryPort(Protocol):

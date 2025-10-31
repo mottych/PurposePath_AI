@@ -6,8 +6,8 @@ with variables and versioning.
 
 from datetime import UTC, datetime
 
-from coaching.src.core.constants import CoachingTopic, ConversationPhase
-from coaching.src.core.types import TemplateId
+from src.core.constants import CoachingTopic, ConversationPhase
+from src.core.types import TemplateId
 from pydantic import BaseModel, Field, field_validator
 
 

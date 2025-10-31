@@ -4,21 +4,21 @@ import json
 from typing import Any
 
 import structlog
-from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
-from coaching.src.core.llm_models import get_model
-from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
-from coaching.src.llm.providers.manager import ProviderManager
-from coaching.src.services.llm_configuration_service import (
+from src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
+from src.core.llm_models import get_model
+from src.domain.entities.llm_config.llm_configuration import LLMConfiguration
+from src.llm.providers.manager import ProviderManager
+from src.services.llm_configuration_service import (
     ConfigurationNotFoundError,
     LLMConfigurationService,
 )
-from coaching.src.services.llm_service_adapter import LLMServiceAdapter
-from coaching.src.services.llm_template_service import (
+from src.services.llm_service_adapter import LLMServiceAdapter
+from src.services.llm_template_service import (
     LLMTemplateService,
     TemplateNotFoundError,
 )
-from coaching.src.services.prompt_service import PromptService
-from coaching.src.workflows.orchestrator import WorkflowOrchestrator
+from src.services.prompt_service import PromptService
+from src.workflows.orchestrator import WorkflowOrchestrator
 
 from ..models.llm_models import BusinessContextForLLM, LLMResponse, SessionOutcomes
 
@@ -264,7 +264,7 @@ class LLMService:
             }
 
         # Calculate cost
-        from coaching.src.infrastructure.llm.model_pricing import calculate_cost
+        from src.infrastructure.llm.model_pricing import calculate_cost
 
         cost = calculate_cost(
             token_usage.get("input", 0),
@@ -393,7 +393,7 @@ class LLMService:
             }
 
         # Calculate cost from token breakdown
-        from coaching.src.infrastructure.llm.model_pricing import calculate_cost
+        from src.infrastructure.llm.model_pricing import calculate_cost
 
         cost = calculate_cost(
             token_usage.get("input", 0),
@@ -465,7 +465,7 @@ class LLMService:
             }
 
             # Use workflow orchestrator for analysis
-            from coaching.src.workflows.base import WorkflowType
+            from src.workflows.base import WorkflowType
 
             workflow_state = await self.workflow_orchestrator.start_workflow(
                 workflow_type=WorkflowType.SINGLE_SHOT_ANALYSIS,

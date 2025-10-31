@@ -6,7 +6,7 @@ between business context and various alignment dimensions.
 
 from typing import Any, ClassVar
 
-from coaching.src.domain.value_objects.alignment_score import (
+from src.domain.value_objects.alignment_score import (
     AlignmentScore,
     ComponentScores,
     FoundationAlignment,

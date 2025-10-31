@@ -3,10 +3,10 @@
 from typing import Any
 
 import structlog
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.constants import CoachingTopic
-from coaching.src.domain.entities.prompt_template import PromptTemplate
-from coaching.src.infrastructure.repositories.s3_prompt_repository import (
+from src.application.llm.llm_service import LLMApplicationService
+from src.core.constants import CoachingTopic
+from src.domain.entities.prompt_template import PromptTemplate
+from src.infrastructure.repositories.s3_prompt_repository import (
     S3PromptRepository,
 )
 from pydantic import BaseModel, Field

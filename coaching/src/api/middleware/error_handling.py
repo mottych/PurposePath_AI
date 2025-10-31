@@ -6,8 +6,8 @@ codes and error messages.
 """
 
 import structlog
-from coaching.src.domain.exceptions.base_exception import DomainException
-from coaching.src.domain.exceptions.conversation_exceptions import (
+from src.domain.exceptions.base_exception import DomainException
+from src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
 )

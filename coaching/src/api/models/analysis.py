@@ -7,7 +7,7 @@ including alignment, strategy, KPI, and operational analysis endpoints.
 from datetime import datetime
 from typing import Any
 
-from coaching.src.core.constants import AnalysisType
+from src.core.constants import AnalysisType
 from pydantic import BaseModel, Field, field_validator
 
 # Request Models

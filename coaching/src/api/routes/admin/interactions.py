@@ -1,14 +1,14 @@
 """Admin API routes for LLM interactions management."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.llm_interactions import (
+from src.api.auth import get_current_context
+from src.api.middleware.admin_auth import require_admin_access
+from src.core.llm_interactions import (
     InteractionCategory,
     get_interaction,
     list_interactions,
 )
-from coaching.src.models.admin_responses import (
+from src.models.admin_responses import (
     ActiveConfigurationInfo,
     LLMInteractionDetail,
     LLMInteractionInfo,

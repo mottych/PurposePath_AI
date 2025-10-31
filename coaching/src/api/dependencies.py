@@ -9,35 +9,35 @@ These dependencies replace the old service dependencies with the new architectur
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
-from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
-from coaching.src.application.analysis.kpi_service import KPIAnalysisService
-from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
+from src.api.auth import get_current_context
+from src.application.analysis.alignment_service import AlignmentAnalysisService
+from src.application.analysis.base_analysis_service import BaseAnalysisService
+from src.application.analysis.kpi_service import KPIAnalysisService
+from src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
-    from coaching.src.services.model_config_service import ModelConfigService
-from coaching.src.application.conversation.conversation_service import (
+    from src.services.model_config_service import ModelConfigService
+from src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.config_multitenant import settings
-from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
-from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
-from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+from src.application.llm.llm_service import LLMApplicationService
+from src.core.config_multitenant import settings
+from src.infrastructure.external.business_api_client import BusinessApiClient
+from src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
     LLMConfigurationRepository,
 )
-from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
+from src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
-from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
-from coaching.src.services.cache_service import CacheService
-from coaching.src.services.insights_service import InsightsService
-from coaching.src.services.llm_configuration_service import LLMConfigurationService
-from coaching.src.services.llm_template_service import LLMTemplateService
+from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from src.services.cache_service import CacheService
+from src.services.insights_service import InsightsService
+from src.services.llm_configuration_service import LLMConfigurationService
+from src.services.llm_template_service import LLMTemplateService
 from fastapi import Depends
 from mypy_boto3_dynamodb import DynamoDBServiceResource
 
@@ -96,7 +96,7 @@ def get_redis_client_singleton() -> Any:
             )
         except ImportError:
             # Fallback to in-memory for testing
-            from coaching.src.api.multitenant_dependencies import _InMemoryRedis
+            from src.api.multitenant_dependencies import _InMemoryRedis
 
             _redis_client = _InMemoryRedis()
     return _redis_client
@@ -169,7 +169,7 @@ async def get_model_config_service() -> "ModelConfigService":
     Returns:
         ModelConfigService instance configured with settings
     """
-    from coaching.src.services.model_config_service import ModelConfigService
+    from src.services.model_config_service import ModelConfigService
 
     s3_client = get_s3_client_singleton()
     return ModelConfigService(

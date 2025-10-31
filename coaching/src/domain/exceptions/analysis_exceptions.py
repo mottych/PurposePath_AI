@@ -6,8 +6,8 @@ and business rule violations.
 
 from typing import Any
 
-from coaching.src.core.constants import AnalysisType
-from coaching.src.domain.exceptions.base_exception import DomainException
+from src.core.constants import AnalysisType
+from src.domain.exceptions.base_exception import DomainException
 
 
 class InvalidAnalysisRequest(DomainException):

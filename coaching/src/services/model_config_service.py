@@ -5,7 +5,7 @@ from typing import Any
 import structlog
 import yaml
 from botocore.exceptions import ClientError
-from coaching.src.domain.entities.model_config import ModelConfig
+from src.domain.entities.model_config import ModelConfig
 
 logger = structlog.get_logger()
 

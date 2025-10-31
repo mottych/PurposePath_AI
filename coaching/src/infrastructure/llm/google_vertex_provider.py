@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
 import structlog
-from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
+from src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
 
@@ -88,7 +88,7 @@ class GoogleVertexLLMProvider:
             credentials = self.credentials
 
             if not project_id or not credentials:
-                from coaching.src.core.config_multitenant import (
+                from src.core.config_multitenant import (
                     get_google_vertex_credentials,
                     get_settings,
                 )

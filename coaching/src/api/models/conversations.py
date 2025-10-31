@@ -7,7 +7,7 @@ These models handle API-layer concerns (serialization, validation, documentation
 from datetime import datetime
 from typing import Any
 
-from coaching.src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
+from src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field, field_validator
 
 # Request Models

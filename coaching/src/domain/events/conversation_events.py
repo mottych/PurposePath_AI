@@ -4,8 +4,8 @@ This module contains all events related to conversation lifecycle and interactio
 
 from datetime import datetime
 
-from coaching.src.core.constants import CoachingTopic, ConversationPhase, MessageRole
-from coaching.src.domain.events.base_event import DomainEvent
+from src.core.constants import CoachingTopic, ConversationPhase, MessageRole
+from src.domain.events.base_event import DomainEvent
 from pydantic import Field
 
 

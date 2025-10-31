@@ -3,28 +3,28 @@
 from datetime import datetime
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import (
+from src.api.auth import get_current_context
+from src.api.dependencies import (
     get_conversation_repository,
     get_llm_service,
     get_prompt_repository,
 )
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.constants import CoachingTopic
-from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+from src.api.middleware.admin_auth import require_admin_access
+from src.application.llm.llm_service import LLMApplicationService
+from src.core.constants import CoachingTopic
+from src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.infrastructure.repositories.s3_prompt_repository import (
+from src.infrastructure.repositories.s3_prompt_repository import (
     S3PromptRepository,
 )
-from coaching.src.services.audit_log_service import AuditLogService
-from coaching.src.services.template_testing_service import (
+from src.services.audit_log_service import AuditLogService
+from src.services.template_testing_service import (
     TemplateTestingService,
     TemplateTestRequest,
     TemplateTestResult,
 )
-from coaching.src.services.usage_analytics_service import (
+from src.services.usage_analytics_service import (
     ModelUsageMetrics,
     UsageAnalyticsService,
     UsageMetrics,

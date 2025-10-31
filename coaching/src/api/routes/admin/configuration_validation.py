@@ -1,20 +1,20 @@
 """Admin API routes for LLM configuration validation."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_prompt_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.llm_interactions import get_interaction
-from coaching.src.core.llm_models import MODEL_REGISTRY
-from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
-from coaching.src.models.admin_requests import ValidateConfigurationRequest
-from coaching.src.models.admin_responses import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_prompt_repository
+from src.api.middleware.admin_auth import require_admin_access
+from src.core.llm_interactions import get_interaction
+from src.core.llm_models import MODEL_REGISTRY
+from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from src.models.admin_requests import ValidateConfigurationRequest
+from src.models.admin_responses import (
     ConfigurationConflict,
     ConfigurationDependencies,
     ConfigurationValidationResponse,
     ParameterCompatibility,
 )
-from coaching.src.services.template_validation_service import TemplateValidationService
+from src.services.template_validation_service import TemplateValidationService
 from fastapi import APIRouter, Body, Depends, HTTPException
 
 from shared.models.multitenant import RequestContext
@@ -93,7 +93,7 @@ async def validate_configuration(
         template_exists = False
         try:
             topic_str, version = request.template_id.split("/")
-            from coaching.src.core.constants import CoachingTopic
+            from src.core.constants import CoachingTopic
 
             topic = CoachingTopic(topic_str)
             template = await prompt_repo.get_by_topic(topic, version)

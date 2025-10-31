@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import structlog
-from coaching.src.infrastructure.cache.in_memory_cache import InMemoryCache
+from src.infrastructure.cache.in_memory_cache import InMemoryCache
 
 logger = structlog.get_logger()
 

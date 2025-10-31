@@ -4,8 +4,8 @@ This module contains all events related to analysis operations
 (alignment scoring, strategy recommendations, etc.).
 """
 
-from coaching.src.core.constants import AnalysisType
-from coaching.src.domain.events.base_event import DomainEvent
+from src.core.constants import AnalysisType
+from src.domain.events.base_event import DomainEvent
 from pydantic import Field
 
 

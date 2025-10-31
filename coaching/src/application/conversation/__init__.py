@@ -1,6 +1,6 @@
 """Conversation application services."""
 
-from coaching.src.application.conversation.conversation_service import (
+from src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
 

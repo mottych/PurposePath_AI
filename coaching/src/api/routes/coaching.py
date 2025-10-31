@@ -1,9 +1,9 @@
 """AI coaching API routes for interactive coaching sessions."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.models.requests import CoachingRequest
-from coaching.src.models.responses import CoachingResponse
+from src.api.auth import get_current_context
+from src.models.requests import CoachingRequest
+from src.models.responses import CoachingResponse
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 

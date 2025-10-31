@@ -15,19 +15,19 @@ try:
 except ImportError:  # pragma: no cover - fallback for tests
     redis = None
 
-from coaching.src.api.auth import get_current_context
-from coaching.src.core.config_multitenant import settings
-from coaching.src.llm.providers.manager import ProviderManager
-from coaching.src.repositories.conversation_repository import ConversationRepository
-from coaching.src.repositories.prompt_repository import PromptRepository
-from coaching.src.services.cache_service import CacheService
-from coaching.src.services.llm_configuration_service import LLMConfigurationService
-from coaching.src.services.llm_service import LLMService
-from coaching.src.services.llm_template_service import LLMTemplateService
-from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
-from coaching.src.services.onboarding_service import OnboardingService
-from coaching.src.services.prompt_service import PromptService
-from coaching.src.workflows.orchestrator import WorkflowOrchestrator
+from src.api.auth import get_current_context
+from src.core.config_multitenant import settings
+from src.llm.providers.manager import ProviderManager
+from src.repositories.conversation_repository import ConversationRepository
+from src.repositories.prompt_repository import PromptRepository
+from src.services.cache_service import CacheService
+from src.services.llm_configuration_service import LLMConfigurationService
+from src.services.llm_service import LLMService
+from src.services.llm_template_service import LLMTemplateService
+from src.services.multitenant_conversation_service import MultitenantConversationService
+from src.services.onboarding_service import OnboardingService
+from src.services.prompt_service import PromptService
+from src.workflows.orchestrator import WorkflowOrchestrator
 
 from shared.models.multitenant import RequestContext
 
@@ -153,7 +153,7 @@ async def get_prompt_repository() -> PromptRepository:
 
 async def get_llm_configuration_repository() -> Any:
     """Get LLM configuration repository."""
-    from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+    from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
         LLMConfigurationRepository,
     )
 
@@ -167,7 +167,7 @@ async def get_llm_configuration_repository() -> Any:
 
 async def get_template_metadata_repository() -> Any:
     """Get template metadata repository."""
-    from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
+    from src.infrastructure.repositories.llm_config.template_metadata_repository import (
         TemplateMetadataRepository,
     )
 

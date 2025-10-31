@@ -1,14 +1,14 @@
 """Admin API routes for conversation monitoring."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_conversation_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.types import create_tenant_id, create_user_id
-from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_conversation_repository
+from src.api.middleware.admin_auth import require_admin_access
+from src.core.types import create_tenant_id, create_user_id
+from src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.models.admin_responses import (
+from src.models.admin_responses import (
     ConversationDetail,
     ConversationMessage,
     ConversationSummary,
@@ -171,7 +171,7 @@ async def get_conversation_details(
 
     try:
         # Fetch conversation
-        from coaching.src.core.types import ConversationId
+        from src.core.types import ConversationId
         conversation = await conversation_repo.get_by_id(ConversationId(conversation_id))
 
         if not conversation:

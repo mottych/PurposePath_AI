@@ -10,11 +10,11 @@ This module is kept for legacy compatibility but new code should use the adapter
 from typing import Any
 
 import structlog
-from coaching.src.core.constants import DEFAULT_LLM_MODELS
-from coaching.src.llm.memory import ConversationMemory
-from coaching.src.llm.providers.base import LLMProvider
-from coaching.src.llm.providers.bedrock import BedrockProvider
-from coaching.src.services.cache_service import CacheService
+from src.core.constants import DEFAULT_LLM_MODELS
+from src.llm.memory import ConversationMemory
+from src.llm.providers.base import LLMProvider
+from src.llm.providers.bedrock import BedrockProvider
+from src.services.cache_service import CacheService
 
 logger = structlog.get_logger()
 

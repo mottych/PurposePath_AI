@@ -4,7 +4,7 @@ This package contains all domain-specific exceptions for the coaching system,
 providing structured error handling and clear business rule violations.
 """
 
-from coaching.src.domain.exceptions.analysis_exceptions import (
+from src.domain.exceptions.analysis_exceptions import (
     AnalysisNotFound,
     AnalysisTimeout,
     EnrichmentFailed,
@@ -12,8 +12,8 @@ from coaching.src.domain.exceptions.analysis_exceptions import (
     InvalidAnalysisRequest,
     UnsupportedAnalysisType,
 )
-from coaching.src.domain.exceptions.base_exception import DomainException
-from coaching.src.domain.exceptions.conversation_exceptions import (
+from src.domain.exceptions.base_exception import DomainException
+from src.domain.exceptions.conversation_exceptions import (
     ConversationCompletionError,
     ConversationNotActive,
     ConversationNotFound,

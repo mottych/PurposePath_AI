@@ -1,19 +1,19 @@
 """Admin API routes for template validation and testing."""
 
 import structlog
-from coaching.src.api.auth import get_current_context
-from coaching.src.api.dependencies import get_prompt_repository
-from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
-from coaching.src.models.admin_requests import TestTemplateRequest, ValidateTemplateRequest
-from coaching.src.models.admin_responses import (
+from src.api.auth import get_current_context
+from src.api.dependencies import get_prompt_repository
+from src.api.middleware.admin_auth import require_admin_access
+from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from src.models.admin_requests import TestTemplateRequest, ValidateTemplateRequest
+from src.models.admin_responses import (
     ParameterAnalysis,
     ParameterAnalysisResponse,
     ParameterUsage,
     TemplateTestResponse,
     TemplateValidationResponse,
 )
-from coaching.src.services.template_validation_service import TemplateValidationService
+from src.services.template_validation_service import TemplateValidationService
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 
 from shared.models.multitenant import RequestContext
@@ -135,7 +135,7 @@ async def test_template(
         # Parse template_id (format: topic/version)
         try:
             topic_str, version = template_id.split("/")
-            from coaching.src.core.constants import CoachingTopic
+            from src.core.constants import CoachingTopic
 
             topic = CoachingTopic(topic_str)
         except (ValueError, KeyError) as e:
@@ -249,7 +249,7 @@ async def analyze_template_parameters(
         # Parse template_id (format: topic/version)
         try:
             topic_str, version = template_id.split("/")
-            from coaching.src.core.constants import CoachingTopic
+            from src.core.constants import CoachingTopic
 
             topic = CoachingTopic(topic_str)
         except (ValueError, KeyError) as e:

@@ -1,6 +1,6 @@
 """API routes package."""
 
-from coaching.src.api.routes import (
+from src.api.routes import (
     admin,
     analysis,
     business_data,

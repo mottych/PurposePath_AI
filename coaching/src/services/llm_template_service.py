@@ -9,11 +9,11 @@ from typing import Any, cast
 
 import structlog
 from botocore.exceptions import ClientError
-from coaching.src.domain.entities.llm_config.template_metadata import TemplateMetadata
-from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
+from src.domain.entities.llm_config.template_metadata import TemplateMetadata
+from src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
-from coaching.src.services.cache_service import CacheService
+from src.services.cache_service import CacheService
 from jinja2 import Template as Jinja2Template
 from jinja2 import TemplateSyntaxError as Jinja2SyntaxError
 

@@ -3,8 +3,8 @@
 import logging
 from collections.abc import Callable
 
-from coaching.src.api.models.auth import UserContext
-from coaching.src.core.config_multitenant import settings
+from src.api.models.auth import UserContext
+from src.core.config_multitenant import settings
 from fastapi import Depends, Header, HTTPException
 from jose import JWTError, jwt
 from mypy_boto3_secretsmanager import SecretsManagerClient

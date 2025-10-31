@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
 import structlog
-from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
+from src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
 
@@ -76,7 +76,7 @@ class OpenAILLMProvider:
             # Get API key from Secrets Manager if not provided
             api_key = self.api_key
             if not api_key:
-                from coaching.src.core.config_multitenant import get_openai_api_key
+                from src.core.config_multitenant import get_openai_api_key
 
                 api_key = get_openai_api_key()
                 if not api_key:

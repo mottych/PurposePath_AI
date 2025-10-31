@@ -9,9 +9,9 @@ from typing import Any
 import structlog
 import yaml
 from botocore.exceptions import ClientError
-from coaching.src.core.constants import CoachingTopic
-from coaching.src.core.types import PromptTemplateId
-from coaching.src.domain.entities.prompt_template import PromptTemplate
+from src.core.constants import CoachingTopic
+from src.core.types import PromptTemplateId
+from src.domain.entities.prompt_template import PromptTemplate
 
 logger = structlog.get_logger()
 

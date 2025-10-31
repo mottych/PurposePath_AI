@@ -7,11 +7,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
-from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
-from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+from src.infrastructure.external.business_api_client import BusinessApiClient
+from src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.models.insights import (
+from src.models.insights import (
     BusinessDataContext,
     Insight,
     InsightCategory,
@@ -19,7 +19,7 @@ from coaching.src.models.insights import (
     InsightStatus,
     SuggestedAction,
 )
-from coaching.src.models.responses import (
+from src.models.responses import (
     InsightMetadata,
     InsightResponse,
     InsightsSummaryResponse,

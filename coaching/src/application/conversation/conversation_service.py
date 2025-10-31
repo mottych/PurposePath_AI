@@ -8,14 +8,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from coaching.src.core.constants import CoachingTopic, ConversationStatus, MessageRole
-from coaching.src.core.types import ConversationId, TenantId, UserId
-from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.exceptions.conversation_exceptions import (
+from src.core.constants import CoachingTopic, ConversationStatus, MessageRole
+from src.core.types import ConversationId, TenantId, UserId
+from src.domain.entities.conversation import Conversation
+from src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
 )
-from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
+from src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 
 logger = structlog.get_logger()
 

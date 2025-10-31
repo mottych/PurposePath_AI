@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 import structlog
-from coaching.src.core.config import settings
+from src.core.config import settings
 
 logger = structlog.get_logger()
 

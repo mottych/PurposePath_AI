@@ -67,7 +67,7 @@ class TemplateMetadata(BaseModel):
         Raises:
             ValueError: If interaction_code not found in registry
         """
-        from coaching.src.core.llm_interactions import get_interaction
+        from src.core.llm_interactions import get_interaction
 
         interaction = get_interaction(self.interaction_code)
         return interaction.get_parameter_schema()
@@ -86,10 +86,10 @@ class TemplateMetadata(BaseModel):
             ValueError: If interaction not in registry
             ParameterValidationError: If template parameters invalid
         """
-        from coaching.src.core.llm_interactions import get_interaction
+        from src.core.llm_interactions import get_interaction
 
         # Import parameter extraction utility
-        from coaching.src.infrastructure.repositories.llm_config.parameter_utils import (
+        from src.infrastructure.repositories.llm_config.parameter_utils import (
             extract_template_parameters,
         )
 

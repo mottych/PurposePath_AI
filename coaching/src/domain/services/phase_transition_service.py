@@ -5,10 +5,10 @@ This service manages conversation phase transitions according to business rules.
 
 from typing import ClassVar
 
-from coaching.src.core.constants import (
+from src.core.constants import (
     ConversationPhase,
 )
-from coaching.src.domain.entities.conversation import Conversation
+from src.domain.entities.conversation import Conversation
 
 
 class PhaseTransitionService:

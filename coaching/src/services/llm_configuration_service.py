@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 from typing import cast
 
 import structlog
-from coaching.src.core.llm_interactions import get_interaction
-from coaching.src.core.llm_models import get_model
-from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
-from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+from src.core.llm_interactions import get_interaction
+from src.core.llm_models import get_model
+from src.domain.entities.llm_config.llm_configuration import LLMConfiguration
+from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
     LLMConfigurationRepository,
 )
-from coaching.src.services.cache_service import CacheService
+from src.services.cache_service import CacheService
 
 logger = structlog.get_logger()
 

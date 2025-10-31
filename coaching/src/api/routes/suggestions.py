@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 
-from coaching.src.core.config_multitenant import settings
-from coaching.src.models.requests import OnboardingSuggestionRequest
-from coaching.src.models.responses import OnboardingSuggestionResponse
+from src.core.config_multitenant import settings
+from src.models.requests import OnboardingSuggestionRequest
+from src.models.responses import OnboardingSuggestionResponse
 from fastapi import APIRouter, Header
 from jose import JWTError, jwt
 

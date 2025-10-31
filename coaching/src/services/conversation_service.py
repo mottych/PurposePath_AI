@@ -3,20 +3,20 @@
 from typing import Any
 
 import structlog
-from coaching.src.core.constants import CoachingTopic
-from coaching.src.core.exceptions import ConversationNotFoundCompatError, ConversationNotFoundError
-from coaching.src.infrastructure.llm.model_pricing import calculate_cost
-from coaching.src.models.conversation import Conversation
-from coaching.src.models.responses import (
+from src.core.constants import CoachingTopic
+from src.core.exceptions import ConversationNotFoundCompatError, ConversationNotFoundError
+from src.infrastructure.llm.model_pricing import calculate_cost
+from src.models.conversation import Conversation
+from src.models.responses import (
     ConversationListResponse,
     ConversationResponse,
     ConversationSummary,
     MessageResponse,
 )
-from coaching.src.repositories.conversation_repository import ConversationRepository
-from coaching.src.services.cache_service import CacheService
-from coaching.src.services.llm_service import LLMService
-from coaching.src.services.prompt_service import PromptService
+from src.repositories.conversation_repository import ConversationRepository
+from src.services.cache_service import CacheService
+from src.services.llm_service import LLMService
+from src.services.prompt_service import PromptService
 
 logger = structlog.get_logger()
 

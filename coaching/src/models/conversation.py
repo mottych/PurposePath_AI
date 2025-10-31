@@ -3,8 +3,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
-from coaching.src.domain.value_objects.message import Message
+from src.core.constants import ConversationPhase, ConversationStatus, MessageRole
+from src.domain.value_objects.message import Message
 from pydantic import BaseModel, Field
 
 
@@ -98,7 +98,7 @@ class Conversation(BaseModel):
 
     def calculate_progress(self) -> float:
         """Calculate conversation progress."""
-        from coaching.src.core.constants import PHASE_PROGRESS_WEIGHTS
+        from src.core.constants import PHASE_PROGRESS_WEIGHTS
 
         return PHASE_PROGRESS_WEIGHTS.get(self.context.phase, 0.0)
 
