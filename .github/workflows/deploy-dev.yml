@@ -2,11 +2,11 @@ name: Deploy Dev
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev ]
   workflow_dispatch: {}
 
 jobs:
-  build-and-deploy:
+  deploy-coaching:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -30,32 +30,17 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEV_ROLE_ARN }}
           role-session-name: purposepath-dev-deploy
 
-      - name: Build (no container)
-        run: |
-          sam build --template account/template-standalone.yaml --parallel --cached
-          sam build --template coaching/template-standalone.yaml --parallel --cached
+      - name: Build Coaching Service
+        working-directory: coaching
+        run: sam build --template template.yaml --parallel --cached
 
-      - name: Resolve Dev JWT Secret ARN
-        id: secret
-        run: |
-          ARN=$(aws secretsmanager list-secrets --query "SecretList[?Name=='purposepath/jwt-secret/dev'].ARN | [0]" --output text)
-          echo "arn=$ARN" >> $GITHUB_OUTPUT
-
-      - name: Deploy Account (dev)
+      - name: Deploy Coaching Service
+        working-directory: coaching
         run: |
           sam deploy \
-            --template-file account/template-standalone.yaml \
-            --stack-name purposepath-account-api-dev \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides Stage=dev LogLevel=DEBUG EmailFrom=dev@purposepath.ai JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
-            --region us-east-1 --resolve-s3 --no-confirm-changeset
-
-      - name: Deploy Coaching (dev)
-        run: |
-          sam deploy \
-            --template-file coaching/template-standalone.yaml \
+            --template-file .aws-sam/build/template.yaml \
             --stack-name purposepath-coaching-api-dev \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides Stage=dev LogLevel=DEBUG JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
-            --region us-east-1 --resolve-s3 --no-confirm-changeset
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app \
+            --region us-east-1 --resolve-s3 --resolve-image-repos --no-confirm-changeset
 
