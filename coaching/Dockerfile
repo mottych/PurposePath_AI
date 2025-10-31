@@ -2,17 +2,22 @@ FROM public.ecr.aws/lambda/python:3.11
 
 # Install system deps if needed
 
+# Copy requirements and install dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app code - preserve directory structure for imports
-COPY src ./coaching/src
+# Copy the entire coaching package
+WORKDIR /var/task
+COPY . /tmp/coaching_build/
+
+# Install coaching package
+RUN cd /tmp/coaching_build && \
+    pip install --no-cache-dir --no-deps -e . && \
+    cd /var/task
+
+# Copy shared module
 COPY shared ./shared
 
-# Create __init__.py for coaching package
-RUN touch ./coaching/__init__.py
-
 # Set the Lambda handler
-# Uses main.py with Phase 7 architecture (new routes, middleware, auth)
 CMD ["coaching.src.api.main.handler"]
 
