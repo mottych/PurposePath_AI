@@ -90,7 +90,9 @@ async def suggest_prioritization(
         )
         actions = [action.model_dump() for action in request.actions]
         business_context = request.business_context.model_dump()
-        suggestions_dicts = await operations_service.suggest_prioritization(actions, business_context)
+        suggestions_dicts = await operations_service.suggest_prioritization(
+            actions, business_context
+        )
         suggestions = [PrioritizationSuggestion.model_validate(s) for s in suggestions_dicts]
         return PrioritizationResponse(success=True, data=suggestions)
     except ValueError as e:
@@ -173,7 +175,9 @@ async def generate_action_plan(
         issue = request.issue.model_dump()
         constraints = request.constraints.model_dump()
         context = request.context.model_dump()
-        suggestions_dicts = await operations_service.generate_action_plan(issue, constraints, context)
+        suggestions_dicts = await operations_service.generate_action_plan(
+            issue, constraints, context
+        )
         suggestions = [ActionSuggestion.model_validate(s) for s in suggestions_dicts]
         return ActionPlanResponse(success=True, data=suggestions)
     except ValueError as e:

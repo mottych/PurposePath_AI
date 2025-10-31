@@ -314,7 +314,8 @@ class RootCauseRequest(BaseModel):
         ..., description="Business impact level"
     )
     context: IssueContext = Field(
-        default_factory=lambda: IssueContext(reportedBy=None, dateReported=None), description="Additional context"
+        default_factory=lambda: IssueContext(reportedBy=None, dateReported=None),
+        description="Additional context",
     )
 
 
@@ -381,7 +382,8 @@ class ActionPlanRequest(BaseModel):
 
     issue: ActionIssue = Field(..., description="Issue to address")
     constraints: ActionConstraints = Field(
-        default_factory=lambda: ActionConstraints(timeline=None, budget=None), description="Constraints"
+        default_factory=lambda: ActionConstraints(timeline=None, budget=None),
+        description="Constraints",
     )
     context: ActionPlanContext = Field(
         default_factory=lambda: ActionPlanContext(), description="Business context"

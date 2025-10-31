@@ -179,7 +179,11 @@ async def test_action_plan_generation_real_llm(
     payload = {
         "goal": "Launch new product feature by Q2 2026",
         "current_situation": "Feature is 30% complete, needs design review and testing",
-        "constraints": ["Limited dev resources", "Must not affect existing features", "Budget: $50k"],
+        "constraints": [
+            "Limited dev resources",
+            "Must not affect existing features",
+            "Budget: $50k",
+        ],
         "timeline": "3 months",
     }
 

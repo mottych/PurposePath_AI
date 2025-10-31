@@ -20,7 +20,9 @@ class UserLimitsCache:
         Args:
             ttl_seconds: Time-to-live for cache entries in seconds
         """
-        self._cache: dict[str, tuple[dict[str, Any], float, str]] = {}  # user_id -> (limits, timestamp, token_hash)
+        self._cache: dict[
+            str, tuple[dict[str, Any], float, str]
+        ] = {}  # user_id -> (limits, timestamp, token_hash)
         self._ttl = ttl_seconds
 
     def get(self, user_id: str, token: str) -> dict[str, Any] | None:
@@ -80,7 +82,9 @@ class UserLimitsService:
             cache_ttl: Cache time-to-live in seconds
         """
         settings = get_settings()
-        self._base_url = account_api_base_url or settings.account_api_url or "https://api.dev.purposepath.app"
+        self._base_url = (
+            account_api_base_url or settings.account_api_url or "https://api.dev.purposepath.app"
+        )
         self._cache = UserLimitsCache(ttl_seconds=cache_ttl)
         self._client: httpx.AsyncClient | None = None
 
@@ -130,7 +134,9 @@ class UserLimitsService:
                     logger.info("User limits fetched successfully", user_id=user_id, limits=limits)
                     return limits
                 else:
-                    logger.warning("Unexpected response format from Account API", response=response_data)
+                    logger.warning(
+                        "Unexpected response format from Account API", response=response_data
+                    )
                     return self._get_default_limits()
             else:
                 logger.warning(

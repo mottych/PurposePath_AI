@@ -17,12 +17,14 @@ T = TypeVar("T")
 
 class ApiResponse(BaseModel, Generic[T]):
     """Generic API response wrapper."""
+
     success: bool
     data: T
 
 
 class BusinessDataSummaryResponse(BaseModel):
     """Business data summary response."""
+
     tenant_id: str
     business_data: dict[str, Any]
 

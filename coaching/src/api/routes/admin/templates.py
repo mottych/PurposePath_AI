@@ -331,6 +331,7 @@ async def create_template_version(
             # Map admin request to domain entity
             from src.core.constants import ConversationPhase
             from src.core.types import TemplateId
+
             template = PromptTemplate(
                 template_id=TemplateId(f"{topic}_{request.version}"),
                 name=f"{topic}_template",
@@ -496,14 +497,18 @@ async def update_template(
         updated_system_prompt = request.system_prompt or existing_template.system_prompt
         updated_template_text = request.user_prompt_template or existing_template.template_text
         updated_variables = (
-            list(request.parameters.keys()) if request.parameters is not None
+            list(request.parameters.keys())
+            if request.parameters is not None
             else existing_template.variables
         )
 
         # Track what changed
         if request.system_prompt and request.system_prompt != existing_template.system_prompt:
             changes["system_prompt"] = "updated"
-        if request.user_prompt_template and request.user_prompt_template != existing_template.template_text:
+        if (
+            request.user_prompt_template
+            and request.user_prompt_template != existing_template.template_text
+        ):
             changes["template_text"] = "updated"
         if request.parameters is not None:
             changes["parameters"] = "updated"

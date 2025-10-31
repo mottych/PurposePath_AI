@@ -91,11 +91,14 @@ def check_aws_credentials() -> None:
     # Try to get credentials using boto3 (works with env vars, config files, and IAM roles)
     try:
         import boto3
+
         sts = boto3.client("sts")
         sts.get_caller_identity()
         # If we get here, credentials are valid
     except Exception:
-        pytest.skip("AWS credentials not configured or invalid. Configure AWS CLI or set credentials.")
+        pytest.skip(
+            "AWS credentials not configured or invalid. Configure AWS CLI or set credentials."
+        )
 
 
 @pytest.fixture(scope="session")
@@ -108,6 +111,7 @@ def check_openai_credentials() -> None:
     # Try to get from AWS Secrets Manager
     try:
         from coaching.src.core.config_multitenant import get_openai_api_key
+
         api_key = get_openai_api_key()
         if api_key:
             os.environ["OPENAI_API_KEY"] = api_key
@@ -115,7 +119,9 @@ def check_openai_credentials() -> None:
     except Exception:
         pass
 
-    pytest.skip("OPENAI_API_KEY not configured. Set environment variable or configure in AWS Secrets Manager.")
+    pytest.skip(
+        "OPENAI_API_KEY not configured. Set environment variable or configure in AWS Secrets Manager."
+    )
 
 
 @pytest.fixture(scope="session")
@@ -128,13 +134,16 @@ def check_google_credentials() -> None:
     # Try to get from AWS Secrets Manager
     try:
         from coaching.src.core.config_multitenant import get_google_vertex_credentials
+
         creds_dict = get_google_vertex_credentials()
         if creds_dict and creds_dict.get("project_id"):
             return
     except Exception:
         pass
 
-    pytest.skip("Google Cloud credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or configure in AWS Secrets Manager.")
+    pytest.skip(
+        "Google Cloud credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or configure in AWS Secrets Manager."
+    )
 
 
 __all__ = [

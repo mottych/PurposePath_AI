@@ -157,9 +157,7 @@ class GoogleVertexLLMProvider:
             )
 
         if model not in self.SUPPORTED_MODELS:
-            raise ValueError(
-                f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}"
-            )
+            raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
             client_class = await self._get_client()
@@ -204,9 +202,7 @@ class GoogleVertexLLMProvider:
                 "prompt_tokens": getattr(response.usage_metadata, "prompt_token_count", 0)
                 if hasattr(response, "usage_metadata")
                 else 0,
-                "completion_tokens": getattr(
-                    response.usage_metadata, "candidates_token_count", 0
-                )
+                "completion_tokens": getattr(response.usage_metadata, "candidates_token_count", 0)
                 if hasattr(response, "usage_metadata")
                 else 0,
                 "total_tokens": getattr(response.usage_metadata, "total_token_count", 0)
@@ -262,9 +258,7 @@ class GoogleVertexLLMProvider:
             )
 
         if model not in self.SUPPORTED_MODELS:
-            raise ValueError(
-                f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}"
-            )
+            raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
             client_class = await self._get_client()
@@ -303,9 +297,7 @@ class GoogleVertexLLMProvider:
                     yield chunk.text
 
         except Exception as e:
-            logger.error(
-                "Google Vertex AI streaming API call failed", error=str(e), model=model
-            )
+            logger.error("Google Vertex AI streaming API call failed", error=str(e), model=model)
             raise RuntimeError(f"Google Vertex AI streaming API call failed: {e}") from e
 
     async def count_tokens(self, text: str, model: str) -> int:
@@ -330,9 +322,7 @@ class GoogleVertexLLMProvider:
             return response.total_tokens
 
         except Exception as e:
-            logger.warning(
-                "Token counting failed, using approximation", error=str(e), model=model
-            )
+            logger.warning("Token counting failed, using approximation", error=str(e), model=model)
             # Fallback approximation: ~4 characters per token
             return len(text) // 4
 

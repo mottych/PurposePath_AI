@@ -70,8 +70,7 @@ class OpenAILLMProvider:
                 from openai import AsyncOpenAI
             except ImportError as e:
                 raise ImportError(
-                    "OpenAI Python SDK not installed. "
-                    "Install with: pip install openai>=1.0.0"
+                    "OpenAI Python SDK not installed. " "Install with: pip install openai>=1.0.0"
                 ) from e
 
             # Get API key from Secrets Manager if not provided
@@ -122,9 +121,7 @@ class OpenAILLMProvider:
             )
 
         if model not in self.SUPPORTED_MODELS:
-            raise ValueError(
-                f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}"
-            )
+            raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
             client = await self._get_client()
@@ -190,15 +187,15 @@ class OpenAILLMProvider:
                     model=model,
                     completion_tokens=response.usage.completion_tokens,
                     finish_reason=finish_reason,
-                    message_dict=message.model_dump() if hasattr(message, "model_dump") else str(message),
+                    message_dict=message.model_dump()
+                    if hasattr(message, "model_dump")
+                    else str(message),
                 )
 
             # Extract usage metrics
             usage = {
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": response.usage.completion_tokens
-                if response.usage
-                else 0,
+                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
                 "total_tokens": response.usage.total_tokens if response.usage else 0,
             }
 
@@ -250,9 +247,7 @@ class OpenAILLMProvider:
             )
 
         if model not in self.SUPPORTED_MODELS:
-            raise ValueError(
-                f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}"
-            )
+            raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
             client = await self._get_client()

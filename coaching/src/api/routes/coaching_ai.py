@@ -47,9 +47,7 @@ async def get_alignment_explanation(
 ) -> AlignmentAnalysisResponse:
     """Generate AI-powered alignment analysis (Issue #62)."""
     try:
-        logger.info(
-            "Generating alignment analysis", user_id=user.user_id
-        )
+        logger.info("Generating alignment analysis", user_id=user.user_id)
         analysis_result = await alignment_service.analyze(
             context={
                 "user_id": user.user_id,
@@ -95,9 +93,7 @@ async def get_alignment_suggestions(
 ) -> AlignmentAnalysisResponse:
     """Generate AI-powered alignment analysis with suggestions (Issue #62)."""
     try:
-        logger.info(
-            "Generating alignment analysis with suggestions", user_id=user.user_id
-        )
+        logger.info("Generating alignment analysis with suggestions", user_id=user.user_id)
         analysis_result = await alignment_service.analyze(
             context={
                 "user_id": user.user_id,

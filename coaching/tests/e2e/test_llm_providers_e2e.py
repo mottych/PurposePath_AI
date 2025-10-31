@@ -143,7 +143,9 @@ async def test_gpt5_mini_real_generation(check_openai_credentials: None) -> None
     messages = [LLMMessage(role="user", content="Say hello in one word.")]
 
     response = await provider.generate(
-        messages=messages, model="gpt-5-mini", max_tokens=500  # Increase tokens to avoid truncation
+        messages=messages,
+        model="gpt-5-mini",
+        max_tokens=500,  # Increase tokens to avoid truncation
     )
 
     # Validate API call succeeded even if content format is unusual

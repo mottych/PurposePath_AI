@@ -157,11 +157,14 @@ async def get_conversation(
             raise HTTPException(status_code=403, detail="Access denied to this conversation")
 
         # Check permissions (users can view their own sessions, admins can view all)
-        if (
-            conversation.user_id != context.user_id
-            and context.role not in [UserRole.ADMIN, UserRole.OWNER]
-        ):
-            raise HTTPException(status_code=403, detail="Can only view your own conversations unless you are an admin")
+        if conversation.user_id != context.user_id and context.role not in [
+            UserRole.ADMIN,
+            UserRole.OWNER,
+        ]:
+            raise HTTPException(
+                status_code=403,
+                detail="Can only view your own conversations unless you are an admin",
+            )
 
         return ConversationDetailResponse(
             conversation_id=conversation.conversation_id,

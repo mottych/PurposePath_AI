@@ -94,7 +94,9 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
         user_status = payload.get("user_status")
 
         if not all([user_id, tenant_id]):
-            raise HTTPException(status_code=401, detail="Token missing required fields: user_id, tenant_id")
+            raise HTTPException(
+                status_code=401, detail="Token missing required fields: user_id, tenant_id"
+            )
 
         # Check user status
         if user_status and user_status.lower() != "active":
@@ -247,9 +249,7 @@ def require_admin() -> Callable[[RequestContext], RequestContext]:
         context: RequestContext = Depends(get_current_context),
     ) -> RequestContext:
         if context.role not in [UserRole.ADMIN, UserRole.OWNER]:
-            raise HTTPException(
-                status_code=403, detail="Admin access required"
-            )
+            raise HTTPException(status_code=403, detail="Admin access required")
         return context
 
     return admin_dependency

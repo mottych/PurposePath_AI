@@ -48,7 +48,9 @@ async def test_complete_coaching_conversation_flow(
     assert conversation_id
 
     # Step 2: Send user message
-    message_payload = {"content": "I want to focus on innovation and customer trust as core values."}
+    message_payload = {
+        "content": "I want to focus on innovation and customer trust as core values."
+    }
 
     response = await e2e_client.post(
         f"/api/conversations/{conversation_id}/message", json=message_payload
