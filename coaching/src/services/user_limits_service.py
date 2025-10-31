@@ -121,10 +121,16 @@ class UserLimitsService:
             )
 
             if response.status_code == 200:
-                limits = response.json()
-                self._cache.set(user_id, token, limits)
-                logger.info("User limits fetched successfully", user_id=user_id)
-                return limits
+                response_data = response.json()
+                # Account API returns {"success": true, "data": {...}}
+                if response_data.get("success") and "data" in response_data:
+                    limits = response_data["data"]
+                    self._cache.set(user_id, token, limits)
+                    logger.info("User limits fetched successfully", user_id=user_id, limits=limits)
+                    return limits
+                else:
+                    logger.warning("Unexpected response format from Account API", response=response_data)
+                    return self._get_default_limits()
             else:
                 logger.warning(
                     "Failed to fetch user limits",
@@ -144,14 +150,29 @@ class UserLimitsService:
         """Get default limits for users when API is unavailable.
 
         Returns:
-            Default limits dictionary
+            Default limits dictionary matching Account API structure
         """
         return {
-            "max_coaching_sessions": 10,
-            "max_team_members": 5,
-            "can_access_advanced_features": False,
-            "subscription_tier": "starter",
+            "goals": 10,
+            "users": 100,
+            "projects": 5,
+            "api_calls_per_month": 10000,
+            "storage_mb": 1000,
         }
+
+    def check_limit(self, limits: dict[str, Any], limit_name: str, current_usage: int) -> bool:
+        """Check if current usage is within limit.
+
+        Args:
+            limits: User limits dictionary
+            limit_name: Name of the limit to check (e.g., "goals", "projects")
+            current_usage: Current usage count
+
+        Returns:
+            True if within limit, False if exceeded
+        """
+        limit_value = limits.get(limit_name, 0)
+        return current_usage < limit_value
 
     async def close(self) -> None:
         """Close HTTP client."""
