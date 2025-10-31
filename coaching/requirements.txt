@@ -13,6 +13,7 @@ botocore==1.40.35
 # Database - Latest stubs
 boto3-stubs[dynamodb]==1.40.35
 mypy-boto3-secretsmanager==1.40.60
+mypy-boto3-ses==1.40.60
 
 # Auth - Latest compatible versions
 python-jose[cryptography]==3.5.0
