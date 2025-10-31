@@ -26,7 +26,7 @@ async def test_website_scan_real_ai(
     """
     payload = {"url": "https://www.example.com"}
 
-    response = await e2e_client.post("/api/website/scan", json=payload)
+    response = await e2e_client.post("/api/v1/website/scan", json=payload)
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
@@ -67,7 +67,7 @@ async def test_onboarding_suggestions_real_ai(
         "goals": ["Define core values", "Create mission statement", "Set OKRs"],
     }
 
-    response = await e2e_client.post("/api/suggestions/onboarding", json=payload)
+    response = await e2e_client.post("/api/v1/suggestions/onboarding", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -98,7 +98,7 @@ async def test_bulk_website_scan_real_ai(
     """
     urls = ["https://www.example.com", "https://www.google.com", "https://www.github.com"]
 
-    response = await e2e_client.post("/api/website/bulk-scan", json={"urls": urls})
+    response = await e2e_client.post("/api/v1/website/bulk-scan", json={"urls": urls})
 
     assert response.status_code == 200
     data = response.json()

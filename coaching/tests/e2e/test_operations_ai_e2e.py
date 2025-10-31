@@ -33,7 +33,7 @@ async def test_strategic_alignment_analysis_real_llm(
         "desired_state": "Market leader in enterprise SaaS solutions",
     }
 
-    response = await e2e_client.post("/api/operations-ai/strategic-alignment", json=payload)
+    response = await e2e_client.post("/api/v1/operations-ai/strategic-alignment", json=payload)
 
     assert response.status_code == 200, f"Failed: {response.text}"
     data = response.json()
@@ -96,7 +96,7 @@ async def test_prioritization_suggestions_real_llm(
         },
     }
 
-    response = await e2e_client.post("/api/operations-ai/prioritization-suggestions", json=payload)
+    response = await e2e_client.post("/api/v1/operations-ai/prioritization-suggestions", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -144,7 +144,7 @@ async def test_root_cause_analysis_real_llm(
         ],
     }
 
-    response = await e2e_client.post("/api/operations-ai/root-cause-suggestions", json=payload)
+    response = await e2e_client.post("/api/v1/operations-ai/root-cause-suggestions", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -187,7 +187,7 @@ async def test_action_plan_generation_real_llm(
         "timeline": "3 months",
     }
 
-    response = await e2e_client.post("/api/operations-ai/action-suggestions", json=payload)
+    response = await e2e_client.post("/api/v1/operations-ai/action-suggestions", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -251,7 +251,7 @@ async def test_scheduling_suggestions_real_llm(
         },
     }
 
-    response = await e2e_client.post("/api/operations-ai/scheduling-suggestions", json=payload)
+    response = await e2e_client.post("/api/v1/operations-ai/scheduling-suggestions", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -286,7 +286,7 @@ async def test_operations_ai_error_handling(
     # Invalid payload - missing required fields
     invalid_payload = {"core_values": []}  # Empty values
 
-    response = await e2e_client.post("/api/operations-ai/strategic-alignment", json=invalid_payload)
+    response = await e2e_client.post("/api/v1/operations-ai/strategic-alignment", json=invalid_payload)
 
     # Should return 400 or 422 for validation errors
     assert response.status_code in [400, 422]

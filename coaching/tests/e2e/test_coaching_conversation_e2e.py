@@ -39,7 +39,7 @@ async def test_complete_coaching_conversation_flow(
         },
     }
 
-    response = await e2e_client.post("/api/conversations/initiate", json=initiate_payload)
+    response = await e2e_client.post("/api/v1/conversations/initiate", json=initiate_payload)
     assert response.status_code == 200, f"Failed to initiate: {response.text}"
 
     data = response.json()
@@ -53,7 +53,7 @@ async def test_complete_coaching_conversation_flow(
     }
 
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message", json=message_payload
+        f"/api/v1/conversations/{conversation_id}/message", json=message_payload
     )
     assert response.status_code == 200, f"Failed to send message: {response.text}"
 
@@ -62,7 +62,7 @@ async def test_complete_coaching_conversation_flow(
     assert len(message_data["response"]) > 50  # Real LLM response should be substantial
 
     # Step 3: Get conversation details
-    response = await e2e_client.get(f"/api/conversations/{conversation_id}")
+    response = await e2e_client.get(f"/api/v1/conversations/{conversation_id}")
     assert response.status_code == 200
 
     conversation = response.json()
@@ -77,12 +77,12 @@ async def test_complete_coaching_conversation_flow(
     }
 
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/complete", json=complete_payload
+        f"/api/v1/conversations/{conversation_id}/complete", json=complete_payload
     )
     assert response.status_code == 200
 
     # Step 5: Verify final state
-    response = await e2e_client.get(f"/api/conversations/{conversation_id}")
+    response = await e2e_client.get(f"/api/v1/conversations/{conversation_id}")
     assert response.status_code == 200
 
     final_conversation = response.json()
@@ -105,7 +105,7 @@ async def test_multi_turn_conversation_with_real_llm(
     """
     # Initiate
     response = await e2e_client.post(
-        "/api/conversations/initiate",
+        "/api/v1/conversations/initiate",
         json={
             "topic": "vision",
             "initial_context": {"business_name": "TechCorp", "industry": "SaaS"},
@@ -116,7 +116,7 @@ async def test_multi_turn_conversation_with_real_llm(
 
     # Turn 1: Ask about vision
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message",
+        f"/api/v1/conversations/{conversation_id}/message",
         json={"content": "Help me create a 5-year vision for my company"},
     )
     assert response.status_code == 200
@@ -125,7 +125,7 @@ async def test_multi_turn_conversation_with_real_llm(
 
     # Turn 2: Follow-up question (tests context retention)
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message",
+        f"/api/v1/conversations/{conversation_id}/message",
         json={"content": "Can you elaborate on the market expansion strategy you mentioned?"},
     )
     assert response.status_code == 200
@@ -134,7 +134,7 @@ async def test_multi_turn_conversation_with_real_llm(
 
     # Turn 3: Refinement
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message",
+        f"/api/v1/conversations/{conversation_id}/message",
         json={"content": "Make it more ambitious but still realistic"},
     )
     assert response.status_code == 200
@@ -142,7 +142,7 @@ async def test_multi_turn_conversation_with_real_llm(
     assert len(turn3_response) > 50
 
     # Verify all messages are stored
-    response = await e2e_client.get(f"/api/conversations/{conversation_id}")
+    response = await e2e_client.get(f"/api/v1/conversations/{conversation_id}")
     conversation = response.json()
     assert len(conversation["messages"]) >= 6  # 3 user + 3 AI messages
 
@@ -163,33 +163,33 @@ async def test_pause_and_resume_conversation(
     """
     # Initiate and have one exchange
     response = await e2e_client.post(
-        "/api/conversations/initiate",
+        "/api/v1/conversations/initiate",
         json={"topic": "purpose", "initial_context": {"business_name": "StartupCo"}},
     )
     conversation_id = response.json()["data"]["conversation_id"]
 
     await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message",
+        f"/api/v1/conversations/{conversation_id}/message",
         json={"content": "Let's define our company purpose"},
     )
 
     # Pause
-    response = await e2e_client.post(f"/api/conversations/{conversation_id}/pause")
+    response = await e2e_client.post(f"/api/v1/conversations/{conversation_id}/pause")
     assert response.status_code == 200
 
     # Verify paused state
-    response = await e2e_client.get(f"/api/conversations/{conversation_id}")
+    response = await e2e_client.get(f"/api/v1/conversations/{conversation_id}")
     assert response.json()["status"] == "paused"
 
     # Resume by sending another message
     response = await e2e_client.post(
-        f"/api/conversations/{conversation_id}/message",
+        f"/api/v1/conversations/{conversation_id}/message",
         json={"content": "Continuing our purpose discussion"},
     )
     assert response.status_code == 200
 
     # Verify conversation resumed
-    response = await e2e_client.get(f"/api/conversations/{conversation_id}")
+    response = await e2e_client.get(f"/api/v1/conversations/{conversation_id}")
     conversation = response.json()
     assert conversation["status"] in ["in_progress", "active"]
     assert len(conversation["messages"]) >= 4
@@ -213,7 +213,7 @@ async def test_list_tenant_conversations(
     conv_ids = []
     for i in range(2):
         response = await e2e_client.post(
-            "/api/conversations/initiate",
+            "/api/v1/conversations/initiate",
             json={
                 "topic": f"test_topic_{i}",
                 "initial_context": {"business_name": f"Company {i}"},
@@ -222,7 +222,7 @@ async def test_list_tenant_conversations(
         conv_ids.append(response.json()["data"]["conversation_id"])
 
     # List conversations
-    response = await e2e_client.get("/api/conversations/?page=1&page_size=20")
+    response = await e2e_client.get("/api/v1/conversations/?page=1&page_size=20")
     assert response.status_code == 200
 
     data = response.json()
