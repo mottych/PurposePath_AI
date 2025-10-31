@@ -96,7 +96,9 @@ async def test_prioritization_suggestions_real_llm(
         },
     }
 
-    response = await e2e_client.post("/api/v1/operations-ai/prioritization-suggestions", json=payload)
+    response = await e2e_client.post(
+        "/api/v1/operations-ai/prioritization-suggestions", json=payload
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -286,7 +288,9 @@ async def test_operations_ai_error_handling(
     # Invalid payload - missing required fields
     invalid_payload = {"core_values": []}  # Empty values
 
-    response = await e2e_client.post("/api/v1/operations-ai/strategic-alignment", json=invalid_payload)
+    response = await e2e_client.post(
+        "/api/v1/operations-ai/strategic-alignment", json=invalid_payload
+    )
 
     # Should return 400 or 422 for validation errors
     assert response.status_code in [400, 422]
