@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./coaching/src
 COPY shared ./shared
 
+# Create __init__.py for coaching package
+RUN touch ./coaching/__init__.py
+
 # Set the Lambda handler
 # Uses main.py with Phase 7 architecture (new routes, middleware, auth)
 CMD ["coaching.src.api.main.handler"]
