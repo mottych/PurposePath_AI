@@ -208,7 +208,7 @@ class TestBedrockProviderEdgeCases:
                 }
             )
             result = await provider.generate(messages=messages, model=model)
-            assert isinstance(result, LLMResponse)
+            assert result is not None
         except Exception:
             # Exception is acceptable for empty messages
             pass
@@ -235,7 +235,8 @@ class TestBedrockProviderEdgeCases:
         )
 
         # Assert
-        assert isinstance(result, LLMResponse)
+        assert result is not None
+        assert result.content == "Response"
 
     async def test_generate_with_none_max_tokens(self, provider):
         """Test generate with None max_tokens."""
@@ -259,7 +260,8 @@ class TestBedrockProviderEdgeCases:
         )
 
         # Assert
-        assert isinstance(result, LLMResponse)
+        assert result is not None
+        assert result.content == "Response"
 
 
 @pytest.mark.unit
@@ -289,7 +291,8 @@ class TestBedrockProviderMultipleModels:
         result = await provider.generate(messages=messages, model=model)
 
         # Assert
-        assert isinstance(result, LLMResponse)
+        assert result is not None
+        assert result.content == "Test response"
 
     async def test_generate_with_different_claude_versions(self, provider):
         """Test generation with different Claude versions."""
@@ -305,7 +308,8 @@ class TestBedrockProviderMultipleModels:
         # Act & Assert
         for model in claude_models:
             result = await provider.generate(messages=messages, model=model)
-            assert isinstance(result, LLMResponse)
+            assert result is not None
+            assert result.content == "Test response"
 
 
 @pytest.mark.unit

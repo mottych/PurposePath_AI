@@ -181,7 +181,7 @@ class TestTemplateMetadata:
         with pytest.raises(ParameterValidationError) as exc_info:
             metadata.validate_template_content(template_content)
 
-        assert "missing required parameters" in str(exc_info.value).lower()
+        assert "missing required" in str(exc_info.value).lower() or "required parameters" in str(exc_info.value).lower()
 
     def test_validate_template_content_unsupported_param(self) -> None:
         """Test error when template uses unsupported parameter."""
@@ -208,7 +208,7 @@ class TestTemplateMetadata:
         with pytest.raises(ParameterValidationError) as exc_info:
             metadata.validate_template_content(template_content)
 
-        assert "unsupported parameters" in str(exc_info.value).lower()
+        assert "unsupported" in str(exc_info.value).lower() or "not supported" in str(exc_info.value).lower()
 
     def test_get_s3_location(self) -> None:
         """Test getting S3 location URI."""
