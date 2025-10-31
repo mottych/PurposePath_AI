@@ -90,28 +90,32 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
         # Support both custom and standard claims
         user_id = payload.get("user_id") or payload.get("sub")
         tenant_id = payload.get("tenant_id")
-        role = payload.get("role")
-        permissions = payload.get("permissions", [])
-        subscription_tier = payload.get("subscription_tier")
-        is_owner = payload.get("is_owner", False)
+        role_str = payload.get("role")
+        user_status = payload.get("user_status")
 
-        if not all([user_id, tenant_id, role, subscription_tier]):
-            raise HTTPException(status_code=401, detail="Token missing required fields")
+        if not all([user_id, tenant_id]):
+            raise HTTPException(status_code=401, detail="Token missing required fields: user_id, tenant_id")
 
-        # Validate enums
-        try:
-            user_role = UserRole(role)
-            sub_tier = SubscriptionTier(subscription_tier)
-        except ValueError as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token values: {e}") from e
+        # Check user status
+        if user_status and user_status.lower() != "active":
+            raise HTTPException(status_code=403, detail="User account is not active")
+
+        # Parse role if provided, default to MEMBER
+        user_role = UserRole.MEMBER
+        if role_str:
+            try:
+                user_role = UserRole(role_str.lower())
+            except ValueError:
+                # If role is not a valid UserRole enum, default to MEMBER
+                logger.warning(f"Invalid role '{role_str}' in token, defaulting to MEMBER")
 
         return RequestContext(
             user_id=str(user_id),
             tenant_id=str(tenant_id),
             role=user_role,
-            permissions=permissions,
-            subscription_tier=sub_tier,
-            is_owner=is_owner,
+            permissions=[],  # Deprecated - use user limits service instead
+            subscription_tier=SubscriptionTier.STARTER,  # Deprecated - use user limits service instead
+            is_owner=False,
         )
 
     except JWTError as e:
@@ -232,26 +236,23 @@ async def get_optional_context(
         return None
 
 
-def require_permission(required_permission: str) -> Callable[[RequestContext], RequestContext]:
-    """Decorator to require specific permission.
-
-    Args:
-        required_permission: Permission string required
+def require_admin() -> Callable[[RequestContext], RequestContext]:
+    """Decorator to require admin role.
 
     Returns:
-        Dependency function
+        Dependency function that checks for admin role
     """
 
-    def permission_dependency(
+    def admin_dependency(
         context: RequestContext = Depends(get_current_context),
     ) -> RequestContext:
-        if required_permission not in context.permissions:
+        if context.role not in [UserRole.ADMIN, UserRole.OWNER]:
             raise HTTPException(
-                status_code=403, detail=f"Permission required: {required_permission}"
+                status_code=403, detail="Admin access required"
             )
         return context
 
-    return permission_dependency
+    return admin_dependency
 
 
 def require_role(required_role: UserRole) -> Callable[[RequestContext], RequestContext]:
@@ -272,32 +273,5 @@ def require_role(required_role: UserRole) -> Callable[[RequestContext], RequestC
     return role_dependency
 
 
-def require_subscription_tier(
-    required_tier: SubscriptionTier,
-) -> Callable[[RequestContext], RequestContext]:
-    """Decorator to require minimum subscription tier.
-
-    Args:
-        required_tier: Minimum subscription tier required
-
-    Returns:
-        Dependency function
-    """
-    # Define tier hierarchy
-    tier_hierarchy = {
-        SubscriptionTier.STARTER: 1,
-        SubscriptionTier.PROFESSIONAL: 2,
-        SubscriptionTier.ENTERPRISE: 3,
-    }
-
-    def tier_dependency(context: RequestContext = Depends(get_current_context)) -> RequestContext:
-        user_tier_level = tier_hierarchy.get(context.subscription_tier, 0)
-        required_tier_level = tier_hierarchy.get(required_tier, 99)
-
-        if user_tier_level < required_tier_level:
-            raise HTTPException(
-                status_code=403, detail=f"Subscription tier required: {required_tier.value}"
-            )
-        return context
-
-    return tier_dependency
+# Subscription tier enforcement removed - use UserLimitsService instead
+# See coaching/src/services/user_limits_service.py for fetching user limits from Account API

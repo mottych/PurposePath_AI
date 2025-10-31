@@ -11,7 +11,7 @@ from coaching.src.models.responses import (
 from coaching.src.services.insights_service import InsightsService
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from shared.models.multitenant import Permission, RequestContext
+from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse, PaginatedResponse
 
 logger = structlog.get_logger()
@@ -46,11 +46,8 @@ async def generate_coaching_insights(
     )
 
     try:
-        # Check permission to generate insights
-        if Permission.READ_BUSINESS_DATA not in context.permissions:
-            raise HTTPException(
-                status_code=403, detail="Permission required to generate coaching insights"
-            )
+        # All active users can generate insights
+        # (Permission checks removed - authenticated users have access)
 
         response = await service.generate_insights(
             page=page,

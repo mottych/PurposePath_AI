@@ -3,7 +3,7 @@
 from typing import Any
 
 import structlog
-from coaching.src.api.auth import get_current_context, require_permission
+from coaching.src.api.auth import get_current_context, require_admin
 from coaching.src.api.dependencies import get_conversation_repository
 from coaching.src.api.multitenant_dependencies import get_multitenant_conversation_service
 from coaching.src.models.requests import (
@@ -23,7 +23,7 @@ from coaching.src.models.responses import (
 from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 
-from shared.models.multitenant import CoachingTopic, Permission, RequestContext
+from shared.models.multitenant import CoachingTopic, RequestContext, UserRole
 from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
@@ -44,11 +44,8 @@ async def initiate_conversation(
         topic=request.topic.value,
     )
 
-    # Check permission to start coaching
-    if Permission.START_COACHING not in context.permissions:
-        raise HTTPException(
-            status_code=403, detail="Permission required to start coaching sessions"
-        )
+    # All active users can start coaching sessions
+    # (Role-based restrictions removed - use UserLimitsService for subscription limits)
 
     try:
         response = await service.initiate_conversation(
@@ -120,9 +117,8 @@ async def get_business_data_summary(
     )
 
     try:
-        # Check permission to read business data (avoid method to handle duplicate models)
-        if Permission.READ_BUSINESS_DATA.value not in (context.permissions or []):
-            return ApiResponse(success=False, error="Permission required to read business data")
+        # All active users can read business data
+        # (Permission checks removed - authenticated users have access)
 
         summary = service.get_business_data_summary()
 
@@ -160,12 +156,12 @@ async def get_conversation(
         if conversation.context.get("tenant_id") != context.tenant_id:
             raise HTTPException(status_code=403, detail="Access denied to this conversation")
 
-        # Check permissions (users can view their own sessions, managers can view all)
+        # Check permissions (users can view their own sessions, admins can view all)
         if (
             conversation.user_id != context.user_id
-            and Permission.VIEW_ALL_SESSIONS not in context.permissions
+            and context.role not in [UserRole.ADMIN, UserRole.OWNER]
         ):
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail="Can only view your own conversations unless you are an admin")
 
         return ConversationDetailResponse(
             conversation_id=conversation.conversation_id,
@@ -317,7 +313,7 @@ async def list_all_tenant_conversations(
     status: str | None = Query(None, description="Filter by status"),
     topic: str | None = Query(None, description="Filter by topic"),
     user_id: str | None = Query(None, description="Filter by user ID"),
-    context: RequestContext = Depends(require_permission(Permission.VIEW_ALL_SESSIONS)),
+    context: RequestContext = Depends(require_admin()),
     service: MultitenantConversationService = Depends(get_multitenant_conversation_service),
 ) -> ConversationListResponse:
     """List all conversations within the tenant (admin/manager only)."""

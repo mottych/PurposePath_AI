@@ -3,7 +3,7 @@
 import structlog
 from fastapi import HTTPException, status
 
-from shared.models.multitenant import Permission, RequestContext
+from shared.models.multitenant import RequestContext, UserRole
 
 logger = structlog.get_logger()
 
@@ -21,12 +21,12 @@ def require_admin_access(context: RequestContext) -> RequestContext:
     Raises:
         HTTPException: 403 if user lacks admin permissions
     """
-    if Permission.ADMIN_ACCESS not in context.permissions:
+    if context.role not in [UserRole.ADMIN, UserRole.OWNER]:
         logger.warning(
             "Admin access denied",
             user_id=context.user_id,
             tenant_id=context.tenant_id,
-            permissions=context.permissions,
+            role=context.role,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
