@@ -24,8 +24,8 @@ tiktoken==0.11.0
 openai==1.109.1
 numpy<2.0  # Pin to avoid compilation in Lambda
 google-cloud-aiplatform==1.74.0
-langchain-core==0.3.29
-langchain-anthropic==0.3.6
+langchain-core==0.3.63
+langchain-anthropic==0.3.9
 
 # Redis - Latest version
 redis==6.4.0
