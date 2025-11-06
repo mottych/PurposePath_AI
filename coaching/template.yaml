@@ -244,6 +244,30 @@ Resources:
             ApiId: !Ref CoachingHttpApi
             Method: ANY
             Path: /api/v1/suggestions/{proxy+}
+        Website:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/website/{proxy+}
+        Insights:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/insights/{proxy+}
+        MultitenantConversations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/multitenant/conversations/{proxy+}
+        Coaching:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/coaching/{proxy+}
 
 
 Outputs:
