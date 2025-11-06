@@ -51,6 +51,10 @@ Parameters:
     Type: String
     Default: ''
     Description: Optional Redis AUTH password
+  CorsOrigins:
+    Type: String
+    Default: '["http://localhost:3000","https://dev.purposepath.app","https://staging.purposepath.app","https://www.purposepath.app","https://purposepath.app","https://dev.admin.purposepath.app","https://staging.admin.purposepath.app","https://admin.purposepath.app"]'
+    Description: Comma-separated list of allowed CORS origins
   # Shared table names from account stack
 
 Conditions:
@@ -67,6 +71,7 @@ Globals:
         STAGE: !Ref Stage
         LOG_LEVEL: !Ref LogLevel
         APPLICATION_NAME: PurposePath
+        CORS_ORIGINS: !Ref CorsOrigins
 
 Resources:
   CoachingHttpApi:
