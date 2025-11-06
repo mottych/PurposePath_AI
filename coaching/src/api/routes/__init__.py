@@ -11,6 +11,7 @@ from src.api.routes import (
     multitenant_conversations,
     onboarding,
     operations_ai,
+    website,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "multitenant_conversations",
     "onboarding",
     "operations_ai",
+    "website",
 ]
