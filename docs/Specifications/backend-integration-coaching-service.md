@@ -1,7 +1,7 @@
 # Coaching Service Backend Integration Specifications
 
-**Version:** 3.2  
-**Last Updated:** October 28, 2025  
+**Version:** 3.1  
+**Last Updated:** October 27, 2025  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -16,9 +16,9 @@ All endpoints in this document are shown as **relative paths** from the base URL
 
 **Example:**
 
-- **Endpoint:** `/analysis/alignment`
-- **Full URL:** `https://api.dev.purposepath.app/coaching/api/v1/analysis/alignment`
-- **Frontend Usage:** `coachingClient.post('/analysis/alignment', data)`
+- **Endpoint:** `/coaching/alignment-check`
+- **Full URL:** `https://api.dev.purposepath.app/coaching/api/v1/coaching/alignment-check`
+- **Frontend Usage:** `coachingClient.post('/coaching/alignment-check', data)`
 
 The base URL already includes `/coaching/api/v1`, so endpoints should not repeat this prefix.
 
@@ -41,20 +41,22 @@ The Coaching Service handles all AI/ML operations, including goal alignment calc
 
 ## Strategic Planning AI Endpoints
 
-### POST /analysis/alignment
+### POST /coaching/alignment-check
 
 Calculate alignment score for a goal against business foundation.
 
-**Note:** Full URL: `{BASE_URL}/analysis/alignment`
+**Note:** Full URL: `{BASE_URL}/coaching/alignment-check`
 
 **Request:**
 
 ```json
 {
-  "text_to_analyze": "string",
-  "context": {
-    "purpose": "string",
+  "goalIntent": "string",
+  "strategies": ["string"],
+  "kpis": ["string"],
+  "businessFoundation": {
     "vision": "string",
+    "purpose": "string",
     "coreValues": ["string"],
     "targetMarket": "string?",
     "valueProposition": "string?"
@@ -66,40 +68,35 @@ Calculate alignment score for a goal against business foundation.
 
 ```json
 {
-  "analysis_id": "anls_1234567890.123",
-  "analysis_type": "alignment",
-  "scores": {
-    "overall_score": 85.0,
-    "purpose_alignment": 88.0,
-    "values_alignment": 82.0,
-    "goal_clarity": 90.0
-  },
-  "overall_assessment": "This goal strongly aligns with your business vision...",
-  "strengths": [
-    "Clear connection to core values",
-    "Well-defined success metrics"
-  ],
-  "misalignments": [
-    "Limited focus on long-term vision"
-  ],
-  "recommendations": [
-    "Consider adding a strategy focused on...",
-    "Your KPIs could be more specific about..."
-  ],
-  "created_at": "2025-10-13T14:30:00Z",
-  "metadata": {
-    "user_id": "string",
-    "tenant_id": "string",
-    "analysis_version": "1.0"
+  "success": true,
+  "data": {
+    "alignmentScore": 85,
+    "score": 85,
+    "explanation": "This goal strongly aligns with your business vision...",
+    "suggestions": [
+      "Consider adding a strategy focused on...",
+      "Your KPIs could be more specific about..."
+    ],
+    "componentScores": {
+      "intentAlignment": 90,
+      "strategyAlignment": 85,
+      "kpiRelevance": 80
+    },
+    "breakdown": {
+      "visionAlignment": 88,
+      "purposeAlignment": 85,
+      "valuesAlignment": 82
+    },
+    "lastUpdated": "2025-10-13T14:30:00Z"
   }
 }
 ```
 
 **Notes:**
 
-- Scores are 0-100 floating point values
-- Returns detailed analysis with strengths, misalignments, and recommendations
-- Created via `/analysis/alignment` endpoint
+- Scores are 0-100 percentages
+- Called automatically when goal, strategies, or KPIs change
+- Results cached to reduce API calls
 
 **Implementation:** `src/services/alignment-engine-service.ts` → `calculateAlignment()`
 
@@ -193,23 +190,28 @@ Get AI-generated suggestions for improving goal alignment.
 
 ---
 
-### POST /analysis/strategy
+### POST /coaching/strategy-suggestions
 
-Get AI-generated strategy analysis and recommendations.
+Get AI-generated strategy recommendations for a goal.
 
-**Note:** Full URL: `{BASE_URL}/analysis/strategy`
+**Note:** Full URL: `{BASE_URL}/coaching/strategy-suggestions`
 
 **Request:**
 
 ```json
 {
-  "current_strategy": "string",
-  "context": {
+  "goalIntent": "string",
+  "businessContext": {
     "industry": "string",
     "businessType": "string",
     "targetMarket": "string",
-    "goals": ["string"],
     "currentChallenges": ["string"]
+  },
+  "existingStrategies": ["string"],
+  "constraints": {
+    "budget": 50000,
+    "timeline": "6 months",
+    "resources": ["2 developers", "1 designer"]
   }
 }
 ```
@@ -218,64 +220,63 @@ Get AI-generated strategy analysis and recommendations.
 
 ```json
 {
-  "analysis_id": "anls_1234567890.123",
-  "analysis_type": "strategy",
-  "effectiveness_score": 75.0,
-  "overall_assessment": "Your current strategy shows good alignment with market needs but could benefit from clearer execution plans...",
-  "strengths": [
-    "Clear focus on customer retention",
-    "Leverages existing capabilities"
-  ],
-  "weaknesses": [
-    "Limited differentiation from competitors",
-    "Resource allocation unclear"
-  ],
-  "opportunities": [
-    "Expand into adjacent markets",
-    "Develop strategic partnerships"
-  ],
-  "recommendations": [{
-    "category": "Execution",
-    "recommendation": "Implement Customer Feedback Loop",
-    "priority": "high",
-    "rationale": "This will help identify pain points and opportunities for retention",
-    "estimated_impact": "Potential 20-30% improvement in retention metrics"
-  }],
-  "created_at": "2025-10-13T14:30:00Z",
-  "metadata": {
-    "user_id": "string",
-    "tenant_id": "string",
-    "analysis_version": "1.0"
+  "success": true,
+  "data": {
+    "suggestions": [{
+      "title": "Implement Customer Feedback Loop",
+      "description": "Create a systematic process for gathering and acting on customer feedback",
+      "rationale": "This strategy will help you identify pain points and opportunities for retention",
+      "difficulty": "medium",
+      "timeframe": "2-3 months",
+      "expectedImpact": "high",
+      "prerequisites": [
+        "CRM system in place",
+        "Customer communication channels"
+      ],
+      "estimatedCost": 15000,
+      "requiredResources": ["1 product manager", "feedback tool subscription"]
+    }],
+    "confidence": 0.85,
+    "reasoning": "Based on your goal of increasing customer retention and your target market of B2B SaaS customers..."
   }
 }
 ```
 
 **Notes:**
 
-- `effectiveness_score`: 0-100 floating point value
-- `priority`: "low" | "medium" | "high"
-- Returns comprehensive SWOT-style analysis with actionable recommendations
+- `difficulty`: "low" | "medium" | "high"
+- `expectedImpact`: "low" | "medium" | "high"
+- `confidence`: 0-1 scale
+- Results depend on quality of business context provided
 
 **Implementation:** `src/services/strategy-suggestion-service.ts` → `getStrategySuggestions()`
 
 ---
 
-### POST /analysis/kpi
+### POST /coaching/kpi-recommendations
 
-Get AI-recommended KPIs analysis for goals and strategies.
+Get AI-recommended KPIs for a goal and strategies.
 
-**Note:** Full URL: `{BASE_URL}/analysis/kpi`
+**Note:** Full URL: `{BASE_URL}/coaching/kpi-recommendations`
 
 **Request:**
 
 ```json
 {
-  "current_kpis": ["string"],
-  "context": {
+  "goalIntent": "string",
+  "strategies": [{
+    "description": "string",
+    "category": "string?"
+  }],
+  "businessContext": {
     "industry": "string",
     "businessType": "string",
-    "goals": ["string"],
-    "strategies": ["string"]
+    "currentKPIs": ["string"]
+  },
+  "preferences": {
+    "quantitative": true,
+    "leadingIndicators": true,
+    "laggingIndicators": true
   }
 }
 ```
@@ -284,39 +285,37 @@ Get AI-recommended KPIs analysis for goals and strategies.
 
 ```json
 {
-  "analysis_id": "anls_1234567890.123",
-  "analysis_type": "kpi",
-  "kpi_effectiveness_score": 80.0,
-  "overall_assessment": "Your current KPIs provide good coverage but could be more specific...",
-  "current_kpi_analysis": [
-    "Customer Retention Rate is well-defined and measurable",
-    "Revenue growth metric lacks time-based targets"
-  ],
-  "missing_kpis": [
-    "Customer Lifetime Value (CLV)",
-    "Net Promoter Score (NPS)"
-  ],
-  "recommended_kpis": [{
-    "kpi_name": "Customer Retention Rate",
-    "description": "Percentage of customers retained over a period",
-    "rationale": "Directly measures success of retention strategies",
-    "target_range": "85-95%",
-    "measurement_frequency": "monthly"
-  }],
-  "created_at": "2025-10-13T14:30:00Z",
-  "metadata": {
-    "user_id": "string",
-    "tenant_id": "string",
-    "analysis_version": "1.0"
+  "success": true,
+  "data": {
+    "recommendations": [{
+      "name": "Customer Retention Rate",
+      "description": "Percentage of customers retained over a period",
+      "category": "customer",
+      "unit": "percentage",
+      "direction": "up",
+      "formula": "(Customers at End - New Customers) / Customers at Start * 100",
+      "rationale": "Directly measures success of retention strategies",
+      "benchmark": {
+        "industry": "SaaS",
+        "typical": 85,
+        "excellent": 95
+      },
+      "isLeading": false,
+      "frequency": "monthly",
+      "difficulty": "low",
+      "dataSource": "CRM system"
+    }],
+    "confidence": 0.90,
+    "reasoning": "These KPIs align with your goal and provide actionable metrics..."
   }
 }
 ```
 
 **Notes:**
 
-- `kpi_effectiveness_score`: 0-100 floating point value
-- Returns analysis of current KPIs plus recommendations for improvements and additions
-- `measurement_frequency`: "daily" | "weekly" | "monthly" | "quarterly"
+- `direction`: "up" (higher is better) | "down" (lower is better)
+- `isLeading`: true for predictive metrics, false for historical
+- `difficulty`: how hard to measure/track
 
 **Implementation:** `src/services/kpi-recommendation-service.ts` → `getKPIRecommendations()`
 

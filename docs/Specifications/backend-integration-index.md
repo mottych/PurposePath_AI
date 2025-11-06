@@ -22,7 +22,7 @@ This specification is split into multiple documents for efficient AI assistant c
    - Coaching Conversations
    - Strategic Planning AI
 
-3. **[Traction Service](./backend-integration-traction-service.md)**
+3. **[Traction Service](./backend-integration-traction-service-v2.md)**
    - Goals Management
    - Strategies & KPIs
    - Operations (Actions & Issues)
@@ -71,6 +71,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 ### Service Responsibilities
 
 #### Account Service
+
 - User authentication (email/password, Google OAuth)
 - User profile management
 - Subscription tiers and billing
@@ -79,6 +80,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 - Feature flags and user limits
 
 #### Coaching Service
+
 - All AI/ML operations
 - Goal alignment calculations
 - Strategy suggestions
@@ -89,6 +91,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 - Coaching conversations
 
 #### Traction Service
+
 - Goals CRUD operations
 - Strategies and KPIs management
 - Operations (Actions and Issues)
@@ -109,7 +112,6 @@ PurposePath frontend integrates with three backend microservices through RESTful
 
 ### Authentication Flow
 
-```
 1. User logs in → POST /auth/login (Account Service)
 2. Receives: accessToken, refreshToken, user, tenant
 3. Stores: localStorage.accessToken, localStorage.refreshToken, localStorage.tenantId
@@ -118,11 +120,11 @@ PurposePath frontend integrates with three backend microservices through RESTful
    - X-Tenant-Id: {tenantId}
 5. On 401 response → POST /auth/refresh (Account Service)
 6. Updates tokens and retries original request
-```
 
 ### Request Interceptors
 
 All service clients (accountClient, coachingClient, traction) implement:
+
 - **Token injection**: Automatically adds `Authorization: Bearer {token}` header
 - **Tenant header**: Automatically adds `X-Tenant-Id` header
 - **Token refresh**: On 401 response, attempts token refresh and retries request
@@ -165,10 +167,6 @@ REACT_APP_COACHING_API_URL=https://api.dev.purposepath.app/coaching/api/v1
 REACT_APP_TRACTION_API_URL=https://api.dev.purposepath.app/traction/api/v1
 
 # Feature Flags
-REACT_APP_MOCK_MODE=false
-REACT_APP_MOCK_ACCOUNT=false
-REACT_APP_MOCK_COACHING=false
-REACT_APP_MOCK_TRACTION=false
 REACT_APP_FEATURE_REALTIME=true
 
 # SSE Configuration
@@ -181,6 +179,7 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 ## Version History
 
 ### Version 3.0 (October 13, 2025)
+
 - Split into multiple documents for AI assistant efficiency
 - Updated to reflect current implementation state
 - Added frontend service file mappings
@@ -188,17 +187,20 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 - Added implementation details and architecture diagrams
 
 ### Version 2.1 (October 1, 2025)
+
 - Added AI/ML endpoints to Coaching Service
 - Clarified alignment engine routing
 - Added operations AI endpoints
 
 ### Version 2.0 (Previous)
+
 - Multi-service architecture
 - Separated Account, Coaching, and Traction concerns
 
 ---
 
 **Navigation:**
+
 - [Account Service Specs →](./backend-integration-account-service.md)
 - [Coaching Service Specs →](./backend-integration-coaching-service.md)
 - [Traction Service Specs →](./backend-integration-traction-service.md)
