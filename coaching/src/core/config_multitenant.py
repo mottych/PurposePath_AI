@@ -72,8 +72,13 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:3000",
-            "https://purposepath.app",
+            "https://dev.purposepath.app",
+            "https://staging.purposepath.app",
             "https://www.purposepath.app",
+            "https://purposepath.app",
+            "https://dev.admin.purposepath.app",
+            "https://staging.admin.purposepath.app",
+            "https://admin.purposepath.app",
         ],
         validation_alias="CORS_ORIGINS",
     )
