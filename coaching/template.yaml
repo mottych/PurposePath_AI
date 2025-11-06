@@ -71,6 +71,7 @@ Globals:
         STAGE: !Ref Stage
         LOG_LEVEL: !Ref LogLevel
         APPLICATION_NAME: PurposePath
+        CORS_ORIGINS: !Ref CorsOrigins
 
 Resources:
   CoachingHttpApi:
@@ -199,7 +200,6 @@ Resources:
           # USER_PREFERENCES_TABLE removed; preferences are stored on user items
           JWT_SECRET_ARN: !If [CreateJwtSecret, !Ref JwtSecret, !Ref JwtSecretArn]
           API_PREFIX: /api/v1
-          CORS_ORIGINS: !Ref CorsOrigins
           REDIS_CLUSTER_ENDPOINT: !Ref RedisClusterEndpoint
           REDIS_SSL: !Ref RedisSSL
           REDIS_PASSWORD: !Ref RedisPassword
