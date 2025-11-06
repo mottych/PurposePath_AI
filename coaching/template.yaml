@@ -271,7 +271,15 @@ Resources:
             ApiId: !Ref CoachingHttpApi
             Method: ANY
             Path: /api/v1/suggestions/{proxy+}
-        
+
+        # Website analysis endpoints
+        Website:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/website/{proxy+}
+
         # Root endpoint
         Root:
           Type: HttpApi
