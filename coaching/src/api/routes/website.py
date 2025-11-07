@@ -13,7 +13,9 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-async def get_context_skip_options(context: RequestContext = Depends(get_current_context)) -> RequestContext:
+async def get_context_skip_options(
+    context: RequestContext = Depends(get_current_context),
+) -> RequestContext:
     """Get context but skip for OPTIONS requests."""
     return context
 
