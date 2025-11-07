@@ -71,6 +71,7 @@ app.add_middleware(
     allow_credentials=settings.cors_allow_credentials,
     allow_methods=settings.cors_allow_methods,
     allow_headers=settings.cors_allow_headers,
+    max_age=3600,
 )
 
 app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)
