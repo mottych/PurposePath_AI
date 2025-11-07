@@ -28,13 +28,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Build Coaching Service
-        working-directory: coaching
-        run: sam build --template template.yaml --parallel --cached
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Coaching Service
+        working-directory: coaching
+        run: sam build --template template.yaml --parallel --cached
 
       - name: Deploy Coaching Service
         working-directory: coaching
