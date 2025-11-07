@@ -1,7 +1,7 @@
 """Website analysis API routes for extracting business insights from websites."""
 
 import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, HttpUrl
 
 from shared.models.multitenant import RequestContext
@@ -13,10 +13,8 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-async def get_context_skip_options(request: Request, context: RequestContext = Depends(get_current_context)) -> RequestContext:
+async def get_context_skip_options(context: RequestContext = Depends(get_current_context)) -> RequestContext:
     """Get context but skip for OPTIONS requests."""
-    if request.method == "OPTIONS":
-        return RequestContext(user_id="", tenant_id="", role=None, permissions=[], subscription_tier=None, is_owner=False)
     return context
 
 
@@ -38,7 +36,6 @@ class WebsiteScanResponse(BaseModel):
 @router.post("/scan", response_model=ApiResponse[WebsiteScanResponse])
 async def scan_website(
     scan_request: WebsiteScanRequest,
-    request: Request,
     context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[WebsiteScanResponse]:
     """
@@ -89,7 +86,6 @@ async def scan_website(
 @router.get("/analysis/{domain}", response_model=ApiResponse[WebsiteAnalysisResponse])
 async def get_website_analysis(
     domain: str,
-    request: Request,
     context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[WebsiteAnalysisResponse]:
     """
@@ -128,7 +124,6 @@ async def get_website_analysis(
 @router.post("/bulk-scan", response_model=ApiResponse[list[BulkScanResult]])
 async def bulk_scan_websites(
     urls: list[HttpUrl],
-    request: Request,
     context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[list[BulkScanResult]]:
     """
