@@ -1,7 +1,7 @@
 """Website analysis API routes for extracting business insights from websites."""
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, HttpUrl
 
 from shared.models.multitenant import RequestContext
@@ -11,6 +11,13 @@ from src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisRes
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+async def get_context_skip_options(request: Request, context: RequestContext = Depends(get_current_context)) -> RequestContext:
+    """Get context but skip for OPTIONS requests."""
+    if request.method == "OPTIONS":
+        return RequestContext(user_id="", tenant_id="", role=None, permissions=[], subscription_tier=None, is_owner=False)
+    return context
 
 
 class WebsiteScanRequest(BaseModel):
@@ -30,8 +37,9 @@ class WebsiteScanResponse(BaseModel):
 
 @router.post("/scan", response_model=ApiResponse[WebsiteScanResponse])
 async def scan_website(
-    request: WebsiteScanRequest,
-    context: RequestContext = Depends(get_current_context),
+    scan_request: WebsiteScanRequest,
+    request: Request,
+    context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[WebsiteScanResponse]:
     """
     Analyze website for business insights.
@@ -45,7 +53,7 @@ async def scan_website(
     """
     logger.info(
         "Website scan requested (STUB)",
-        url=str(request.url),
+        url=str(scan_request.url),
         user_id=context.user_id,
         tenant_id=context.tenant_id,
     )
@@ -81,7 +89,8 @@ async def scan_website(
 @router.get("/analysis/{domain}", response_model=ApiResponse[WebsiteAnalysisResponse])
 async def get_website_analysis(
     domain: str,
-    context: RequestContext = Depends(get_current_context),
+    request: Request,
+    context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[WebsiteAnalysisResponse]:
     """
     Get cached website analysis results.
@@ -119,7 +128,8 @@ async def get_website_analysis(
 @router.post("/bulk-scan", response_model=ApiResponse[list[BulkScanResult]])
 async def bulk_scan_websites(
     urls: list[HttpUrl],
-    context: RequestContext = Depends(get_current_context),
+    request: Request,
+    context: RequestContext = Depends(get_context_skip_options),
 ) -> ApiResponse[list[BulkScanResult]]:
     """
     Scan multiple websites for competitive analysis.

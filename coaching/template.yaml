@@ -79,9 +79,19 @@ Resources:
     Properties:
       Name: !Sub purposepath-coaching-api-${Stage}
       CorsConfiguration:
-        AllowOrigins: ['*']
+        AllowOrigins:
+          - http://localhost:3000
+          - https://dev.purposepath.app
+          - https://staging.purposepath.app
+          - https://www.purposepath.app
+          - https://purposepath.app
+          - https://dev.admin.purposepath.app
+          - https://staging.admin.purposepath.app
+          - https://admin.purposepath.app
         AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
         AllowHeaders: ['*']
+        AllowCredentials: true
+        MaxAge: 3600
 
   ApiDomainMapping:
     Type: AWS::ApiGatewayV2::ApiMapping
