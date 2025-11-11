@@ -279,6 +279,20 @@ Resources:
             Method: ANY
             Path: /api/v1/analysis
         
+        # Admin endpoints (Phase 7 - admin routes)
+        Admin:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/admin/{proxy+}
+        AdminRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoachingHttpApi
+            Method: ANY
+            Path: /api/v1/admin
+        
         # Legacy endpoints (for backward compatibility)
         Suggestions:
           Type: HttpApi
