@@ -124,7 +124,9 @@ class AllTemplatesResponse(BaseModel):
 
     topics: list[TopicTemplatesInfo] = Field(..., description="Template info for each topic")
     total_topics: int = Field(..., description="Total number of topics", alias="totalTopics")
-    total_versions: int = Field(..., description="Total versions across all topics", alias="totalVersions")
+    total_versions: int = Field(
+        ..., description="Total versions across all topics", alias="totalVersions"
+    )
 
     model_config = {"populate_by_name": True}
 
