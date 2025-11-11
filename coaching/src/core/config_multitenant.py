@@ -2,7 +2,10 @@
 
 import json
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -192,11 +195,9 @@ def get_openai_api_key() -> str | None:
     # Retrieve from Secrets Manager if configured
     if settings.openai_api_key_secret:
         try:
-            from mypy_boto3_secretsmanager import SecretsManagerClient
-
             from shared.services.aws_helpers import get_secretsmanager_client
 
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.openai_api_key_secret)
             secret_value = response.get("SecretString")
             return secret_value if secret_value else None
@@ -228,11 +229,9 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     # Retrieve from Secrets Manager if configured
     if settings.google_vertex_credentials_secret:
         try:
-            from mypy_boto3_secretsmanager import SecretsManagerClient
-
             from shared.services.aws_helpers import get_secretsmanager_client
 
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
             secret_value = response.get("SecretString")
 

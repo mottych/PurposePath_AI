@@ -2,11 +2,14 @@
 
 import json
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import structlog
 import yaml
 from botocore.exceptions import ClientError
-from mypy_boto3_s3.client import S3Client
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3.client import S3Client
 
 from src.core.exceptions import PromptTemplateNotFoundCompatError
 from src.models.prompt import (
@@ -21,7 +24,7 @@ logger = structlog.get_logger()
 class PromptRepository:
     """Repository for managing prompt templates in S3."""
 
-    def __init__(self, s3_client: S3Client, bucket_name: str):
+    def __init__(self, s3_client: "S3Client", bucket_name: str):
         """Initialize prompt repository.
 
         Args:

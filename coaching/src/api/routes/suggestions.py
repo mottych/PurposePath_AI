@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 from fastapi import APIRouter, Header
 from jose import JWTError, jwt
@@ -17,9 +21,7 @@ router = APIRouter()
 def _get_jwt_secret() -> str:
     try:
         if settings.jwt_secret_arn:
-            from mypy_boto3_secretsmanager import SecretsManagerClient
-
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
             resp = client.get_secret_value(SecretId=settings.jwt_secret_arn)
             s = resp.get("SecretString") or ""
             try:

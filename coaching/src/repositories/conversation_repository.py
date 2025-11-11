@@ -2,12 +2,14 @@
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import structlog
 from boto3.dynamodb.conditions import Attr, ConditionBase, Key
-from mypy_boto3_dynamodb import DynamoDBServiceResource
-from mypy_boto3_dynamodb.service_resource import Table
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb import DynamoDBServiceResource
+    from mypy_boto3_dynamodb.service_resource import Table
 
 from shared.types.common import JSONDict
 from src.core.constants import ConversationPhase, ConversationStatus, MessageRole
@@ -75,7 +77,7 @@ class ConversationRepository:
 
     def __init__(
         self,
-        dynamodb_resource: DynamoDBServiceResource,
+        dynamodb_resource: "DynamoDBServiceResource",
         table_name: str,
         tenant_id: str | None = None,
     ):
@@ -86,8 +88,8 @@ class ConversationRepository:
             table_name: DynamoDB table name
             tenant_id: Optional tenant ID for multitenant support
         """
-        self.dynamodb: DynamoDBServiceResource = dynamodb_resource
-        self.table: Table = self.dynamodb.Table(table_name)
+        self.dynamodb: "DynamoDBServiceResource" = dynamodb_resource
+        self.table: "Table" = self.dynamodb.Table(table_name)
         self.tenant_id = tenant_id
 
     async def create(

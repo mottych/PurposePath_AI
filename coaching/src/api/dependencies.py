@@ -17,9 +17,11 @@ from src.application.analysis.kpi_service import KPIAnalysisService
 from src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
+    from mypy_boto3_dynamodb import DynamoDBServiceResource
+
     from src.services.model_config_service import ModelConfigService
+
 from fastapi import Depends
-from mypy_boto3_dynamodb import DynamoDBServiceResource
 
 from shared.models.multitenant import RequestContext
 from shared.services.aws_helpers import (
@@ -58,7 +60,7 @@ _bedrock_client = None
 _redis_client = None
 
 
-def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
+def get_dynamodb_resource_singleton() -> "DynamoDBServiceResource":
     """Get DynamoDB resource singleton."""
     global _dynamodb_resource
     if _dynamodb_resource is None:

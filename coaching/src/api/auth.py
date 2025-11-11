@@ -2,10 +2,13 @@
 
 import logging
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, Header, HTTPException
 from jose import JWTError, jwt
-from mypy_boto3_secretsmanager import SecretsManagerClient
+
+if TYPE_CHECKING:
+    from mypy_boto3_secretsmanager import SecretsManagerClient
 
 from shared.models.multitenant import Permission, RequestContext, SubscriptionTier, UserRole
 from shared.services.aws_helpers import get_secretsmanager_client
@@ -23,7 +26,7 @@ def _get_jwt_secret() -> str:
         return str(secret)
     if settings.jwt_secret_arn:
         try:
-            secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+            secrets_client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
             response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_arn)
             val = response.get("SecretString")
             return str(val) if val else "change-me-in-prod"
