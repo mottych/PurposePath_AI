@@ -97,7 +97,15 @@ Resources:
           - https://staging.app.purposepath.app
           - https://prod.app.purposepath.app
         AllowMethods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
-        AllowHeaders: ['*']
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+          - Accept
+          - Origin
+          - X-Api-Key
+          - X-Tenant-Id
+          - X-User-Id
         AllowCredentials: true
         MaxAge: 3600
 
