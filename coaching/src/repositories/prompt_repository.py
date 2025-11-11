@@ -1,5 +1,7 @@
 """Repository for prompt template management."""
 
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -24,7 +26,7 @@ logger = structlog.get_logger()
 class PromptRepository:
     """Repository for managing prompt templates in S3."""
 
-    def __init__(self, s3_client: "S3Client", bucket_name: str):
+    def __init__(self, s3_client: S3Client, bucket_name: str):
         """Initialize prompt repository.
 
         Args:

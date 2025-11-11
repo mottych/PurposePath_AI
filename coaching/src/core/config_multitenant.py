@@ -1,5 +1,7 @@
 """Multitenant configuration management for the coaching module."""
 
+from __future__ import annotations
+
 import json
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
@@ -197,7 +199,7 @@ def get_openai_api_key() -> str | None:
         try:
             from shared.services.aws_helpers import get_secretsmanager_client
 
-            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
+            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.openai_api_key_secret)
             secret_value = response.get("SecretString")
             return secret_value if secret_value else None
@@ -231,7 +233,7 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
         try:
             from shared.services.aws_helpers import get_secretsmanager_client
 
-            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
+            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
             secret_value = response.get("SecretString")
 

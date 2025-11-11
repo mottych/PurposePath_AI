@@ -1,12 +1,10 @@
-"""Dependency injection for Phase 4-6 application services.
+"""Dependency injection for API layer."""
 
-This module provides dependency injection functions for the new application services
-that integrate with the domain layer (Phase 1-3) and implement business logic.
+from __future__ import annotations
 
-These dependencies replace the old service dependencies with the new architecture.
-"""
-
-from typing import TYPE_CHECKING, Any
+# ruff: noqa: F401 - Required for type checking
+import logging
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -60,7 +58,7 @@ _bedrock_client = None
 _redis_client = None
 
 
-def get_dynamodb_resource_singleton() -> "DynamoDBServiceResource":
+def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
     """Get DynamoDB resource singleton."""
     global _dynamodb_resource
     if _dynamodb_resource is None:
@@ -166,7 +164,7 @@ async def get_template_metadata_repository() -> TemplateMetadataRepository:
     )
 
 
-async def get_model_config_service() -> "ModelConfigService":
+async def get_model_config_service() -> ModelConfigService:
     """Get model configuration service (Phase 3).
 
     Returns:

@@ -21,7 +21,7 @@ router = APIRouter()
 def _get_jwt_secret() -> str:
     try:
         if settings.jwt_secret_arn:
-            client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
+            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             resp = client.get_secret_value(SecretId=settings.jwt_secret_arn)
             s = resp.get("SecretString") or ""
             try:

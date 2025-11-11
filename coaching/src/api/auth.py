@@ -1,5 +1,7 @@
 """Authentication dependencies for the coaching module."""
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -26,7 +28,7 @@ def _get_jwt_secret() -> str:
         return str(secret)
     if settings.jwt_secret_arn:
         try:
-            secrets_client: "SecretsManagerClient" = get_secretsmanager_client(settings.aws_region)
+            secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_arn)
             val = response.get("SecretString")
             return str(val) if val else "change-me-in-prod"

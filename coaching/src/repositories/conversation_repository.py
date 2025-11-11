@@ -1,5 +1,7 @@
 """Repository for conversation data persistence."""
 
+from __future__ import annotations
+
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypedDict, cast
@@ -77,7 +79,7 @@ class ConversationRepository:
 
     def __init__(
         self,
-        dynamodb_resource: "DynamoDBServiceResource",
+        dynamodb_resource: DynamoDBServiceResource,
         table_name: str,
         tenant_id: str | None = None,
     ):
@@ -88,8 +90,8 @@ class ConversationRepository:
             table_name: DynamoDB table name
             tenant_id: Optional tenant ID for multitenant support
         """
-        self.dynamodb: "DynamoDBServiceResource" = dynamodb_resource
-        self.table: "Table" = self.dynamodb.Table(table_name)
+        self.dynamodb: DynamoDBServiceResource = dynamodb_resource
+        self.table: Table = self.dynamodb.Table(table_name)
         self.tenant_id = tenant_id
 
     async def create(
