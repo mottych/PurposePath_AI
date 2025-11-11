@@ -200,7 +200,7 @@ Resources:
     Type: AWS::SecretsManager::Secret
     Condition: CreateJwtSecret
     Properties:
-      Name: !Sub purposepath/jwt-secret/${Stage}
+      Name: !Sub purposepath-jwt-secret-${Stage}
       Description: JWT signing secret for PurposePath authentication
       GenerateSecretString:
         SecretStringTemplate: '{}'
