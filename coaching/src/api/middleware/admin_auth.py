@@ -1,14 +1,17 @@
 """Admin authentication and authorization middleware."""
 
 import structlog
-from fastapi import HTTPException, status
+from fastapi import Depends, HTTPException, status
 
 from shared.models.multitenant import RequestContext, UserRole
+from src.api.auth import get_current_context
 
 logger = structlog.get_logger()
 
 
-def require_admin_access(context: RequestContext) -> RequestContext:
+def require_admin_access(
+    context: RequestContext = Depends(get_current_context),
+) -> RequestContext:
     """
     Verify that the current user has admin access.
 
