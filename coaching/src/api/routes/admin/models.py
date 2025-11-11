@@ -30,8 +30,7 @@ async def list_ai_models(
     provider: str | None = None,
     active_only: bool = True,
     capability: str | None = None,
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
 ) -> ApiResponse[LLMModelsResponse]:
     """
     Get all supported LLM models from MODEL_REGISTRY.
@@ -122,8 +121,7 @@ async def list_ai_models(
 
 @router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
 async def list_coaching_topics(
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
 ) -> ApiResponse[list[CoachingTopicInfo]]:
     """
     Get all available coaching topics that have prompt templates.
@@ -188,8 +186,7 @@ async def list_coaching_topics(
 async def update_model_configuration(
     model_id: str = Path(..., description="Unique model identifier"),
     request: UpdateModelConfigRequest = Body(...),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     model_config_service: ModelConfigService = Depends(get_model_config_service),
 ) -> ApiResponse[dict[str, Any]]:
     """
