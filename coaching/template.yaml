@@ -81,14 +81,22 @@ Resources:
       CorsConfiguration:
         AllowOrigins:
           - http://localhost:3000
+          - http://localhost:3001
+          - http://localhost:5173
+          - https://purposepath.app
+          - https://www.purposepath.app
           - https://dev.purposepath.app
           - https://staging.purposepath.app
-          - https://www.purposepath.app
-          - https://purposepath.app
+          - https://prod.purposepath.app
+          - https://admin.purposepath.app
           - https://dev.admin.purposepath.app
           - https://staging.admin.purposepath.app
-          - https://admin.purposepath.app
-        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+          - https://prod.admin.purposepath.app
+          - https://app.purposepath.app
+          - https://dev.app.purposepath.app
+          - https://staging.app.purposepath.app
+          - https://prod.app.purposepath.app
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
         AllowHeaders: ['*']
         AllowCredentials: true
         MaxAge: 3600
