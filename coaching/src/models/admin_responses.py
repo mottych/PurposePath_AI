@@ -108,6 +108,27 @@ class PromptTemplateVersionsResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TopicTemplatesInfo(BaseModel):
+    """Template information for a single topic."""
+
+    topic: str = Field(..., description="Coaching topic")
+    display_name: str = Field(..., description="Human-readable topic name", alias="displayName")
+    versions: list[TemplateVersionInfo] = Field(..., description="Available versions")
+    latest_version: str = Field(..., description="Current latest version", alias="latestVersion")
+
+    model_config = {"populate_by_name": True}
+
+
+class AllTemplatesResponse(BaseModel):
+    """Response for listing all templates across all topics."""
+
+    topics: list[TopicTemplatesInfo] = Field(..., description="Template info for each topic")
+    total_topics: int = Field(..., description="Total number of topics", alias="totalTopics")
+    total_versions: int = Field(..., description="Total versions across all topics", alias="totalVersions")
+
+    model_config = {"populate_by_name": True}
+
+
 class PromptTemplateDetail(BaseModel):
     """Detailed prompt template content."""
 

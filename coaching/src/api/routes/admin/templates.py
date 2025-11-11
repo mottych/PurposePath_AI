@@ -7,7 +7,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
-from src.api.auth import get_current_context
 from src.api.dependencies import get_prompt_repository
 from src.api.middleware.admin_auth import require_admin_access
 from src.core.constants import CoachingTopic
@@ -19,9 +18,11 @@ from src.models.admin_requests import (
     UpdateTemplateRequest,
 )
 from src.models.admin_responses import (
+    AllTemplatesResponse,
     PromptTemplateDetail,
     PromptTemplateVersionsResponse,
     TemplateVersionInfo,
+    TopicTemplatesInfo,
 )
 from src.services.audit_log_service import AuditLogService
 from src.services.template_validation_service import (
@@ -34,13 +35,120 @@ router = APIRouter()
 
 
 @router.get(
+    "/prompts",
+    response_model=ApiResponse[AllTemplatesResponse],
+)
+async def list_all_templates(
+    context: RequestContext = Depends(require_admin_access),
+    prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
+) -> ApiResponse[AllTemplatesResponse]:
+    """
+    Get all prompt templates across all coaching topics.
+
+    This endpoint aggregates template information for all topics in a single call,
+    providing a comprehensive view of all available templates in the system.
+
+    **Permissions Required:** ADMIN_ACCESS
+
+    **Returns:**
+    - List of all topics with their templates
+    - Version information for each topic
+    - Total counts for topics and versions
+    """
+    logger.info("Fetching all templates across topics", admin_user_id=context.user_id)
+
+    try:
+        topic_infos = []
+        total_versions = 0
+
+        # Topic display names
+        display_names = {
+            CoachingTopic.CORE_VALUES: "Core Values",
+            CoachingTopic.PURPOSE: "Purpose",
+            CoachingTopic.VISION: "Vision",
+            CoachingTopic.GOALS: "Goals",
+        }
+
+        # Iterate through all topics
+        for topic in CoachingTopic:
+            try:
+                # Get versions from repository
+                versions = await prompt_repo.list_versions(topic)
+
+                if not versions:
+                    # Skip topics with no versions
+                    continue
+
+                # Get latest version marker
+                latest_version_marker = await prompt_repo._get_latest_version_marker(topic)
+                latest_version = latest_version_marker if latest_version_marker else versions[0]
+
+                # Build version info list
+                version_infos = []
+                for version in versions:
+                    version_info = TemplateVersionInfo(
+                        version=version,
+                        isLatest=(version == latest_version),
+                        createdAt=datetime.now(UTC),  # Placeholder
+                        lastModified=datetime.now(UTC),  # Placeholder
+                        sizeBytes=0,  # Placeholder
+                    )
+                    version_infos.append(version_info)
+
+                # Create topic info
+                topic_info = TopicTemplatesInfo(
+                    topic=topic.value,
+                    displayName=display_names.get(topic, topic.value.replace("_", " ").title()),
+                    versions=version_infos,
+                    latestVersion=latest_version,
+                )
+                topic_infos.append(topic_info)
+                total_versions += len(versions)
+
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch templates for topic",
+                    topic=topic.value,
+                    error=str(e),
+                )
+                # Continue with other topics even if one fails
+                continue
+
+        response_data = AllTemplatesResponse(
+            topics=topic_infos,
+            totalTopics=len(topic_infos),
+            totalVersions=total_versions,
+        )
+
+        logger.info(
+            "All templates retrieved",
+            topic_count=len(topic_infos),
+            total_versions=total_versions,
+            admin_user_id=context.user_id,
+        )
+
+        return ApiResponse(success=True, data=response_data)
+
+    except Exception as e:
+        logger.error(
+            "Failed to fetch all templates",
+            error=str(e),
+            admin_user_id=context.user_id,
+        )
+        return ApiResponse(
+            success=False,
+            data=None,
+            error="Failed to retrieve templates",
+        )
+
+
+@router.get(
     "/prompts/{topic}/versions",
     response_model=ApiResponse[PromptTemplateVersionsResponse],
 )
 async def list_template_versions(
     topic: str = Path(..., description="Coaching topic identifier"),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[PromptTemplateVersionsResponse]:
     """
@@ -141,8 +249,7 @@ async def list_template_versions(
 async def get_template_content(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Template version"),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[PromptTemplateDetail]:
     """
@@ -238,8 +345,7 @@ async def get_template_content(
 async def create_template_version(
     topic: str = Path(..., description="Coaching topic identifier"),
     request: CreateTemplateVersionRequest = Body(...),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[PromptTemplateDetail]:
     """
@@ -432,8 +538,7 @@ async def update_template(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Template version"),
     request: UpdateTemplateRequest = Body(...),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[PromptTemplateDetail]:
     """
@@ -609,8 +714,7 @@ async def set_latest_version(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Version to set as latest"),
     request: SetLatestVersionRequest = Body(...),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[dict[str, str]]:
     """
@@ -714,8 +818,7 @@ async def set_latest_version(
 async def delete_template_version(
     topic: str = Path(..., description="Coaching topic identifier"),
     version: str = Path(..., description="Version to delete"),
-    context: RequestContext = Depends(get_current_context),
-    _admin: RequestContext = Depends(require_admin_access),
+    context: RequestContext = Depends(require_admin_access),
     prompt_repo: S3PromptRepository = Depends(get_prompt_repository),
 ) -> ApiResponse[dict[str, str]]:
     """
