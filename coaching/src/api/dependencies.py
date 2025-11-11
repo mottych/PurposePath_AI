@@ -4,7 +4,7 @@ from __future__ import annotations
 
 # ruff: noqa: F401 - Required for type checking
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
