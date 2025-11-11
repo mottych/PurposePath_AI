@@ -152,5 +152,5 @@ jobs:
             --template-file .aws-sam/build/template.yaml \
             --stack-name purposepath-coaching-api-dev \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app \
+            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app JwtSecretArn=arn:aws:secretsmanager:us-east-1:265429842111:secret:purposepath-jwt-secret-dev-FilBbY \
             --region us-east-1 --resolve-s3 --resolve-image-repos --no-confirm-changeset
