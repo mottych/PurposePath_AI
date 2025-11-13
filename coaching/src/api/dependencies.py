@@ -44,10 +44,12 @@ from src.infrastructure.repositories.llm_config.template_metadata_repository imp
     TemplateMetadataRepository,
 )
 from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
+from src.repositories.topic_repository import TopicRepository
 from src.services.cache_service import CacheService
 from src.services.insights_service import InsightsService
 from src.services.llm_configuration_service import LLMConfigurationService
 from src.services.llm_template_service import LLMTemplateService
+from src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
 
@@ -361,6 +363,32 @@ async def get_insights_service(
     )
 
 
+def get_topic_repository() -> TopicRepository:
+    """Get topic repository instance.
+
+    Returns:
+        TopicRepository: Repository for LLM topics
+    """
+    dynamodb = get_dynamodb_resource_singleton()
+    return TopicRepository(
+        dynamodb_resource=dynamodb,
+        table_name=settings.llm_prompts_table,
+    )
+
+
+def get_s3_prompt_storage() -> S3PromptStorage:
+    """Get S3 prompt storage instance.
+
+    Returns:
+        S3PromptStorage: Service for storing/retrieving prompts in S3
+    """
+    s3_client = get_s3_client_singleton()
+    return S3PromptStorage(
+        bucket_name=settings.prompts_bucket,
+        s3_client=s3_client,
+    )
+
+
 __all__ = [
     "get_alignment_service",
     "get_analysis_service_by_type",
@@ -375,6 +403,8 @@ __all__ = [
     "get_llm_template_service",
     "get_model_config_service",
     "get_prompt_repository",
+    "get_s3_prompt_storage",
     "get_strategy_service",
     "get_template_metadata_repository",
+    "get_topic_repository",
 ]

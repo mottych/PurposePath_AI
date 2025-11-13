@@ -21,22 +21,39 @@ from src.domain.exceptions.conversation_exceptions import (
     InvalidMessageContent,
     InvalidPhaseTransition,
 )
+from src.domain.exceptions.topic_exceptions import (
+    DuplicateTopicError,
+    InvalidParameterDefinitionError,
+    InvalidTopicTypeError,
+    PromptNotFoundError,
+    S3StorageError,
+    TopicNotFoundError,
+    TopicUpdateError,
+)
 
 __all__ = [
+    # Analysis Exceptions
     "AnalysisNotFound",
     "AnalysisTimeout",
+    # Conversation Exceptions
     "ConversationCompletionError",
     "ConversationNotActive",
-    # Conversation Exceptions
     "ConversationNotFound",
     "ConversationTTLExpired",
     # Base
     "DomainException",
+    # Topic Exceptions
+    "DuplicateTopicError",
     "EnrichmentFailed",
     "InsufficientDataForAnalysis",
-    # Analysis Exceptions
     "InvalidAnalysisRequest",
     "InvalidMessageContent",
+    "InvalidParameterDefinitionError",
     "InvalidPhaseTransition",
+    "InvalidTopicTypeError",
+    "PromptNotFoundError",
+    "S3StorageError",
+    "TopicNotFoundError",
+    "TopicUpdateError",
     "UnsupportedAnalysisType",
 ]
