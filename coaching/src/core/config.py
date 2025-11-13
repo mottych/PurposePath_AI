@@ -19,9 +19,14 @@ class Settings(BaseSettings):
     # DynamoDB
     dynamodb_table: str = "truenorth-coaching-conversations-dev"
     dynamodb_endpoint: str | None = None
+    llm_prompts_table: str = Field(
+        default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
+    )
 
     # S3
-    prompts_bucket: str = "truenorth-coaching-prompts-dev"
+    prompts_bucket: str = Field(
+        default="purposepath-coaching-prompts-dev", validation_alias="PROMPTS_BUCKET"
+    )
 
     # Redis
     redis_host: str = "localhost"

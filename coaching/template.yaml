@@ -195,6 +195,36 @@ Resources:
               KeyType: RANGE
           Projection: { ProjectionType: ALL }
 
+  LLMPromptsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub purposepath-llm-prompts-${Stage}${NameSuffix}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: topic_id
+          AttributeType: S
+        - AttributeName: topic_type
+          AttributeType: S
+      KeySchema:
+        - AttributeName: topic_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: topic_type-index
+          KeySchema:
+            - AttributeName: topic_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Stage
+        - Key: Purpose
+          Value: LLM-Prompt-Management
+
 
   JwtSecret:
     Type: AWS::SecretsManager::Secret
@@ -222,6 +252,7 @@ Resources:
         Variables:
           CONVERSATIONS_TABLE: !Ref ConversationsTable
           COACHING_SESSIONS_TABLE: !Ref CoachingSessionsTable
+          LLM_PROMPTS_TABLE: !Ref LLMPromptsTable
           # BUSINESS_DATA_TABLE removed - business data accessed via .NET API calls
           # USER_PREFERENCES_TABLE removed; preferences are stored on user items
           JWT_SECRET_ARN: !If [CreateJwtSecret, !Ref JwtSecret, !Ref JwtSecretArn]
@@ -229,9 +260,11 @@ Resources:
           REDIS_CLUSTER_ENDPOINT: !Ref RedisClusterEndpoint
           REDIS_SSL: !Ref RedisSSL
           REDIS_PASSWORD: !Ref RedisPassword
+          PROMPTS_BUCKET: !Sub purposepath-coaching-prompts-${Stage}
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref ConversationsTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CoachingSessionsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref LLMPromptsTable }
         # Business data table access removed - accessed via .NET API integration
         - Statement:
             - Effect: Allow

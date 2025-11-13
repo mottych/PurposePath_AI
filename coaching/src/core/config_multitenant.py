@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     )
     dynamodb_endpoint: str | None = None
 
+    # DynamoDB Tables (Unified LLM Prompts)
+    llm_prompts_table: str = Field(
+        default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
+    )
+
     # S3
     prompts_bucket: str = Field(
         default="purposepath-coaching-prompts-dev", validation_alias="PROMPTS_BUCKET"
