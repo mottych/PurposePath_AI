@@ -1,0 +1,53 @@
+#!/bin/sh
+# Git pre-commit hook for PurposePath AI
+# This hook runs automatically before each commit
+#
+# To bypass this hook temporarily:
+#   git commit --no-verify -m "message"
+
+# Get the repository root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+CHECK_SCRIPT="$REPO_ROOT/scripts/pre-commit-check.ps1"
+
+if [ ! -f "$CHECK_SCRIPT" ]; then
+    echo "Warning: Pre-commit check script not found: $CHECK_SCRIPT"
+    echo "Commit allowed, but please run checks manually."
+    exit 0
+fi
+
+echo ""
+echo "Running pre-commit quality checks..."
+echo ""
+
+# Run checks in Quick mode (skip tests for faster commits)
+# Tests will run in CI/CD pipeline
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -ExecutionPolicy Bypass -File "$CHECK_SCRIPT" -Quick
+    EXIT_CODE=$?
+elif command -v powershell >/dev/null 2>&1; then
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$CHECK_SCRIPT" -Quick
+    EXIT_CODE=$?
+else
+    echo "Warning: PowerShell not found. Skipping pre-commit checks."
+    echo "Please install PowerShell or run checks manually:"
+    echo "  .\scripts\pre-commit-check.ps1"
+    exit 0
+fi
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "====================================="
+    echo "COMMIT BLOCKED"
+    echo "====================================="
+    echo ""
+    echo "Pre-commit checks failed. Please fix the errors and try again."
+    echo ""
+    echo "To run full checks (including tests):"
+    echo "  .\scripts\pre-commit-check.ps1"
+    echo ""
+    echo "To bypass this hook (not recommended):"
+    echo "  git commit --no-verify -m 'your message'"
+    echo ""
+fi
+
+exit $EXIT_CODE
