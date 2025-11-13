@@ -17,10 +17,13 @@ except ImportError:  # pragma: no cover - fallback for tests
 
 from shared.models.multitenant import RequestContext
 from src.api.auth import get_current_context
+from src.api.dependencies import (
+    get_s3_prompt_storage,
+    get_topic_repository,
+)
 from src.core.config_multitenant import settings
 from src.llm.providers.manager import ProviderManager
 from src.repositories.conversation_repository import ConversationRepository
-from src.repositories.prompt_repository import PromptRepository
 from src.services.cache_service import CacheService
 from src.services.llm_configuration_service import LLMConfigurationService
 from src.services.llm_service import LLMService
@@ -141,15 +144,6 @@ async def get_conversation_repository(
     )
 
 
-async def get_prompt_repository() -> PromptRepository:
-    """Get prompt repository."""
-    s3_client = get_s3_client()
-    return PromptRepository(
-        s3_client=s3_client,
-        bucket_name=settings.prompts_bucket,
-    )
-
-
 async def get_llm_configuration_repository() -> Any:
     """Get LLM configuration repository."""
     from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
@@ -229,13 +223,15 @@ async def get_workflow_orchestrator(
 
 
 async def get_prompt_service() -> PromptService:
-    """Get prompt service."""
-    prompt_repo = await get_prompt_repository()
+    """Get prompt service using unified topic system."""
+    topic_repo = await get_topic_repository()
+    s3_storage = await get_s3_prompt_storage()
     # Use a context-free cache service for prompts (shared across tenants)
     redis_client = get_redis_client()
     cache_service = CacheService(redis_client=redis_client, key_prefix="prompts:")
     return PromptService(
-        prompt_repository=prompt_repo,
+        topic_repository=topic_repo,
+        s3_storage=s3_storage,
         cache_service=cache_service,
     )
 

@@ -3,14 +3,11 @@
 from fastapi import APIRouter
 
 from .analytics import router as analytics_router
-from .configuration_validation import router as configuration_validation_router
 from .configurations import router as configurations_router
 from .conversations import router as conversations_router
 from .interactions import router as interactions_router
 from .models import router as models_router
 from .prompts import router as prompts_router
-from .template_validation import router as template_validation_router
-from .templates import router as templates_router
 
 # Create main admin router
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -19,9 +16,6 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 router.include_router(interactions_router)
 router.include_router(models_router)
 router.include_router(prompts_router)
-router.include_router(templates_router)
-router.include_router(template_validation_router)
-router.include_router(configuration_validation_router)
 router.include_router(configurations_router)
 router.include_router(conversations_router)
 router.include_router(analytics_router)

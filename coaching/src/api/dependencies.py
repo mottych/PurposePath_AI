@@ -43,7 +43,6 @@ from src.infrastructure.repositories.llm_config.llm_configuration_repository imp
 from src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
-from src.infrastructure.repositories.s3_prompt_repository import S3PromptRepository
 from src.repositories.topic_repository import TopicRepository
 from src.services.cache_service import CacheService
 from src.services.insights_service import InsightsService
@@ -118,19 +117,6 @@ async def get_conversation_repository() -> DynamoDBConversationRepository:
     return DynamoDBConversationRepository(
         dynamodb_resource=dynamodb,
         table_name=settings.conversations_table,
-    )
-
-
-async def get_prompt_repository() -> S3PromptRepository:
-    """Get S3 prompt repository (Phase 3).
-
-    Returns:
-        S3PromptRepository instance configured with settings
-    """
-    s3_client = get_s3_client_singleton()
-    return S3PromptRepository(
-        s3_client=s3_client,
-        bucket_name=settings.prompts_bucket,
     )
 
 
@@ -402,7 +388,6 @@ __all__ = [
     "get_llm_service",
     "get_llm_template_service",
     "get_model_config_service",
-    "get_prompt_repository",
     "get_s3_prompt_storage",
     "get_strategy_service",
     "get_template_metadata_repository",
