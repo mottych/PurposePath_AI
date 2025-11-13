@@ -1,8 +1,9 @@
 """Unit tests for LLMTopic entity."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
+
 from src.domain.entities.llm_topic import (
     LLMTopic,
     ParameterDefinition,
@@ -20,7 +21,7 @@ class TestPromptInfo:
             prompt_type="system",
             s3_bucket="test-bucket",
             s3_key="prompts/test/system.md",
-            updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
             updated_by="admin@test.com",
         )
 
@@ -47,7 +48,7 @@ class TestPromptInfo:
         assert prompt.prompt_type == "user"
         assert prompt.s3_bucket == "test-bucket"
         assert prompt.s3_key == "prompts/test/user.md"
-        assert prompt.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=timezone.utc)
+        assert prompt.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert prompt.updated_by == "admin@test.com"
 
     def test_roundtrip_serialization(self) -> None:
@@ -56,7 +57,7 @@ class TestPromptInfo:
             prompt_type="assistant",
             s3_bucket="bucket",
             s3_key="key",
-            updated_at=datetime.now(tz=timezone.utc),
+            updated_at=datetime.now(tz=UTC),
             updated_by="user",
         )
 
@@ -167,13 +168,13 @@ class TestLLMTopic:
                     prompt_type="system",
                     s3_bucket="test-bucket",
                     s3_key="prompts/core_values/system.md",
-                    updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=timezone.utc),
+                    updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
                     updated_by="admin@test.com",
                 )
             ],
             config={"default_model": "claude-3-sonnet", "supports_streaming": True},
-            created_at=datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc),
-            updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=timezone.utc),
+            created_at=datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC),
+            updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
             description="Discover your core values",
             display_order=1,
             created_by="admin@test.com",
@@ -194,8 +195,8 @@ class TestLLMTopic:
             allowed_parameters=[],
             prompts=[],
             config={},
-            created_at=datetime.now(tz=timezone.utc),
-            updated_at=datetime.now(tz=timezone.utc),
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
         )
         assert topic2.topic_type == "single_shot"
 
@@ -209,8 +210,8 @@ class TestLLMTopic:
             allowed_parameters=[],
             prompts=[],
             config={},
-            created_at=datetime.now(tz=timezone.utc),
-            updated_at=datetime.now(tz=timezone.utc),
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
         )
         assert topic3.topic_type == "kpi_system"
 
@@ -226,8 +227,8 @@ class TestLLMTopic:
                 allowed_parameters=[],
                 prompts=[],
                 config={},
-                created_at=datetime.now(tz=timezone.utc),
-                updated_at=datetime.now(tz=timezone.utc),
+                created_at=datetime.now(tz=UTC),
+                updated_at=datetime.now(tz=UTC),
             )
 
     def test_to_dynamodb_item(self, sample_topic: LLMTopic) -> None:
@@ -284,8 +285,8 @@ class TestLLMTopic:
         assert len(topic.allowed_parameters) == 1
         assert len(topic.prompts) == 1
         assert topic.config["key"] == "value"
-        assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
-        assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=timezone.utc)
+        assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
+        assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert topic.description == "Test description"
         assert topic.display_order == 50
         assert topic.created_by == "tester"
@@ -347,8 +348,8 @@ class TestLLMTopic:
             allowed_parameters=[],
             prompts=[],
             config={},
-            created_at=datetime.now(tz=timezone.utc),
-            updated_at=datetime.now(tz=timezone.utc),
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
         )
 
         assert topic.description is None

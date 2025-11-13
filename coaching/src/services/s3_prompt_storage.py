@@ -4,7 +4,6 @@ This service handles storing and retrieving prompt markdown files from S3,
 following the path structure: prompts/{topic_id}/{prompt_type}.md
 """
 
-
 import boto3
 import structlog
 from botocore.exceptions import ClientError

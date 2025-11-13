@@ -1,13 +1,11 @@
 """Unit tests for TopicRepository."""
 
 from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from coaching.src.domain.entities.llm_topic import (
     LLMTopic,
-    ParameterDefinition,
     PromptInfo,
 )
 from coaching.src.domain.exceptions.topic_exceptions import (
