@@ -10,7 +10,7 @@ Use LLMTopic and TopicRepository instead for all prompt management.
 import warnings
 from datetime import UTC, datetime
 
-from coaching.src.core.constants import CoachingTopic, ConversationPhase
+from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.types import TemplateId
 from pydantic import BaseModel, Field, field_validator
 
@@ -58,7 +58,7 @@ class PromptTemplate(BaseModel):
     template_id: TemplateId = Field(..., description="Unique template ID")
     name: str = Field(..., min_length=3, max_length=100, description="Template name")
     topic: CoachingTopic = Field(..., description="Coaching topic")
-    phase: ConversationPhase = Field(..., description="Conversation phase")
+    phase: str = Field(..., description="Conversation phase (DEPRECATED)")
     system_prompt: str = Field(
         ..., min_length=10, max_length=5000, description="System prompt for LLM context/role"
     )
