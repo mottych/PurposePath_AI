@@ -21,17 +21,6 @@ class ConversationStatus(str, Enum):
     ABANDONED = "abandoned"
 
 
-class ConversationPhase(str, Enum):
-    """Conversation phases."""
-
-    INTRODUCTION = "introduction"
-    EXPLORATION = "exploration"
-    DEEPENING = "deepening"
-    SYNTHESIS = "synthesis"
-    VALIDATION = "validation"
-    COMPLETION = "completion"
-
-
 class MessageRole(str, Enum):
     """Message roles in conversation."""
 
@@ -51,40 +40,6 @@ class AnalysisType(str, Enum):
     ACTION_PLAN = "action_plan"
     GOAL_BREAKDOWN = "goal_breakdown"
 
-
-# Progress weights for each phase
-PHASE_PROGRESS_WEIGHTS = {
-    ConversationPhase.INTRODUCTION: 0.1,
-    ConversationPhase.EXPLORATION: 0.3,
-    ConversationPhase.DEEPENING: 0.5,
-    ConversationPhase.SYNTHESIS: 0.7,
-    ConversationPhase.VALIDATION: 0.9,
-    ConversationPhase.COMPLETION: 1.0,
-}
-
-# Minimum requirements for phase advancement
-PHASE_REQUIREMENTS = {
-    ConversationPhase.EXPLORATION: {
-        "min_responses": 1,
-        "min_time_seconds": 0,
-    },
-    ConversationPhase.DEEPENING: {
-        "min_responses": 5,
-        "min_categories_explored": 2,
-    },
-    ConversationPhase.SYNTHESIS: {
-        "min_responses": 8,
-        "min_insights": 3,
-    },
-    ConversationPhase.VALIDATION: {
-        "min_values_identified": 3,
-        "max_values_identified": 7,
-    },
-    ConversationPhase.COMPLETION: {
-        "user_confirmation": True,
-        "min_values_confirmed": 3,
-    },
-}
 
 # Default LLM models for each topic
 DEFAULT_LLM_MODELS = {

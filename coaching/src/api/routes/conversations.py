@@ -108,9 +108,8 @@ async def initiate_conversation(
             tenant_id=conversation.tenant_id,
             topic=conversation.topic,
             status=conversation.status,
-            current_phase=conversation.context.current_phase,
             initial_message=initial_prompt,
-            progress=conversation.calculate_progress_percentage(),
+            progress=conversation.calculate_progress_percentage() / 100.0,
             created_at=conversation.created_at,
         )
 
@@ -234,8 +233,7 @@ async def send_message(
             conversation_id=conversation.conversation_id,
             ai_response=llm_response.content,
             follow_up_question=None,  # Could be extracted from AI response
-            current_phase=conversation.context.current_phase,
-            progress=conversation.calculate_progress_percentage(),
+            progress=conversation.calculate_progress_percentage() / 100.0,
             is_complete=is_complete,
             insights=insights,
             identified_values=[],  # Could be extracted from context
@@ -313,8 +311,7 @@ async def get_conversation(
             tenant_id=conversation.tenant_id,
             topic=conversation.topic,
             status=conversation.status,
-            current_phase=conversation.context.current_phase,
-            progress=conversation.calculate_progress_percentage(),
+            progress=conversation.calculate_progress_percentage() / 100.0,
             messages=[
                 {
                     "role": msg.role.value,
@@ -396,8 +393,7 @@ async def list_conversations(
                 tenant_id=conv.tenant_id,
                 topic=conv.topic,
                 status=conv.status,
-                current_phase=conv.context.current_phase,
-                progress=conv.calculate_progress_percentage(),
+                progress=conv.calculate_progress_percentage() / 100.0,
                 message_count=len(conv.messages),
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,

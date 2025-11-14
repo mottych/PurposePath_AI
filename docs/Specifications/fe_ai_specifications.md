@@ -66,6 +66,7 @@ This document lists all breaking changes to AI-related endpoints that affect the
   "conversation_id": "conv_123",
   "topic": "core_values_coaching",
   "topic_type": "coaching",
+  "status": "active",
   "initial_message": "Welcome...",
   "progress": 0.0
 }
@@ -141,7 +142,9 @@ This document lists all breaking changes to AI-related endpoints that affect the
 {
   "conversation_id": "conv_123",
   "ai_response": "That's great...",
-  "progress": 0.3
+  "status": "active",
+  "progress": 0.3,
+  "is_complete": false
 }
 ```
 
@@ -180,6 +183,7 @@ This document lists all breaking changes to AI-related endpoints that affect the
   "conversation_id": "conv_123",
   "topic": "core_values_coaching",
   "topic_type": "coaching",
+  "status": "active",
   "messages": [...],
   "progress": 0.6
 }
@@ -252,6 +256,7 @@ interface ConversationResponse {
   conversation_id: string;
   topic: string;  // Now a dynamic string, not enum
   topic_type: string;
+  status: string; // "active" | "paused" | "completed"
   initial_message: string;
   progress: number;
 }
@@ -286,6 +291,7 @@ interface MessageResponse {
 interface MessageResponse {
   conversation_id: string;
   ai_response: string;
+  status: string; // "active" | "paused" | "completed"
   progress: number;
   is_complete: boolean;
 }
@@ -522,6 +528,7 @@ interface ConversationState {
   id: string;
   topic: string;
   topic_type: string;
+  status: string; // "active" | "paused" | "completed"
   progress: number;
 }
 ```

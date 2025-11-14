@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.core.constants import CoachingTopic, ConversationPhase, ConversationStatus
+from src.core.constants import CoachingTopic, ConversationStatus
 
 # Request Models
 
@@ -140,10 +140,6 @@ class ConversationResponse(BaseModel):
         ...,
         description="Current conversation status",
     )
-    current_phase: ConversationPhase = Field(
-        ...,
-        description="Current conversation phase",
-    )
     initial_message: str = Field(
         ...,
         description="Initial coach message/question",
@@ -198,10 +194,6 @@ class MessageResponse(BaseModel):
         description="Optional follow-up question",
         examples=["How does honesty show up in your daily work?"],
     )
-    current_phase: ConversationPhase = Field(
-        ...,
-        description="Current conversation phase",
-    )
     progress: float = Field(
         ...,
         ge=0.0,
@@ -242,7 +234,6 @@ class ConversationSummary(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     topic: CoachingTopic = Field(..., description="Coaching topic")
     status: ConversationStatus = Field(..., description="Conversation status")
-    current_phase: ConversationPhase = Field(..., description="Current phase")
     progress: float = Field(..., ge=0.0, le=1.0, description="Progress")
     message_count: int = Field(..., ge=0, description="Number of messages")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -293,7 +284,6 @@ class ConversationDetailResponse(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     topic: CoachingTopic = Field(..., description="Coaching topic")
     status: ConversationStatus = Field(..., description="Conversation status")
-    current_phase: ConversationPhase = Field(..., description="Current phase")
     progress: float = Field(..., ge=0.0, le=1.0, description="Progress")
     messages: list[dict[str, Any]] = Field(
         default_factory=list,

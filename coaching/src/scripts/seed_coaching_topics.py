@@ -17,11 +17,11 @@ import structlog
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 
-from src.core.config_multitenant import settings
-from src.core.constants import CoachingTopic
-from src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
-from src.repositories.topic_repository import TopicRepository
-from src.services.s3_prompt_storage import S3PromptStorage
+from coaching.src.core.config_multitenant import settings
+from coaching.src.core.constants import CoachingTopic
+from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.repositories.topic_repository import TopicRepository
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
 
@@ -274,7 +274,28 @@ async def seed_coaching_topics() -> dict[str, int]:
         # Migrate existing prompts if they exist
         prompts = await migrate_existing_prompts(topic_id, s3_storage, s3_client)
 
-        # Create topic entity
+        # Extract model configuration from topic config
+        model_config = config["config"]
+
+        # Separate core model parameters from additional topic configuration
+        model_code = model_config.get("default_model", "anthropic.claude-3-sonnet-20240229-v1:0")
+        temperature = model_config.get("temperature", 0.7)
+        max_tokens = model_config.get("max_tokens", 2000)
+        top_p = model_config.get("top_p", 1.0)
+
+        additional_config = {
+            key: value
+            for key, value in model_config.items()
+            if key
+            not in {
+                "default_model",
+                "temperature",
+                "max_tokens",
+                "top_p",
+            }
+        }
+
+        # Create topic entity with explicit model configuration
         topic = LLMTopic(
             topic_id=topic_id,
             topic_name=config["topic_name"],
@@ -283,9 +304,15 @@ async def seed_coaching_topics() -> dict[str, int]:
             description=config.get("description"),
             display_order=config["display_order"],
             is_active=True,
+            model_code=model_code,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
             allowed_parameters=[ParameterDefinition(**p) for p in config["allowed_parameters"]],
             prompts=prompts,
-            config=config["config"],
+            additional_config=additional_config,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
             created_by="seed_script",

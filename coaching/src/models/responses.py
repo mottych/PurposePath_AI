@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.core.constants import ConversationPhase, ConversationStatus
+from src.core.constants import ConversationStatus
 
 
 class ConversationResponse(BaseModel):
@@ -15,7 +15,6 @@ class ConversationResponse(BaseModel):
     status: ConversationStatus
     current_question: str
     progress: float = Field(ge=0.0, le=1.0)
-    phase: ConversationPhase
     session_data: dict[str, Any] | None = None
 
 
@@ -29,7 +28,6 @@ class MessageResponse(BaseModel):
     is_complete: bool = False
     next_steps: list[str] | None = None
     identified_values: list[str] | None = None
-    phase: ConversationPhase
 
 
 class ConversationSummary(BaseModel):
@@ -80,7 +78,7 @@ class SessionContextData(BaseModel):
     """Session context data structure."""
 
     conversation_id: str | None = Field(default=None, description="Conversation identifier")
-    phase: str = Field(description="Current conversation phase")
+    status: str = Field(default="active", description="Current conversation status")
     context: dict[str, str] = Field(default_factory=dict, description="Additional context")
     business_context: BusinessContext = Field(
         default_factory=BusinessContext, description="Business context"
@@ -103,7 +101,7 @@ class ConversationContextData(BaseModel):
 class CacheSessionData(BaseModel):
     """Cache session data structure."""
 
-    phase: str = Field(description="Current phase")
+    status: str = Field(default="active", description="Current status")
     context: dict[str, str] = Field(default_factory=dict, description="Context data")
     message_count: int = Field(description="Number of messages")
     template_version: str = Field(description="Template version")

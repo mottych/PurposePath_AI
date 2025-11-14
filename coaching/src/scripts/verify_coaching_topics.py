@@ -16,9 +16,9 @@ import structlog
 if TYPE_CHECKING:
     pass
 
-from src.core.config_multitenant import settings
-from src.core.constants import CoachingTopic
-from src.repositories.topic_repository import TopicRepository
+from coaching.src.core.config_multitenant import settings
+from coaching.src.core.constants import CoachingTopic
+from coaching.src.repositories.topic_repository import TopicRepository
 
 logger = structlog.get_logger()
 

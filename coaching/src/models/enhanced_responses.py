@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from shared.models.base import BaseResponseModel
-from src.core.constants import ConversationPhase, ConversationStatus
+from src.core.constants import ConversationStatus
 
 
 # Proper message model instead of Dict[str, Any]
@@ -63,7 +63,6 @@ class ConversationResponse(BaseResponseModel):
     status: ConversationStatus = Field(..., description="Current conversation status")
     current_question: str = Field(..., description="Current question being asked")
     progress: float = Field(..., ge=0.0, le=1.0, description="Conversation progress (0-1)")
-    phase: ConversationPhase = Field(..., description="Current conversation phase")
     session_data: SessionData | None = Field(None, description="Session-specific data")
 
 
@@ -77,7 +76,6 @@ class MessageResponse(BaseResponseModel):
     is_complete: bool = Field(default=False, description="Whether conversation is complete")
     next_steps: list[str] | None = Field(None, description="Suggested next steps")
     identified_values: list[str] | None = Field(None, description="Newly identified values")
-    phase: ConversationPhase = Field(..., description="Current conversation phase")
 
 
 class ConversationSummary(BaseResponseModel):

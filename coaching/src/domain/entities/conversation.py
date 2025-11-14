@@ -8,9 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.core.constants import (
-    PHASE_PROGRESS_WEIGHTS,
     CoachingTopic,
-    ConversationPhase,
     ConversationStatus,
     MessageRole,
 )
@@ -44,9 +42,8 @@ class Conversation(BaseModel):
 
     Business Rules:
         - Cannot add messages to non-active conversations
-        - Phase transitions must follow proper sequence
-        - Minimum response counts required for phase advancement
-        - Conversations can only be completed once validation phase reached
+        - Conversations can be paused/resumed and marked complete based on
+          simple completion rules (no phase-based workflow)
     """
 
     conversation_id: ConversationId = Field(..., description="Unique conversation ID")
@@ -58,7 +55,7 @@ class Conversation(BaseModel):
     )
     messages: list[Message] = Field(default_factory=list, description="Conversation messages")
     context: ConversationContext = Field(
-        default_factory=lambda: ConversationContext(current_phase=ConversationPhase.INTRODUCTION),
+        default_factory=ConversationContext,
         description="Conversation context",
     )
     created_at: datetime = Field(
@@ -112,60 +109,12 @@ class Conversation(BaseModel):
         # Update context response count for user messages
         if role == MessageRole.USER:
             new_context = ConversationContext(
-                current_phase=self.context.current_phase,
                 insights=self.context.insights,
                 response_count=self.context.response_count + 1,
                 progress_percentage=self.context.progress_percentage,
                 metadata=self.context.metadata,
             )
             object.__setattr__(self, "context", new_context)
-
-    def transition_to_phase(self, new_phase: ConversationPhase) -> None:
-        """
-        Transition conversation to a new phase.
-
-        Args:
-            new_phase: The phase to transition to
-
-        Raises:
-            ValueError: If transition is invalid
-
-        Business Rule: Phase transitions must follow proper sequence
-        """
-        if not self.is_active():
-            raise ValueError(f"Cannot transition {self.status.value} conversation")
-
-        # Validate phase sequence
-        phase_order = [
-            ConversationPhase.INTRODUCTION,
-            ConversationPhase.EXPLORATION,
-            ConversationPhase.DEEPENING,
-            ConversationPhase.SYNTHESIS,
-            ConversationPhase.VALIDATION,
-            ConversationPhase.COMPLETION,
-        ]
-
-        current_index = phase_order.index(self.context.current_phase)
-        new_index = phase_order.index(new_phase)
-
-        # Can only move forward or stay in same phase
-        if new_index < current_index:
-            raise ValueError(
-                f"Cannot move backward from {self.context.current_phase.value} to {new_phase.value}"
-            )
-
-        # Update context with new phase and progress
-        new_progress = PHASE_PROGRESS_WEIGHTS.get(new_phase, 0.0) * 100
-        new_context = ConversationContext(
-            current_phase=new_phase,
-            insights=self.context.insights,
-            response_count=self.context.response_count,
-            progress_percentage=new_progress,
-            metadata=self.context.metadata,
-        )
-
-        object.__setattr__(self, "context", new_context)
-        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def add_insight(self, insight: str) -> None:
         """
@@ -202,14 +151,6 @@ class Conversation(BaseModel):
         """
         if not self.is_active():
             raise ValueError(f"Cannot complete {self.status.value} conversation")
-
-        if self.context.current_phase not in [
-            ConversationPhase.VALIDATION,
-            ConversationPhase.COMPLETION,
-        ]:
-            raise ValueError(
-                f"Cannot complete conversation in {self.context.current_phase.value} phase"
-            )
 
         now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.COMPLETED)
@@ -269,13 +210,21 @@ class Conversation(BaseModel):
         return sum(1 for msg in self.messages if msg.is_from_assistant())
 
     def calculate_progress_percentage(self) -> float:
-        """
-        Calculate current progress percentage.
+        """Calculate current progress percentage.
 
-        Returns:
-            float: Progress percentage (0-100)
+        This implementation derives progress from simple heuristics based on
+        the number of user and assistant messages. It returns a value between
+        0.0 and 100.0.
         """
-        return PHASE_PROGRESS_WEIGHTS.get(self.context.current_phase, 0.0) * 100
+        total_messages = self.get_message_count()
+        if total_messages == 0:
+            return 0.0
+
+        # Simple heuristic: assume typical conversations complete around 12 messages
+        # (6 user, 6 assistant). Clamp to 100.
+        estimated_completion_messages = 12
+        progress = min(1.0, total_messages / estimated_completion_messages) * 100.0
+        return progress
 
     def get_conversation_history(self, max_messages: int | None = None) -> list[dict[str, str]]:
         """

@@ -5,14 +5,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.core.constants import ConversationPhase, ConversationStatus, MessageRole
+from src.core.constants import ConversationStatus, MessageRole
 from src.domain.value_objects.message import Message
 
 
 class ConversationContext(BaseModel):
     """Context information for a conversation."""
 
-    phase: ConversationPhase = ConversationPhase.INTRODUCTION
+    # Phase removed - no longer used
     identified_values: list[str] = Field(default_factory=list)
     key_insights: list[str] = Field(default_factory=list)
     progress_markers: dict[str, Any] = Field(default_factory=dict)
@@ -36,7 +36,8 @@ class ConversationSession(BaseModel):
     """Session data for active conversation."""
 
     conversation_id: str
-    phase: ConversationPhase
+    # Phase removed - no longer used
+    status: str = "active"
     context: dict[str, Any]
     message_count: int = 0
     last_activity: datetime = Field(default_factory=datetime.utcnow)
@@ -98,10 +99,12 @@ class Conversation(BaseModel):
         return [{"role": msg.role.value, "content": msg.content} for msg in messages]
 
     def calculate_progress(self) -> float:
-        """Calculate conversation progress."""
-        from src.core.constants import PHASE_PROGRESS_WEIGHTS
-
-        return PHASE_PROGRESS_WEIGHTS.get(self.context.phase, 0.0)
+        """Calculate conversation progress based on message count."""
+        total_messages = len(self.messages)
+        if total_messages == 0:
+            return 0.0
+        # Simple heuristic: typical conversation completes around 12 messages
+        return min(1.0, total_messages / 12.0)
 
     def is_active(self) -> bool:
         """Check if conversation is active."""
