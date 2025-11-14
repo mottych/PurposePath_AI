@@ -7,9 +7,8 @@ following the path structure: prompts/{topic_id}/{prompt_type}.md
 import boto3
 import structlog
 from botocore.exceptions import ClientError
+from coaching.src.domain.exceptions.topic_exceptions import S3StorageError
 from mypy_boto3_s3 import S3Client
-
-from src.domain.exceptions.topic_exceptions import S3StorageError
 
 logger = structlog.get_logger()
 

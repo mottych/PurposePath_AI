@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
-from src.domain.entities.llm_topic import LLMTopic, PromptInfo
-from src.domain.exceptions.topic_exceptions import (
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
+from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
     PromptNotFoundError,
     TopicNotFoundError,
