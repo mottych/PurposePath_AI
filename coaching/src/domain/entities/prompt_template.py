@@ -2,8 +2,12 @@
 
 This module defines the PromptTemplate entity for managing dynamic prompts
 with variables and versioning.
+
+DEPRECATED: This entity is deprecated and will be removed in version 2.0.0.
+Use LLMTopic and TopicRepository instead for all prompt management.
 """
 
+import warnings
 from datetime import UTC, datetime
 
 from coaching.src.core.constants import CoachingTopic, ConversationPhase
@@ -14,6 +18,16 @@ from pydantic import BaseModel, Field, field_validator
 class PromptTemplate(BaseModel):
     """
     PromptTemplate aggregate root for dynamic prompt management.
+
+    .. deprecated:: 1.5.0
+        PromptTemplate is deprecated and will be removed in version 2.0.0.
+        Use LLMTopic and TopicRepository instead.
+
+        Migration guide:
+        - Replace PromptTemplate with LLMTopic
+        - Use TopicRepository.get_topic_by_id() instead of template lookups
+        - Use PromptService.get_prompt() for prompt content
+        - Store prompts in S3 via TopicRepository
 
     Manages prompt templates with variable substitution and versioning.
 
@@ -64,6 +78,16 @@ class PromptTemplate(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
+
+    def __init__(self, **data):
+        """Initialize PromptTemplate with deprecation warning."""
+        warnings.warn(
+            "PromptTemplate is deprecated and will be removed in version 2.0.0. "
+            "Use LLMTopic and TopicRepository instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(**data)
 
     @field_validator("name")
     @classmethod

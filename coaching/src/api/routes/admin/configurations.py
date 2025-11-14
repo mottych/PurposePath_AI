@@ -1,5 +1,16 @@
-"""Admin API routes for LLM configuration management (CRUD)."""
+"""Admin API routes for LLM configuration management (CRUD).
 
+DEPRECATED: These routes are deprecated and will be removed in version 2.0.0.
+Use the new topic-based admin endpoints instead:
+- GET /api/v1/admin/topics
+- POST /api/v1/admin/topics
+- PUT /api/v1/admin/topics/{topic_id}
+- DELETE /api/v1/admin/topics/{topic_id}
+
+See docs/Specifications/admin_ai_specifications.md for the new API.
+"""
+
+import warnings
 from datetime import datetime
 
 import structlog
@@ -62,6 +73,12 @@ async def create_configuration(
     **Note:** Consider running POST /admin/configurations/validate first
     to check for conflicts and parameter compatibility.
     """
+    warnings.warn(
+        "POST /admin/configurations is deprecated. Use POST /admin/topics instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     logger.info(
         "Creating configuration",
         admin_user_id=context.user_id,

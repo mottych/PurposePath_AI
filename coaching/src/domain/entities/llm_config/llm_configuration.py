@@ -1,8 +1,12 @@
 """LLM Configuration domain entity.
 
 Represents configuration mappings between interactions, templates, and models.
+
+DEPRECATED: This entity is deprecated and will be removed in version 2.0.0.
+Use LLMTopic instead - topics now own their model configuration directly.
 """
 
+import warnings
 from datetime import datetime
 from typing import Any, ClassVar
 
@@ -12,6 +16,16 @@ from pydantic import BaseModel, Field
 class LLMConfiguration(BaseModel):
     """
     LLM configuration entity linking interactions to templates and models.
+
+    .. deprecated:: 1.5.0
+        LLMConfiguration is deprecated and will be removed in version 2.0.0.
+        Use LLMTopic instead - topics now own their model configuration directly.
+
+        Migration guide:
+        - Replace LLMConfiguration with LLMTopic
+        - Model configuration is now part of LLMTopic (model_code, temperature, etc.)
+        - Remove template_id references - prompts are stored in S3 and referenced by topic
+        - Use TopicRepository for CRUD operations
 
     Maps an interaction to a specific template and model with runtime parameters.
     Supports tier-based configurations for different subscription levels.
@@ -61,6 +75,16 @@ class LLMConfiguration(BaseModel):
 
         json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
         # Not frozen - entity can be updated
+
+    def __init__(self, **data):
+        """Initialize LLMConfiguration with deprecation warning."""
+        warnings.warn(
+            "LLMConfiguration is deprecated and will be removed in version 2.0.0. "
+            "Use LLMTopic instead - topics now own their model configuration directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(**data)
 
     def applies_to_tier(self, user_tier: str | None) -> bool:
         """
