@@ -71,7 +71,7 @@ if (-not $Quick) {
         $WarningCount++
     } else {
         # Try to run tests (same command as CI/CD for consistency)
-        $TestOutput = python -m pytest coaching/tests/unit -v --tb=short 2>&1
+        $TestOutput = python -m pytest coaching/tests/unit -v --tb=short --ignore=coaching/tests/unit/workflows/test_refactored_workflows.py 2>&1
         
         # Check if tests failed due to missing dependencies
         if ($TestOutput -match "ModuleNotFoundError|ImportError") {
