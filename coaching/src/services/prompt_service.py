@@ -8,19 +8,18 @@ from datetime import timedelta
 from typing import Any
 
 import structlog
-
-from src.domain.entities.llm_topic import LLMTopic, ParameterDefinition
-from src.domain.exceptions.topic_exceptions import TopicNotFoundError
-from src.models.prompt import (
+from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition
+from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
+from coaching.src.models.prompt import (
     CompletionCriteria,
     EvaluationCriteria,
     LLMConfig,
     PromptTemplate,
     QuestionBank,
 )
-from src.repositories.topic_repository import TopicRepository
-from src.services.cache_service import CacheService
-from src.services.s3_prompt_storage import S3PromptStorage
+from coaching.src.repositories.topic_repository import TopicRepository
+from coaching.src.services.cache_service import CacheService
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
 
@@ -180,13 +179,12 @@ class PromptService:
         Returns:
             PromptTemplate in legacy format
         """
-        # Convert config to LLMConfig
-        config = topic.config
+        # Build LLMConfig from explicit LLMTopic fields
         llm_config = LLMConfig(
-            model=config.get("default_model", "claude-3-sonnet"),
-            temperature=config.get("temperature", 0.7),
-            max_tokens=config.get("max_tokens", 2000),
-            top_p=config.get("top_p", 0.9),
+            model=topic.model_code,
+            temperature=topic.temperature,
+            max_tokens=topic.max_tokens,
+            top_p=topic.top_p,
         )
 
         # Use defaults for fields not in new system
