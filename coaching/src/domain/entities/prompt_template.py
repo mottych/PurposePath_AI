@@ -58,7 +58,9 @@ class PromptTemplate(BaseModel):
     template_id: TemplateId = Field(..., description="Unique template ID")
     name: str = Field(..., min_length=3, max_length=100, description="Template name")
     topic: CoachingTopic = Field(..., description="Coaching topic")
-    phase: str = Field("exploration", description="Conversation phase (DEPRECATED - no longer used)")
+    phase: str = Field(
+        "exploration", description="Conversation phase (DEPRECATED - no longer used)"
+    )
     system_prompt: str = Field(
         ..., min_length=10, max_length=5000, description="System prompt for LLM context/role"
     )

@@ -62,7 +62,7 @@ def mock_topic_repository():
 @pytest.fixture
 def mock_s3_storage():
     """Create a mock S3 storage."""
-    storage = AsyncMock(spec=S3PromptStorage)
+    storage = AsyncMock()
     storage.get_prompt_content.return_value = (
         "# System Prompt\n\nYou are a test coach for {user_name}."
     )
