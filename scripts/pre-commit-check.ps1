@@ -50,7 +50,7 @@ Write-Host ""
 
 # 3. MyPy Type Checking (informational only)
 Write-Host "[3/4] Running type checks..." -ForegroundColor Yellow
-$TypeCheckOutput = python -m mypy coaching/src shared/ --explicit-package-bases --no-error-summary 2>&1
+python -m mypy coaching/src shared/ --explicit-package-bases --no-error-summary 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️  Type checking warnings present (not blocking)" -ForegroundColor Yellow
     $WarningCount++
@@ -64,14 +64,14 @@ if (-not $Quick) {
     Write-Host "[4/4] Running unit tests..." -ForegroundColor Yellow
     
     # Check if pytest is available
-    $PytestCheck = python -m pytest --version 2>&1
+    python -m pytest --version 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "⚠️  Pytest not available - skipping tests" -ForegroundColor Yellow
         Write-Host "   Install dependencies: pip install -r requirements.txt" -ForegroundColor Gray
         $WarningCount++
     } else {
-        # Try to run tests
-        $TestOutput = python -m pytest coaching/tests/unit -v --tb=short -x 2>&1
+        # Try to run tests (same command as CI/CD for consistency)
+        $TestOutput = python -m pytest coaching/tests/unit -v --tb=short 2>&1
         
         # Check if tests failed due to missing dependencies
         if ($TestOutput -match "ModuleNotFoundError|ImportError") {
@@ -81,7 +81,7 @@ if (-not $Quick) {
             $WarningCount++
         } elseif ($LASTEXITCODE -ne 0) {
             Write-Host "❌ Unit tests failed!" -ForegroundColor Red
-            Write-Host "   Run 'python -m pytest coaching/tests/unit -v' to see details" -ForegroundColor Yellow
+            Write-Host "   Run 'python -m pytest coaching/tests/unit -v --tb=short' to see details" -ForegroundColor Yellow
             $ErrorCount++
         } else {
             Write-Host "✅ Unit tests passed" -ForegroundColor Green
