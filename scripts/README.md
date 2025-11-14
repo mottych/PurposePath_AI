@@ -208,3 +208,31 @@ python -m pytest coaching/tests/unit -v
 # Then run checks again
 .\scripts\pre-commit-check.ps1
 ```
+
+**Missing test dependencies:**
+
+If you see "ModuleNotFoundError" when running tests locally:
+
+```powershell
+# Option 1: Install dependencies globally (not recommended)
+pip install -r requirements.txt
+
+# Option 2: Use a virtual environment (recommended)
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Then run tests
+python -m pytest coaching/tests/unit -v
+```
+
+**Note:** The pre-commit hook runs in "Quick mode" by default (no tests) because:
+
+- Test dependencies may not be installed locally
+- Tests are slower and would delay commits
+- Tests run automatically in CI/CD with full environment
+
+For full local validation including tests, run:
+
+```powershell
+.\scripts\pre-commit-check.ps1  # Runs full check with tests
