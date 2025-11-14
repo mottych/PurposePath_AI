@@ -47,6 +47,12 @@ def sample_topic() -> LLMTopic:
         topic_type="single_shot",
         category="analysis",
         is_active=True,
+        model_code="claude-3-5-sonnet-20241022",
+        temperature=0.7,
+        max_tokens=2000,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
         allowed_parameters=[],
         prompts=[
             PromptInfo(
@@ -57,7 +63,6 @@ def sample_topic() -> LLMTopic:
                 updated_by="admin",
             )
         ],
-        config={},
         created_at=datetime.now(tz=UTC),
         updated_at=datetime.now(tz=UTC),
     )
