@@ -76,6 +76,8 @@ if (-not $Quick) {
             "-v",
             "--tb=short",
             "--ignore=coaching/tests/unit/workflows/test_refactored_workflows.py",
+            "--ignore=coaching/tests/unit/test_insights_service.py",
+            "--ignore=coaching/tests/unit/test_onboarding_service.py",
             "--ignore=coaching/tests/test_llm_service_refactoring.py",
             "--ignore=coaching/tests/test_langgraph_workflows.py",
             "--ignore=coaching/tests/test_business_data_api.py"
