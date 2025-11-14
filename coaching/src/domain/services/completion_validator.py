@@ -3,8 +3,8 @@
 This service validates conversation completion criteria according to business rules.
 """
 
-from src.core.constants import ConversationPhase
-from src.domain.entities.conversation import Conversation
+from coaching.src.core.constants import ConversationPhase
+from coaching.src.domain.entities.conversation import Conversation
 
 
 class CompletionValidator:

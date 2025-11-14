@@ -6,8 +6,8 @@ and business rule violations.
 
 from typing import Any
 
-from src.core.constants import ConversationPhase, ConversationStatus
-from src.domain.exceptions.base_exception import DomainException
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
+from coaching.src.domain.exceptions.base_exception import DomainException
 
 
 class ConversationNotFound(DomainException):

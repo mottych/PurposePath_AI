@@ -7,9 +7,9 @@ to be used interchangeably.
 
 from typing import Protocol
 
-from src.core.constants import CoachingTopic
-from src.core.types import TemplateId
-from src.domain.entities.prompt_template import PromptTemplate
+from coaching.src.core.constants import CoachingTopic
+from coaching.src.core.types import TemplateId
+from coaching.src.domain.entities.prompt_template import PromptTemplate
 
 
 class PromptRepositoryPort(Protocol):

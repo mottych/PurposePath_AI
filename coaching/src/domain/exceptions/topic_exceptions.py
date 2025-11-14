@@ -6,7 +6,7 @@ and business rule violations.
 
 from typing import Any
 
-from src.domain.exceptions.base_exception import DomainError
+from coaching.src.domain.exceptions.base_exception import DomainError
 
 
 class TopicNotFoundError(DomainError):
@@ -145,6 +145,35 @@ class TopicUpdateError(DomainError):
         )
 
 
+class InvalidModelConfigurationError(DomainError):
+    """
+    Raised when LLM model configuration parameters are invalid.
+
+    Business Rules:
+        - model_code must not be empty
+        - temperature must be between 0.0 and 2.0
+        - max_tokens must be positive
+        - top_p must be between 0.0 and 1.0
+        - frequency_penalty must be between -2.0 and 2.0
+        - presence_penalty must be between -2.0 and 2.0
+    """
+
+    def __init__(self, *, topic_id: str, errors: list[str]) -> None:
+        """
+        Initialize exception.
+
+        Args:
+            topic_id: ID of the topic with invalid configuration
+            errors: List of validation error messages
+        """
+        error_list = "\n- ".join(errors)
+        super().__init__(
+            message=f"Invalid model configuration for topic '{topic_id}':\n- {error_list}",
+            code="INVALID_MODEL_CONFIGURATION",
+            context={"topic_id": topic_id, "errors": errors},
+        )
+
+
 class S3StorageError(DomainError):
     """
     Raised when S3 operations fail.
@@ -179,6 +208,7 @@ class S3StorageError(DomainError):
 
 __all__ = [
     "DuplicateTopicError",
+    "InvalidModelConfigurationError",
     "InvalidParameterDefinitionError",
     "InvalidTopicTypeError",
     "PromptNotFoundError",

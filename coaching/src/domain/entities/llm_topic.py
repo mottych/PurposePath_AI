@@ -4,11 +4,14 @@ This module defines the unified topic entity for all LLM prompts across
 conversation coaching, single-shot analysis, and KPI system templates.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, ClassVar
 
-from src.domain.exceptions.topic_exceptions import InvalidTopicTypeError
+from coaching.src.domain.exceptions.topic_exceptions import (
+    InvalidModelConfigurationError,
+    InvalidTopicTypeError,
+)
 
 
 @dataclass
@@ -135,6 +138,11 @@ class LLMTopic:
         - topic_type must be: conversation_coaching, single_shot, or kpi_system
         - At least one prompt must be defined
         - Parameter names must be unique within a topic
+        - model_code must be a valid LLM model identifier
+        - temperature must be between 0.0 and 2.0
+        - max_tokens must be positive
+        - top_p must be between 0.0 and 1.0
+        - frequency_penalty and presence_penalty must be between -2.0 and 2.0
 
     Attributes:
         topic_id: Unique identifier (snake_case)
@@ -142,29 +150,50 @@ class LLMTopic:
         topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
         category: Grouping category (coaching, analysis, strategy, kpi)
         is_active: Whether topic is active and available
+        model_code: LLM model identifier (e.g., 'claude-3-5-sonnet-20241022')
+        temperature: LLM temperature parameter (0.0-2.0)
+        max_tokens: Maximum tokens for LLM response (must be positive)
+        top_p: Nucleus sampling parameter (0.0-1.0)
+        frequency_penalty: Frequency penalty parameter (-2.0 to 2.0)
+        presence_penalty: Presence penalty parameter (-2.0 to 2.0)
         allowed_parameters: List of parameter definitions
         prompts: List of prompt information entries
-        config: Topic-specific configuration dict
         created_at: When topic was created
         updated_at: When topic was last updated
         description: Optional detailed description
         display_order: Sort order for UI display
         created_by: User/system that created the topic
+        additional_config: Optional additional topic-specific configuration
     """
 
+    # Identity fields
     topic_id: str
     topic_name: str
     topic_type: str
     category: str
     is_active: bool
-    allowed_parameters: list[ParameterDefinition]
-    prompts: list[PromptInfo]
-    config: dict[str, Any]
-    created_at: datetime
-    updated_at: datetime
+
+    # LLM Model Configuration (owned by topic)
+    model_code: str
+    temperature: float
+    max_tokens: int
+    top_p: float = 1.0
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+
+    # Prompts and Parameters
+    allowed_parameters: list[ParameterDefinition] = field(default_factory=list)
+    prompts: list[PromptInfo] = field(default_factory=list)
+
+    # Metadata
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
     description: str | None = None
     display_order: int = 100
     created_by: str | None = None
+
+    # Optional additional configuration
+    additional_config: dict[str, Any] = field(default_factory=dict)
 
     VALID_TOPIC_TYPES: ClassVar[set[str]] = {
         "conversation_coaching",
@@ -177,9 +206,53 @@ class LLMTopic:
 
         Raises:
             InvalidTopicTypeError: If topic_type is not valid
+            InvalidModelConfigurationError: If model configuration is invalid
         """
+        # Validate topic type
         if self.topic_type not in self.VALID_TOPIC_TYPES:
             raise InvalidTopicTypeError(topic_id=self.topic_id, invalid_type=self.topic_type)
+
+        # Validate model configuration
+        self._validate_model_config()
+
+    def _validate_model_config(self) -> None:
+        """Validate model configuration parameters.
+
+        Raises:
+            InvalidModelConfigurationError: If any model parameter is invalid
+        """
+        errors: list[str] = []
+
+        # Validate model_code
+        if not self.model_code or not self.model_code.strip():
+            errors.append("model_code must not be empty")
+
+        # Validate temperature
+        if not (0.0 <= self.temperature <= 2.0):
+            errors.append(f"temperature must be between 0.0 and 2.0, got {self.temperature}")
+
+        # Validate max_tokens
+        if self.max_tokens <= 0:
+            errors.append(f"max_tokens must be positive, got {self.max_tokens}")
+
+        # Validate top_p
+        if not (0.0 <= self.top_p <= 1.0):
+            errors.append(f"top_p must be between 0.0 and 1.0, got {self.top_p}")
+
+        # Validate frequency_penalty
+        if not (-2.0 <= self.frequency_penalty <= 2.0):
+            errors.append(
+                f"frequency_penalty must be between -2.0 and 2.0, got {self.frequency_penalty}"
+            )
+
+        # Validate presence_penalty
+        if not (-2.0 <= self.presence_penalty <= 2.0):
+            errors.append(
+                f"presence_penalty must be between -2.0 and 2.0, got {self.presence_penalty}"
+            )
+
+        if errors:
+            raise InvalidModelConfigurationError(topic_id=self.topic_id, errors=errors)
 
     def to_dynamodb_item(self) -> dict[str, Any]:
         """Convert to DynamoDB item format.
@@ -195,9 +268,15 @@ class LLMTopic:
             "topic_type": self.topic_type,
             "category": self.category,
             "is_active": self.is_active,
+            "model_code": self.model_code,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
+            "frequency_penalty": self.frequency_penalty,
+            "presence_penalty": self.presence_penalty,
             "allowed_parameters": [param.to_dict() for param in self.allowed_parameters],
             "prompts": [prompt.to_dict() for prompt in self.prompts],
-            "config": self.config,
+            "additional_config": self.additional_config,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "display_order": self.display_order,
@@ -216,6 +295,7 @@ class LLMTopic:
         """Create from DynamoDB item.
 
         Deserializes nested objects and parses ISO 8601 datetime strings.
+        Supports backward compatibility with old 'config' field.
 
         Args:
             item: DynamoDB item dictionary
@@ -223,17 +303,56 @@ class LLMTopic:
         Returns:
             LLMTopic: Instance created from DynamoDB item
         """
+        # Handle backward compatibility: extract model config from old 'config' dict if present
+        model_code = item.get("model_code")
+        if model_code is None and "config" in item:
+            # Old format: extract from config dict
+            config = item["config"]
+            model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
+            temperature = config.get("temperature", 0.7)
+            max_tokens = config.get("max_tokens", 2000)
+            top_p = config.get("top_p", 1.0)
+            frequency_penalty = config.get("frequency_penalty", 0.0)
+            presence_penalty = config.get("presence_penalty", 0.0)
+            additional_config = {
+                k: v
+                for k, v in config.items()
+                if k
+                not in {
+                    "model_code",
+                    "temperature",
+                    "max_tokens",
+                    "top_p",
+                    "frequency_penalty",
+                    "presence_penalty",
+                }
+            }
+        else:
+            # New format: explicit fields
+            temperature = item.get("temperature", 0.7)
+            max_tokens = item.get("max_tokens", 2000)
+            top_p = item.get("top_p", 1.0)
+            frequency_penalty = item.get("frequency_penalty", 0.0)
+            presence_penalty = item.get("presence_penalty", 0.0)
+            additional_config = item.get("additional_config", {})
+
         return cls(
             topic_id=item["topic_id"],
             topic_name=item["topic_name"],
             topic_type=item["topic_type"],
             category=item["category"],
             is_active=item["is_active"],
+            model_code=model_code or "claude-3-5-sonnet-20241022",
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
             allowed_parameters=[
-                ParameterDefinition.from_dict(param) for param in item["allowed_parameters"]
+                ParameterDefinition.from_dict(param) for param in item.get("allowed_parameters", [])
             ],
-            prompts=[PromptInfo.from_dict(prompt) for prompt in item["prompts"]],
-            config=item["config"],
+            prompts=[PromptInfo.from_dict(prompt) for prompt in item.get("prompts", [])],
+            additional_config=additional_config,
             created_at=datetime.fromisoformat(item["created_at"]),
             updated_at=datetime.fromisoformat(item["updated_at"]),
             description=item.get("description"),
