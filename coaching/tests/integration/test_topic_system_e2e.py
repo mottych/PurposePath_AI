@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
-from coaching.src.infrastructure.storage.s3_prompt_storage import S3PromptStorage
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.prompt_service import PromptService
 

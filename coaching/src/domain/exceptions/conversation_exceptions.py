@@ -6,7 +6,7 @@ and business rule violations.
 
 from typing import Any
 
-from coaching.src.core.constants import ConversationPhase, ConversationStatus
+from coaching.src.core.constants import ConversationStatus
 from coaching.src.domain.exceptions.base_exception import DomainException
 
 
@@ -38,16 +38,17 @@ class ConversationNotFound(DomainException):
 
 class InvalidPhaseTransition(DomainException):
     """
-    Raised when attempting an invalid conversation phase transition.
+    Raised when attempting an invalid phase transition.
 
-    Business Rule: Phases must progress sequentially, no backward transitions allowed.
+    DEPRECATED: Phase transitions are no longer used. This exception is kept for
+    backward compatibility but will be removed in v2.0.0.
     """
 
     def __init__(
         self,
         conversation_id: str,
-        current_phase: ConversationPhase,
-        target_phase: ConversationPhase,
+        current_phase: str,
+        target_phase: str,
         reason: str | None = None,
     ) -> None:
         """
