@@ -1,0 +1,53 @@
+import structlog
+from fastapi import APIRouter, Depends, HTTPException
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
+from src.api.auth import get_current_context
+from src.api.dependencies import get_topic_repository
+from src.models.topics import AvailableTopic
+from src.repositories.topic_repository import TopicRepository
+
+logger = structlog.get_logger()
+router = APIRouter(prefix="/topics", tags=["topics"])
+
+
+@router.get("/available", response_model=ApiResponse[list[AvailableTopic]])
+async def list_available_topics(
+    context: RequestContext = Depends(get_current_context),
+    topic_repository: TopicRepository = Depends(get_topic_repository),
+) -> ApiResponse[list[AvailableTopic]]:
+    try:
+        topics = await topic_repository.list_by_type(
+            topic_type="conversation_coaching",
+            include_inactive=False,
+        )
+
+        available = [
+            AvailableTopic(
+                id=topic.topic_id,
+                name=topic.topic_name,
+                category=topic.category,
+                description=topic.description,
+                displayOrder=topic.display_order,
+                createdAt=topic.created_at,
+                updatedAt=topic.updated_at,
+            )
+            for topic in sorted(topics, key=lambda t: t.display_order)
+        ]
+
+        return ApiResponse(success=True, data=available)
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "Failed to list available topics",
+            error=str(exc),
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+        )
+        raise HTTPException(status_code=500, detail="Failed to list available topics") from exc
+
+
+__all__ = ["router"]

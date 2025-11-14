@@ -24,6 +24,7 @@ from src.api.routes import (
     multitenant_conversations,
     onboarding,
     operations_ai,
+    topics,
     website,
 )
 from src.core.config_multitenant import settings
@@ -106,6 +107,7 @@ app.include_router(
 )
 app.include_router(coaching_ai.router, prefix=f"{settings.api_prefix}")
 app.include_router(operations_ai.router, prefix=f"{settings.api_prefix}")
+app.include_router(topics.router, prefix=f"{settings.api_prefix}")
 app.include_router(website.router, prefix=f"{settings.api_prefix}/website", tags=["website"])
 
 
