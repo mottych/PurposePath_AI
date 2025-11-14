@@ -1,5 +1,7 @@
 # Admin AI Specifications - LLM Topic Management
 
+- Created on 11/13/2025
+
 ## Overview
 
 This document specifies all admin endpoints required to manage the LLM Topic system. Admin users can create, update, activate/deactivate topics, and manage prompts.

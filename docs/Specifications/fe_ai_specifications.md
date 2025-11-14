@@ -1,5 +1,7 @@
 # Frontend AI Specifications - Breaking Changes
 
+- Created on 11/13/2025
+
 ## Overview
 
 This document lists all breaking changes to AI-related endpoints that affect the frontend application. This is a technical reference for what has changed, not how to fix it.
