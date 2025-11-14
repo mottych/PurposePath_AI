@@ -11,6 +11,7 @@ from src.api.auth import get_current_user
 from src.api.dependencies import (
     get_conversation_service,
     get_llm_service,
+    get_prompt_service,
 )
 from src.api.models.auth import UserContext
 from src.api.models.conversations import (
@@ -34,7 +35,9 @@ from src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
 )
+from src.domain.exceptions.topic_exceptions import TopicNotFoundError
 from src.domain.ports.llm_provider_port import LLMMessage
+from src.services.prompt_service import PromptService
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/conversations", tags=["conversations"])
@@ -46,6 +49,7 @@ async def initiate_conversation(
     user: UserContext = Depends(get_current_user),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
     _llm_service: LLMApplicationService = Depends(get_llm_service),
+    prompt_service: PromptService = Depends(get_prompt_service),
 ) -> ConversationResponse:
     """Initiate a new coaching conversation.
 
@@ -76,16 +80,11 @@ async def initiate_conversation(
             topic=request.topic.value,
         )
 
-        # Generate initial coaching prompt using LLM service
-        initial_prompt = f"Welcome! Let's explore your {request.topic.value.replace('_', ' ')}. "
-        if request.topic.value == "core_values":
-            initial_prompt += "What matters most to you in your work and life?"
-        elif request.topic.value == "purpose":
-            initial_prompt += "What gives your work meaning and direction?"
-        elif request.topic.value == "vision":
-            initial_prompt += "Where do you see yourself and your work heading?"
-        else:
-            initial_prompt += "Let's begin this journey together."
+        # Load prompt template for topic from unified topic system
+        template = await prompt_service.get_template(topic=request.topic.value)
+
+        # Use system prompt from template as initial assistant message
+        initial_prompt = template.system_prompt
 
         # Start conversation using application service
         conversation = await conversation_service.start_conversation(
@@ -115,6 +114,17 @@ async def initiate_conversation(
             created_at=conversation.created_at,
         )
 
+    except TopicNotFoundError as e:
+        logger.error(
+            "Topic not found for conversation initiation",
+            user_id=user.user_id,
+            topic=request.topic.value,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic not found: {request.topic.value}",
+        ) from e
     except Exception as e:
         logger.error(
             "Failed to initiate conversation",

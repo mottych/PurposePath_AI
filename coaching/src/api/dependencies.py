@@ -48,6 +48,7 @@ from src.services.cache_service import CacheService
 from src.services.insights_service import InsightsService
 from src.services.llm_configuration_service import LLMConfigurationService
 from src.services.llm_template_service import LLMTemplateService
+from src.services.prompt_service import PromptService
 from src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
@@ -208,6 +209,23 @@ async def get_llm_template_service() -> LLMTemplateService:
     return LLMTemplateService(
         template_repository=template_repo,
         s3_client=s3_client,
+        cache_service=cache_service,
+    )
+
+
+async def get_prompt_service() -> PromptService:
+    """Get PromptService wired to TopicRepository and S3PromptStorage.
+
+    Returns:
+        PromptService instance backed by the unified LLMTopic system
+    """
+    topic_repo = get_topic_repository()
+    s3_storage = get_s3_prompt_storage()
+    cache_service = await get_cache_service()
+
+    return PromptService(
+        topic_repository=topic_repo,
+        s3_storage=s3_storage,
         cache_service=cache_service,
     )
 
@@ -388,6 +406,7 @@ __all__ = [
     "get_llm_service",
     "get_llm_template_service",
     "get_model_config_service",
+    "get_prompt_service",
     "get_s3_prompt_storage",
     "get_strategy_service",
     "get_template_metadata_repository",
