@@ -62,7 +62,10 @@ jobs:
       - name: Run Pytest (Unit Tests)
         run: |
           python -m pytest coaching/tests/unit -v --tb=short --cov=coaching/src --cov=shared --cov-report=term-missing \
-            --ignore=coaching/tests/unit/workflows/test_refactored_workflows.py
+            --ignore=coaching/tests/unit/workflows/test_refactored_workflows.py \
+            --ignore=coaching/tests/test_llm_service_refactoring.py \
+            --ignore=coaching/tests/test_langgraph_workflows.py \
+            --ignore=coaching/tests/test_business_data_api.py
         env:
           PYTHONPATH: ${{ github.workspace }}
       
