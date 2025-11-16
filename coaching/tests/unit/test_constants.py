@@ -3,11 +3,8 @@
 import pytest
 from coaching.src.core.constants import (
     DEFAULT_LLM_MODELS,
-    PHASE_PROGRESS_WEIGHTS,
-    PHASE_REQUIREMENTS,
     AnalysisType,
     CoachingTopic,
-    ConversationPhase,
     ConversationStatus,
     MessageRole,
 )
@@ -62,32 +59,6 @@ class TestConversationStatusEnum:
 
 
 @pytest.mark.unit
-class TestConversationPhaseEnum:
-    """Test ConversationPhase enum."""
-
-    def test_all_phases_defined(self):
-        """Test that all expected phases are defined."""
-        # Assert
-        assert ConversationPhase.INTRODUCTION == "introduction"
-        assert ConversationPhase.EXPLORATION == "exploration"
-        assert ConversationPhase.DEEPENING == "deepening"
-        assert ConversationPhase.SYNTHESIS == "synthesis"
-        assert ConversationPhase.VALIDATION == "validation"
-        assert ConversationPhase.COMPLETION == "completion"
-
-    def test_phase_values_are_strings(self):
-        """Test that all phase values are strings."""
-        # Act & Assert
-        for phase in ConversationPhase:
-            assert isinstance(phase.value, str)
-
-    def test_phase_count(self):
-        """Test expected number of phases."""
-        # Assert
-        assert len(ConversationPhase) == 6
-
-
-@pytest.mark.unit
 class TestMessageRoleEnum:
     """Test MessageRole enum."""
 
@@ -127,96 +98,6 @@ class TestAnalysisTypeEnum:
 
 
 @pytest.mark.unit
-class TestPhaseProgressWeights:
-    """Test PHASE_PROGRESS_WEIGHTS constant."""
-
-    def test_all_phases_have_weights(self):
-        """Test that all phases have progress weights."""
-        # Assert
-        assert ConversationPhase.INTRODUCTION in PHASE_PROGRESS_WEIGHTS
-        assert ConversationPhase.EXPLORATION in PHASE_PROGRESS_WEIGHTS
-        assert ConversationPhase.DEEPENING in PHASE_PROGRESS_WEIGHTS
-        assert ConversationPhase.SYNTHESIS in PHASE_PROGRESS_WEIGHTS
-        assert ConversationPhase.VALIDATION in PHASE_PROGRESS_WEIGHTS
-        assert ConversationPhase.COMPLETION in PHASE_PROGRESS_WEIGHTS
-
-    def test_weights_are_between_0_and_1(self):
-        """Test that all weights are valid percentages."""
-        # Act & Assert
-        for phase, weight in PHASE_PROGRESS_WEIGHTS.items():
-            assert 0.0 <= weight <= 1.0
-
-    def test_weights_are_ascending(self):
-        """Test that weights increase through phases."""
-        # Arrange
-        phases_in_order = [
-            ConversationPhase.INTRODUCTION,
-            ConversationPhase.EXPLORATION,
-            ConversationPhase.DEEPENING,
-            ConversationPhase.SYNTHESIS,
-            ConversationPhase.VALIDATION,
-            ConversationPhase.COMPLETION,
-        ]
-
-        # Act & Assert
-        for i in range(len(phases_in_order) - 1):
-            current_weight = PHASE_PROGRESS_WEIGHTS[phases_in_order[i]]
-            next_weight = PHASE_PROGRESS_WEIGHTS[phases_in_order[i + 1]]
-            assert current_weight < next_weight
-
-    def test_completion_weight_is_100_percent(self):
-        """Test that completion phase is 100%."""
-        # Assert
-        assert PHASE_PROGRESS_WEIGHTS[ConversationPhase.COMPLETION] == 1.0
-
-    def test_introduction_weight_is_low(self):
-        """Test that introduction phase has low weight."""
-        # Assert
-        assert PHASE_PROGRESS_WEIGHTS[ConversationPhase.INTRODUCTION] < 0.2
-
-
-@pytest.mark.unit
-class TestPhaseRequirements:
-    """Test PHASE_REQUIREMENTS constant."""
-
-    def test_exploration_requirements(self):
-        """Test exploration phase requirements."""
-        # Assert
-        assert "min_responses" in PHASE_REQUIREMENTS[ConversationPhase.EXPLORATION]
-        assert PHASE_REQUIREMENTS[ConversationPhase.EXPLORATION]["min_responses"] >= 0
-
-    def test_deepening_requirements(self):
-        """Test deepening phase requirements."""
-        # Assert
-        deepening_req = PHASE_REQUIREMENTS[ConversationPhase.DEEPENING]
-        assert "min_responses" in deepening_req
-        assert "min_categories_explored" in deepening_req
-        assert deepening_req["min_responses"] > 0
-
-    def test_synthesis_requirements(self):
-        """Test synthesis phase requirements."""
-        # Assert
-        synthesis_req = PHASE_REQUIREMENTS[ConversationPhase.SYNTHESIS]
-        assert "min_responses" in synthesis_req
-        assert "min_insights" in synthesis_req
-
-    def test_validation_requirements(self):
-        """Test validation phase requirements."""
-        # Assert
-        validation_req = PHASE_REQUIREMENTS[ConversationPhase.VALIDATION]
-        assert "min_values_identified" in validation_req
-        assert "max_values_identified" in validation_req
-        assert validation_req["min_values_identified"] <= validation_req["max_values_identified"]
-
-    def test_completion_requirements(self):
-        """Test completion phase requirements."""
-        # Assert
-        completion_req = PHASE_REQUIREMENTS[ConversationPhase.COMPLETION]
-        assert "user_confirmation" in completion_req
-        assert "min_values_confirmed" in completion_req
-
-
-@pytest.mark.unit
 class TestDefaultLLMModels:
     """Test DEFAULT_LLM_MODELS constant."""
 
@@ -250,18 +131,6 @@ class TestDefaultLLMModels:
 @pytest.mark.unit
 class TestConstantsIntegrity:
     """Test integrity and relationships between constants."""
-
-    def test_phase_requirements_keys_are_phases(self):
-        """Test that phase requirements use valid phase enums."""
-        # Act & Assert
-        for phase in PHASE_REQUIREMENTS.keys():
-            assert phase in ConversationPhase
-
-    def test_phase_weights_keys_are_phases(self):
-        """Test that phase weights use valid phase enums."""
-        # Act & Assert
-        for phase in PHASE_PROGRESS_WEIGHTS.keys():
-            assert phase in ConversationPhase
 
     def test_default_models_keys_are_topics(self):
         """Test that default models use valid topic enums."""
