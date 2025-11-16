@@ -43,6 +43,19 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/admin/topics", tags=["Admin - Topics"])
 
 
+# OPTIONS handlers for CORS preflight
+
+
+@router.options("")
+@router.options("/{topic_id}")
+@router.options("/{topic_id}/prompts/{prompt_type}")
+@router.options("/../../models")
+@router.options("/validate")
+async def admin_topics_options_handler() -> dict[str, str]:
+    """Handle OPTIONS preflight requests for admin topics endpoints."""
+    return {}
+
+
 # Helper functions
 
 

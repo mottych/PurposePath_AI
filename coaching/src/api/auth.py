@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from jose import JWTError, jwt
 
 if TYPE_CHECKING:
@@ -38,11 +38,17 @@ def _get_jwt_secret() -> str:
     return "change-me-in-prod"  # Fallback for development
 
 
-async def get_current_context(authorization: str = Header(...)) -> RequestContext:
+async def get_current_context(
+    request: Request,
+    authorization: str | None = Header(None, alias="Authorization"),
+) -> RequestContext:
     """Extract and validate request context from JWT token.
 
+    For OPTIONS requests (CORS preflight), returns a dummy context without validation.
+
     Args:
-        authorization: Authorization header with Bearer token
+        request: FastAPI request object (to check HTTP method)
+        authorization: Authorization header with Bearer token (optional for OPTIONS)
 
     Returns:
         RequestContext with user and tenant information
@@ -50,6 +56,23 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
     Raises:
         HTTPException: If token is invalid or missing required fields
     """
+    # Allow OPTIONS requests without authentication (CORS preflight)
+    if request.method == "OPTIONS":
+        return RequestContext(
+            user_id="options_request",
+            tenant_id="options_request",
+            role=UserRole.MEMBER,
+            permissions=[],
+            subscription_tier=SubscriptionTier.STARTER,
+            is_owner=False,
+        )
+
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization header",
+        )
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header format")
 
@@ -134,14 +157,20 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
         raise HTTPException(status_code=401, detail="Token validation failed") from e
 
 
-async def get_current_user(authorization: str = Header(...)) -> UserContext:
+async def get_current_user(
+    request: Request,
+    authorization: str | None = Header(None, alias="Authorization"),
+) -> UserContext:
     """Extract authenticated user context from JWT token.
 
     This is a simplified version of get_current_context that returns
     UserContext for use with the new API layer.
 
+    For OPTIONS requests (CORS preflight), returns a dummy context without validation.
+
     Args:
-        authorization: Authorization header with Bearer token
+        request: FastAPI request object (to check HTTP method)
+        authorization: Authorization header with Bearer token (optional for OPTIONS)
 
     Returns:
         UserContext with user and tenant information
@@ -149,6 +178,22 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
     Raises:
         HTTPException: If token is invalid or missing required fields
     """
+    # Allow OPTIONS requests without authentication (CORS preflight)
+    if request.method == "OPTIONS":
+        return UserContext(
+            user_id="options_request",
+            tenant_id="options_request",
+            email="options@preflight.local",
+            roles=["preflight"],
+            scopes=[],
+        )
+
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization header",
+        )
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header format")
 
@@ -225,11 +270,13 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
 
 
 async def get_optional_context(
-    authorization: str | None = Header(None),
+    request: Request,
+    authorization: str | None = Header(None, alias="Authorization"),
 ) -> RequestContext | None:
     """Extract request context from JWT token if provided.
 
     Args:
+        request: FastAPI request object (to check HTTP method)
         authorization: Optional authorization header
 
     Returns:
@@ -239,7 +286,7 @@ async def get_optional_context(
         return None
 
     try:
-        return await get_current_context(authorization)
+        return await get_current_context(request, authorization)
     except HTTPException:
         return None
 

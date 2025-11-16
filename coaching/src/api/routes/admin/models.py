@@ -24,6 +24,14 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
+@router.options("/models")
+@router.options("/topics")
+@router.options("/models/{model_id}")
+async def admin_options_handler() -> dict[str, str]:
+    """Handle OPTIONS preflight requests for admin endpoints."""
+    return {}
+
+
 @router.get("/models", response_model=ApiResponse[LLMModelsResponse])
 async def list_ai_models(
     provider: str | None = None,
