@@ -8,11 +8,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.core.constants import (
+    PHASE_PROGRESS_WEIGHTS,
     CoachingTopic,
     ConversationPhase,
     ConversationStatus,
     MessageRole,
-    PHASE_PROGRESS_WEIGHTS,
 )
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.value_objects.conversation_context import (
@@ -240,7 +240,7 @@ class Conversation(BaseModel):
         """
         # Calculate progress percentage based on phase
         progress_percentage = PHASE_PROGRESS_WEIGHTS[new_phase] * 100.0
-        
+
         new_context = ConversationContext(
             current_phase=new_phase,
             insights=self.context.insights,

@@ -3,7 +3,6 @@
 from datetime import UTC, datetime
 
 import pytest
-
 from coaching.src.domain.entities.llm_topic import (
     LLMTopic,
     ParameterDefinition,
