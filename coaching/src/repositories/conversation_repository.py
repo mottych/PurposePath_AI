@@ -13,11 +13,12 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
+from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
+from coaching.src.core.exceptions import ConversationNotFoundCompatError
+from coaching.src.domain.value_objects.message import Message
+from coaching.src.models.conversation import Conversation, ConversationContext
+
 from shared.types.common import JSONDict
-from src.core.constants import ConversationPhase, ConversationStatus, MessageRole
-from src.core.exceptions import ConversationNotFoundCompatError
-from src.domain.value_objects.message import Message
-from src.models.conversation import Conversation, ConversationContext
 
 logger = structlog.get_logger()
 

@@ -1,23 +1,23 @@
 """Admin API routes for LLM interactions management."""
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
-from src.api.auth import get_current_context
-from src.api.middleware.admin_auth import require_admin_access
-from src.core.llm_interactions import (
+from coaching.src.api.auth import get_current_context
+from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.core.llm_interactions import (
     InteractionCategory,
     get_interaction,
     list_interactions,
 )
-from src.models.admin_responses import (
+from coaching.src.models.admin_responses import (
     ActiveConfigurationInfo,
     LLMInteractionDetail,
     LLMInteractionInfo,
     LLMInteractionsResponse,
 )
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 router = APIRouter()

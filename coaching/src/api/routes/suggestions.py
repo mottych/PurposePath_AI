@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mypy_boto3_secretsmanager import SecretsManagerClient
 
+from coaching.src.core.config_multitenant import settings
+from coaching.src.models.requests import OnboardingSuggestionRequest
+from coaching.src.models.responses import OnboardingSuggestionResponse
 from fastapi import APIRouter, Header
 from jose import JWTError, jwt
 
 from shared.models.schemas import ApiResponse
 from shared.services.aws_helpers import get_secretsmanager_client
-from src.core.config_multitenant import settings
-from src.models.requests import OnboardingSuggestionRequest
-from src.models.responses import OnboardingSuggestionResponse
 
 router = APIRouter()
 

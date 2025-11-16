@@ -7,13 +7,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
-
-from shared.models.schemas import PaginatedResponse, PaginationMeta
-from src.infrastructure.external.business_api_client import BusinessApiClient
-from src.infrastructure.repositories.dynamodb_conversation_repository import (
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from src.models.insights import (
+from coaching.src.models.insights import (
     BusinessDataContext,
     Insight,
     InsightCategory,
@@ -21,11 +19,13 @@ from src.models.insights import (
     InsightStatus,
     SuggestedAction,
 )
-from src.models.responses import (
+from coaching.src.models.responses import (
     InsightMetadata,
     InsightResponse,
     InsightsSummaryResponse,
 )
+
+from shared.models.schemas import PaginatedResponse, PaginationMeta
 
 logger = structlog.get_logger()
 

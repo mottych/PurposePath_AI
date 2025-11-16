@@ -3,11 +3,10 @@
 from typing import Any, Generic, TypeVar
 
 import structlog
+from coaching.src.api.auth import get_current_user
+from coaching.src.api.models.auth import UserContext
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-
-from src.api.auth import get_current_user
-from src.api.models.auth import UserContext
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["business-data"])

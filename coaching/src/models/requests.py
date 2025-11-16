@@ -2,9 +2,8 @@
 
 from typing import Any
 
+from coaching.src.core.constants import CoachingTopic
 from pydantic import BaseModel, Field, field_validator
-
-from src.core.constants import CoachingTopic
 
 
 class InitiateConversationRequest(BaseModel):

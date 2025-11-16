@@ -4,22 +4,21 @@ import json
 from typing import Any
 
 import structlog
-
-from src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
-from src.core.llm_models import get_model
-from src.domain.entities.llm_config.llm_configuration import LLMConfiguration
-from src.llm.providers.manager import ProviderManager
-from src.services.llm_configuration_service import (
+from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
+from coaching.src.core.llm_models import get_model
+from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
+from coaching.src.llm.providers.manager import ProviderManager
+from coaching.src.services.llm_configuration_service import (
     ConfigurationNotFoundError,
     LLMConfigurationService,
 )
-from src.services.llm_service_adapter import LLMServiceAdapter
-from src.services.llm_template_service import (
+from coaching.src.services.llm_service_adapter import LLMServiceAdapter
+from coaching.src.services.llm_template_service import (
     LLMTemplateService,
     TemplateNotFoundError,
 )
-from src.services.prompt_service import PromptService
-from src.workflows.orchestrator import WorkflowOrchestrator
+from coaching.src.services.prompt_service import PromptService
+from coaching.src.workflows.orchestrator import WorkflowOrchestrator
 
 from ..models.llm_models import BusinessContextForLLM, LLMResponse, SessionOutcomes
 

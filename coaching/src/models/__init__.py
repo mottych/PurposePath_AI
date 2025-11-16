@@ -1,6 +1,6 @@
 """Data models for the coaching module."""
 
-from src.domain.value_objects.message import Message
+from coaching.src.domain.value_objects.message import Message
 
 from .conversation import (
     Conversation,

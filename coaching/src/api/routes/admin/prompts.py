@@ -5,30 +5,30 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
-from src.api.dependencies import get_s3_prompt_storage, get_topic_repository
-from src.api.middleware.admin_auth import require_admin_access
-from src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
-from src.domain.exceptions.topic_exceptions import (
+from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
+from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
     PromptNotFoundError,
     TopicNotFoundError,
 )
-from src.models.prompt_requests import (
+from coaching.src.models.prompt_requests import (
     CreatePromptRequest,
     CreateTopicRequest,
     UpdateTopicRequest,
 )
-from src.models.prompt_responses import (
+from coaching.src.models.prompt_responses import (
     ParameterDefinitionResponse,
     PromptDetailResponse,
     TopicResponse,
 )
-from src.repositories.topic_repository import TopicRepository
-from src.services.s3_prompt_storage import S3PromptStorage
+from coaching.src.repositories.topic_repository import TopicRepository
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 

@@ -6,17 +6,16 @@ codes and error messages.
 """
 
 import structlog
+from coaching.src.domain.exceptions.base_exception import DomainException
+from coaching.src.domain.exceptions.conversation_exceptions import (
+    ConversationNotActive,
+    ConversationNotFound,
+)
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from src.domain.exceptions.base_exception import DomainException
-from src.domain.exceptions.conversation_exceptions import (
-    ConversationNotActive,
-    ConversationNotFound,
-)
 
 logger = structlog.get_logger()
 

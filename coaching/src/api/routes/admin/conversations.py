@@ -1,22 +1,22 @@
 """Admin API routes for conversation monitoring."""
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse, PaginatedResponse, PaginationMeta
-from src.api.auth import get_current_context
-from src.api.dependencies import get_conversation_repository
-from src.api.middleware.admin_auth import require_admin_access
-from src.core.types import create_tenant_id, create_user_id
-from src.infrastructure.repositories.dynamodb_conversation_repository import (
+from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies import get_conversation_repository
+from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.core.types import create_tenant_id, create_user_id
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from src.models.admin_responses import (
+from coaching.src.models.admin_responses import (
     ConversationDetail,
     ConversationMessage,
     ConversationSummary,
 )
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse, PaginatedResponse, PaginationMeta
 
 logger = structlog.get_logger()
 router = APIRouter()

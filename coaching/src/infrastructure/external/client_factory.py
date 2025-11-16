@@ -1,7 +1,7 @@
 """Factory functions for creating external API clients."""
 
-from src.core.config import get_settings
-from src.infrastructure.external.business_api_client import BusinessApiClient
+from coaching.src.core.config import get_settings
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
 
 def create_business_api_client(jwt_token: str) -> BusinessApiClient:

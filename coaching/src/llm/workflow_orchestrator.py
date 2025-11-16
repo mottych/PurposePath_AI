@@ -13,10 +13,9 @@ from datetime import datetime
 from typing import Any, TypedDict
 
 import structlog
-
-from src.llm.providers.manager import provider_manager
-from src.workflows.base import WorkflowConfig, WorkflowState, WorkflowStatus, WorkflowType
-from src.workflows.orchestrator import WorkflowOrchestrator
+from coaching.src.llm.providers.manager import provider_manager
+from coaching.src.workflows.base import WorkflowConfig, WorkflowState, WorkflowStatus, WorkflowType
+from coaching.src.workflows.orchestrator import WorkflowOrchestrator
 
 logger = structlog.get_logger(__name__)
 

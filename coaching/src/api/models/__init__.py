@@ -4,7 +4,7 @@ This module provides Pydantic models for API layer, separate from domain models.
 These models handle serialization, validation, and API contracts.
 """
 
-from src.api.models.analysis import (
+from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
     AlignmentScore,
@@ -17,8 +17,8 @@ from src.api.models.analysis import (
     StrategyAnalysisResponse,
     StrategyRecommendation,
 )
-from src.api.models.auth import UserContext
-from src.api.models.conversations import (
+from coaching.src.api.models.auth import UserContext
+from coaching.src.api.models.conversations import (
     CompleteConversationRequest,
     ConversationDetailResponse,
     ConversationListResponse,

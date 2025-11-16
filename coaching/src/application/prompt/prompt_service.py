@@ -5,11 +5,10 @@ supporting both end-user consumption and admin UI management.
 """
 
 import structlog
-
-from src.core.constants import CoachingTopic
-from src.core.types import PromptTemplateId
-from src.domain.entities.prompt_template import PromptTemplate
-from src.domain.ports.prompt_repository_port import PromptRepositoryPort
+from coaching.src.core.constants import CoachingTopic
+from coaching.src.core.types import PromptTemplateId
+from coaching.src.domain.entities.prompt_template import PromptTemplate
+from coaching.src.domain.ports.prompt_repository_port import PromptRepositoryPort
 
 logger = structlog.get_logger()
 

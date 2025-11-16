@@ -10,16 +10,15 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from langgraph.graph import StateGraph
-from pydantic import BaseModel, Field
-
-from src.application.conversation.conversation_service import (
+from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
-from src.application.llm.llm_service import LLMApplicationService
-from src.core.constants import CoachingTopic, MessageRole
-from src.core.types import ConversationId, TenantId, UserId
-from src.domain.ports.llm_provider_port import LLMMessage
+from coaching.src.application.llm.llm_service import LLMApplicationService
+from coaching.src.core.constants import CoachingTopic, MessageRole
+from coaching.src.core.types import ConversationId, TenantId, UserId
+from coaching.src.domain.ports.llm_provider_port import LLMMessage
+from langgraph.graph import StateGraph
+from pydantic import BaseModel, Field
 
 from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 

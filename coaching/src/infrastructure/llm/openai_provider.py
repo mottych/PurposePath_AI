@@ -8,8 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
 import structlog
-
-from src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
+from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
 

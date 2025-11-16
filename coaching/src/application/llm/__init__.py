@@ -1,5 +1,5 @@
 """LLM application services."""
 
-from src.application.llm.llm_service import LLMApplicationService
+from coaching.src.application.llm.llm_service import LLMApplicationService
 
 __all__ = ["LLMApplicationService"]

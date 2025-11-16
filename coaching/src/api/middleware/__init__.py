@@ -6,8 +6,8 @@ This package provides middleware for:
 - Rate limiting: Token bucket rate limiting
 """
 
-from src.api.middleware.error_handling import ErrorHandlingMiddleware
-from src.api.middleware.logging import LoggingMiddleware
-from src.api.middleware.rate_limiting import RateLimitingMiddleware
+from coaching.src.api.middleware.error_handling import ErrorHandlingMiddleware
+from coaching.src.api.middleware.logging import LoggingMiddleware
+from coaching.src.api.middleware.rate_limiting import RateLimitingMiddleware
 
 __all__ = ["ErrorHandlingMiddleware", "LoggingMiddleware", "RateLimitingMiddleware"]

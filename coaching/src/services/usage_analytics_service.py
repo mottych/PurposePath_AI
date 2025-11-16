@@ -4,12 +4,11 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from pydantic import BaseModel, Field
-
-from src.domain.value_objects.message import Message
-from src.infrastructure.repositories.dynamodb_conversation_repository import (
+from coaching.src.domain.value_objects.message import Message
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 

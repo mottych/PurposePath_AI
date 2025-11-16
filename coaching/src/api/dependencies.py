@@ -7,18 +7,40 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import structlog
-
-from src.api.auth import get_current_context
-from src.application.analysis.alignment_service import AlignmentAnalysisService
-from src.application.analysis.base_analysis_service import BaseAnalysisService
-from src.application.analysis.kpi_service import KPIAnalysisService
-from src.application.analysis.strategy_service import StrategyAnalysisService
+from coaching.src.api.auth import get_current_context
+from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
+from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
+from coaching.src.application.analysis.kpi_service import KPIAnalysisService
+from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
 
     from src.services.model_config_service import ModelConfigService
 
+from coaching.src.application.conversation.conversation_service import (
+    ConversationApplicationService,
+)
+from coaching.src.application.llm.llm_service import LLMApplicationService
+from coaching.src.core.config_multitenant import settings
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
+from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+    DynamoDBConversationRepository,
+)
+from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+    LLMConfigurationRepository,
+)
+from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
+    TemplateMetadataRepository,
+)
+from coaching.src.repositories.topic_repository import TopicRepository
+from coaching.src.services.cache_service import CacheService
+from coaching.src.services.insights_service import InsightsService
+from coaching.src.services.llm_configuration_service import LLMConfigurationService
+from coaching.src.services.llm_template_service import LLMTemplateService
+from coaching.src.services.prompt_service import PromptService
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import Depends
 
 from shared.models.multitenant import RequestContext
@@ -27,29 +49,6 @@ from shared.services.aws_helpers import (
     get_dynamodb_resource,
     get_s3_client,
 )
-from src.application.conversation.conversation_service import (
-    ConversationApplicationService,
-)
-from src.application.llm.llm_service import LLMApplicationService
-from src.core.config_multitenant import settings
-from src.infrastructure.external.business_api_client import BusinessApiClient
-from src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
-from src.infrastructure.repositories.dynamodb_conversation_repository import (
-    DynamoDBConversationRepository,
-)
-from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
-    LLMConfigurationRepository,
-)
-from src.infrastructure.repositories.llm_config.template_metadata_repository import (
-    TemplateMetadataRepository,
-)
-from src.repositories.topic_repository import TopicRepository
-from src.services.cache_service import CacheService
-from src.services.insights_service import InsightsService
-from src.services.llm_configuration_service import LLMConfigurationService
-from src.services.llm_template_service import LLMTemplateService
-from src.services.prompt_service import PromptService
-from src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
 

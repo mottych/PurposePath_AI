@@ -3,24 +3,24 @@
 from datetime import datetime
 
 import structlog
+from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies import (
+    get_conversation_repository,
+)
+from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+    DynamoDBConversationRepository,
+)
+from coaching.src.services.usage_analytics_service import (
+    ModelUsageMetrics,
+    UsageAnalyticsService,
+    UsageMetrics,
+)
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel
 
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
-from src.api.auth import get_current_context
-from src.api.dependencies import (
-    get_conversation_repository,
-)
-from src.api.middleware.admin_auth import require_admin_access
-from src.infrastructure.repositories.dynamodb_conversation_repository import (
-    DynamoDBConversationRepository,
-)
-from src.services.usage_analytics_service import (
-    ModelUsageMetrics,
-    UsageAnalyticsService,
-    UsageMetrics,
-)
 
 logger = structlog.get_logger()
 router = APIRouter()

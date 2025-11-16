@@ -9,11 +9,10 @@ multi-provider support and advanced workflow capabilities.
 from typing import Any
 
 import structlog
-
-from src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
-from src.llm.providers.manager import ProviderManager
-from src.workflows.base import WorkflowState, WorkflowType
-from src.workflows.orchestrator import WorkflowOrchestrator
+from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
+from coaching.src.llm.providers.manager import ProviderManager
+from coaching.src.workflows.base import WorkflowState, WorkflowType
+from coaching.src.workflows.orchestrator import WorkflowOrchestrator
 
 logger = structlog.get_logger(__name__)
 

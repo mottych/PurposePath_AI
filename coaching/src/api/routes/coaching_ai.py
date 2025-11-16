@@ -4,21 +4,21 @@ import uuid
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from shared.services.aws_helpers import get_bedrock_client
-from src.api.auth import get_current_user
-from src.api.models.analysis import (
+from coaching.src.api.auth import get_current_user
+from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
     AlignmentScore,
 )
-from src.api.models.auth import UserContext
-from src.application.analysis.alignment_service import AlignmentAnalysisService
-from src.application.llm.llm_service import LLMApplicationService
-from src.core.config_multitenant import settings
-from src.core.constants import AnalysisType
-from src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from coaching.src.api.models.auth import UserContext
+from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
+from coaching.src.application.llm.llm_service import LLMApplicationService
+from coaching.src.core.config_multitenant import settings
+from coaching.src.core.constants import AnalysisType
+from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/coaching", tags=["coaching", "ai"])

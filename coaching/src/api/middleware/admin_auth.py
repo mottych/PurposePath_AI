@@ -1,10 +1,10 @@
 """Admin authentication and authorization middleware."""
 
 import structlog
+from coaching.src.api.auth import get_current_context
 from fastapi import Depends, HTTPException, status
 
 from shared.models.multitenant import RequestContext, UserRole
-from src.api.auth import get_current_context
 
 logger = structlog.get_logger()
 

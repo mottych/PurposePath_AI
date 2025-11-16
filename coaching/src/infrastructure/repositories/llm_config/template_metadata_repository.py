@@ -10,9 +10,8 @@ from uuid import uuid4
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
-
-from src.core.llm_interactions import get_interaction
-from src.domain.entities.llm_config.template_metadata import TemplateMetadata
+from coaching.src.core.llm_interactions import get_interaction
+from coaching.src.domain.entities.llm_config.template_metadata import TemplateMetadata
 
 logger = structlog.get_logger()
 

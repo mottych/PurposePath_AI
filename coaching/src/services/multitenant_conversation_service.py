@@ -6,6 +6,30 @@ from typing import Any, cast
 
 import structlog
 
+# Enhanced with shared types for better type safety
+from coaching.src.core.config_multitenant import settings
+from coaching.src.core.exceptions import ConversationNotFoundCompatError
+from coaching.src.infrastructure.llm.model_pricing import calculate_cost
+from coaching.src.models.conversation import Conversation
+
+# Import LLM models for better type safety
+from coaching.src.models.llm_models import SessionOutcomes
+from coaching.src.models.responses import (
+    AIResponseData,
+    BusinessContext,
+    CacheSessionData,
+    ConversationListResponse,
+    ConversationResponse,
+    ConversationSummary,
+    MessageResponse,
+    SessionContextData,
+    UserPreferences,
+)
+from coaching.src.repositories.conversation_repository import ConversationRepository
+from coaching.src.services.cache_service import CacheService
+from coaching.src.services.llm_service import LLMService
+from coaching.src.services.prompt_service import PromptService
+
 from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
 from shared.models.multitenant import RequestContext
 
@@ -26,30 +50,6 @@ from shared.types.coaching_models import (
 )
 from shared.types.coaching_models import CoachingSession as CoachingSessionDict
 from shared.types.coaching_models import UserPreferences as UserPreferencesDict
-
-# Enhanced with shared types for better type safety
-from src.core.config_multitenant import settings
-from src.core.exceptions import ConversationNotFoundCompatError
-from src.infrastructure.llm.model_pricing import calculate_cost
-from src.models.conversation import Conversation
-
-# Import LLM models for better type safety
-from src.models.llm_models import SessionOutcomes
-from src.models.responses import (
-    AIResponseData,
-    BusinessContext,
-    CacheSessionData,
-    ConversationListResponse,
-    ConversationResponse,
-    ConversationSummary,
-    MessageResponse,
-    SessionContextData,
-    UserPreferences,
-)
-from src.repositories.conversation_repository import ConversationRepository
-from src.services.cache_service import CacheService
-from src.services.llm_service import LLMService
-from src.services.prompt_service import PromptService
 
 logger = structlog.get_logger()  # Third-party logging boundary
 
