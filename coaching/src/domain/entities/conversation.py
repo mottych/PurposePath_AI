@@ -9,8 +9,10 @@ from typing import Any
 
 from coaching.src.core.constants import (
     CoachingTopic,
+    ConversationPhase,
     ConversationStatus,
     MessageRole,
+    PHASE_PROGRESS_WEIGHTS,
 )
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.value_objects.conversation_context import (
@@ -225,6 +227,30 @@ class Conversation(BaseModel):
         estimated_completion_messages = 12
         progress = min(1.0, total_messages / estimated_completion_messages) * 100.0
         return progress
+
+    def transition_to_phase(self, new_phase: ConversationPhase) -> None:
+        """
+        Transition conversation to a new phase.
+
+        Args:
+            new_phase: The new conversation phase to transition to
+
+        Business Rule: Phase transitions update the conversation context
+        and progress percentage based on the phase progress weights
+        """
+        # Calculate progress percentage based on phase
+        progress_percentage = PHASE_PROGRESS_WEIGHTS[new_phase] * 100.0
+        
+        new_context = ConversationContext(
+            current_phase=new_phase,
+            insights=self.context.insights,
+            response_count=self.context.response_count,
+            progress_percentage=progress_percentage,
+            metadata=self.context.metadata,
+        )
+
+        object.__setattr__(self, "context", new_context)
+        object.__setattr__(self, "updated_at", datetime.now(UTC))
 
     def get_conversation_history(self, max_messages: int | None = None) -> list[dict[str, str]]:
         """

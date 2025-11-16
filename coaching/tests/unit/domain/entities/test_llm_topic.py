@@ -4,12 +4,12 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.domain.entities.llm_topic import (
+from coaching.src.domain.entities.llm_topic import (
     LLMTopic,
     ParameterDefinition,
     PromptInfo,
 )
-from src.domain.exceptions.topic_exceptions import InvalidTopicTypeError
+from coaching.src.domain.exceptions.topic_exceptions import InvalidTopicTypeError
 
 
 class TestPromptInfo:
@@ -155,6 +155,12 @@ class TestLLMTopic:
             topic_type="conversation_coaching",
             category="coaching",
             is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
             allowed_parameters=[
                 ParameterDefinition(
                     name="user_name",
@@ -172,7 +178,7 @@ class TestLLMTopic:
                     updated_by="admin@test.com",
                 )
             ],
-            config={"default_model": "claude-3-sonnet", "supports_streaming": True},
+            additional_config={"default_model": "claude-3-sonnet", "supports_streaming": True},
             created_at=datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC),
             updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
             description="Discover your core values",
@@ -192,9 +198,12 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="analysis",
             is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
             allowed_parameters=[],
             prompts=[],
-            config={},
+            additional_config={},
             created_at=datetime.now(tz=UTC),
             updated_at=datetime.now(tz=UTC),
         )
@@ -207,9 +216,12 @@ class TestLLMTopic:
             topic_type="kpi_system",
             category="kpi",
             is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
             allowed_parameters=[],
             prompts=[],
-            config={},
+            additional_config={},
             created_at=datetime.now(tz=UTC),
             updated_at=datetime.now(tz=UTC),
         )
@@ -224,9 +236,12 @@ class TestLLMTopic:
                 topic_type="invalid_type",
                 category="test",
                 is_active=True,
+                model_code="claude-3-5-sonnet-20241022",
+                temperature=0.7,
+                max_tokens=2000,
                 allowed_parameters=[],
                 prompts=[],
-                config={},
+                additional_config={},
                 created_at=datetime.now(tz=UTC),
                 updated_at=datetime.now(tz=UTC),
             )
@@ -242,7 +257,10 @@ class TestLLMTopic:
         assert item["is_active"] is True
         assert len(item["allowed_parameters"]) == 1
         assert len(item["prompts"]) == 1
-        assert item["config"]["default_model"] == "claude-3-sonnet"
+        assert item["model_code"] == "claude-3-5-sonnet-20241022"
+        assert item["temperature"] == 0.7
+        assert item["max_tokens"] == 2000
+        assert item["additional_config"]["default_model"] == "claude-3-sonnet"
         assert item["created_at"] == "2025-01-15T10:00:00+00:00"
         assert item["updated_at"] == "2025-01-20T12:00:00+00:00"
         assert item["description"] == "Discover your core values"
@@ -250,7 +268,7 @@ class TestLLMTopic:
         assert item["created_by"] == "admin@test.com"
 
     def test_from_dynamodb_item(self) -> None:
-        """Test creation from DynamoDB item."""
+        """Test creation from DynamoDB item with old format for backward compatibility."""
         item = {
             "topic_id": "test_topic",
             "topic_name": "Test Topic",
@@ -267,7 +285,7 @@ class TestLLMTopic:
                     "updated_by": "user",
                 }
             ],
-            "config": {"key": "value"},
+            "config": {"key": "value", "model_code": "claude-3-5-sonnet-20241022"},
             "created_at": "2025-01-15T10:00:00+00:00",
             "updated_at": "2025-01-20T12:00:00+00:00",
             "description": "Test description",
@@ -284,7 +302,8 @@ class TestLLMTopic:
         assert topic.is_active is False
         assert len(topic.allowed_parameters) == 1
         assert len(topic.prompts) == 1
-        assert topic.config["key"] == "value"
+        assert topic.additional_config["key"] == "value"
+        assert topic.model_code == "claude-3-5-sonnet-20241022"
         assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert topic.description == "Test description"
@@ -303,7 +322,10 @@ class TestLLMTopic:
         assert roundtrip.is_active == sample_topic.is_active
         assert len(roundtrip.allowed_parameters) == len(sample_topic.allowed_parameters)
         assert len(roundtrip.prompts) == len(sample_topic.prompts)
-        assert roundtrip.config == sample_topic.config
+        assert roundtrip.additional_config == sample_topic.additional_config
+        assert roundtrip.model_code == sample_topic.model_code
+        assert roundtrip.temperature == sample_topic.temperature
+        assert roundtrip.max_tokens == sample_topic.max_tokens
         assert roundtrip.created_at == sample_topic.created_at
         assert roundtrip.updated_at == sample_topic.updated_at
 
@@ -345,9 +367,12 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="test",
             is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
             allowed_parameters=[],
             prompts=[],
-            config={},
+            additional_config={},
             created_at=datetime.now(tz=UTC),
             updated_at=datetime.now(tz=UTC),
         )
