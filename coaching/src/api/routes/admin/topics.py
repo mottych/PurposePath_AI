@@ -3,7 +3,11 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from coaching.src.api.dependencies import get_current_context, get_topic_repository
+from coaching.src.api.dependencies import (
+    get_current_context,
+    get_s3_prompt_storage,
+    get_topic_repository,
+)
 from coaching.src.api.models.auth import UserContext
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
@@ -32,6 +36,7 @@ from coaching.src.models.admin_topics import (
     ValidationResult,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from structlog import get_logger
 
@@ -123,7 +128,7 @@ async def list_topics(
     """
     try:
         # Get all topics
-        all_topics = await repository.get_all_topics()
+        all_topics = await repository.list_all(include_inactive=True)
 
         # Apply filters
         filtered = all_topics
@@ -178,7 +183,7 @@ async def get_topic(
     Requires admin:topics:read permission.
     """
     try:
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -209,7 +214,7 @@ async def create_topic(
     """
     try:
         # Check if topic already exists
-        existing = await repository.get_topic_by_id(request.topic_id)
+        existing = await repository.get(topic_id=request.topic_id)
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -251,7 +256,7 @@ async def create_topic(
         topic.validate()
 
         # Save
-        await repository.create_topic(topic)
+        await repository.create(topic=topic)
 
         logger.info(
             "Topic created",
@@ -299,7 +304,7 @@ async def update_topic(
     """
     try:
         # Get existing topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -345,7 +350,7 @@ async def update_topic(
         updated_topic = topic.update(**updates)
         updated_topic.validate()
 
-        await repository.update_topic(updated_topic)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Topic updated",
@@ -389,7 +394,7 @@ async def delete_topic(
     """
     try:
         # Get existing topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -400,13 +405,13 @@ async def delete_topic(
 
         if hard_delete:
             # Hard delete - permanently remove
-            await repository.delete_topic(topic_id)
+            await repository.delete(topic_id=topic_id, hard_delete=True)
             logger.info("Topic hard deleted", topic_id=topic_id, deleted_by=user.user_id)
             raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="")
         else:
             # Soft delete - mark as inactive
             updated_topic = topic.update(is_active=False, updated_at=now)
-            await repository.update_topic(updated_topic)
+            await repository.update(topic=updated_topic)
 
             logger.info("Topic deactivated", topic_id=topic_id, deactivated_by=user.user_id)
 
@@ -431,6 +436,7 @@ async def get_prompt_content(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     prompt_type: Annotated[str, Path(description="Prompt type")],
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
     _user: UserContext = Depends(get_current_context),
 ) -> PromptContentResponse:
     """Get prompt content for editing.
@@ -439,7 +445,7 @@ async def get_prompt_content(
     """
     try:
         # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -455,7 +461,7 @@ async def get_prompt_content(
             )
 
         # Get content from S3
-        content = await repository.get_prompt_content(prompt.s3_bucket, prompt.s3_key)
+        content = await s3_storage.get_prompt(topic_id=topic_id, prompt_type=prompt_type)
 
         return PromptContentResponse(
             topic_id=topic_id,
@@ -489,6 +495,7 @@ async def update_prompt_content(
     request: UpdatePromptRequest,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> UpdatePromptResponse:
     """Update prompt content.
 
@@ -496,7 +503,7 @@ async def update_prompt_content(
     """
     try:
         # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -513,10 +520,10 @@ async def update_prompt_content(
 
         # Update content in S3
         now = datetime.now(UTC)
-        await repository.update_prompt_content(
-            prompt.s3_bucket,
-            prompt.s3_key,
-            request.content,
+        await s3_storage.save_prompt(
+            topic_id=topic_id,
+            prompt_type=prompt_type,
+            content=request.content,
         )
 
         # Update prompt metadata in topic
@@ -536,7 +543,7 @@ async def update_prompt_content(
         ]
 
         updated_topic = topic.update(prompts=updated_prompts, updated_at=now)
-        await repository.update_topic(updated_topic)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt updated",
@@ -579,6 +586,7 @@ async def create_prompt(
     request: CreatePromptRequest,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> CreatePromptResponse:
     """Create a new prompt for a topic.
 
@@ -586,7 +594,7 @@ async def create_prompt(
     """
     try:
         # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -600,13 +608,14 @@ async def create_prompt(
                 detail=f"Prompt type '{request.prompt_type}' already exists for topic '{topic_id}'",
             )
 
-        # Create S3 key
-        s3_bucket = topic.prompts[0].s3_bucket if topic.prompts else "purposepath-prompts-prod"
-        s3_key = f"prompts/{topic_id}/{request.prompt_type}.md"
-
         # Upload content to S3
         now = datetime.now(UTC)
-        await repository.update_prompt_content(s3_bucket, s3_key, request.content)
+        s3_key = await s3_storage.save_prompt(
+            topic_id=topic_id,
+            prompt_type=request.prompt_type,
+            content=request.content,
+        )
+        s3_bucket = s3_storage.bucket_name
 
         # Add prompt to topic
         new_prompt = DomainPromptInfo(
@@ -621,7 +630,7 @@ async def create_prompt(
             prompts=[*topic.prompts, new_prompt],
             updated_at=now,
         )
-        await repository.update_topic(updated_topic)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt created",
@@ -660,6 +669,7 @@ async def delete_prompt(
     prompt_type: Annotated[str, Path(description="Prompt type")],
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> DeletePromptResponse:
     """Delete a prompt from a topic.
 
@@ -667,7 +677,7 @@ async def delete_prompt(
     """
     try:
         # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -683,12 +693,12 @@ async def delete_prompt(
             )
 
         # Delete from S3
-        await repository.delete_prompt_content(prompt.s3_bucket, prompt.s3_key)
+        await s3_storage.delete_prompt(topic_id=topic_id, prompt_type=prompt_type)
 
         # Remove from topic
         updated_prompts = [p for p in topic.prompts if p.prompt_type != prompt_type]
         updated_topic = topic.update(prompts=updated_prompts, updated_at=datetime.now(UTC))
-        await repository.update_topic(updated_topic)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt deleted",
