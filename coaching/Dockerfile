@@ -5,10 +5,11 @@ FROM public.ecr.aws/lambda/python:3.11
 COPY coaching/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code directly to task root  
-COPY coaching/src ${LAMBDA_TASK_ROOT}/src
+# Copy source code with proper module structure
+# coaching/src -> coaching/src (maintains import paths like coaching.src.api.main)
+COPY coaching ${LAMBDA_TASK_ROOT}/coaching
 COPY shared ${LAMBDA_TASK_ROOT}/shared
 
-# Use handler directly from main.py
-CMD ["src.api.main.handler"]
+# Use handler with proper module path
+CMD ["coaching.src.api.main.handler"]
 
