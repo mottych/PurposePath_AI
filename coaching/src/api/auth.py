@@ -38,7 +38,9 @@ def _get_jwt_secret() -> str:
     return "change-me-in-prod"  # Fallback for development
 
 
-async def get_current_context(authorization: str = Header(...)) -> RequestContext:
+async def get_current_context(
+    authorization: str | None = Header(None),
+) -> RequestContext:
     """Extract and validate request context from JWT token.
 
     Args:
@@ -50,6 +52,13 @@ async def get_current_context(authorization: str = Header(...)) -> RequestContex
     Raises:
         HTTPException: If token is invalid or missing required fields
     """
+    # Allow missing authorization for development/testing
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization header",
+        )
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header format")
 
