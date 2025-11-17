@@ -18,8 +18,6 @@ from coaching.src.models.admin_topics import (
     CreateTopicResponse,
     DeletePromptResponse,
     DeleteTopicResponse,
-    ModelInfo,
-    ModelsListResponse,
     ParameterDefinition,
     PromptContentResponse,
     PromptInfo,
@@ -39,7 +37,7 @@ from structlog import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/admin/topics", tags=["Admin - Topics"])
+router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 
 
 # Helper functions
@@ -715,65 +713,6 @@ async def delete_prompt(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete prompt",
         ) from e
-
-
-@router.get("/../../models", response_model=ModelsListResponse)
-async def list_models(
-    _user: UserContext = Depends(get_current_context),
-) -> ModelsListResponse:
-    """List available LLM models.
-
-    Requires admin:topics:read permission.
-    """
-    # Hardcoded model list based on current Bedrock models
-    models = [
-        ModelInfo(
-            model_code="claude-3-5-sonnet-20241022",
-            model_name="Claude 3.5 Sonnet",
-            provider="anthropic",
-            capabilities=["chat", "function_calling"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=3.00,
-            cost_per_output_million=15.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="claude-3-5-haiku-20241022",
-            model_name="Claude 3.5 Haiku",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=0.80,
-            cost_per_output_million=4.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="anthropic.claude-3-sonnet-20240229-v1:0",
-            model_name="Claude 3 Sonnet (Legacy)",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=3.00,
-            cost_per_output_million=15.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="anthropic.claude-3-haiku-20240307-v1:0",
-            model_name="Claude 3 Haiku (Legacy)",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=0.25,
-            cost_per_output_million=1.25,
-            is_active=True,
-        ),
-    ]
-
-    return ModelsListResponse(models=models)
 
 
 @router.post("/validate", response_model=ValidationResult)
