@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from coaching.src.api.dependencies import get_current_context, get_topic_repository
+from coaching.src.api.models.auth import UserContext
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
@@ -35,8 +36,6 @@ from coaching.src.models.admin_topics import (
 from coaching.src.repositories.topic_repository import TopicRepository
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from structlog import get_logger
-
-from shared.models.user_context import UserContext
 
 logger = get_logger(__name__)
 
