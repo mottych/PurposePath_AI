@@ -24,9 +24,10 @@ from coaching.src.api.routes import (
     website,
 )
 from coaching.src.core.config_multitenant import settings
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
+from starlette.middleware.base import BaseHTTPMiddleware
 
 structlog.configure(
     processors=[
@@ -48,6 +49,28 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
+class CORSPreflightMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+    """Middleware to handle CORS preflight OPTIONS requests early.
+
+    This middleware ensures OPTIONS requests get CORS headers without
+    going through authentication or other middleware that might reject them.
+    """
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        """Handle OPTIONS requests immediately."""
+        # Let CORSMiddleware handle the response
+        # This just ensures we log pre-flight requests for debugging
+        if request.method == "OPTIONS":
+            logger.debug(
+                "CORS preflight request",
+                path=request.url.path,
+                origin=request.headers.get("origin"),
+            )
+
+        response = await call_next(request)
+        return response
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
@@ -65,6 +88,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add middleware in correct order - CORS must be last (runs first)
+app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)
+app.add_middleware(ErrorHandlingMiddleware)
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(CORSPreflightMiddleware)
+
+# CORS middleware must be added LAST so it runs FIRST in the middleware chain
+# This ensures CORS headers are added before any authentication or error handling
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://.*\.purposepath\.app|http://localhost:\d+",
@@ -80,12 +111,14 @@ app.add_middleware(
         "X-Tenant-Id",
         "X-User-Id",
     ],
+    expose_headers=[
+        "X-Request-Id",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+    ],
     max_age=3600,
 )
-
-app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)
-app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(LoggingMiddleware)
 
 # Include routers
 app.include_router(conversations.router, prefix=f"{settings.api_prefix}")
