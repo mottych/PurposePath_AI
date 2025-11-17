@@ -4,11 +4,17 @@ This service handles storing and retrieving prompt markdown files from S3,
 following the path structure: prompts/{topic_id}/{prompt_type}.md
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import boto3
 import structlog
 from botocore.exceptions import ClientError
 from coaching.src.domain.exceptions.topic_exceptions import S3StorageError
-from mypy_boto3_s3 import S3Client
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
 
 logger = structlog.get_logger()
 
