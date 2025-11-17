@@ -1,14 +1,18 @@
 """Shared data access layer for cross-module communication in PurposePath."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import structlog
 from boto3.dynamodb.conditions import And, Attr, ConditionBase, Key
 from botocore.exceptions import ClientError
-from mypy_boto3_dynamodb import DynamoDBServiceResource
-from mypy_boto3_dynamodb.service_resource import Table
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb import DynamoDBServiceResource
+    from mypy_boto3_dynamodb.service_resource import Table
 
 # Import shared types for enhanced type safety
 from shared.types import (
