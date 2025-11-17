@@ -39,7 +39,7 @@ from structlog import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/admin/topics", tags=["Admin - Topics"])
+router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 
 
 # Helper functions
