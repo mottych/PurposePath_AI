@@ -1,57 +1,35 @@
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from mypy_boto3_secretsmanager import SecretsManagerClient
-
-from coaching.src.core.config_multitenant import settings
+from coaching.src.api.auth import get_current_context
 from coaching.src.models.requests import OnboardingSuggestionRequest
 from coaching.src.models.responses import OnboardingSuggestionResponse
-from fastapi import APIRouter, Header
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends
 
+from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
-from shared.services.aws_helpers import get_secretsmanager_client
 
 router = APIRouter()
 
 
-def _get_jwt_secret() -> str:
-    try:
-        if settings.jwt_secret_arn:
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            resp = client.get_secret_value(SecretId=settings.jwt_secret_arn)
-            s = resp.get("SecretString") or ""
-            try:
-                obj = json.loads(s)
-                return str(obj.get("secret", s))
-            except Exception:
-                return s
-        return "change-me-in-prod"
-    except Exception:
-        return "change-me-in-prod"
-
-
-def _authorized(auth_header: str | None) -> bool:
-    if not auth_header or not auth_header.lower().startswith("bearer "):
-        return False
-    token = auth_header.split(" ", 1)[1]
-    secret = _get_jwt_secret()
-    try:
-        jwt.decode(token, secret, algorithms=[settings.jwt_algorithm], issuer=settings.jwt_issuer)
-        return True
-    except JWTError:
-        return False
-
-
 @router.post("/onboarding", response_model=ApiResponse[OnboardingSuggestionResponse])
 async def suggest_onboarding(
-    payload: OnboardingSuggestionRequest, authorization: str | None = Header(default=None)
+    payload: OnboardingSuggestionRequest,
+    _context: RequestContext = Depends(get_current_context),
 ) -> ApiResponse[OnboardingSuggestionResponse]:
-    if not _authorized(authorization):
-        return ApiResponse(success=False, error="Unauthorized")
+    """Generate onboarding suggestions based on user input.
+
+    Args:
+        payload: Request containing suggestion type and current value
+        _context: Authenticated user context (validated via dependency injection)
+
+    Returns:
+        ApiResponse containing suggestion text
+
+    Raises:
+        HTTPException 401: If authentication fails
+    """
+    # Authentication is enforced via _context dependency injection
+    # Future enhancement: Use context for tenant-specific suggestions
 
     # Simple deterministic stub; can be replaced with Bedrock/LLM call
     base = {
