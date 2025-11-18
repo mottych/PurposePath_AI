@@ -3,6 +3,8 @@
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
+from coaching.src.services.llm_service import LLMService
+from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, HttpUrl
 
@@ -11,6 +13,23 @@ from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+async def get_website_analysis_service() -> WebsiteAnalysisService:
+    """Get website analysis service dependency.
+
+    Returns:
+        WebsiteAnalysisService instance
+    """
+    # Create LLM service (simplified for now - could use full dependency injection)
+    from coaching.src.llm.providers.manager import ProviderManager
+
+    provider_manager = ProviderManager()
+    # Use Bedrock as primary provider
+    await provider_manager.initialize()
+
+    llm_service = LLMService(provider_manager=provider_manager)
+    return WebsiteAnalysisService(llm_service=llm_service)
 
 
 @router.options("/scan")
@@ -39,51 +58,90 @@ class WebsiteScanResponse(BaseModel):
 @router.post("/scan", response_model=ApiResponse[WebsiteScanResponse])
 async def scan_website(
     scan_request: WebsiteScanRequest,
-    context: RequestContext = Depends(get_current_context),
+    _context: RequestContext = Depends(get_current_context),
+    analysis_service: WebsiteAnalysisService = Depends(get_website_analysis_service),
 ) -> ApiResponse[WebsiteScanResponse]:
     """
-    Analyze website for business insights.
+    Analyze website for business insights using AI.
 
-    TODO: Implement AI-powered website analysis including:
-    - Product/service extraction
-    - Target market identification
-    - Value proposition analysis
-    - Competitive positioning
-    - Content strategy insights
+    This endpoint:
+    - Fetches and parses website content
+    - Extracts products/services information
+    - Identifies target market and ICA
+    - Analyzes value proposition
+    - Returns structured business insights
+
+    Raises:
+        HTTPException 400: Invalid URL or website cannot be accessed
+        HTTPException 500: Analysis failed
     """
     logger.info(
-        "Website scan requested (STUB)",
+        "Website scan requested",
         url=str(scan_request.url),
-        user_id=context.user_id,
-        tenant_id=context.tenant_id,
+        user_id=_context.user_id,
+        tenant_id=_context.tenant_id,
     )
 
-    # STUB IMPLEMENTATION
-    # In the future, this will:
-    # 1. Crawl and analyze the website content
-    # 2. Extract product/service information
-    # 3. Identify target market and ICA
-    # 4. Generate value proposition suggestions
-    # 5. Provide actionable business insights
+    try:
+        # Analyze website using AI service
+        analysis = await analysis_service.analyze_website(str(scan_request.url))
 
-    stub_response = WebsiteScanResponse(
-        products=[
+        # Convert to response format
+        products = [
             ProductInfo(
-                id="generated_placeholder_id",
-                name="Business Service/Product",
-                problem="Identified business challenge (analysis pending)",
+                id=product.get("id", "unknown"),
+                name=product.get("name", "Unknown Product"),
+                problem=product.get("problem", ""),
             )
-        ],
-        niche="Target market analysis in progress",
-        ica="Ideal Customer Avatar to be defined",
-        value_proposition="Value proposition development scheduled",
-    )
+            for product in analysis.get("products", [])
+        ]
 
-    return ApiResponse(
-        success=True,
-        data=stub_response,
-        message="Website scan completed (preliminary analysis - full AI analysis coming soon)",
-    )
+        response = WebsiteScanResponse(
+            products=products,
+            niche=analysis.get("niche", ""),
+            ica=analysis.get("ica", ""),
+            value_proposition=analysis.get("value_proposition", ""),
+        )
+
+        logger.info(
+            "Website scan completed",
+            url=str(scan_request.url),
+            user_id=_context.user_id,
+            products_found=len(products),
+        )
+
+        return ApiResponse(
+            success=True,
+            data=response,
+            message="Website analyzed successfully using AI",
+        )
+
+    except ValueError as e:
+        logger.warning(
+            "Invalid website scan request",
+            url=str(scan_request.url),
+            user_id=_context.user_id,
+            error=str(e),
+        )
+        return ApiResponse(
+            success=False,
+            error=f"Invalid request: {e!s}",
+            message="Could not analyze website",
+        )
+
+    except Exception as e:
+        logger.error(
+            "Website scan failed",
+            url=str(scan_request.url),
+            user_id=_context.user_id,
+            error=str(e),
+            exc_info=True,
+        )
+        return ApiResponse(
+            success=False,
+            error="An error occurred during website analysis",
+            message="Analysis failed - please try again",
+        )
 
 
 @router.get("/analysis/{domain}", response_model=ApiResponse[WebsiteAnalysisResponse])
