@@ -20,6 +20,7 @@ from coaching.src.api.routes import (
     multitenant_conversations,
     onboarding,
     operations_ai,
+    suggestions,
     topics,
     website,
 )
@@ -139,6 +140,9 @@ app.include_router(
 )
 app.include_router(coaching_ai.router, prefix=f"{settings.api_prefix}")
 app.include_router(operations_ai.router, prefix=f"{settings.api_prefix}")
+app.include_router(
+    suggestions.router, prefix=f"{settings.api_prefix}/suggestions", tags=["suggestions"]
+)
 app.include_router(topics.router, prefix=f"{settings.api_prefix}")
 app.include_router(website.router, prefix=f"{settings.api_prefix}/website", tags=["website"])
 
