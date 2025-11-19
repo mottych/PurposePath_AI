@@ -1240,6 +1240,455 @@ Update business foundation information (partial updates supported).
 
 ---
 
+## Admin Discount Code Management
+
+**Authentication Required:** Admin role (JWT with "Admin" role claim)  
+**Base Path:** `/admin/discount-codes`
+
+### GET /admin/discount-codes
+
+Get paginated list of discount codes with optional filtering and sorting.
+
+**Query Parameters:**
+
+- `page` (number, default: 1) - Page number (1-based)
+- `pageSize` (number, default: 20) - Items per page (1-100)
+- `status` (string, optional) - Filter by status ("active", "inactive", "expired", or null for all)
+- `search` (string, optional) - Search by discount code (case-insensitive partial match)
+- `sortBy` (string, default: "createdAt") - Sort field ("createdAt", "code", "redemptions", "expiresAt")
+- `sortOrder` (string, default: "desc") - Sort direction ("asc" or "desc")
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "string (GUID)",
+        "code": "string",
+        "description": "string",
+        "discountType": "percentage | fixed",
+        "value": "number",
+        "durationInCycles": "number",
+        "isActive": "boolean",
+        "expiresAt": "string (ISO 8601)?",
+        "currentRedemptions": "number",
+        "maxRedemptions": "number",
+        "applicableTiers": ["string"],
+        "applicableFrequencies": ["string"],
+        "isOneTimeUsePerTenant": "boolean",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)"
+      }
+    ],
+    "pagination": {
+      "page": "number",
+      "pageSize": "number",
+      "totalCount": "number",
+      "totalPages": "number",
+      "hasNext": "boolean",
+      "hasPrevious": "boolean"
+    }
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Invalid query parameters
+- `401` - Unauthorized (missing or invalid admin token)
+
+---
+
+### GET /admin/discount-codes/{id}
+
+Get comprehensive details of a specific discount code.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "description": "string",
+    "discountType": "percentage | fixed",
+    "value": "number",
+    "durationInCycles": "number",
+    "isActive": "boolean",
+    "expiresAt": "string (ISO 8601)?",
+    "currentRedemptions": "number",
+    "maxRedemptions": "number",
+    "applicableTiers": ["string"],
+    "applicableFrequencies": ["string"],
+    "isOneTimeUsePerTenant": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Invalid discount code ID format
+- `401` - Unauthorized
+- `404` - Discount code not found
+
+---
+
+### POST /admin/discount-codes
+
+Create a new discount code.
+
+**Request:**
+
+```json
+{
+  "code": "string",
+  "description": "string",
+  "discountType": "percentage | fixed",
+  "value": "number",
+  "durationInCycles": "number",
+  "maxRedemptions": "number?",
+  "applicableTiers": ["string"]?,
+  "applicableFrequencies": ["string"]?,
+  "isOneTimeUsePerTenant": "boolean",
+  "expiresAt": "string (ISO 8601)?"
+}
+```
+
+**Validation Rules:**
+
+- `code`: 4-20 characters, uppercase letters and numbers only
+- `discountType`: "percentage" or "fixed"
+- `value`: For percentage: 1-100 (inclusive), For fixed: > 0
+- `durationInCycles`: Positive integer (number of billing cycles)
+- `applicableTiers`: Valid values: ["starter", "professional", "enterprise"] or empty for all
+- `applicableFrequencies`: Valid values: ["monthly", "annual"] or empty for all
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "description": "string",
+    "discountType": "percentage | fixed",
+    "value": "number",
+    "durationInCycles": "number",
+    "isActive": "boolean",
+    "expiresAt": "string (ISO 8601)?",
+    "currentRedemptions": "number",
+    "maxRedemptions": "number",
+    "applicableTiers": ["string"],
+    "applicableFrequencies": ["string"],
+    "isOneTimeUsePerTenant": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201` - Created (includes Location header with resource URL)
+- `400` - Validation error
+- `401` - Unauthorized
+- `409` - Conflict (discount code already exists)
+
+---
+
+### PATCH /admin/discount-codes/{id}
+
+Update an existing discount code (partial update).
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Request:**
+
+```json
+{
+  "description": "string?",
+  "maxRedemptions": "number?",
+  "expiresAt": "string (ISO 8601)?",
+  "applicableTiers": ["string"]?,
+  "applicableFrequencies": ["string"]?,
+  "isOneTimeUsePerTenant": "boolean?"
+}
+```
+
+**Immutable Fields (cannot be updated):**
+
+- `code` - Create new code instead
+- `discountType` - Create new code instead
+- `value` - Create new code instead
+- `durationInCycles` - Create new code instead
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "description": "string",
+    "discountType": "percentage | fixed",
+    "value": "number",
+    "durationInCycles": "number",
+    "isActive": "boolean",
+    "expiresAt": "string (ISO 8601)?",
+    "currentRedemptions": "number",
+    "maxRedemptions": "number",
+    "applicableTiers": ["string"],
+    "applicableFrequencies": ["string"],
+    "isOneTimeUsePerTenant": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Validation error or attempting to update immutable fields
+- `401` - Unauthorized
+- `404` - Discount code not found
+
+---
+
+### POST /admin/discount-codes/{id}/enable
+
+Enable a previously disabled discount code.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "isActive": true,
+    ...
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Code already active or expired
+- `401` - Unauthorized
+- `404` - Discount code not found
+
+---
+
+### POST /admin/discount-codes/{id}/disable
+
+Disable an active discount code to prevent new redemptions.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "isActive": false,
+    ...
+  }
+}
+```
+
+**Notes:**
+
+- Existing redemptions remain unaffected
+- Preserves redemption history and statistics
+- Use this instead of DELETE for codes with redemptions
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Code already inactive
+- `401` - Unauthorized
+- `404` - Discount code not found
+
+---
+
+### DELETE /admin/discount-codes/{id}
+
+Delete a discount code permanently (only if never redeemed).
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Response:**
+
+```
+204 No Content
+```
+
+**Restrictions:**
+
+- Can ONLY delete codes with **zero redemptions** (`currentRedemptions = 0`)
+- Codes with redemption history CANNOT be deleted (returns 409 Conflict)
+- For codes with redemptions, use `POST /admin/discount-codes/{id}/disable` instead
+
+**Status Codes:**
+
+- `204` - No Content (successful deletion)
+- `400` - Invalid discount code ID format
+- `401` - Unauthorized
+- `404` - Discount code not found
+- `409` - Conflict (code has redemptions and cannot be deleted)
+
+---
+
+### GET /admin/discount-codes/{id}/usage
+
+Get redemption history and usage statistics for a discount code.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - The discount code ID
+
+**Query Parameters:**
+
+- `page` (number, default: 1) - Page number (1-based)
+- `pageSize` (number, default: 20) - Items per page (1-100)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "discountCode": {
+      "id": "string (GUID)",
+      "code": "string",
+      "currentRedemptions": "number",
+      "maxRedemptions": "number"
+    },
+    "redemptions": [
+      {
+        "id": "string (GUID)",
+        "tenantId": "string (GUID)",
+        "tenantName": "string",
+        "userId": "string (GUID)",
+        "userEmail": "string",
+        "subscriptionTier": "string",
+        "subscriptionFrequency": "string",
+        "appliedDiscountAmount": "number",
+        "redeemedAt": "string (ISO 8601)"
+      }
+    ],
+    "pagination": {
+      "page": "number",
+      "pageSize": "number",
+      "totalCount": "number",
+      "totalPages": "number",
+      "hasNext": "boolean",
+      "hasPrevious": "boolean"
+    }
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Invalid parameters
+- `401` - Unauthorized
+- `404` - Discount code not found
+
+---
+
+### POST /admin/discount-codes/validate
+
+**PUBLIC ENDPOINT** - Validate a discount code during signup (NO AUTHENTICATION REQUIRED).
+
+**Request:**
+
+```json
+{
+  "code": "string",
+  "tierId": "string",
+  "frequency": "monthly | annual"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "isValid": "boolean",
+    "code": "string",
+    "discountType": "percentage | fixed",
+    "discountValue": "number",
+    "durationInCycles": "number",
+    "calculatedDiscount": "number?",
+    "error": "string?"
+  }
+}
+```
+
+**Validation Checks:**
+
+1. Code exists and is active (`isActive = true`)
+2. Code has not expired (`expiresAt` is null or future date)
+3. Max redemptions limit not reached (`currentRedemptions < maxRedemptions`)
+4. Code applies to specified subscription tier (or all tiers)
+5. Code applies to specified billing frequency (or all frequencies)
+
+**Response Fields:**
+
+- `isValid`: `true` if all checks pass, `false` otherwise
+- `discountType`: "percentage" or "fixed"
+- `discountValue`: Percentage (1-100) or fixed dollar amount
+- `durationInCycles`: Number of billing cycles discount applies
+- `calculatedDiscount`: Actual dollar amount (for fixed discounts) or null (calculated at subscription time for percentage)
+- `error`: Error message if `isValid = false`
+
+**Status Codes:**
+
+- `200` - Success (both valid and invalid codes return 200 with `isValid` flag)
+- `400` - Invalid request format
+
+**Security Considerations:**
+
+- Returns generic "invalid code" message for non-existent codes
+- Rate limiting recommended to prevent code enumeration attacks
+- Validation attempts logged for security monitoring
+
+---
+
 ## Error Responses
 
 All Account Service endpoints follow the standard error format:

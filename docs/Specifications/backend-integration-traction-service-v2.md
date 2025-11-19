@@ -1,6 +1,6 @@
 # Traction Service Backend Integration Specifications (v2 - Frontend Implementation)
 
-**Version:** 2.0 - Frontend Actual Implementation  
+**Version:** 2.1 - Corrected Field Naming Convention  
 **Service Base URL:** `{REACT_APP_TRACTION_API_URL}`  
 **Default (Localhost):** `http://localhost:8002`  
 **Dev Environment:** `https://api.dev.purposepath.app/traction/api/v1`
@@ -9,13 +9,15 @@
 
 ## Overview
 
-This document reflects the **ACTUAL** frontend implementation. The backend should match these payloads and response structures.
+This document reflects the **ACTUAL** backend API implementation and field naming conventions.
 
 **Important Notes:**
 
 - Routes do NOT include `/api` prefix - the base URL already contains the full path
 - Base URL format: `{BASE_URL}/traction/api/v1`
 - All routes are relative (e.g., `/goals`, not `/api/goals`)
+- **Field Naming Convention:** API uses **snake_case** for all JSON fields (e.g., `owner_id`, `created_at`, `alignment_score`)
+- Backend uses `JsonSnakeCaseNamingPolicy` to convert C# PascalCase properties to snake_case JSON
 
 ### Frontend Implementation
 
@@ -85,7 +87,7 @@ Create new goal. **Implementation:** `goal-service.ts:125`
   "title": "Increase Revenue",
   "intent": "We want to increase monthly recurring revenue to support expansion",
   "description": "Additional context about the goal",
-  "ownerId": "user_abc123"
+  "owner_id": "user_abc123"
 }
 ```
 
@@ -100,14 +102,14 @@ Create new goal. **Implementation:** `goal-service.ts:125`
     "intent": "We want to increase monthly recurring revenue to support expansion",
     "description": "Additional context about the goal",
     "status": "draft",
-    "ownerId": "user_abc123",
-    "alignmentScore": 0,
-    "alignmentExplanation": "",
-    "alignmentSuggestions": [],
+    "owner_id": "user_abc123",
+    "alignment_score": 0,
+    "alignment_explanation": "",
+    "alignment_suggestions": [],
     "strategies": [],
     "kpis": [],
-    "createdAt": "2025-11-02T23:00:00Z",
-    "updatedAt": "2025-11-02T23:00:00Z"
+    "created_at": "2025-11-02T23:00:00Z",
+    "updated_at": "2025-11-02T23:00:00Z"
   }
 }
 ```
