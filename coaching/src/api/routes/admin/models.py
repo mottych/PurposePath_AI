@@ -118,7 +118,7 @@ async def list_ai_models(
         raise HTTPException(status_code=500, detail="Failed to list LLM models") from e
 
 
-@router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
+@router.get("/models/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
 async def list_coaching_topics(
     context: RequestContext = Depends(require_admin_access),
 ) -> ApiResponse[list[CoachingTopicInfo]]:
@@ -127,6 +127,9 @@ async def list_coaching_topics(
 
     This endpoint lists all coaching topics configured in the system,
     along with metadata about their template versions.
+
+    **Note:** This endpoint has been moved from /admin/topics to /admin/models/topics
+    to avoid conflict with the main topics management API.
 
     **Permissions Required:** ADMIN_ACCESS
 
