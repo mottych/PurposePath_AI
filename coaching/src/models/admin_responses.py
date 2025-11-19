@@ -196,21 +196,6 @@ class ConversationDetail(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-# Topic Response
-
-
-class CoachingTopicInfo(BaseModel):
-    """Information about a coaching topic."""
-
-    topic: str = Field(..., description="Topic identifier")
-    display_name: str = Field(..., description="Human-readable name", alias="displayName")
-    description: str = Field(..., description="Topic description")
-    version_count: int = Field(..., description="Number of versions", alias="versionCount")
-    latest_version: str = Field(..., description="Latest version", alias="latestVersion")
-
-    model_config = {"populate_by_name": True}
-
-
 # Template Validation Responses
 
 
@@ -499,7 +484,6 @@ __all__ = [
     "AIModelsResponse",
     "AIProviderInfo",
     "ActiveConfigurationInfo",
-    "CoachingTopicInfo",
     "ConfigurationConflict",
     "ConfigurationDependencies",
     "ConfigurationDetail",
