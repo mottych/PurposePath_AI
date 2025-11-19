@@ -11,7 +11,7 @@ import html2text
 import requests
 import structlog
 from bs4 import BeautifulSoup
-from coaching.src.services.llm_service import LLMService
+from coaching.src.llm.providers.manager import ProviderManager
 
 logger = structlog.get_logger()
 
@@ -34,12 +34,16 @@ class WebsiteAnalysisService:
     3. Uses LLM to analyze and structure business information
     """
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self, provider_manager: ProviderManager | None = None, llm_service: Any | None = None
+    ):
         """Initialize website analysis service.
 
         Args:
-            llm_service: LLM service for AI analysis
+            provider_manager: Provider manager for direct LLM access (preferred for simple usage)
+            llm_service: Full LLM service for advanced usage (optional)
         """
+        self.provider_manager = provider_manager
         self.llm_service = llm_service
         self.html_converter = html2text.HTML2Text()
         self.html_converter.ignore_links = False
@@ -273,13 +277,33 @@ Important:
 - Ensure valid JSON output"""
 
         # Generate analysis using LLM
-        response_data = await self.llm_service.generate_single_shot_analysis(
-            topic="website_analysis",
-            user_input=prompt,
-            analysis_type="business_extraction",
-        )
+        if self.llm_service:
+            # Use full LLM service if available
+            response_data = await self.llm_service.generate_single_shot_analysis(
+                topic="website_analysis",
+                user_input=prompt,
+                analysis_type="business_extraction",
+            )
+            response_text = response_data.get("response", "")
+        elif self.provider_manager:
+            # Use provider manager directly for simpler usage
+            # Get the first available provider (usually Bedrock)
+            if not self.provider_manager._providers:
+                raise RuntimeError("No providers available in ProviderManager")
 
-        response_text = response_data.get("response", "")
+            provider = next(iter(self.provider_manager._providers.values()))
+            # Use invoke with LangChain messages
+            from langchain_core.messages import HumanMessage, SystemMessage
+
+            messages = [
+                SystemMessage(
+                    content="You are a business analyst AI that extracts structured information from websites."
+                ),
+                HumanMessage(content=prompt),
+            ]
+            response_text = await provider.invoke(messages)
+        else:
+            raise RuntimeError("No LLM service or provider manager configured")
 
         # Parse JSON response
         try:
