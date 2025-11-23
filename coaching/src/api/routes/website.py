@@ -3,7 +3,6 @@
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
-from coaching.src.services.llm_service import LLMService
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, HttpUrl
@@ -21,15 +20,15 @@ async def get_website_analysis_service() -> WebsiteAnalysisService:
     Returns:
         WebsiteAnalysisService instance
     """
-    # Create LLM service (simplified for now - could use full dependency injection)
+    # Create provider manager and pass directly to WebsiteAnalysisService
+    # WebsiteAnalysisService can work with provider_manager directly without full LLMService
     from coaching.src.llm.providers.manager import ProviderManager
 
     provider_manager = ProviderManager()
     # Use Bedrock as primary provider
     await provider_manager.initialize()
 
-    llm_service = LLMService(provider_manager=provider_manager)
-    return WebsiteAnalysisService(llm_service=llm_service)
+    return WebsiteAnalysisService(provider_manager=provider_manager)
 
 
 @router.options("/scan")
