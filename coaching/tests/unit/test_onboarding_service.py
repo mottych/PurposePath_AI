@@ -88,14 +88,39 @@ class TestOnboardingService:
         assert result["response"]
         assert isinstance(result["suggestions"], list)
 
-    async def test_scan_website_not_implemented(self, onboarding_service):
-        """Test website scanning raises NotImplementedError."""
+    async def test_scan_website_success(self, onboarding_service, mock_llm_service):
+        """Test successful website scanning."""
         # Arrange
         url = "https://example.com"
+        mock_analysis_result = {
+            "products": [
+                {"id": "product-1", "name": "Test Product", "problem": "Solves test problem"}
+            ],
+            "niche": "Test niche description",
+            "ica": "Test ideal customer",
+            "value_proposition": "Test value proposition",
+        }
 
-        # Act & Assert
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            await onboarding_service.scan_website(url)
+        # Mock the website_analysis_service.analyze_website method
+        onboarding_service.website_analysis_service.analyze_website = AsyncMock(
+            return_value=mock_analysis_result
+        )
+
+        # Act
+        result = await onboarding_service.scan_website(url)
+
+        # Assert
+        assert "businessName" in result
+        assert "industry" in result
+        assert "description" in result
+        assert "products" in result
+        assert "targetMarket" in result
+        assert "suggestedNiche" in result
+        assert result["businessName"] == "Example"
+        assert result["products"] == ["Test Product"]
+        assert result["description"] == "Test value proposition"
+        assert result["targetMarket"] == "Test ideal customer"
+        assert result["suggestedNiche"] == "Test niche description"
 
     async def test_parse_suggestions_from_response(self, onboarding_service):
         """Test internal suggestion parsing logic."""

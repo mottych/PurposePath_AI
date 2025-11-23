@@ -26,7 +26,7 @@ class OnboardingService:
         """
         self.llm_service = llm_service
         self.website_analysis_service = website_analysis_service or WebsiteAnalysisService(
-            llm_service
+            llm_service=llm_service
         )
         logger.info("Onboarding service initialized")
 
