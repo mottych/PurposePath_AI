@@ -128,14 +128,9 @@ async def get_current_context(
                 status_code=401, detail="Token missing required fields: user_id, tenant_id"
             )
 
-        # Check user status - allow Active and Pending users
-        # Pending users can access the coaching API during onboarding
-        allowed_statuses = ["active", "pending"]
-        if user_status and user_status.lower() not in allowed_statuses:
-            raise HTTPException(
-                status_code=403,
-                detail=f"User account status '{user_status}' is not allowed. Must be Active or Pending.",
-            )
+        # Check user status - only Active users allowed
+        if user_status and user_status.lower() != "active":
+            raise HTTPException(status_code=403, detail="User account is not active")
 
         # Parse role if provided, default to MEMBER
         user_role = UserRole.MEMBER
