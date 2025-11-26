@@ -26,11 +26,15 @@ class Settings(BaseSettings):
 
     # JWT Authentication (for token validation)
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
-    jwt_secret_name: str | None = Field(
-        default="purposepath-jwt-secret-dev", validation_alias="JWT_SECRET_NAME"
-    )
+    jwt_secret_name: str | None = Field(default=None, validation_alias="JWT_SECRET_NAME")
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "purposepath"
+
+    def get_jwt_secret_name(self) -> str:
+        """Get JWT secret name with environment suffix."""
+        if self.jwt_secret_name:
+            return self.jwt_secret_name
+        return f"purposepath-jwt-secret-{self.stage}"
 
     # DynamoDB Tables (Multitenant)
     conversations_table: str = Field(

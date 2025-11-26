@@ -36,16 +36,18 @@ def _get_jwt_secret() -> str:
     if settings.jwt_secret:
         return str(settings.jwt_secret)
 
-    # Retrieve from Secrets Manager using secret name (not ARN)
-    if settings.jwt_secret_name:
-        try:
-            secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_name)
-            secret_value = response.get("SecretString")
-            if secret_value:
-                return str(secret_value)
-        except Exception as e:
-            logger.warning(f"Failed to get JWT secret from AWS Secrets Manager: {e}")
+    # Retrieve from Secrets Manager using secret name with environment suffix
+    secret_name = settings.get_jwt_secret_name()
+    try:
+        secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+        response = secrets_client.get_secret_value(SecretId=secret_name)
+        secret_value = response.get("SecretString")
+        if secret_value:
+            return str(secret_value)
+    except Exception as e:
+        logger.warning(
+            f"Failed to get JWT secret from AWS Secrets Manager (secret: {secret_name}): {e}"
+        )
 
     # Fallback for development
     return "change-me-in-prod"
