@@ -104,6 +104,27 @@ aws.iam.RolePolicy(
     ),
 )
 
+# Secrets Manager access for JWT secret and API keys
+aws.iam.RolePolicy(
+    "coaching-secrets-policy",
+    role=lambda_role.id,
+    policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": ["secretsmanager:GetSecretValue"],
+                    "Resource": [
+                        "arn:aws:secretsmanager:us-east-1:380276784420:secret:purposepath-jwt-secret-*",
+                        "arn:aws:secretsmanager:us-east-1:380276784420:secret:purposepath/*",
+                    ],
+                }
+            ],
+        }
+    ),
+)
+
 # Create ECR repository
 ecr_repo = aws.ecr.Repository(
     "coaching-repo",
@@ -146,6 +167,8 @@ coaching_lambda = aws.lambda_.Function(
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": "dev",
             "LOG_LEVEL": "INFO",
+            "JWT_SECRET_NAME": "purposepath-jwt-secret-dev",
+            "AWS_REGION": "us-east-1",
         }
     ),
 )
