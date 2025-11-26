@@ -168,7 +168,6 @@ coaching_lambda = aws.lambda_.Function(
             "STAGE": "dev",
             "LOG_LEVEL": "INFO",
             "JWT_SECRET_NAME": "purposepath-jwt-secret-dev",
-            "AWS_REGION": "us-east-1",
         }
     ),
 )
