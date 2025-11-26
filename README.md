@@ -1,6 +1,6 @@
 # PurposePath AI Coaching Service
 
-Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon Bedrock.
+Serverless AI-powered coaching platform built with Pulumi, FastAPI, and Amazon Bedrock.
 
 ## Quick Start
 
@@ -8,20 +8,30 @@ Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon 
 
 - Python 3.11+
 - AWS CLI configured
-- AWS SAM CLI
-- Docker (for local development)
+- Pulumi CLI (`choco install pulumi` or download from pulumi.com)
+- Node.js 18+ (for Lambda Pulumi project)
+- Docker (for building Lambda container images)
 
 ### Setup
 
 ```powershell
-.\setup.ps1
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure Pulumi (first time only)
+pulumi login
 ```
 
 ### Deploy
 
 ```powershell
-# Deploy coaching service to dev
-.\deploy.ps1 -Stage dev
+# Deploy infrastructure (DynamoDB tables, S3 buckets)
+cd infrastructure/pulumi
+pulumi up
+
+# Deploy Lambda function and API Gateway
+cd ../../coaching/pulumi
+pulumi up
 ```
 
 ## Architecture
@@ -36,12 +46,13 @@ Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon 
 
 ## Infrastructure
 
-- **AWS Lambda** (Serverless Python functions)
+- **AWS Lambda** (Serverless Python functions in Docker containers)
 - **Amazon Bedrock** (Claude 3.5 Sonnet for AI coaching)
-- **DynamoDB** (Data storage with typed models)
-- **S3 Buckets** (Prompts and file storage)
+- **DynamoDB** (Data storage with typed models, Point-in-Time Recovery enabled)
+- **S3 Buckets** (Prompts and file storage with versioning and encryption)
 - **Custom Domain** with SSL certificate
-- **API Gateway** with AWS SAM deployment
+- **API Gateway HTTP API** deployed via Pulumi
+- **ECR** (Container registry for Lambda images)
 
 ## Development Workflow
 
@@ -49,7 +60,7 @@ Serverless AI-powered coaching platform built with AWS SAM, FastAPI, and Amazon 
 
 We follow a **GitFlow-inspired** workflow with three main branches:
 
-```
+```text
 master (production)  ←── PR ←── staging ←── PR ←── dev ←── feature branches
 ```
 
@@ -62,6 +73,7 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
 #### Feature Development Process
 
 1. **Create feature branch** from `dev`:
+
    ```bash
    git checkout dev
    git pull origin dev
@@ -69,12 +81,14 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
    ```
 
 2. **Develop and commit** your changes:
+
    ```bash
    git add .
    git commit -m "feat: description of your feature"
    ```
 
 3. **Merge to dev** when feature is complete:
+
    ```bash
    git checkout dev
    git merge feature/your-feature-name
@@ -83,30 +97,40 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
    ```
 
 4. **Deploy to dev** for testing:
-   ```bash
-   .\deploy.ps1 -Stage dev
+
+   ```powershell
+   cd infrastructure/pulumi
+   pulumi up
+   cd ../../coaching/pulumi
+   pulumi up
    ```
 
 5. **Create PR to staging** when dev is stable:
+
    ```bash
    git checkout staging
    git pull origin staging
    # Create PR from dev to staging via GitHub
    ```
 
-6. **Deploy staging** after PR approval:
-   ```bash
-   .\deploy.ps1 -Stage staging
+6. **Deploy staging** after PR approval (use staging stack):
+
+   ```powershell
+   pulumi stack select staging
+   pulumi up
    ```
 
 7. **Create PR to master** when staging is verified:
+
    ```bash
    # Create PR from staging to master via GitHub
    ```
 
-8. **Deploy production** after PR approval:
-   ```bash
-   .\deploy.ps1 -Stage production
+8. **Deploy production** after PR approval (use production stack):
+
+   ```powershell
+   pulumi stack select production
+   pulumi up
    ```
 
 ### Environment Endpoints
@@ -115,21 +139,41 @@ master (production)  ←── PR ←── staging ←── PR ←── dev �
 
 ## Deployment
 
-### Quick Deploy
+### Pulumi Projects
+
+The infrastructure is split into two Pulumi projects:
+
+1. **`infrastructure/pulumi`** - Core infrastructure (DynamoDB tables, S3 buckets)
+2. **`coaching/pulumi`** - Lambda function, API Gateway, and application resources
+
+### Deployment Steps
 
 ```powershell
-# Development
-.\deploy.ps1 -Stage dev
+# 1. Deploy infrastructure first
+cd infrastructure/pulumi
+pulumi up
+
+# 2. Deploy Lambda and API Gateway
+cd ../../coaching/pulumi
+pulumi up
 ```
 
-### Files
+### Stack Management
 
-- `deploy.ps1` - Deployment script
-- `coaching/template.yaml` - Coaching service SAM template
+```powershell
+# List available stacks
+pulumi stack ls
+
+# Switch to a different stack
+pulumi stack select dev
+
+# View stack outputs
+pulumi stack output
+```
 
 ## Shared Types System
 
-The PurposePath AI service uses a comprehensive shared types system for type safety and consistency. 
+The PurposePath AI service uses a comprehensive shared types system for type safety and consistency.
 
 ### Quick Usage
 

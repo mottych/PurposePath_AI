@@ -10,30 +10,56 @@
 
 **CRITICAL**: Always consult these documents in order before implementing:
 
-1. **Implementation Roadmap** (`docs/Plans/REVISED_IMPLEMENTATION_ROADMAP.md`) - Current phase requirements
-2. **This Document** - Development standards and workflow
-3. **Architecture Design** (`docs/Plans/AI_COACHING_ARCHITECTURE_DESIGN.md`) - System architecture
-4. **Guides** (`docs/Guides/`) - Specific technical guidance
+1. **This Document** - Development standards and workflow
+2. **Architecture Design** (`docs/Plans/AI_COACHING_ARCHITECTURE_DESIGN.md`) - System architecture
+3. **Guides** (`docs/Guides/`) - Specific technical guidance
 
 ---
 
 ## 🎯 Core Development Philosophy
 
-### Development Workflow(Mandatory)
-- Always work within a GitGib Issue. If one doesn't exist - ask me to create one.
-- Make sure virtual environment is active
-- Always work on a feature branch related to the issue or group of issues (epic/feature) being worked on.
-- Mark the Issue on GitHub as "In Progress" when starting work.
-- Report your progress using the issue comments.
-- After development is complete, create test fixture for new or modified fixture
-- To complete the issue:
--- Make sure there sare no errors or warning  in the code, including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors.
--- Issue ios not considered complete until all tests pass, and trhere are absolutioly no errors or warnings, regardless if those are related to the issue or not.
--- Update the issue with the comnpletion state and mark it as "Done" on GitHub.
--- Update any related documents that may have been modified as a result of the issue.
--- Delete any tempporary files created during development, including scripts, settings files, etc.
--- commit your changes to the feature branch. 
--- If there are more issues related to this branch, merge the branch to dev, push the dev branch to remote and delete the feature branch.
+### Quality & Discipline
+
+* Quality first — no shortcuts or temporary hacks.
+* Implement long-term, maintainable solutions.
+* Remove all temporary code, tests, and data after use.
+* Any infrastructure changes must be done through Pulumi as IaC.
+* dev branch is the main integration branch; keep it stable. Only merge fully tested, complete features, with no warning or errors on build or tests for the whole solution, even if not related to the changes.
+* **When in doubt - ask me**
+
+### Workflow & GitHub**
+
+* Always work under a GitHub issue; request one if missing.
+* When starting to work on an issue - mark the issue in-progress using a label.
+* Do not create status documents, only update issues.
+* Always work in a feature branch off the dev branch
+* Use issue ID in commits (e.g., `feat(#123): add API endpoint`).
+* Work in a feature branch off `dev`.
+* Use GitHub Issues: add `in-progress`, post updates, close after completion.
+* Use the issues in github to find your next step. Always upate progress (in-progress and completed). Add progress to the issue as comments, and add a in-progress' label
+
+### Testing & Validation**
+
+* Create unit and integration tests for all new or modified logic.
+* All tests must pass before marking complete regardless if they are related to our changes.
+* **IMPORTANT** Do NOT run full system tests with verbose output as it causes the system to hang. When running full system tests use only quiet or minimal output. You can run full tests on a specific module, or smaller scope if needed.
+* Resolve all build warnings and errors regardless if they are related to our changes.
+* Include unit and integration tests for all new or modified logic.
+* Make sure there are no errors or warnings in the build, and all tests pass.
+* The task is not complete until everything passes, regardless if failures are related to the issue being worked.
+
+### Completion & Merge**
+
+1. Make sure there are no warning or errors on build or tests including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors. If there are - fix them.
+2. Commit with descriptive message referencing the issue. 
+3. Merge the feature branch into 'dev' and sync. Then delete the feature branch.
+4. Clean temporary code and artifacts.
+5. Update labels (remove in-progress) and **close** the issue on GitHub.
+
+**Collaboration**
+
+* Ask for clarification when needed.
+* Report progress and blockers promptly.
 
 ### Quality First Principles
 

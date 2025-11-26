@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     application_name: str = Field(default="PurposePath")
 
     # JWT Authentication (for token validation)
-    jwt_secret_arn: str | None = Field(default=None, validation_alias="JWT_SECRET_ARN")
+    jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
+    jwt_secret_name: str | None = Field(
+        default="purposepath/jwt-secret", validation_alias="JWT_SECRET_NAME"
+    )
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "purposepath"
 

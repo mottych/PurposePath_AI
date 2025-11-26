@@ -22,20 +22,33 @@ logger = logging.getLogger(__name__)
 
 
 def _get_jwt_secret() -> str:
-    """Get JWT secret from settings or AWS Secrets Manager with safe fallback."""
+    """Get JWT secret from settings or AWS Secrets Manager with safe fallback.
+
+    Priority:
+    1. JWT_SECRET environment variable (direct secret value)
+    2. AWS Secrets Manager using JWT_SECRET_NAME (secret name, not ARN)
+    3. Fallback to development default
+
+    Returns:
+        JWT secret string for token validation
+    """
     # Prefer explicit secret in settings when present
-    secret = getattr(settings, "jwt_secret", None)
-    if secret:
-        return str(secret)
-    if settings.jwt_secret_arn:
+    if settings.jwt_secret:
+        return str(settings.jwt_secret)
+
+    # Retrieve from Secrets Manager using secret name (not ARN)
+    if settings.jwt_secret_name:
         try:
             secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_arn)
-            val = response.get("SecretString")
-            return str(val) if val else "change-me-in-prod"
+            response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_name)
+            secret_value = response.get("SecretString")
+            if secret_value:
+                return str(secret_value)
         except Exception as e:
-            logger.warning(f"Failed to get JWT secret from AWS: {e}")
-    return "change-me-in-prod"  # Fallback for development
+            logger.warning(f"Failed to get JWT secret from AWS Secrets Manager: {e}")
+
+    # Fallback for development
+    return "change-me-in-prod"
 
 
 async def get_current_context(

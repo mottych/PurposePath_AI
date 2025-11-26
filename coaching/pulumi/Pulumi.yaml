@@ -1,0 +1,3 @@
+name: purposepath-coaching-api
+runtime: python
+description: PurposePath Coaching API Lambda (Docker)

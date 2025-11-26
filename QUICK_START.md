@@ -1,16 +1,64 @@
-# Quick Start: Enable Website Scanning Feature
+# Quick Start: PurposePath AI Deployment
 
-## Current Status
+## Deployment Method
 
-✅ **Code:** Fully implemented and working
-✅ **Dependencies:** Installed
-✅ **AWS Credentials:** Configured (Account: 265429842111)
-✅ **Bedrock API:** Accessible (24 Anthropic models available)
-❌ **Anthropic Access:** Needs one-time use case form submission
+**⚠️ IMPORTANT:** This project now uses **Pulumi** for infrastructure deployment.
+
+All SAM/CloudFormation templates have been removed. See `PULUMI_DEPLOYMENT.md` for complete documentation.
+
+## Quick Deploy
+
+### 1. Install Prerequisites
+
+```powershell
+# Install Pulumi
+choco install pulumi
+
+# Verify installations
+pulumi version
+aws --version
+python --version
+docker --version
+```
+
+### 2. Deploy Infrastructure
+
+```powershell
+cd infrastructure/pulumi
+pip install -r requirements.txt
+pulumi stack select dev
+pulumi up
+```
+
+### 3. Deploy Lambda & API
+
+```powershell
+cd ../../coaching/pulumi
+pip install -r requirements.txt
+pulumi stack select dev
+pulumi up
+```
+
+### 4. Verify Deployment
+
+```powershell
+pulumi stack output
+# Should show: customDomainUrl: https://api.dev.purposepath.app/coaching
+```
 
 ---
 
-## What You Need to Do (5 Minutes)
+## Enable Website Scanning Feature (Optional)
+
+### Current Status
+
+✅ **Code:** Fully implemented and working
+✅ **Dependencies:** Installed
+✅ **AWS Credentials:** Configured
+✅ **Bedrock API:** Accessible (24 Anthropic models available)
+❌ **Anthropic Access:** Needs one-time use case form submission
+
+### What You Need to Do (5 Minutes)
 
 ### Step 1: Submit Use Case Form
 
