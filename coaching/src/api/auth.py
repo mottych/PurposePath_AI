@@ -43,15 +43,17 @@ def _get_jwt_secret() -> str:
         response = secrets_client.get_secret_value(SecretId=secret_name)
         secret_value = response.get("SecretString")
         if secret_value:
-            # Parse JSON if the secret is stored as JSON object
-            try:
-                import json
+            # Parse JSON to extract jwt_secret key (matches .NET API behavior)
+            import json
 
+            try:
                 secret_data = json.loads(secret_value)
-                # Try to get jwt_secret key, fallback to raw value if not JSON
-                return str(secret_data.get("jwt_secret", secret_value))
-            except (json.JSONDecodeError, AttributeError):
-                # If not JSON, return the raw value
+                if "jwt_secret" in secret_data:
+                    return str(secret_data["jwt_secret"])
+                # Fallback to raw value if jwt_secret key not found
+                return str(secret_value)
+            except json.JSONDecodeError:
+                # If not JSON, return raw value
                 return str(secret_value)
     except Exception as e:
         logger.warning(
