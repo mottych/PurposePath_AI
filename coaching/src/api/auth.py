@@ -49,11 +49,18 @@ def _get_jwt_secret() -> str:
             try:
                 secret_data = json.loads(secret_value)
                 if "jwt_secret" in secret_data:
-                    return str(secret_data["jwt_secret"])
+                    extracted_secret = str(secret_data["jwt_secret"])
+                    logger.info(
+                        f"JWT secret extracted from JSON (length: {len(extracted_secret)}, "
+                        f"first 10 chars: {extracted_secret[:10]})"
+                    )
+                    return extracted_secret
                 # Fallback to raw value if jwt_secret key not found
+                logger.warning("jwt_secret key not found in secret JSON, using raw value")
                 return str(secret_value)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 # If not JSON, return raw value
+                logger.warning(f"Secret is not valid JSON: {e}, using raw value")
                 return str(secret_value)
     except Exception as e:
         logger.warning(
