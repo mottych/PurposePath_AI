@@ -43,7 +43,16 @@ def _get_jwt_secret() -> str:
         response = secrets_client.get_secret_value(SecretId=secret_name)
         secret_value = response.get("SecretString")
         if secret_value:
-            return str(secret_value)
+            # Parse JSON if the secret is stored as JSON object
+            try:
+                import json
+
+                secret_data = json.loads(secret_value)
+                # Try to get jwt_secret key, fallback to raw value if not JSON
+                return str(secret_data.get("jwt_secret", secret_value))
+            except (json.JSONDecodeError, AttributeError):
+                # If not JSON, return the raw value
+                return str(secret_value)
     except Exception as e:
         logger.warning(
             f"Failed to get JWT secret from AWS Secrets Manager (secret: {secret_name}): {e}"
