@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
     jwt_secret_name: str | None = Field(default=None, validation_alias="JWT_SECRET_NAME")
     jwt_algorithm: str = "HS256"
-    jwt_issuer: str = "purposepath"
+    jwt_issuer: str = Field(
+        default="https://api.dev.purposepath.app", validation_alias="JWT_ISSUER"
+    )
+    jwt_audience: str = Field(
+        default="https://dev.purposepath.app", validation_alias="JWT_AUDIENCE"
+    )
 
     def get_jwt_secret_name(self) -> str:
         """Get JWT secret name with environment suffix."""
@@ -55,6 +60,9 @@ class Settings(BaseSettings):
     llm_prompts_table: str = Field(
         default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
     )
+
+    # DynamoDB Tables (Topics)
+    topics_table: str = Field(default="purposepath-topics-dev", validation_alias="TOPICS_TABLE")
 
     # S3
     prompts_bucket: str = Field(

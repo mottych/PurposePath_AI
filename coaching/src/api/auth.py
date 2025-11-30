@@ -117,10 +117,11 @@ async def get_current_context(
                 secret,
                 algorithms=[settings.jwt_algorithm],
                 options={
-                    "verify_aud": False,
+                    "verify_aud": settings.stage != "dev",
                     "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
+                audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
         except JWTError:
             # Dev-friendly fallback to default secret
@@ -217,10 +218,11 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 secret,
                 algorithms=[settings.jwt_algorithm],
                 options={
-                    "verify_aud": False,
+                    "verify_aud": settings.stage != "dev",
                     "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
+                audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
         except JWTError:
             # Dev-friendly fallback to default secret

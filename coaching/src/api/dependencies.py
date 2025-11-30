@@ -375,7 +375,7 @@ def get_topic_repository() -> TopicRepository:
     dynamodb = get_dynamodb_resource_singleton()
     return TopicRepository(
         dynamodb_resource=dynamodb,
-        table_name=settings.llm_prompts_table,
+        table_name=settings.topics_table,
     )
 
 

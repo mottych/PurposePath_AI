@@ -9,7 +9,8 @@ import pulumi
 infra = pulumi.StackReference("mottych/purposepath-infrastructure/dev")
 coaching_infra = pulumi.StackReference("mottych/purposepath-coaching-infrastructure/dev")
 
-jwt_secret_arn = infra.get_output("certificates").apply(lambda c: c["apiDev"])
+# Certificate ARN from infrastructure stack (already attached to custom domain)
+certificate_arn = infra.get_output("certificates").apply(lambda c: c["apiDev"])
 prompts_bucket = coaching_infra.get_output("promptsBucket")
 
 # IAM Role for Lambda
@@ -59,6 +60,8 @@ aws.iam.RolePolicy(
                         "arn:aws:dynamodb:us-east-1:380276784420:table/coaching_sessions/index/*",
                         "arn:aws:dynamodb:us-east-1:380276784420:table/llm_prompts",
                         "arn:aws:dynamodb:us-east-1:380276784420:table/llm_prompts/index/*",
+                        "arn:aws:dynamodb:us-east-1:380276784420:table/purposepath-topics-dev",
+                        "arn:aws:dynamodb:us-east-1:380276784420:table/purposepath-topics-dev/index/*",
                     ],
                 }
             ],
@@ -164,10 +167,13 @@ coaching_lambda = aws.lambda_.Function(
             "CONVERSATIONS_TABLE": "coaching_conversations",
             "COACHING_SESSIONS_TABLE": "coaching_sessions",
             "LLM_PROMPTS_TABLE": "llm_prompts",
+            "TOPICS_TABLE": "purposepath-topics-dev",
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": "dev",
             "LOG_LEVEL": "INFO",
             "JWT_SECRET_NAME": "purposepath-jwt-secret-dev",
+            "JWT_ISSUER": "https://api.dev.purposepath.app",
+            "JWT_AUDIENCE": "https://dev.purposepath.app",
         }
     ),
 )
@@ -209,7 +215,10 @@ aws.lambda_.Permission(
     source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
 )
 
-# Use existing custom domain
+# Use existing custom domain from infrastructure stack
+# Domain: api.dev.purposepath.app (created by mottych/purposepath-infrastructure/dev)
+# Certificate: Already attached to domain (certificates["apiDev"])
+# This creates the API mapping at path: /coaching
 custom_domain = aws.apigatewayv2.DomainName.get("existing-custom-domain", "api.dev.purposepath.app")
 
 aws.apigatewayv2.ApiMapping(
@@ -217,7 +226,7 @@ aws.apigatewayv2.ApiMapping(
     api_id=api.id,
     domain_name=custom_domain.id,
     stage=stage.name,
-    api_mapping_key="coaching",
+    api_mapping_key="coaching",  # Creates path: https://api.dev.purposepath.app/coaching
 )
 
 pulumi.export("apiId", api.id)
