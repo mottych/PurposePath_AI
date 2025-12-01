@@ -21,6 +21,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Pulumi Python dependencies
+        working-directory: coaching/pulumi
+        run: pip install -r requirements.txt
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
