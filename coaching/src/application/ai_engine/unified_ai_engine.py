@@ -8,7 +8,10 @@ from typing import Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
+from coaching.src.core.types import ConversationId, TenantId, UserId
+from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic
+from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
@@ -103,6 +106,7 @@ class UnifiedAIEngine:
         s3_storage: S3PromptStorage,
         llm_provider: LLMProviderPort,
         response_serializer: ResponseSerializer,
+        conversation_repo: ConversationRepositoryPort | None = None,
     ) -> None:
         """Initialize unified AI engine.
 
@@ -111,11 +115,13 @@ class UnifiedAIEngine:
             s3_storage: Storage service for prompt content
             llm_provider: LLM provider for AI generation
             response_serializer: Serializer for response formatting
+            conversation_repo: Optional repository for conversation persistence
         """
         self.topic_repo = topic_repo
         self.s3_storage = s3_storage
         self.llm_provider = llm_provider
         self.response_serializer = response_serializer
+        self.conversation_repo = conversation_repo
         self.logger = logger.bind(service="unified_ai_engine")
 
     async def execute_single_shot(
@@ -350,6 +356,268 @@ class UnifiedAIEngine:
                 exc_info=True,
             )
             raise PromptRenderError(topic_id, prompt_type, error_msg) from e
+
+    # ========== Conversation Methods ==========
+
+    async def initiate_conversation(
+        self,
+        *,
+        topic_id: str,
+        user_id: UserId,
+        tenant_id: TenantId,
+        initial_parameters: dict[str, Any] | None = None,
+    ) -> Conversation:
+        """Initiate a new coaching conversation using topic configuration.
+
+        Args:
+            topic_id: Topic identifier for conversation
+            user_id: User initiating the conversation
+            tenant_id: Tenant identifier for multi-tenancy
+            initial_parameters: Optional initial context parameters
+
+        Returns:
+            Created Conversation entity
+
+        Raises:
+            TopicNotFoundError: If topic doesn't exist or is inactive
+            UnifiedAIEngineError: If conversation creation fails
+        """
+        if self.conversation_repo is None:
+            raise UnifiedAIEngineError(topic_id, "Conversation repository not configured")
+
+        self.logger.info(
+            "Initiating conversation",
+            topic_id=topic_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
+
+        # Get topic configuration
+        topic = await self._get_active_topic(topic_id)
+
+        # Verify topic type supports conversations
+        if topic.topic_type != "conversation_coaching":
+            raise UnifiedAIEngineError(
+                topic_id,
+                f"Topic type '{topic.topic_type}' does not support conversations",
+            )
+
+        # Create conversation entity
+        from coaching.src.core.types import create_conversation_id
+
+        conversation_id = create_conversation_id()
+        conversation = Conversation(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            topic=topic_id,
+            messages=[],
+            context=initial_parameters or {},
+        )
+
+        # Save conversation
+        await self.conversation_repo.save(conversation)
+
+        self.logger.info(
+            "Conversation initiated",
+            conversation_id=conversation_id,
+            topic_id=topic_id,
+        )
+
+        return conversation
+
+    async def send_message(
+        self,
+        *,
+        conversation_id: ConversationId,
+        user_message: str,
+        tenant_id: TenantId,
+    ) -> dict[str, Any]:
+        """Send message in existing conversation.
+
+        Args:
+            conversation_id: Conversation identifier
+            user_message: User's message content
+            tenant_id: Tenant identifier for isolation
+
+        Returns:
+            Dictionary with AI response and conversation state
+
+        Raises:
+            UnifiedAIEngineError: If conversation not found or send fails
+        """
+        if self.conversation_repo is None:
+            raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
+
+        self.logger.info(
+            "Sending message",
+            conversation_id=conversation_id,
+            message_length=len(user_message),
+        )
+
+        # Load conversation
+        conversation = await self.conversation_repo.get_by_id(conversation_id, tenant_id)
+        if conversation is None:
+            raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
+
+        # Get topic
+        topic = await self._get_active_topic(conversation.topic)
+
+        # Build conversation history for context
+        messages = self._build_message_history(conversation, user_message)
+
+        # Load system prompt
+        system_prompt_content = await self._load_prompt(topic, "system")
+        rendered_system = self._render_prompt(
+            conversation.topic, "system", system_prompt_content, conversation.context
+        )
+
+        # Call LLM
+        llm_response = await self.llm_provider.generate(
+            messages=messages,
+            model=topic.model_code,
+            temperature=topic.temperature,
+            max_tokens=topic.max_tokens,
+            system_prompt=rendered_system,
+        )
+
+        # Serialize conversation response
+        response_data = await self.response_serializer.serialize_conversation(
+            ai_response=llm_response.content,
+            topic=topic,
+        )
+
+        # Update conversation with messages
+        conversation.add_user_message(user_message)
+        conversation.add_assistant_message(llm_response.content)
+
+        # Save updated conversation
+        await self.conversation_repo.save(conversation)
+
+        self.logger.info(
+            "Message sent successfully",
+            conversation_id=conversation_id,
+            response_length=len(llm_response.content),
+        )
+
+        return response_data
+
+    async def pause_conversation(
+        self,
+        *,
+        conversation_id: ConversationId,
+        tenant_id: TenantId,
+    ) -> None:
+        """Pause conversation (save state).
+
+        Args:
+            conversation_id: Conversation identifier
+            tenant_id: Tenant identifier
+
+        Raises:
+            UnifiedAIEngineError: If conversation not found
+        """
+        if self.conversation_repo is None:
+            raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
+
+        conversation = await self.conversation_repo.get_by_id(conversation_id, tenant_id)
+        if conversation is None:
+            raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
+
+        conversation.pause()
+        await self.conversation_repo.save(conversation)
+
+        self.logger.info("Conversation paused", conversation_id=conversation_id)
+
+    async def resume_conversation(
+        self,
+        *,
+        conversation_id: ConversationId,
+        tenant_id: TenantId,
+    ) -> Conversation:
+        """Resume paused conversation.
+
+        Args:
+            conversation_id: Conversation identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Resumed Conversation entity
+
+        Raises:
+            UnifiedAIEngineError: If conversation not found
+        """
+        if self.conversation_repo is None:
+            raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
+
+        conversation = await self.conversation_repo.get_by_id(conversation_id, tenant_id)
+        if conversation is None:
+            raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
+
+        conversation.resume()
+        await self.conversation_repo.save(conversation)
+
+        self.logger.info("Conversation resumed", conversation_id=conversation_id)
+
+        return conversation
+
+    async def complete_conversation(
+        self,
+        *,
+        conversation_id: ConversationId,
+        tenant_id: TenantId,
+    ) -> Conversation:
+        """Mark conversation as complete.
+
+        Args:
+            conversation_id: Conversation identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Completed Conversation entity
+
+        Raises:
+            UnifiedAIEngineError: If conversation not found
+        """
+        if self.conversation_repo is None:
+            raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
+
+        conversation = await self.conversation_repo.get_by_id(conversation_id, tenant_id)
+        if conversation is None:
+            raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
+
+        conversation.complete()
+        await self.conversation_repo.save(conversation)
+
+        self.logger.info("Conversation completed", conversation_id=conversation_id)
+
+        return conversation
+
+    def _build_message_history(
+        self, conversation: Conversation, new_message: str
+    ) -> list[LLMMessage]:
+        """Build message history for LLM context.
+
+        Args:
+            conversation: Conversation entity with history
+            new_message: New user message to add
+
+        Returns:
+            List of LLM messages including history and new message
+        """
+        messages = []
+
+        # Add conversation history (limit to recent messages for context window)
+        max_history = 10  # Configurable based on model context window
+        recent_messages = conversation.messages[-max_history:]
+
+        for msg in recent_messages:
+            messages.append(LLMMessage(role=msg.role, content=msg.content))
+
+        # Add new user message
+        messages.append(LLMMessage(role="user", content=new_message))
+
+        return messages
 
 
 __all__ = [
