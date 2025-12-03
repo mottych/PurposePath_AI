@@ -1,14 +1,20 @@
-"""Admin API routes for topic management."""
+"""Admin API routes for topic management (Enhanced for Issue #113)."""
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from coaching.src.api.dependencies import (
     get_current_context,
     get_s3_prompt_storage,
     get_topic_repository,
 )
+from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
 from coaching.src.api.models.auth import UserContext
+from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
+from coaching.src.core.endpoint_registry import (
+    ENDPOINT_REGISTRY,
+    get_registry_statistics,
+)
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
@@ -38,6 +44,7 @@ from coaching.src.models.admin_topics import (
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from pydantic import BaseModel
 from structlog import get_logger
 
 logger = get_logger(__name__)
@@ -787,3 +794,158 @@ async def validate_topic_config(
         suggestions=suggestions,
         errors=errors,
     )
+
+
+# ========== New Endpoints for Issue #113 ==========
+
+
+class EndpointRegistryResponse(BaseModel):
+    """Response model for endpoint registry listing."""
+
+    endpoints: list[dict[str, Any]]
+    total: int
+    statistics: dict[str, Any]
+
+
+class TopicTestRequest(BaseModel):
+    """Request model for testing a topic."""
+
+    parameters: dict[str, Any]
+    use_draft_prompts: bool = False
+
+
+class TopicTestResponse(BaseModel):
+    """Response model for topic testing."""
+
+    success: bool
+    result: dict[str, Any] | None = None
+    execution_time_ms: float
+    tokens_used: int | None = None
+    error: str | None = None
+
+
+@router.get("/registry/endpoints", response_model=EndpointRegistryResponse)
+async def list_endpoint_registry(
+    category: str | None = Query(None, description="Filter by category"),
+    is_active: bool | None = Query(None, description="Filter by active status"),
+    requires_conversation: bool | None = Query(
+        None, description="Filter by conversation requirement"
+    ),
+    _user: UserContext = Depends(get_current_context),
+) -> EndpointRegistryResponse:
+    """List all endpoints from the endpoint registry.
+
+    Requires admin:topics:read permission.
+    Enhanced for Issue #113 - Topic-Driven Endpoint Architecture.
+    """
+    try:
+        # Get all endpoints
+        all_endpoints = list(ENDPOINT_REGISTRY.values())
+
+        # Apply filters
+        filtered = all_endpoints
+        if category:
+            filtered = [e for e in filtered if e.category == category]
+        if is_active is not None:
+            filtered = [e for e in filtered if e.is_active == is_active]
+        if requires_conversation is not None:
+            filtered = [e for e in filtered if e.requires_conversation == requires_conversation]
+
+        # Convert to dicts
+        endpoint_dicts = [
+            {
+                "endpoint_path": e.endpoint_path,
+                "http_method": e.http_method,
+                "topic_id": e.topic_id,
+                "response_model": e.response_model,
+                "requires_conversation": e.requires_conversation,
+                "category": e.category,
+                "description": e.description,
+                "is_active": e.is_active,
+            }
+            for e in filtered
+        ]
+
+        # Get statistics
+        stats = get_registry_statistics()
+
+        return EndpointRegistryResponse(
+            endpoints=endpoint_dicts,
+            total=len(endpoint_dicts),
+            statistics=stats,
+        )
+
+    except Exception as e:
+        logger.error("Failed to list endpoint registry", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list endpoint registry",
+        ) from e
+
+
+@router.post("/{topic_id}/test", response_model=TopicTestResponse)
+async def test_topic(
+    topic_id: Annotated[str, Path(description="Topic identifier")],
+    request: TopicTestRequest,
+    user: UserContext = Depends(get_current_context),
+    unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
+) -> TopicTestResponse:
+    """Test a topic with sample parameters.
+
+    Requires admin:topics:write permission.
+    Enhanced for Issue #113 - Topic-Driven Endpoint Architecture.
+
+    This endpoint allows admins to test topic configurations and prompts
+    before deploying them to production endpoints.
+    """
+    try:
+        import time
+
+        start_time = time.time()
+
+        logger.info(
+            "Testing topic",
+            topic_id=topic_id,
+            user_id=user.user_id,
+            use_draft=request.use_draft_prompts,
+        )
+
+        # Execute single-shot with topic
+        # Note: This is a simplified version - in full implementation,
+        # we'd need to determine the response_model from topic metadata
+        result = await unified_engine.execute_single_shot(
+            topic_id=topic_id,
+            parameters=request.parameters,
+            response_model=dict,  # Use dict for testing - allows any response
+        )
+
+        execution_time = (time.time() - start_time) * 1000  # Convert to ms
+
+        logger.info(
+            "Topic test successful",
+            topic_id=topic_id,
+            execution_time_ms=execution_time,
+        )
+
+        return TopicTestResponse(
+            success=True,
+            result=result if isinstance(result, dict) else {"data": str(result)},
+            execution_time_ms=execution_time,
+            tokens_used=None,  # Could be extracted from LLM response metadata
+        )
+
+    except Exception as e:
+        execution_time = (time.time() - start_time) * 1000 if "start_time" in locals() else 0
+        logger.error(
+            "Topic test failed",
+            topic_id=topic_id,
+            error=str(e),
+            exc_info=True,
+        )
+
+        return TopicTestResponse(
+            success=False,
+            result=None,
+            execution_time_ms=execution_time,
+            error=str(e),
+        )
