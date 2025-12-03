@@ -798,8 +798,422 @@ Strategy: {strategy}
 Calculate alignment with detailed breakdown.""",
         display_order=62,
     ),
-    # Additional topics would be added here following the same pattern
-    # For brevity, showing structure for remaining topics
+    # Continuing Operations-Strategic Integration topics
+    "update_connections": TopicSeedData(
+        topic_id="update_connections",
+        topic_name="Update Connections",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Update strategic connections for an action",
+        temperature=0.6,
+        max_tokens=1024,
+        allowed_parameters=[
+            {"name": "action_id", "type": "string", "required": True},
+            {"name": "connections", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a strategic connections manager.
+
+Validate and update strategic connections ensuring they remain meaningful and aligned.""",
+        default_user_prompt="""Action: {action_id}
+
+New connections: {connections}
+
+Validate and confirm connection updates.""",
+        display_order=63,
+    ),
+    "analyze_kpi_impact": TopicSeedData(
+        topic_id="analyze_kpi_impact",
+        topic_name="Analyze KPI Impact",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Analyze KPI impact of proposed actions",
+        temperature=0.7,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "action", "type": "object", "required": True},
+            {"name": "kpis", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a KPI impact analyst.
+
+Analyze how proposed actions will affect key performance indicators, providing quantitative and qualitative assessments.""",
+        default_user_prompt="""Action: {action}
+
+KPIs: {kpis}
+
+Analyze expected impact on each KPI.""",
+        display_order=64,
+    ),
+    "record_kpi_update": TopicSeedData(
+        topic_id="record_kpi_update",
+        topic_name="Record KPI Update",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Record a KPI update event with validation",
+        temperature=0.5,
+        max_tokens=1024,
+        allowed_parameters=[
+            {"name": "kpi_id", "type": "string", "required": True},
+            {"name": "update_data", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are a KPI update validator.
+
+Validate KPI updates for consistency, reasonableness, and strategic alignment.""",
+        default_user_prompt="""KPI: {kpi_id}
+
+Update data: {update_data}
+
+Validate and record the update.""",
+        display_order=65,
+    ),
+    "get_kpi_updates": TopicSeedData(
+        topic_id="get_kpi_updates",
+        topic_name="Get KPI Updates",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Retrieve and summarize KPI update history",
+        temperature=0.5,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "kpi_id", "type": "string", "required": True},
+            {"name": "time_range", "type": "object", "required": False},
+        ],
+        default_system_prompt="""You are a KPI historian.
+
+Provide clear summaries of KPI update history with trend analysis.""",
+        default_user_prompt="""KPI: {kpi_id}
+
+Time range: {time_range}
+
+Provide update history with trend insights.""",
+        display_order=66,
+    ),
+    "issue_strategic_context": TopicSeedData(
+        topic_id="issue_strategic_context",
+        topic_name="Issue Strategic Context",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Get strategic context for an operational issue",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "issue_id", "type": "string", "required": True},
+            {"name": "issue_details", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are a strategic issue analyst.
+
+Provide strategic context showing how operational issues relate to strategic objectives and risks.""",
+        default_user_prompt="""Issue: {issue_id}
+
+Details: {issue_details}
+
+Provide strategic context and implications.""",
+        display_order=67,
+    ),
+    "generate_actions_from_issue": TopicSeedData(
+        topic_id="generate_actions_from_issue",
+        topic_name="Generate Actions from Issue",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Generate strategic actions from operational issue",
+        temperature=0.8,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "issue_id", "type": "string", "required": True},
+            {"name": "issue_details", "type": "object", "required": True},
+            {"name": "strategic_context", "type": "object", "required": False},
+        ],
+        default_system_prompt="""You are an action planning expert.
+
+Generate strategic actions that address operational issues while advancing strategic objectives.""",
+        default_user_prompt="""Issue: {issue_id}
+
+Details: {issue_details}
+Strategic context: {strategic_context}
+
+Generate actionable response plan.""",
+        display_order=68,
+    ),
+    "complete_action": TopicSeedData(
+        topic_id="complete_action",
+        topic_name="Complete Action",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Mark action as complete with strategic impact assessment",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "action_id", "type": "string", "required": True},
+            {"name": "completion_data", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an action completion analyst.
+
+Assess completion quality and strategic impact, providing insights for continuous improvement.""",
+        default_user_prompt="""Action: {action_id}
+
+Completion data: {completion_data}
+
+Assess completion and strategic impact.""",
+        display_order=69,
+    ),
+    "kpi_update_prompt": TopicSeedData(
+        topic_id="kpi_update_prompt",
+        topic_name="KPI Update Prompt",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Get prompt for KPI update after action completion",
+        temperature=0.7,
+        max_tokens=1024,
+        allowed_parameters=[
+            {"name": "action_id", "type": "string", "required": True},
+            {"name": "action_details", "type": "object", "required": True},
+            {"name": "related_kpis", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a KPI update facilitator.
+
+Generate helpful prompts to guide users in updating KPIs after action completion.""",
+        default_user_prompt="""Action: {action_id}
+
+Details: {action_details}
+Related KPIs: {related_kpis}
+
+Generate KPI update prompt.""",
+        display_order=70,
+    ),
+    "update_kpi_from_action": TopicSeedData(
+        topic_id="update_kpi_from_action",
+        topic_name="Update KPI from Action",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Update KPI based on action completion",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "action_id", "type": "string", "required": True},
+            {"name": "kpi_id", "type": "string", "required": True},
+            {"name": "update_value", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are a KPI update processor.
+
+Process and validate KPI updates resulting from action completions.""",
+        default_user_prompt="""Action: {action_id}
+
+KPI: {kpi_id}
+Update value: {update_value}
+
+Process KPI update.""",
+        display_order=71,
+    ),
+    "convert_issue_to_actions": TopicSeedData(
+        topic_id="convert_issue_to_actions",
+        topic_name="Convert Issue to Actions",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Convert operational issue into actionable items",
+        temperature=0.8,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "issue_id", "type": "string", "required": True},
+            {"name": "issue_details", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an issue resolution strategist.
+
+Convert issues into clear, actionable steps with priorities and assignments.""",
+        default_user_prompt="""Issue: {issue_id}
+
+Details: {issue_details}
+
+Convert to actionable items.""",
+        display_order=72,
+    ),
+    "check_closure_eligibility": TopicSeedData(
+        topic_id="check_closure_eligibility",
+        topic_name="Check Closure Eligibility",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Check if issue is eligible for closure",
+        temperature=0.6,
+        max_tokens=1024,
+        allowed_parameters=[
+            {"name": "issue_id", "type": "string", "required": True},
+            {"name": "issue_status", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an issue closure validator.
+
+Assess whether issues meet closure criteria based on resolution quality and impact.""",
+        default_user_prompt="""Issue: {issue_id}
+
+Status: {issue_status}
+
+Assess closure eligibility.""",
+        display_order=73,
+    ),
+    "close_issue": TopicSeedData(
+        topic_id="close_issue",
+        topic_name="Close Issue",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Close operational issue with strategic impact assessment",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "issue_id", "type": "string", "required": True},
+            {"name": "closure_data", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an issue closure analyst.
+
+Process issue closures with lessons learned and strategic impact assessment.""",
+        default_user_prompt="""Issue: {issue_id}
+
+Closure data: {closure_data}
+
+Process closure and assess impact.""",
+        display_order=74,
+    ),
+    "strategic_context": TopicSeedData(
+        topic_id="strategic_context",
+        topic_name="Strategic Context",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Get comprehensive strategic planning context",
+        temperature=0.6,
+        max_tokens=4096,
+        allowed_parameters=[
+            {"name": "tenant_id", "type": "string", "required": True},
+            {"name": "context_type", "type": "string", "required": False, "default": "full"},
+        ],
+        default_system_prompt="""You are a strategic context provider.
+
+Deliver comprehensive strategic context including foundation, goals, KPIs, and current initiatives.""",
+        default_user_prompt="""Tenant: {tenant_id}
+
+Context type: {context_type}
+
+Provide strategic context.""",
+        display_order=75,
+    ),
+    "create_action_with_context": TopicSeedData(
+        topic_id="create_action_with_context",
+        topic_name="Create Action with Context",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Create action with full strategic context",
+        temperature=0.7,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "action_data", "type": "object", "required": True},
+            {"name": "strategic_context", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an action creation strategist.
+
+Create actions with rich strategic context, ensuring alignment from inception.""",
+        default_user_prompt="""Action data: {action_data}
+
+Strategic context: {strategic_context}
+
+Create strategically-aligned action.""",
+        display_order=76,
+    ),
+    "action_relationships": TopicSeedData(
+        topic_id="action_relationships",
+        topic_name="Action Relationships",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Get strategic relationships for an action",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "action_id", "type": "string", "required": True},
+        ],
+        default_system_prompt="""You are a relationship mapper.
+
+Map strategic relationships showing how actions connect to goals, KPIs, and other actions.""",
+        default_user_prompt="""Action: {action_id}
+
+Provide relationship map.""",
+        display_order=77,
+    ),
+    "kpi_sync_to_strategic": TopicSeedData(
+        topic_id="kpi_sync_to_strategic",
+        topic_name="KPI Sync to Strategic",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Sync operational KPI updates to strategic planning",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "kpi_updates", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a KPI synchronization manager.
+
+Sync operational KPI updates to strategic planning, identifying impacts and misalignments.""",
+        default_user_prompt="""KPI updates: {kpi_updates}
+
+Sync to strategic planning.""",
+        display_order=78,
+    ),
+    "kpi_sync_from_strategic": TopicSeedData(
+        topic_id="kpi_sync_from_strategic",
+        topic_name="KPI Sync from Strategic",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Sync strategic KPIs to operational tracking",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "strategic_kpis", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a KPI synchronization manager.
+
+Sync strategic KPIs to operational tracking, ensuring consistency and traceability.""",
+        default_user_prompt="""Strategic KPIs: {strategic_kpis}
+
+Sync to operations.""",
+        display_order=79,
+    ),
+    "detect_kpi_conflicts": TopicSeedData(
+        topic_id="detect_kpi_conflicts",
+        topic_name="Detect KPI Conflicts",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Detect KPI conflicts between operations and strategy",
+        temperature=0.6,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "operational_kpis", "type": "array", "required": True},
+            {"name": "strategic_kpis", "type": "array", "required": True},
+        ],
+        default_system_prompt="""You are a KPI conflict detector.
+
+Identify conflicts, discrepancies, and misalignments between operational and strategic KPIs.""",
+        default_user_prompt="""Operational KPIs: {operational_kpis}
+
+Strategic KPIs: {strategic_kpis}
+
+Detect conflicts and misalignments.""",
+        display_order=80,
+    ),
+    "resolve_kpi_conflict": TopicSeedData(
+        topic_id="resolve_kpi_conflict",
+        topic_name="Resolve KPI Conflict",
+        topic_type="single_shot",
+        category="operations_strategic_integration",
+        description="Resolve KPI conflict with AI recommendations",
+        temperature=0.7,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "conflict_id", "type": "string", "required": True},
+            {"name": "conflict_details", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are a KPI conflict resolution expert.
+
+Recommend resolution strategies that maintain strategic alignment while respecting operational realities.""",
+        default_user_prompt="""Conflict: {conflict_id}
+
+Details: {conflict_details}
+
+Recommend resolution approach.""",
+        display_order=81,
+    ),
 }
 
 
