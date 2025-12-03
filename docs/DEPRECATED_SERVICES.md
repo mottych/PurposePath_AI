@@ -2,11 +2,18 @@
 
 **Issue**: #113
 **Date**: 2025-12-03
-**Status**: Documentation Only - Services Not Yet Removed
+**Status**: Services STILL IN USE - No Removal Needed
 
 ## Overview
 
-As part of the topic-driven architecture migration (Issue #113), the following service classes have been replaced by the **UnifiedAIEngine** and are candidates for deprecation and removal in a future cleanup phase.
+As part of the topic-driven architecture migration (Issue #113), some endpoints were migrated to use the **UnifiedAIEngine**. However, after verification, the old service classes are **still actively used** by non-migrated `/analysis/*` endpoints.
+
+### Decision: NO SERVICE REMOVAL
+After thorough verification, we determined that:
+- `/analysis/alignment`, `/analysis/strategy`, `/analysis/kpi` endpoints still use old services
+- These endpoints were NOT part of the Phase 3 migration scope
+- All service files remain in production use
+- **NO files will be deleted** in this cleanup phase
 
 ## Deprecated Service Classes
 
@@ -22,7 +29,7 @@ As part of the topic-driven architecture migration (Issue #113), the following s
 - POST `/coaching/alignment-explanation` ✅ Migrated
 - POST `/coaching/alignment-suggestions` ✅ Migrated
 
-**Status**: Safe to remove after verifying no other dependencies
+**Status**: ⚠️ STILL IN USE - DO NOT REMOVE
 
 ---
 
@@ -35,7 +42,7 @@ As part of the topic-driven architecture migration (Issue #113), the following s
 **Used By (Before Migration)**:
 - POST `/coaching/strategy-suggestions` ✅ Migrated
 
-**Status**: Safe to remove after verifying no other dependencies
+**Status**: ⚠️ STILL IN USE - DO NOT REMOVE
 
 ---
 
@@ -56,7 +63,7 @@ As part of the topic-driven architecture migration (Issue #113), the following s
 - POST `/operations/root-cause-suggestions` ✅ Migrated
 - POST `/operations/action-suggestions` ✅ Migrated
 
-**Status**: Safe to remove after verifying no other dependencies
+**Status**: ⚠️ STILL IN USE - DO NOT REMOVE
 
 ---
 
@@ -73,7 +80,7 @@ As part of the topic-driven architecture migration (Issue #113), the following s
 - POST `/website/scan` ✅ Migrated
 - POST `/coaching/onboarding` ✅ Migrated
 
-**Status**: Safe to remove after verifying no other dependencies
+**Status**: ⚠️ STILL IN USE - DO NOT REMOVE
 
 ---
 
