@@ -429,11 +429,12 @@ class LLMTopic:
             LLMTopic: New instance with updated fields
         """
         from dataclasses import replace
+
         return replace(self, **kwargs)
 
     def validate(self) -> None:
         """Validate the topic configuration.
-        
+
         This is called automatically during initialization, but can be called
         manually if needed.
         """

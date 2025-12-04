@@ -185,7 +185,9 @@ class Conversation(BaseModel):
         # Check phase requirements
         allowed_phases = [ConversationPhase.VALIDATION, ConversationPhase.COMPLETION]
         if self.context.current_phase not in allowed_phases:
-            raise ValueError(f"Cannot complete conversation in {self.context.current_phase.value} phase")
+            raise ValueError(
+                f"Cannot complete conversation in {self.context.current_phase.value} phase"
+            )
 
         now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.COMPLETED)
@@ -277,7 +279,9 @@ class Conversation(BaseModel):
         new_weight = PHASE_PROGRESS_WEIGHTS[new_phase]
 
         if new_weight < current_weight:
-            raise ValueError(f"Cannot move backward from {self.context.current_phase.value} to {new_phase.value}")
+            raise ValueError(
+                f"Cannot move backward from {self.context.current_phase.value} to {new_phase.value}"
+            )
 
         # Calculate progress percentage based on phase
         progress_percentage = new_weight * 100.0

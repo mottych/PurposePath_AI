@@ -59,7 +59,7 @@ class TestConversationEndpoints:
         response = client.post(
             "/api/v1/conversations/initiate",
             json=request_data,
-            headers={"Authorization": "Bearer test-token"}
+            headers={"Authorization": "Bearer test-token"},
         )
 
         # We expect either success or a dependency error, not validation error

@@ -196,7 +196,7 @@ async def create_topic(
         model_code = config_dict.pop("default_model", "claude-3-5-sonnet-20241022")
         # Also check for model_code just in case
         if "model_code" in config_dict:
-             model_code = config_dict.pop("model_code")
+            model_code = config_dict.pop("model_code")
 
         # Handle optional fields that might be None
         temp_val = config_dict.pop("temperature", None)

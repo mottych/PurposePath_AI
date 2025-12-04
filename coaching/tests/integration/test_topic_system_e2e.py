@@ -63,9 +63,7 @@ def mock_topic_repository():
 def mock_s3_storage():
     """Create a mock S3 storage."""
     storage = AsyncMock()
-    storage.get_prompt.return_value = (
-        "# System Prompt\n\nYou are a test coach for {user_name}."
-    )
+    storage.get_prompt.return_value = "# System Prompt\n\nYou are a test coach for {user_name}."
     return storage
 
 
@@ -456,8 +454,6 @@ class TestTopicUpdate:
         assert updated_topic.temperature == 0.9
         assert updated_topic.max_tokens == 3000
         assert updated_topic.topic_id == test_topic.topic_id
-
-
 
 
 class TestBackwardCompatibility:
