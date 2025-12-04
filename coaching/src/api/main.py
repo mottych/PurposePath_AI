@@ -49,14 +49,14 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
-class CORSPreflightMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+class CORSPreflightMiddleware(BaseHTTPMiddleware):
     """Middleware to handle CORS preflight OPTIONS requests early.
 
     This middleware ensures OPTIONS requests get CORS headers without
     going through authentication or other middleware that might reject them.
     """
 
-    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+    async def dispatch(self, request: Request, call_next):
         """Handle OPTIONS requests immediately."""
         # Let CORSMiddleware handle the response
         # This just ensures we log pre-flight requests for debugging

@@ -70,7 +70,7 @@ class UserPreferences(BaseModel):
     focus_areas: list[str] | None = Field(default=None, description="Areas of focus")
     notification_preferences: dict[str, bool] | None = Field(
         default_factory=dict, description="Notification settings"
-    )
+    )  # type: ignore[assignment]
 
 
 class SessionContextData(BaseModel):
@@ -113,7 +113,7 @@ class AIResponseData(BaseModel):
 
     response: str = Field(description="AI response text")
     confidence: float | None = Field(default=None, description="Response confidence")
-    metadata: dict[str, str] | None = Field(default_factory=dict, description="Response metadata")
+    metadata: dict[str, str] | None = Field(default_factory=dict, description="Response metadata")  # type: ignore[assignment]
     suggested_actions: list[str] | None = Field(default=None, description="Suggested next actions")
 
 

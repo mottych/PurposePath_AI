@@ -4,7 +4,7 @@ This client provides integration with the .NET Business API for
 retrieving user and organizational data for context enrichment.
 """
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -267,7 +267,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return goals
+            return cast(list[dict[str, Any]], goals)
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -439,7 +439,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return actions
+            return cast(list[dict[str, Any]], actions)
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -498,7 +498,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return issues
+            return cast(list[dict[str, Any]], issues)
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -548,7 +548,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return tiers
+            return cast(list[dict[str, Any]], tiers)
 
         except httpx.HTTPStatusError as e:
             logger.error(

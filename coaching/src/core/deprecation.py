@@ -3,7 +3,7 @@
 import functools
 import warnings
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -58,7 +58,7 @@ def deprecated(
             obj.__init__ = new_init  # type: ignore[misc]
             obj.__deprecated__ = True  # type: ignore[attr-defined]
             obj.__deprecation_message__ = deprecation_message  # type: ignore[attr-defined]
-            return obj
+            return cast(F, obj)
 
         # For functions/methods
         @functools.wraps(obj)

@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover - fallback for local testing
         def get_encoding(_: str) -> _FallbackEncoding:
             return _FallbackEncoding()
 
-    tiktoken = _TiktokenFallback()
+    tiktoken = _TiktokenFallback()  # type: ignore[assignment]
 
 from botocore.exceptions import ClientError
 
@@ -92,8 +92,8 @@ class BedrockProvider(BaseProvider):
             # Create LangChain Bedrock client
             # Note: LangChain's ChatBedrock signature may vary by version
             self._client = ChatBedrock(
-                model_id=self.config.model_name,
-                region_name=self.config.region_name or "us-east-1",
+                model=self.config.model_name,
+                region=self.config.region_name or "us-east-1",
                 model_kwargs={
                     "temperature": self.config.temperature,
                     "max_tokens": self.config.max_tokens or 4096,

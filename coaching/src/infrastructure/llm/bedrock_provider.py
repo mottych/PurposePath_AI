@@ -248,7 +248,7 @@ class BedrockLLMProvider:
             return ""
         else:
             # Generic format
-            return response_body.get("generation", "")  # type: ignore[no-any-return]
+            return str(response_body.get("generation", ""))
 
     def _extract_usage(self, response_body: dict[str, Any], model: str) -> dict[str, int]:
         """Extract usage metrics from response body."""
