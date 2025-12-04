@@ -1,10 +1,11 @@
 """Admin API routes for topic management (Enhanced for Issue #113)."""
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
+from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import (
-    get_current_context,
     get_s3_prompt_storage,
     get_topic_repository,
 )
@@ -260,7 +261,7 @@ async def create_topic(
         )
 
         # Validate
-        topic.validate()
+        # topic.validate() # Validated in __post_init__
 
         # Save
         await repository.create(topic=topic)
@@ -319,7 +320,7 @@ async def update_topic(
             )
 
         # Update fields
-        updates = {}
+        updates: dict[str, Any] = {}
         if request.topic_name is not None:
             updates["topic_name"] = request.topic_name
         if request.description is not None:
@@ -354,8 +355,8 @@ async def update_topic(
         updates["updated_at"] = datetime.now(UTC)
 
         # Update topic
-        updated_topic = topic.update(**updates)
-        updated_topic.validate()
+        updated_topic = replace(topic, **updates)
+        # updated_topic.validate() # Validated in __post_init__
 
         await repository.update(topic=updated_topic)
 
@@ -417,7 +418,7 @@ async def delete_topic(
             raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="")
         else:
             # Soft delete - mark as inactive
-            updated_topic = topic.update(is_active=False, updated_at=now)
+            updated_topic = replace(topic, is_active=False, updated_at=now)
             await repository.update(topic=updated_topic)
 
             logger.info("Topic deactivated", topic_id=topic_id, deactivated_by=user.user_id)
@@ -473,7 +474,7 @@ async def get_prompt_content(
         return PromptContentResponse(
             topic_id=topic_id,
             prompt_type=prompt_type,
-            content=content,
+            content=content or "",
             s3_key=prompt.s3_key,
             updated_at=prompt.updated_at,
             updated_by=prompt.updated_by,
@@ -549,7 +550,7 @@ async def update_prompt_content(
             for p in topic.prompts
         ]
 
-        updated_topic = topic.update(prompts=updated_prompts, updated_at=now)
+        updated_topic = replace(topic, prompts=updated_prompts, updated_at=now)
         await repository.update(topic=updated_topic)
 
         logger.info(
@@ -633,7 +634,8 @@ async def create_prompt(
             updated_by=user.user_id,
         )
 
-        updated_topic = topic.update(
+        updated_topic = replace(
+            topic,
             prompts=[*topic.prompts, new_prompt],
             updated_at=now,
         )
@@ -704,7 +706,7 @@ async def delete_prompt(
 
         # Remove from topic
         updated_prompts = [p for p in topic.prompts if p.prompt_type != prompt_type]
-        updated_topic = topic.update(prompts=updated_prompts, updated_at=datetime.now(UTC))
+        updated_topic = replace(topic, prompts=updated_prompts, updated_at=datetime.now(UTC))
         await repository.update(topic=updated_topic)
 
         logger.info(
@@ -824,6 +826,12 @@ class TopicTestResponse(BaseModel):
     error: str | None = None
 
 
+class TestResponseModel(BaseModel):
+    """Generic response model for testing."""
+
+    model_config = {"extra": "allow"}
+
+
 @router.get("/registry/endpoints", response_model=EndpointRegistryResponse)
 async def list_endpoint_registry(
     category: str | None = Query(None, description="Filter by category"),
@@ -916,7 +924,7 @@ async def test_topic(
         result = await unified_engine.execute_single_shot(
             topic_id=topic_id,
             parameters=request.parameters,
-            response_model=dict,  # Use dict for testing - allows any response
+            response_model=TestResponseModel,  # Use generic model for testing
         )
 
         execution_time = (time.time() - start_time) * 1000  # Convert to ms
@@ -929,7 +937,7 @@ async def test_topic(
 
         return TopicTestResponse(
             success=True,
-            result=result if isinstance(result, dict) else {"data": str(result)},
+            result=result.model_dump() if isinstance(result, BaseModel) else {"data": str(result)},
             execution_time_ms=execution_time,
             tokens_used=None,  # Could be extracted from LLM response metadata
         )

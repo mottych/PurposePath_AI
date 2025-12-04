@@ -1,48 +1,51 @@
 from __future__ import annotations
 
-from coaching.src.api.auth import get_current_context
-from coaching.src.models.requests import OnboardingSuggestionRequest
-from coaching.src.models.responses import OnboardingSuggestionResponse
+from typing import cast
+
+import structlog
+from coaching.src.api.auth import get_current_user
+from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
+from coaching.src.api.models.auth import UserContext
+from coaching.src.api.models.onboarding import (
+    OnboardingSuggestionRequest,
+    OnboardingSuggestionResponse,
+)
 from fastapi import APIRouter, Depends
 
-from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 
+logger = structlog.get_logger()
 router = APIRouter()
 
 
 @router.post("/onboarding", response_model=ApiResponse[OnboardingSuggestionResponse])
 async def suggest_onboarding(
-    payload: OnboardingSuggestionRequest,
-    _context: RequestContext = Depends(get_current_context),
+    request: OnboardingSuggestionRequest,
+    user: UserContext = Depends(get_current_user),
+    handler: GenericAIHandler = Depends(get_generic_handler),
 ) -> ApiResponse[OnboardingSuggestionResponse]:
     """Generate onboarding suggestions based on user input.
 
+    Migrated to unified topic-driven architecture.
+    Uses 'onboarding_suggestions' topic.
+
     Args:
-        payload: Request containing suggestion type and current value
-        _context: Authenticated user context (validated via dependency injection)
+        request: Request containing suggestion type and current value
+        user: Authenticated user context
+        handler: Generic AI handler
 
     Returns:
         ApiResponse containing suggestion text
-
-    Raises:
-        HTTPException 401: If authentication fails
     """
-    # Authentication is enforced via _context dependency injection
-    # Future enhancement: Use context for tenant-specific suggestions
+    logger.info("Generating onboarding suggestions", user_id=user.user_id, kind=request.kind)
 
-    # Simple deterministic stub; can be replaced with Bedrock/LLM call
-    base = {
-        "niche": "Consider specializing in a focused segment to increase resonance.",
-        "ica": "Define your ideal customer by role, pains, and goals.",
-        "valueProposition": "We reduce time-to-insight by unifying siloed data and automating analysis.",
-    }[payload.kind]
-
-    suggestion = (
-        base
-        if not payload.current
-        else f"{base} Based on your input, strengthen it around: '{payload.current}'."
+    result = await handler.handle_single_shot(
+        http_method="POST",
+        endpoint_path="/suggestions/onboarding",
+        request_body=request,
+        user_context=user,
+        response_model=OnboardingSuggestionResponse,
     )
 
-    response = OnboardingSuggestionResponse(suggestion=suggestion)
-    return ApiResponse(success=True, data=response)
+    return ApiResponse(success=True, data=cast(OnboardingSuggestionResponse, result))

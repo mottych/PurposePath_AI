@@ -483,6 +483,47 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         description="Resolve KPI conflict with AI recommendations",
         is_active=False,  # Missing - needs implementation
     ),
+    # ========== Section 7: Analysis API (4 endpoints) ==========
+    "POST:/analysis/alignment": EndpointDefinition(
+        endpoint_path="/analysis/alignment",
+        http_method="POST",
+        topic_id="alignment_analysis",
+        response_model="AlignmentAnalysisResponse",
+        requires_conversation=False,
+        category="analysis",
+        description="Analyze alignment between goals and purpose",
+        is_active=True,
+    ),
+    "POST:/analysis/strategy": EndpointDefinition(
+        endpoint_path="/analysis/strategy",
+        http_method="POST",
+        topic_id="strategy_analysis",
+        response_model="StrategyAnalysisResponse",
+        requires_conversation=False,
+        category="analysis",
+        description="Analyze business strategy effectiveness",
+        is_active=True,
+    ),
+    "POST:/analysis/kpi": EndpointDefinition(
+        endpoint_path="/analysis/kpi",
+        http_method="POST",
+        topic_id="kpi_analysis",
+        response_model="KPIAnalysisResponse",
+        requires_conversation=False,
+        category="analysis",
+        description="Analyze KPI effectiveness",
+        is_active=True,
+    ),
+    "POST:/analysis/operations": EndpointDefinition(
+        endpoint_path="/analysis/operations",
+        http_method="POST",
+        topic_id="operations_analysis",
+        response_model="OperationsAnalysisResponse",
+        requires_conversation=False,
+        category="analysis",
+        description="Perform operational analysis (SWOT, root cause, etc.)",
+        is_active=True,
+    ),
 }
 
 
@@ -550,7 +591,7 @@ def validate_registry() -> dict[str, list[str]]:
             - invalid_methods: List of invalid HTTP methods
             - missing_descriptions: List of endpoints without descriptions
     """
-    validation_results = {
+    validation_results: dict[str, list[str]] = {
         "duplicate_topics": [],
         "invalid_methods": [],
         "missing_descriptions": [],
@@ -602,7 +643,7 @@ def get_registry_statistics() -> dict[str, int]:
     conversation_endpoints = [e for e in all_endpoints if e.requires_conversation]
     single_shot_endpoints = [e for e in all_endpoints if not e.requires_conversation]
 
-    categories = {}
+    categories: dict[str, int] = {}
     for endpoint in all_endpoints:
         categories[endpoint.category] = categories.get(endpoint.category, 0) + 1
 

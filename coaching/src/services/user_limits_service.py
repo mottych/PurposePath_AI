@@ -20,7 +20,7 @@ class UserLimitsCache:
             ttl_seconds: Time-to-live for cache entries in seconds
         """
         self._cache: dict[
-            str, tuple[dict[str, Any], float, str]
+            str, tuple[dict[str, Any], float, int]
         ] = {}  # user_id -> (limits, timestamp, token_hash)
         self._ttl = ttl_seconds
 
@@ -128,7 +128,7 @@ class UserLimitsService:
                 response_data = response.json()
                 # Account API returns {"success": true, "data": {...}}
                 if response_data.get("success") and "data" in response_data:
-                    limits = response_data["data"]
+                    limits: dict[str, Any] = response_data["data"]
                     self._cache.set(user_id, token, limits)
                     logger.info("User limits fetched successfully", user_id=user_id, limits=limits)
                     return limits
@@ -177,7 +177,7 @@ class UserLimitsService:
         Returns:
             True if within limit, False if exceeded
         """
-        limit_value = limits.get(limit_name, 0)
+        limit_value = int(limits.get(limit_name, 0))
         return current_usage < limit_value
 
     async def close(self) -> None:

@@ -5,6 +5,8 @@ Migration Status:
 - categories, priorities, dismiss, acknowledge: Not migrated (CRUD operations, not AI)
 """
 
+from typing import cast
+
 import structlog
 from coaching.src.api.auth import get_current_context, get_current_user
 from coaching.src.api.dependencies import get_insights_service
@@ -69,13 +71,14 @@ async def generate_coaching_insights(
         page=page, page_size=page_size, category=category, priority=priority, status=status
     )
 
-    return await handler.handle_single_shot(
+    result = await handler.handle_single_shot(
         http_method="POST",
         endpoint_path="/insights/generate",
         request_body=request,
         user_context=user,
         response_model=PaginatedResponse[InsightResponse],
     )
+    return cast(PaginatedResponse[InsightResponse], result)
 
 
 @router.get("/categories", response_model=ApiResponse[list[str]])

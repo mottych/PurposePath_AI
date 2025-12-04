@@ -12,6 +12,7 @@ Usage:
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -50,7 +51,7 @@ class TopicSeedData:
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    allowed_parameters: list[dict] = field(default_factory=list)
+    allowed_parameters: list[dict[str, Any]] = field(default_factory=list)
     default_system_prompt: str = ""
     default_user_prompt: str = ""
     display_order: int = 100

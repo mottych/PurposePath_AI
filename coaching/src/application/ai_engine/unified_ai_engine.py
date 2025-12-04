@@ -8,11 +8,13 @@ from typing import Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
+from coaching.src.core.constants import CoachingTopic, MessageRole
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort
+from coaching.src.domain.value_objects.conversation_context import ConversationContext
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from pydantic import BaseModel
@@ -359,6 +361,22 @@ class UnifiedAIEngine:
 
     # ========== Conversation Methods ==========
 
+    async def get_initial_prompt(self, topic_id: str) -> str:
+        """Get initial prompt (system prompt) for a topic.
+
+        Args:
+            topic_id: Topic identifier
+
+        Returns:
+            System prompt content
+
+        Raises:
+            TopicNotFoundError: If topic doesn't exist
+            PromptRenderError: If prompt not found
+        """
+        topic = await self._get_active_topic(topic_id)
+        return await self._load_prompt(topic, "system")
+
     async def initiate_conversation(
         self,
         *,
@@ -406,13 +424,21 @@ class UnifiedAIEngine:
         from coaching.src.core.types import create_conversation_id
 
         conversation_id = create_conversation_id()
+
+        # Convert initial parameters to context if provided
+        context = ConversationContext()
+        if initial_parameters:
+            # Map known fields if they exist in initial_parameters
+            # This is a simplified mapping, might need adjustment based on actual usage
+            context = ConversationContext(metadata=initial_parameters)
+
         conversation = Conversation(
             conversation_id=conversation_id,
             user_id=user_id,
             tenant_id=tenant_id,
-            topic=topic_id,
+            topic=CoachingTopic(topic_id),
             messages=[],
-            context=initial_parameters or {},
+            context=context,
         )
 
         # Save conversation
@@ -461,7 +487,7 @@ class UnifiedAIEngine:
             raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
 
         # Get topic
-        topic = await self._get_active_topic(conversation.topic)
+        topic = await self._get_active_topic(conversation.topic.value)
 
         # Build conversation history for context
         messages = self._build_message_history(conversation, user_message)
@@ -469,7 +495,10 @@ class UnifiedAIEngine:
         # Load system prompt
         system_prompt_content = await self._load_prompt(topic, "system")
         rendered_system = self._render_prompt(
-            conversation.topic, "system", system_prompt_content, conversation.context
+            conversation.topic.value,
+            "system",
+            system_prompt_content,
+            conversation.context.model_dump(),
         )
 
         # Call LLM
@@ -488,8 +517,8 @@ class UnifiedAIEngine:
         )
 
         # Update conversation with messages
-        conversation.add_user_message(user_message)
-        conversation.add_assistant_message(llm_response.content)
+        conversation.add_message(role=MessageRole.USER, content=user_message)
+        conversation.add_message(role=MessageRole.ASSISTANT, content=llm_response.content)
 
         # Save updated conversation
         await self.conversation_repo.save(conversation)
@@ -524,7 +553,7 @@ class UnifiedAIEngine:
         if conversation is None:
             raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
 
-        conversation.pause()
+        conversation.mark_paused()
         await self.conversation_repo.save(conversation)
 
         self.logger.info("Conversation paused", conversation_id=conversation_id)
@@ -586,7 +615,7 @@ class UnifiedAIEngine:
         if conversation is None:
             raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
 
-        conversation.complete()
+        conversation.mark_completed()
         await self.conversation_repo.save(conversation)
 
         self.logger.info("Conversation completed", conversation_id=conversation_id)

@@ -4,13 +4,15 @@ This module provides REST API endpoints for conversation management,
 integrating with the Phase 4-6 application services and domain layer.
 """
 
+from typing import cast
+
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies import (
     get_conversation_service,
-    get_llm_service,
-    get_prompt_service,
 )
+from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.conversations import (
     CompleteConversationRequest,
@@ -26,16 +28,13 @@ from coaching.src.api.models.conversations import (
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
-from coaching.src.application.llm.llm_service import LLMApplicationService
-from coaching.src.core.constants import MessageRole
 from coaching.src.core.types import ConversationId, TenantId, UserId
+from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.exceptions.conversation_exceptions import (
     ConversationNotActive,
     ConversationNotFound,
 )
 from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
-from coaching.src.domain.ports.llm_provider_port import LLMMessage
-from coaching.src.services.prompt_service import PromptService
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 logger = structlog.get_logger()
@@ -46,9 +45,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 async def initiate_conversation(
     request: InitiateConversationRequest,
     user: UserContext = Depends(get_current_user),
-    conversation_service: ConversationApplicationService = Depends(get_conversation_service),
-    _llm_service: LLMApplicationService = Depends(get_llm_service),
-    prompt_service: PromptService = Depends(get_prompt_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
 ) -> ConversationResponse:
     """Initiate a new coaching conversation.
 
@@ -61,8 +58,7 @@ async def initiate_conversation(
     Args:
         request: Conversation initiation request
         user: Authenticated user context (from JWT)
-        conversation_service: Conversation application service
-        llm_service: LLM service for generating initial prompt
+        handler: Generic AI handler for topic-driven execution
 
     Returns:
         ConversationResponse with conversation details and initial message
@@ -79,19 +75,17 @@ async def initiate_conversation(
             topic=request.topic.value,
         )
 
-        # Load prompt template for topic from unified topic system
-        template = await prompt_service.get_template(topic=request.topic.value)
+        # Get initial prompt (system prompt)
+        initial_prompt = await handler.get_initial_prompt(request.topic.value)
 
-        # Use system prompt from template as initial assistant message
-        initial_prompt = template.system_prompt
-
-        # Start conversation using application service
-        conversation = await conversation_service.start_conversation(
-            user_id=UserId(user.user_id),
-            tenant_id=TenantId(user.tenant_id),
-            topic=request.topic,
-            initial_message_content=initial_prompt,
-            metadata=request.context,
+        # Start conversation using generic handler
+        conversation = cast(
+            Conversation,
+            await handler.handle_conversation_initiate(
+                topic_id=request.topic.value,
+                user_context=user,
+                initial_parameters=request.context,
+            ),
         )
 
         logger.info(
@@ -141,8 +135,8 @@ async def send_message(
     request: MessageRequest,
     conversation_id: str = Path(..., description="Conversation ID"),
     user: UserContext = Depends(get_current_user),
+    handler: GenericAIHandler = Depends(get_generic_handler),
     conversation_service: ConversationApplicationService = Depends(get_conversation_service),
-    llm_service: LLMApplicationService = Depends(get_llm_service),
 ) -> MessageResponse:
     """Send a message in an existing conversation.
 
@@ -155,8 +149,8 @@ async def send_message(
         conversation_id: Unique conversation identifier
         request: Message request with user content
         user: Authenticated user context
-        conversation_service: Conversation application service
-        llm_service: LLM service for generating responses
+        handler: Generic AI handler
+        conversation_service: Conversation service for fetching updated state
 
     Returns:
         MessageResponse with AI response and conversation state
@@ -174,12 +168,17 @@ async def send_message(
             message_length=len(request.user_message),
         )
 
-        # Add user message
-        conversation = await conversation_service.add_message(
+        # Send message via generic handler
+        response_data = await handler.handle_conversation_message(
+            conversation_id=conversation_id,
+            user_message=request.user_message,
+            user_context=user,
+        )
+
+        # Fetch updated conversation to get full state
+        conversation = await conversation_service.get_conversation(
             conversation_id=ConversationId(conversation_id),
             tenant_id=TenantId(user.tenant_id),
-            role=MessageRole.USER,
-            content=request.user_message,
         )
 
         # Verify ownership
@@ -189,39 +188,11 @@ async def send_message(
                 detail="Not authorized to access this conversation",
             )
 
-        # Build conversation history for LLM
-        llm_messages = [
-            LLMMessage(role=msg.role.value, content=msg.content) for msg in conversation.messages
-        ]
-
-        # Generate AI response
-        llm_response = await llm_service.generate_coaching_response(
-            conversation_history=llm_messages,
-            system_prompt=f"You are a professional coach helping with {conversation.topic.value.replace('_', ' ')}.",
-            temperature=0.7,
-        )
-
-        # Add AI response to conversation
-        conversation = await conversation_service.add_message(
-            conversation_id=ConversationId(conversation_id),
-            tenant_id=TenantId(user.tenant_id),
-            role=MessageRole.ASSISTANT,
-            content=llm_response.content,
-        )
-
-        # Check if conversation should complete
-        is_complete = conversation.context.is_complete()
-        if is_complete:
-            conversation = await conversation_service.complete_conversation(
-                conversation_id=ConversationId(conversation_id),
-                tenant_id=TenantId(user.tenant_id),
-            )
-
         logger.info(
             "Message processed successfully",
             conversation_id=conversation_id,
             message_count=len(conversation.messages),
-            is_complete=is_complete,
+            is_complete=response_data.get("is_complete", False),
         )
 
         # Extract insights from conversation
@@ -230,10 +201,10 @@ async def send_message(
 
         return MessageResponse(
             conversation_id=conversation.conversation_id,
-            ai_response=llm_response.content,
+            ai_response=str(response_data.get("content", "")),
             follow_up_question=None,  # Could be extracted from AI response
             progress=conversation.calculate_progress_percentage() / 100.0,
-            is_complete=is_complete,
+            is_complete=bool(response_data.get("is_complete", False)),
             insights=insights,
             identified_values=[],  # Could be extracted from context
             next_steps=None,
@@ -427,7 +398,7 @@ async def pause_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     request: PauseConversationRequest = PauseConversationRequest(),
     user: UserContext = Depends(get_current_user),
-    conversation_service: ConversationApplicationService = Depends(get_conversation_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
 ) -> None:
     """Pause an active conversation.
 
@@ -437,7 +408,7 @@ async def pause_conversation(
         conversation_id: Unique conversation identifier
         request: Pause request with optional reason
         user: Authenticated user context
-        conversation_service: Conversation application service
+        handler: Generic AI handler
 
     Raises:
         HTTPException 404: If conversation not found
@@ -452,17 +423,10 @@ async def pause_conversation(
             reason=request.reason,
         )
 
-        conversation = await conversation_service.pause_conversation(
-            conversation_id=ConversationId(conversation_id),
-            tenant_id=TenantId(user.tenant_id),
+        await handler.handle_conversation_pause(
+            conversation_id=conversation_id,
+            user_context=user,
         )
-
-        # Verify ownership
-        if conversation.user_id != user.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this conversation",
-            )
 
         logger.info("Conversation paused successfully", conversation_id=conversation_id)
 
@@ -490,7 +454,7 @@ async def complete_conversation(
     conversation_id: str = Path(..., description="Conversation ID"),
     request: CompleteConversationRequest = CompleteConversationRequest(),
     user: UserContext = Depends(get_current_user),
-    conversation_service: ConversationApplicationService = Depends(get_conversation_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
 ) -> None:
     """Mark a conversation as complete.
 
@@ -500,7 +464,7 @@ async def complete_conversation(
         conversation_id: Unique conversation identifier
         request: Completion request with optional feedback
         user: Authenticated user context
-        conversation_service: Conversation application service
+        handler: Generic AI handler
 
     Raises:
         HTTPException 404: If conversation not found
@@ -514,17 +478,10 @@ async def complete_conversation(
             rating=request.rating,
         )
 
-        conversation = await conversation_service.complete_conversation(
-            conversation_id=ConversationId(conversation_id),
-            tenant_id=TenantId(user.tenant_id),
+        await handler.handle_conversation_complete(
+            conversation_id=conversation_id,
+            user_context=user,
         )
-
-        # Verify ownership
-        if conversation.user_id != user.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this conversation",
-            )
 
         # TODO: Store feedback and rating if provided
 
@@ -547,6 +504,9 @@ async def complete_conversation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to complete conversation",
         ) from e
+
+
+__all__ = ["router"]
 
 
 __all__ = ["router"]

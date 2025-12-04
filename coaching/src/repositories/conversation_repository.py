@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
-from coaching.src.core.constants import ConversationPhase, ConversationStatus, MessageRole
+from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.core.exceptions import ConversationNotFoundCompatError
 from coaching.src.domain.value_objects.message import Message
 from coaching.src.models.conversation import Conversation, ConversationContext
@@ -348,7 +348,6 @@ class ConversationRepository:
                 for msg in conversation.messages
             ],
             "context": {
-                "phase": conversation.context.phase.value,
                 "identified_values": conversation.context.identified_values,
                 "key_insights": conversation.context.key_insights,
                 "progress_markers": conversation.context.progress_markers,
@@ -397,7 +396,6 @@ class ConversationRepository:
             # Parse context
             context_data = item.get("context", {})
             context = ConversationContext(
-                phase=ConversationPhase(context_data.get("phase", "introduction")),
                 identified_values=context_data.get("identified_values", []),
                 key_insights=context_data.get("key_insights", []),
                 progress_markers=context_data.get("progress_markers", {}),

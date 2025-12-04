@@ -137,7 +137,6 @@ class MultitenantConversationService:
 
         session_context = SessionContextData(
             conversation_id=None,  # Will be updated after conversation creation
-            phase="introduction",
             context=context_data or {},
             business_context=business_context_model,
             user_preferences=user_preferences_data,
@@ -192,7 +191,6 @@ class MultitenantConversationService:
         # Update session with conversation ID
         updated_session_context = SessionContextData(
             conversation_id=conversation.conversation_id,
-            phase=session_context.phase,
             context=session_context.context,
             business_context=session_context.business_context,
             user_preferences=session_context.user_preferences,
@@ -213,7 +211,6 @@ class MultitenantConversationService:
 
         # Initialize typed session cache
         cache_session_data = CacheSessionData(
-            phase="introduction",
             context=context_data or {},
             message_count=1,
             template_version=template.version,
@@ -230,7 +227,6 @@ class MultitenantConversationService:
             status=conversation.status,
             current_question=template.initial_message,
             progress=conversation.calculate_progress(),
-            phase=conversation.context.phase,
             session_data={"session_id": session["session_id"]},
         )
 
@@ -271,7 +267,6 @@ class MultitenantConversationService:
                 else BusinessContext()
             )
             session_data = CacheSessionData(
-                phase=session_data_raw.get("phase", "introduction"),
                 context=session_data_raw.get("context", {}),
                 message_count=session_data_raw.get("message_count", 0),
                 template_version=session_data_raw.get("template_version", "1.0"),
@@ -376,7 +371,6 @@ class MultitenantConversationService:
             insights=ai_response_raw.insights,
             progress=conversation.calculate_progress(),
             is_complete=is_complete,
-            phase=conversation.context.phase,
         )
 
     async def complete_conversation(

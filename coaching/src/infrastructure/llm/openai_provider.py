@@ -145,7 +145,7 @@ class OpenAILLMProvider:
             )
 
             # Build API parameters based on model requirements
-            params = {
+            params: dict[str, Any] = {
                 "model": model,
                 "messages": api_messages,
             }
@@ -170,14 +170,14 @@ class OpenAILLMProvider:
 
             # Extract response
             message = response.choices[0].message
-            content = message.content or ""
+            content = str(message.content or "")
 
             # For newer models, check for refusal field
             if hasattr(message, "refusal") and message.refusal:
                 logger.warning("OpenAI model refused request", refusal=message.refusal, model=model)
                 content = f"[Model refused: {message.refusal}]"
 
-            finish_reason = response.choices[0].finish_reason or "stop"
+            finish_reason = str(response.choices[0].finish_reason or "stop")
 
             # Debug log for empty responses
             if not content and response.usage and response.usage.completion_tokens > 0:

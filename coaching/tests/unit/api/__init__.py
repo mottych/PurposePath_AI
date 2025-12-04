@@ -1,3 +1,3 @@
 """Unit tests for API layer."""
 
-__all__ = []  # Test package, no exports
+__all__: list[str] = []  # Test package, no exports

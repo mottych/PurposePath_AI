@@ -9,6 +9,7 @@ Use LLMTopic and TopicRepository instead for all prompt management.
 
 import warnings
 from datetime import UTC, datetime
+from typing import Any
 
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.types import TemplateId
@@ -81,7 +82,7 @@ class PromptTemplate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """Initialize PromptTemplate with deprecation warning."""
         warnings.warn(
             "PromptTemplate is deprecated and will be removed in version 2.0.0. "

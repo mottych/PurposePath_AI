@@ -76,7 +76,7 @@ class LLMConfiguration(BaseModel):
         json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
         # Not frozen - entity can be updated
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """Initialize LLMConfiguration with deprecation warning."""
         warnings.warn(
             "LLMConfiguration is deprecated and will be removed in version 2.0.0. "

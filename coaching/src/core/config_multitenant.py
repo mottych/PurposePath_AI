@@ -115,11 +115,15 @@ class Settings(BaseSettings):
         """Parse CORS origins from JSON string or return as-is if already a list."""
         if isinstance(v, str):
             try:
-                return json.loads(v)
+                from typing import cast
+
+                return cast(list[str], json.loads(v))
             except json.JSONDecodeError:
                 # If not valid JSON, try splitting by comma
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+        from typing import cast
+
+        return cast(list[str], v)
 
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -259,7 +263,7 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
 
             if secret_value:
                 # Parse JSON credentials
-                credentials_dict = json.loads(secret_value)
+                credentials_dict: dict[str, Any] = json.loads(secret_value)
                 return credentials_dict
 
             return None
