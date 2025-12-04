@@ -147,7 +147,7 @@ async def get_conversation_repository(
 
 async def get_llm_configuration_repository() -> Any:
     """Get LLM configuration repository."""
-    from src.infrastructure.repositories.llm_config.llm_configuration_repository import (
+    from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
         LLMConfigurationRepository,
     )
 
@@ -161,7 +161,7 @@ async def get_llm_configuration_repository() -> Any:
 
 async def get_template_metadata_repository() -> Any:
     """Get template metadata repository."""
-    from src.infrastructure.repositories.llm_config.template_metadata_repository import (
+    from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
         TemplateMetadataRepository,
     )
 

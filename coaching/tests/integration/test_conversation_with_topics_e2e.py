@@ -6,6 +6,7 @@ Tests complete conversation flows using topics instead of hardcoded prompts.
 from datetime import UTC, datetime
 
 import pytest
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 
@@ -16,7 +17,7 @@ def coaching_topic():
     return LLMTopic(
         topic_id="core_values_coaching",
         topic_name="Core Values Discovery",
-        topic_type="coaching",
+        topic_type="conversation_coaching",
         category="core_values",
         is_active=True,
         model_code="claude-3-5-sonnet-20241022",
@@ -62,7 +63,7 @@ def assessment_topic():
     return LLMTopic(
         topic_id="values_assessment",
         topic_name="Values Assessment",
-        topic_type="assessment",
+        topic_type="conversation_coaching",
         category="core_values",
         is_active=True,
         model_code="claude-3-5-haiku-20241022",
@@ -113,7 +114,7 @@ class TestConversationInitiation:
         assert conversation.conversation_id
         assert conversation.user_id == "test_user_123"
         assert conversation.topic == "core_values_coaching"
-        assert conversation.status == "ACTIVE"
+        assert conversation.status == ConversationStatus.ACTIVE
         assert len(conversation.messages) == 0
 
     @pytest.mark.asyncio
@@ -171,7 +172,7 @@ class TestConversationFlow:
 
     @pytest.mark.asyncio
     async def test_conversation_progress_calculation(self, coaching_topic):
-        """Test that progress is calculated based on message count."""
+        """Test that progress is calculated based on phase."""
         conversation = Conversation.create(
             user_id="test_user_123",
             tenant_id="test_tenant",
@@ -181,12 +182,10 @@ class TestConversationFlow:
         # Initial progress
         assert conversation.calculate_progress_percentage() == 0.0
 
-        # Add messages
-        for i in range(6):
-            conversation.add_user_message(f"Message {i}")
-            conversation.add_assistant_message(f"Response {i}")
+        # Transition to next phase
+        conversation.transition_to_phase(ConversationPhase.EXPLORATION)
 
-        # Progress should be based on message count (12 messages)
+        # Progress should increase
         progress = conversation.calculate_progress_percentage()
         assert progress > 0.0
         assert progress <= 100.0
@@ -205,10 +204,13 @@ class TestConversationFlow:
             conversation.add_user_message(f"Message {i}")
             conversation.add_assistant_message(f"Response {i}")
 
+        # Transition to completion phase
+        conversation.transition_to_phase(ConversationPhase.COMPLETION)
+
         # Mark as completed
         conversation.complete()
 
-        assert conversation.status == "COMPLETED"
+        assert conversation.status == ConversationStatus.COMPLETED
         assert conversation.completed_at is not None
 
 
@@ -286,19 +288,6 @@ class TestConversationContext:
     """Test conversation context without phases."""
 
     @pytest.mark.asyncio
-    async def test_context_has_no_phase(self, coaching_topic):
-        """Verify conversation context doesn't have phase."""
-        conversation = Conversation.create(
-            user_id="test_user_123",
-            tenant_id="test_tenant",
-            topic=coaching_topic.topic_id,
-        )
-
-        # Context should not have phase
-        assert not hasattr(conversation.context, "phase")
-        assert not hasattr(conversation.context, "current_phase")
-
-    @pytest.mark.asyncio
     async def test_context_tracks_insights(self, coaching_topic):
         """Test that context tracks insights."""
         conversation = Conversation.create(
@@ -308,7 +297,7 @@ class TestConversationContext:
         )
 
         # Add insight
-        conversation.context.add_insight("User values family time")
+        conversation.add_insight("User values family time")
 
         assert len(conversation.context.insights) == 1
         assert "family time" in conversation.context.insights[0].lower()
@@ -375,6 +364,7 @@ class TestConversationMetadata:
         assert conversation.completed_at is None
 
         # Complete conversation
+        conversation.transition_to_phase(ConversationPhase.COMPLETION)
         conversation.complete()
         assert conversation.completed_at is not None
 
@@ -402,8 +392,8 @@ class TestTopicAsSourceOfTruth:
         assert coaching_topic.temperature
         assert coaching_topic.max_tokens
         assert coaching_topic.top_p
-        assert coaching_topic.frequency_penalty
-        assert coaching_topic.presence_penalty
+        assert coaching_topic.frequency_penalty is not None
+        assert coaching_topic.presence_penalty is not None
 
     @pytest.mark.asyncio
     async def test_topic_owns_prompts(self, coaching_topic):
@@ -446,10 +436,11 @@ class TestConversationStatusTransitions:
             topic=coaching_topic.topic_id,
         )
 
-        assert conversation.status == "ACTIVE"
+        assert conversation.status == ConversationStatus.ACTIVE
 
+        conversation.transition_to_phase(ConversationPhase.COMPLETION)
         conversation.complete()
-        assert conversation.status == "COMPLETED"
+        assert conversation.status == ConversationStatus.COMPLETED
 
     @pytest.mark.asyncio
     async def test_active_to_paused(self, coaching_topic):
@@ -460,10 +451,10 @@ class TestConversationStatusTransitions:
             topic=coaching_topic.topic_id,
         )
 
-        assert conversation.status == "ACTIVE"
+        assert conversation.status == ConversationStatus.ACTIVE
 
         conversation.pause()
-        assert conversation.status == "PAUSED"
+        assert conversation.status == ConversationStatus.PAUSED
 
     @pytest.mark.asyncio
     async def test_paused_to_active(self, coaching_topic):
@@ -475,7 +466,7 @@ class TestConversationStatusTransitions:
         )
 
         conversation.pause()
-        assert conversation.status == "PAUSED"
+        assert conversation.status == ConversationStatus.PAUSED
 
         conversation.resume()
-        assert conversation.status == "ACTIVE"
+        assert conversation.status == ConversationStatus.ACTIVE

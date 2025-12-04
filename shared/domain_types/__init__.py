@@ -4,9 +4,9 @@ Central re-export module for convenient access to all shared types.
 Provides strongly-typed definitions for domain IDs, API responses, and AWS service interactions.
 
 Usage:
-    from shared.types import UserId, TenantId, APISuccessResponse
-    from shared.types import DynamoDBItem, DynamoDBKey
-    from shared.types import GoogleUserInfo, StripeCustomer
+    from shared.domain_types import UserId, TenantId, APISuccessResponse
+    from shared.domain_types import DynamoDBItem, DynamoDBKey
+    from shared.domain_types import GoogleUserInfo, StripeCustomer
 """
 
 # Domain ID types and common patterns

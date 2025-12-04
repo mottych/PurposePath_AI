@@ -171,7 +171,7 @@ async def get_conversation_details(
 
     try:
         # Fetch conversation
-        from src.core.types import ConversationId
+        from coaching.src.core.types import ConversationId
 
         conversation = await conversation_repo.get_by_id(ConversationId(conversation_id))
 

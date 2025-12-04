@@ -16,7 +16,7 @@ from coaching.src.application.analysis.strategy_service import StrategyAnalysisS
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
 
-    from src.services.model_config_service import ModelConfigService
+    from coaching.src.services.model_config_service import ModelConfigService
 
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
@@ -56,7 +56,7 @@ logger = structlog.get_logger()
 _dynamodb_resource = None
 _s3_client = None
 _bedrock_client = None
-_redis_client = None
+_redis_client: Any = None
 
 
 def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
@@ -98,7 +98,7 @@ def get_redis_client_singleton() -> Any:
             )
         except ImportError:
             # Fallback to in-memory for testing
-            from src.api.multitenant_dependencies import _InMemoryRedis
+            from coaching.src.api.multitenant_dependencies import _InMemoryRedis
 
             _redis_client = _InMemoryRedis()
     return _redis_client
@@ -158,7 +158,7 @@ async def get_model_config_service() -> ModelConfigService:
     Returns:
         ModelConfigService instance configured with settings
     """
-    from src.services.model_config_service import ModelConfigService
+    from coaching.src.services.model_config_service import ModelConfigService
 
     s3_client = get_s3_client_singleton()
     return ModelConfigService(

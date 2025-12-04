@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import html2text
-import requests  # type: ignore[import]
+import requests  # type: ignore
 import structlog
 from bs4 import BeautifulSoup
 from coaching.src.llm.providers.manager import ProviderManager

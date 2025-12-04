@@ -10,9 +10,9 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from shared.domain_types.common import JSONDict
 from shared.models.domain import KPI, Goal, Issue
 from shared.models.multitenant import User
-from shared.types.common import JSONDict
 
 # Generic type for domain models
 T = TypeVar("T", bound=BaseModel)

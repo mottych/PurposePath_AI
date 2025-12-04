@@ -2,54 +2,18 @@
 
 from __future__ import annotations
 
-import sys
-import types
 from datetime import UTC, datetime
-from typing import Any
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-
-# Stub external AWS dependencies to avoid real DynamoDB usage in TopicRepository
-if "boto3" not in sys.modules:
-    boto3_module = types.ModuleType("boto3")
-    dynamodb_module = types.ModuleType("boto3.dynamodb")
-    conditions_module = types.ModuleType("boto3.dynamodb.conditions")
-
-    class _DummyCondition:  # pragma: no cover - not used directly
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            """Lightweight stand-in for boto3.dynamodb.conditions objects."""
-
-        def __call__(self, *args: object, **kwargs: object) -> _DummyCondition:
-            return self
-
-    conditions_module.Attr = _DummyCondition  # type: ignore[attr-defined]
-    conditions_module.Key = _DummyCondition  # type: ignore[attr-defined]
-
-    sys.modules["boto3"] = boto3_module
-    sys.modules["boto3.dynamodb"] = dynamodb_module
-    sys.modules["boto3.dynamodb.conditions"] = conditions_module
-
-if "botocore" not in sys.modules:
-    botocore_module = types.ModuleType("botocore")
-    exceptions_module = types.ModuleType("botocore.exceptions")
-
-    class ClientError(Exception):  # pragma: no cover - not raised in these tests
-        """Dummy ClientError compatible with boto3 expectations."""
-
-        def __init__(self, error_response: dict[str, Any], operation_name: str) -> None:
-            super().__init__(f"{operation_name}: {error_response}")
-
-    exceptions_module.ClientError = ClientError  # type: ignore[attr-defined]
-
-    sys.modules["botocore"] = botocore_module
-    sys.modules["botocore.exceptions"] = exceptions_module
-
+from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_topic_repository
 from coaching.src.api.routes.topics import router
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.repositories.topic_repository import TopicRepository
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from shared.models.multitenant import RequestContext, UserRole
 
 
 class DummyTopicRepository(TopicRepository):
@@ -83,7 +47,15 @@ def create_test_app(topics: list[LLMTopic]) -> tuple[FastAPI, DummyTopicReposito
     async def _get_repo_override() -> DummyTopicRepository:
         return repo
 
+    async def _get_context_override() -> RequestContext:
+        return RequestContext(
+            user_id="test-user",
+            tenant_id="test-tenant",
+            role=UserRole.MEMBER
+        )
+
     app.dependency_overrides[get_topic_repository] = _get_repo_override
+    app.dependency_overrides[get_current_context] = _get_context_override
     return app, repo
 
 
@@ -153,7 +125,15 @@ async def test_list_available_topics_handles_repository_error() -> None:
     async def _get_repo_override() -> FailingRepo:
         return failing_repo
 
+    async def _get_context_override() -> RequestContext:
+        return RequestContext(
+            user_id="test-user",
+            tenant_id="test-tenant",
+            role=UserRole.MEMBER
+        )
+
     app.dependency_overrides[get_topic_repository] = _get_repo_override
+    app.dependency_overrides[get_current_context] = _get_context_override
     client = TestClient(app)
 
     response = client.get("/topics/available")

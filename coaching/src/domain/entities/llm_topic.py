@@ -410,5 +410,34 @@ class LLMTopic:
         """
         return self.get_parameter(name=name) is not None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Alias for to_dynamodb_item for backward compatibility."""
+        return self.to_dynamodb_item()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "LLMTopic":
+        """Alias for from_dynamodb_item for backward compatibility."""
+        return cls.from_dynamodb_item(data)
+
+    def update(self, **kwargs: Any) -> "LLMTopic":
+        """Create a copy of the topic with updated fields.
+
+        Args:
+            **kwargs: Fields to update
+
+        Returns:
+            LLMTopic: New instance with updated fields
+        """
+        from dataclasses import replace
+        return replace(self, **kwargs)
+
+    def validate(self) -> None:
+        """Validate the topic configuration.
+        
+        This is called automatically during initialization, but can be called
+        manually if needed.
+        """
+        self.__post_init__()
+
 
 __all__ = ["LLMTopic", "ParameterDefinition", "PromptInfo"]

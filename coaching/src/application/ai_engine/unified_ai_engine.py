@@ -487,7 +487,7 @@ class UnifiedAIEngine:
             raise UnifiedAIEngineError("unknown", f"Conversation {conversation_id} not found")
 
         # Get topic
-        topic = await self._get_active_topic(conversation.topic.value)
+        topic = await self._get_active_topic(conversation.topic)
 
         # Build conversation history for context
         messages = self._build_message_history(conversation, user_message)
@@ -495,7 +495,7 @@ class UnifiedAIEngine:
         # Load system prompt
         system_prompt_content = await self._load_prompt(topic, "system")
         rendered_system = self._render_prompt(
-            conversation.topic.value,
+            conversation.topic,
             "system",
             system_prompt_content,
             conversation.context.model_dump(),

@@ -1215,6 +1215,111 @@ Details: {conflict_details}
 Recommend resolution approach.""",
         display_order=81,
     ),
+    # ========== Section 7: Analysis API (4 topics) ==========
+    "alignment_analysis": TopicSeedData(
+        topic_id="alignment_analysis",
+        topic_name="Alignment Analysis",
+        topic_type="single_shot",
+        category="analysis",
+        description="Analyze alignment between goals and purpose",
+        temperature=0.5,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "goal", "type": "object", "required": True},
+            {"name": "business_foundation", "type": "object", "required": True},
+        ],
+        default_system_prompt="""You are an alignment analysis expert.
+
+Calculate precise alignment scores (0-100) between goals and business foundation.
+
+Analyze alignment across:
+- Core values alignment
+- Purpose alignment
+- Vision alignment
+- Strategic coherence
+
+Provide data-driven, objective scoring.""",
+        default_user_prompt="""Goal: {goal}
+
+Business foundation: {business_foundation}
+
+Calculate alignment scores and provide detailed analysis.""",
+        display_order=90,
+    ),
+    "strategy_analysis": TopicSeedData(
+        topic_id="strategy_analysis",
+        topic_name="Strategy Analysis",
+        topic_type="single_shot",
+        category="analysis",
+        description="Analyze business strategy effectiveness",
+        temperature=0.7,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "strategy", "type": "object", "required": True},
+            {"name": "context", "type": "object", "required": False},
+        ],
+        default_system_prompt="""You are a strategy analysis expert.
+
+Analyze business strategy for:
+- Clarity and focus
+- Market fit
+- Feasibility
+- Competitive advantage""",
+        default_user_prompt="""Strategy: {strategy}
+
+Context: {context}
+
+Analyze strategy effectiveness.""",
+        display_order=91,
+    ),
+    "kpi_analysis": TopicSeedData(
+        topic_id="kpi_analysis",
+        topic_name="KPI Analysis",
+        topic_type="single_shot",
+        category="analysis",
+        description="Analyze KPI effectiveness",
+        temperature=0.6,
+        max_tokens=2048,
+        allowed_parameters=[
+            {"name": "kpis", "type": "array", "required": True},
+            {"name": "performance_data", "type": "object", "required": False},
+        ],
+        default_system_prompt="""You are a KPI analyst.
+
+Analyze KPIs for:
+- Relevance to goals
+- Measurability
+- Actionability
+- Performance trends""",
+        default_user_prompt="""KPIs: {kpis}
+
+Performance data: {performance_data}
+
+Analyze KPI effectiveness.""",
+        display_order=92,
+    ),
+    "operations_analysis": TopicSeedData(
+        topic_id="operations_analysis",
+        topic_name="Operations Analysis",
+        topic_type="single_shot",
+        category="analysis",
+        description="Perform operational analysis (SWOT, root cause, etc.)",
+        temperature=0.7,
+        max_tokens=3072,
+        allowed_parameters=[
+            {"name": "operations_data", "type": "object", "required": True},
+            {"name": "analysis_type", "type": "string", "required": True},
+        ],
+        default_system_prompt="""You are an operations analyst.
+
+Perform detailed operational analysis based on provided data and analysis type.""",
+        default_user_prompt="""Operations data: {operations_data}
+
+Analysis type: {analysis_type}
+
+Perform analysis.""",
+        display_order=93,
+    ),
 }
 
 

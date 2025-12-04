@@ -272,7 +272,7 @@ class DynamoDBConversationRepository:
             "conversation_id": conversation.conversation_id,
             "user_id": conversation.user_id,
             "tenant_id": conversation.tenant_id,
-            "topic": conversation.topic.value,
+            "topic": conversation.topic,
             "status": conversation.status.value,
             "messages": [
                 {

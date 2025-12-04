@@ -88,7 +88,7 @@ class GoogleVertexLLMProvider:
             credentials = self.credentials
 
             if not project_id or not credentials:
-                from src.core.config_multitenant import (
+                from coaching.src.core.config_multitenant import (
                     get_google_vertex_credentials,
                     get_settings,
                 )

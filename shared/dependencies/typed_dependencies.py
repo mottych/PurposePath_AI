@@ -11,8 +11,8 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from shared.types import TenantId, UserId
-from shared.types.common import JSONDict
+from shared.domain_types import TenantId, UserId
+from shared.domain_types.common import JSONDict
 
 
 class TypedRequestContext:

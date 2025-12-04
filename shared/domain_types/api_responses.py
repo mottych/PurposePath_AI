@@ -6,7 +6,7 @@ compatibility with existing route handlers.
 
 from typing import Literal, NotRequired, TypedDict
 
-from shared.types.common import (
+from shared.domain_types.common import (
     ActionStatus,
     GoalId,
     ISODateString,

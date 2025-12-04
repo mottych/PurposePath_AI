@@ -30,6 +30,16 @@ from coaching.src.services.cache_service import CacheService
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.prompt_service import PromptService
 
+# Import typed models for proper type safety
+from shared.domain_types.coaching_models import (
+    BusinessDataSummary,
+    CompletionSummary,
+    SessionCreateData,
+    SessionData,
+    SessionUpdateData,
+)
+from shared.domain_types.coaching_models import CoachingSession as CoachingSessionDict
+from shared.domain_types.coaching_models import UserPreferences as UserPreferencesDict
 from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
 from shared.models.multitenant import RequestContext
 
@@ -39,17 +49,6 @@ from shared.services.data_access import (
     CoachingSessionRepository,
     UserPreferencesRepository,
 )
-
-# Import typed models for proper type safety
-from shared.types.coaching_models import (
-    BusinessDataSummary,
-    CompletionSummary,
-    SessionCreateData,
-    SessionData,
-    SessionUpdateData,
-)
-from shared.types.coaching_models import CoachingSession as CoachingSessionDict
-from shared.types.coaching_models import UserPreferences as UserPreferencesDict
 
 logger = structlog.get_logger()  # Third-party logging boundary
 
@@ -227,6 +226,7 @@ class MultitenantConversationService:
             status=conversation.status,
             current_question=template.initial_message,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
             session_data={"session_id": session["session_id"]},
         )
 
@@ -370,6 +370,7 @@ class MultitenantConversationService:
             follow_up_question=ai_response_raw.follow_up_question,
             insights=ai_response_raw.insights,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
             is_complete=is_complete,
         )
 

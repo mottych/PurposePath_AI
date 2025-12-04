@@ -92,5 +92,33 @@ class ConversationContext(BaseModel):
         """
         return self.progress_percentage >= 100.0
 
+    def is_in_phase(self, phase: ConversationPhase) -> bool:
+        """Check if currently in specific phase."""
+        return self.current_phase == phase
+
+    def is_introduction_phase(self) -> bool:
+        """Check if in introduction phase."""
+        return self.current_phase == ConversationPhase.INTRODUCTION
+
+    def is_exploration_phase(self) -> bool:
+        """Check if in exploration phase."""
+        return self.current_phase == ConversationPhase.EXPLORATION
+
+    def is_deepening_phase(self) -> bool:
+        """Check if in deepening phase."""
+        return self.current_phase == ConversationPhase.DEEPENING
+
+    def is_synthesis_phase(self) -> bool:
+        """Check if in synthesis phase."""
+        return self.current_phase == ConversationPhase.SYNTHESIS
+
+    def is_validation_phase(self) -> bool:
+        """Check if in validation phase."""
+        return self.current_phase == ConversationPhase.VALIDATION
+
+    def is_completion_phase(self) -> bool:
+        """Check if in completion phase."""
+        return self.current_phase == ConversationPhase.COMPLETION
+
 
 __all__ = ["ConversationContext"]

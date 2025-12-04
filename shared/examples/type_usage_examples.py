@@ -6,7 +6,7 @@ in real-world scenarios across different services.
 
 from typing import Any, cast
 
-from shared.types import (  # Common patterns; External API types; Repository result types; Domain IDs
+from shared.domain_types import (  # Common patterns; External API types; Repository result types; Domain IDs
     ConversationListResult,
     DynamoDBItem,
     ErrorData,

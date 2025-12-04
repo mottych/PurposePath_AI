@@ -18,7 +18,7 @@ def test_topic():
     return LLMTopic(
         topic_id="test_coaching_e2e",
         topic_name="Test Coaching E2E",
-        topic_type="coaching",
+        topic_type="conversation_coaching",
         category="test",
         is_active=True,
         model_code="claude-3-5-sonnet-20241022",
@@ -63,7 +63,7 @@ def mock_topic_repository():
 def mock_s3_storage():
     """Create a mock S3 storage."""
     storage = AsyncMock()
-    storage.get_prompt_content.return_value = (
+    storage.get_prompt.return_value = (
         "# System Prompt\n\nYou are a test coach for {user_name}."
     )
     return storage
@@ -85,14 +85,14 @@ class TestTopicCreationAndRetrieval:
     async def test_create_and_retrieve_topic(self, mock_topic_repository, test_topic):
         """Test creating a topic and retrieving it."""
         # Setup
-        mock_topic_repository.create_topic.return_value = None
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
+        mock_topic_repository.create.return_value = None
+        mock_topic_repository.get.return_value = test_topic
 
         # Create topic
-        await mock_topic_repository.create_topic(test_topic)
+        await mock_topic_repository.create(topic=test_topic)
 
         # Retrieve topic
-        retrieved = await mock_topic_repository.get_topic_by_id("test_coaching_e2e")
+        retrieved = await mock_topic_repository.get(topic_id="test_coaching_e2e")
 
         # Verify
         assert retrieved is not None
@@ -106,9 +106,9 @@ class TestTopicCreationAndRetrieval:
     @pytest.mark.asyncio
     async def test_retrieve_nonexistent_topic(self, mock_topic_repository):
         """Test retrieving a topic that doesn't exist."""
-        mock_topic_repository.get_topic_by_id.return_value = None
+        mock_topic_repository.get.return_value = None
 
-        retrieved = await mock_topic_repository.get_topic_by_id("nonexistent")
+        retrieved = await mock_topic_repository.get(topic_id="nonexistent")
 
         assert retrieved is None
 
@@ -140,7 +140,7 @@ class TestTopicListing:
         inactive_topic = LLMTopic(
             topic_id="inactive_topic",
             topic_name="Inactive Topic",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="test",
             is_active=False,
             model_code="claude-3-5-sonnet-20241022",
@@ -152,9 +152,9 @@ class TestTopicListing:
             updated_at=datetime.now(UTC),
         )
 
-        mock_topic_repository.get_all_topics.return_value = [test_topic, inactive_topic]
+        mock_topic_repository.list_all.return_value = [test_topic, inactive_topic]
 
-        all_topics = await mock_topic_repository.get_all_topics()
+        all_topics = await mock_topic_repository.list_all()
         active_topics = [t for t in all_topics if t.is_active]
 
         assert len(active_topics) == 1
@@ -166,7 +166,7 @@ class TestTopicListing:
         other_topic = LLMTopic(
             topic_id="other_category",
             topic_name="Other Category",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="other",
             is_active=True,
             model_code="claude-3-5-sonnet-20241022",
@@ -178,9 +178,9 @@ class TestTopicListing:
             updated_at=datetime.now(UTC),
         )
 
-        mock_topic_repository.get_all_topics.return_value = [test_topic, other_topic]
+        mock_topic_repository.list_all.return_value = [test_topic, other_topic]
 
-        all_topics = await mock_topic_repository.get_all_topics()
+        all_topics = await mock_topic_repository.list_all()
         test_category = [t for t in all_topics if t.category == "test"]
 
         assert len(test_category) == 1
@@ -192,7 +192,7 @@ class TestTopicListing:
         topic1 = LLMTopic(
             topic_id="topic1",
             topic_name="Topic 1",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="test",
             is_active=True,
             model_code="claude-3-5-sonnet-20241022",
@@ -208,7 +208,7 @@ class TestTopicListing:
         topic2 = LLMTopic(
             topic_id="topic2",
             topic_name="Topic 2",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="test",
             is_active=True,
             model_code="claude-3-5-sonnet-20241022",
@@ -221,9 +221,9 @@ class TestTopicListing:
             updated_at=datetime.now(UTC),
         )
 
-        mock_topic_repository.get_all_topics.return_value = [topic1, topic2]
+        mock_topic_repository.list_all.return_value = [topic1, topic2]
 
-        all_topics = await mock_topic_repository.get_all_topics()
+        all_topics = await mock_topic_repository.list_all()
         sorted_topics = sorted(all_topics, key=lambda t: t.display_order)
 
         assert sorted_topics[0].topic_id == "topic2"
@@ -238,7 +238,7 @@ class TestPromptService:
         self, mock_topic_repository, mock_s3_storage, mock_cache, test_topic
     ):
         """Test getting prompt content via PromptService."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
+        mock_topic_repository.get.return_value = test_topic
 
         prompt_service = PromptService(mock_topic_repository, mock_s3_storage, mock_cache)
 
@@ -257,7 +257,7 @@ class TestPromptService:
         self, mock_topic_repository, mock_s3_storage, mock_cache, test_topic
     ):
         """Test that parameters are correctly substituted in prompts."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
+        mock_topic_repository.get.return_value = test_topic
 
         prompt_service = PromptService(mock_topic_repository, mock_s3_storage, mock_cache)
 
@@ -275,7 +275,7 @@ class TestPromptService:
         self, mock_topic_repository, mock_s3_storage, mock_cache, test_topic
     ):
         """Test that prompts are cached."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
+        mock_topic_repository.get.return_value = test_topic
 
         prompt_service = PromptService(mock_topic_repository, mock_s3_storage, mock_cache)
 
@@ -305,7 +305,7 @@ class TestTopicValidation:
             LLMTopic(
                 topic_id="invalid",
                 topic_name="Invalid",
-                topic_type="coaching",
+                topic_type="conversation_coaching",
                 category="test",
                 is_active=True,
                 model_code="claude-3-5-sonnet-20241022",
@@ -323,7 +323,7 @@ class TestTopicValidation:
             LLMTopic(
                 topic_id="invalid",
                 topic_name="Invalid",
-                topic_type="coaching",
+                topic_type="conversation_coaching",
                 category="test",
                 is_active=True,
                 model_code="claude-3-5-sonnet-20241022",
@@ -345,7 +345,7 @@ class TestMultipleTopics:
         coaching_topic = LLMTopic(
             topic_id="coaching_topic",
             topic_name="Coaching Topic",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="test",
             is_active=True,
             model_code="claude-3-5-sonnet-20241022",
@@ -360,7 +360,7 @@ class TestMultipleTopics:
         assessment_topic = LLMTopic(
             topic_id="assessment_topic",
             topic_name="Assessment Topic",
-            topic_type="assessment",
+            topic_type="conversation_coaching",
             category="test",
             is_active=True,
             model_code="claude-3-5-haiku-20241022",
@@ -372,15 +372,15 @@ class TestMultipleTopics:
             updated_at=datetime.now(UTC),
         )
 
-        mock_topic_repository.get_all_topics.return_value = [
+        mock_topic_repository.list_all.return_value = [
             coaching_topic,
             assessment_topic,
         ]
 
-        all_topics = await mock_topic_repository.get_all_topics()
+        all_topics = await mock_topic_repository.list_all()
 
-        coaching_topics = [t for t in all_topics if t.topic_type == "coaching"]
-        assessment_topics = [t for t in all_topics if t.topic_type == "assessment"]
+        coaching_topics = [t for t in all_topics if t.topic_id == "coaching_topic"]
+        assessment_topics = [t for t in all_topics if t.topic_id == "assessment_topic"]
 
         assert len(coaching_topics) == 1
         assert len(assessment_topics) == 1
@@ -393,9 +393,9 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_nonexistent_topic_error(self, mock_topic_repository):
         """Test handling of non-existent topic."""
-        mock_topic_repository.get_topic_by_id.return_value = None
+        mock_topic_repository.get.return_value = None
 
-        topic = await mock_topic_repository.get_topic_by_id("nonexistent")
+        topic = await mock_topic_repository.get(topic_id="nonexistent")
 
         assert topic is None
 
@@ -405,7 +405,7 @@ class TestErrorHandling:
         inactive_topic = LLMTopic(
             topic_id="inactive",
             topic_name="Inactive",
-            topic_type="coaching",
+            topic_type="conversation_coaching",
             category="test",
             is_active=False,
             model_code="claude-3-5-sonnet-20241022",
@@ -417,9 +417,9 @@ class TestErrorHandling:
             updated_at=datetime.now(UTC),
         )
 
-        mock_topic_repository.get_all_topics.return_value = [inactive_topic]
+        mock_topic_repository.list_all.return_value = [inactive_topic]
 
-        all_topics = await mock_topic_repository.get_all_topics()
+        all_topics = await mock_topic_repository.list_all()
         active_topics = [t for t in all_topics if t.is_active]
 
         assert len(active_topics) == 0
@@ -429,8 +429,8 @@ class TestErrorHandling:
         self, mock_topic_repository, mock_s3_storage, mock_cache, test_topic
     ):
         """Test handling of missing prompt in S3."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
-        mock_s3_storage.get_prompt_content.side_effect = Exception("Prompt not found")
+        mock_topic_repository.get.return_value = test_topic
+        mock_s3_storage.get_prompt.side_effect = Exception("Prompt not found")
 
         prompt_service = PromptService(mock_topic_repository, mock_s3_storage, mock_cache)
 
@@ -448,7 +448,7 @@ class TestTopicUpdate:
     @pytest.mark.asyncio
     async def test_update_topic_configuration(self, mock_topic_repository, test_topic):
         """Test updating topic configuration."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
+        mock_topic_repository.get.return_value = test_topic
 
         # Update topic
         updated_topic = test_topic.update(temperature=0.9, max_tokens=3000)
@@ -457,21 +457,7 @@ class TestTopicUpdate:
         assert updated_topic.max_tokens == 3000
         assert updated_topic.topic_id == test_topic.topic_id
 
-    @pytest.mark.asyncio
-    async def test_update_prompt_content(self, mock_topic_repository, test_topic):
-        """Test updating prompt content."""
-        mock_topic_repository.get_topic_by_id.return_value = test_topic
-        mock_topic_repository.update_prompt_content.return_value = None
 
-        # Update prompt
-        await mock_topic_repository.update_prompt_content(
-            bucket="test-bucket",
-            key="prompts/test_coaching_e2e/system.md",
-            content="# Updated System Prompt\n\nNew content",
-        )
-
-        # Verify update was called
-        mock_topic_repository.update_prompt_content.assert_called_once()
 
 
 class TestBackwardCompatibility:
