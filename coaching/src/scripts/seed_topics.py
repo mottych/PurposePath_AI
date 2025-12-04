@@ -356,11 +356,11 @@ async def main() -> int:
     # Initialize repositories and services
     topic_repo = TopicRepository(
         dynamodb_resource=dynamodb_resource,
-        table_name=settings.topics_table_name,
+        table_name=settings.topics_table,
     )
 
     s3_storage = S3PromptStorage(
-        bucket_name=settings.prompts_bucket_name,
+        bucket_name=settings.prompts_bucket,
         s3_client=s3_client,
     )
 

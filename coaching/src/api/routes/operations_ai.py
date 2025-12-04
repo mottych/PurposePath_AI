@@ -12,6 +12,8 @@ Migration Status:
 - action-suggestions: Migrated to topic-driven (action_suggestions topic)
 """
 
+from typing import cast
+
 import structlog
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies.ai_engine import get_generic_handler
@@ -20,6 +22,7 @@ from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.operations import (
     ActionPlanRequest,
     ActionPlanResponse,
+    OptimizedActionPlanResponse,
     PrioritizationRequest,
     PrioritizationResponse,
     RootCauseRequest,
@@ -54,12 +57,15 @@ async def analyze_strategic_alignment(
         "Analyzing strategic alignment", user_id=user.user_id, action_count=len(request.actions)
     )
 
-    return await handler.handle_single_shot(
-        http_method="POST",
-        endpoint_path="/operations/strategic-alignment",
-        request_body=request,
-        user_context=user,
-        response_model=StrategicAlignmentResponse,
+    return cast(
+        StrategicAlignmentResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/strategic-alignment",
+            request_body=request,
+            user_context=user,
+            response_model=StrategicAlignmentResponse,
+        ),
     )
 
 
@@ -82,12 +88,15 @@ async def suggest_prioritization(
         "Generating prioritization", user_id=user.user_id, action_count=len(request.actions)
     )
 
-    return await handler.handle_single_shot(
-        http_method="POST",
-        endpoint_path="/operations/prioritization-suggestions",
-        request_body=request,
-        user_context=user,
-        response_model=PrioritizationResponse,
+    return cast(
+        PrioritizationResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/prioritization-suggestions",
+            request_body=request,
+            user_context=user,
+            response_model=PrioritizationResponse,
+        ),
     )
 
 
@@ -106,12 +115,15 @@ async def suggest_scheduling(
     """
     logger.info("Generating scheduling", user_id=user.user_id, action_count=len(request.actions))
 
-    return await handler.handle_single_shot(
-        http_method="POST",
-        endpoint_path="/operations/scheduling-suggestions",
-        request_body=request,
-        user_context=user,
-        response_model=SchedulingResponse,
+    return cast(
+        SchedulingResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/scheduling-suggestions",
+            request_body=request,
+            user_context=user,
+            response_model=SchedulingResponse,
+        ),
     )
 
 
@@ -132,12 +144,15 @@ async def suggest_root_cause_methods(
         "Suggesting root cause methods", user_id=user.user_id, issue_title=request.issue_title
     )
 
-    return await handler.handle_single_shot(
-        http_method="POST",
-        endpoint_path="/operations/root-cause-suggestions",
-        request_body=request,
-        user_context=user,
-        response_model=RootCauseResponse,
+    return cast(
+        RootCauseResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/root-cause-suggestions",
+            request_body=request,
+            user_context=user,
+            response_model=RootCauseResponse,
+        ),
     )
 
 
@@ -156,12 +171,43 @@ async def generate_action_plan(
     """
     logger.info("Generating action plan", user_id=user.user_id, issue_title=request.issue.title)
 
-    return await handler.handle_single_shot(
-        http_method="POST",
-        endpoint_path="/operations/action-suggestions",
-        request_body=request,
-        user_context=user,
-        response_model=ActionPlanResponse,
+    return cast(
+        ActionPlanResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/action-suggestions",
+            request_body=request,
+            user_context=user,
+            response_model=ActionPlanResponse,
+        ),
+    )
+
+
+@router.post(
+    "/optimize-action-plan",
+    response_model=OptimizedActionPlanResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def optimize_action_plan(
+    request: ActionPlanRequest,
+    user: UserContext = Depends(get_current_user),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+) -> OptimizedActionPlanResponse:
+    """Optimize action plan using topic-driven architecture.
+
+    Uses 'optimize_action_plan' topic.
+    """
+    logger.info("Optimizing action plan", user_id=user.user_id, issue_title=request.issue.title)
+
+    return cast(
+        OptimizedActionPlanResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/operations/optimize-action-plan",
+            request_body=request,
+            user_context=user,
+            response_model=OptimizedActionPlanResponse,
+        ),
     )
 
 

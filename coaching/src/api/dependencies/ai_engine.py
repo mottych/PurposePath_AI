@@ -40,9 +40,9 @@ async def get_topic_repository() -> TopicRepository:
         dynamodb_resource = boto3.resource("dynamodb", region_name=settings.aws_region)
         _topic_repo = TopicRepository(
             dynamodb_resource=dynamodb_resource,
-            table_name=settings.topics_table_name,
+            table_name=settings.topics_table,
         )
-        logger.info("TopicRepository initialized", table=settings.topics_table_name)
+        logger.info("TopicRepository initialized", table=settings.topics_table)
 
     return _topic_repo
 
@@ -57,10 +57,10 @@ async def get_s3_prompt_storage() -> S3PromptStorage:
     if _s3_storage is None:
         s3_client = boto3.client("s3", region_name=settings.aws_region)
         _s3_storage = S3PromptStorage(
-            bucket_name=settings.prompts_bucket_name,
+            bucket_name=settings.prompts_bucket,
             s3_client=s3_client,
         )
-        logger.info("S3PromptStorage initialized", bucket=settings.prompts_bucket_name)
+        logger.info("S3PromptStorage initialized", bucket=settings.prompts_bucket)
 
     return _s3_storage
 

@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import html2text
-import requests
+import requests  # type: ignore
 import structlog
 from bs4 import BeautifulSoup
 from coaching.src.llm.providers.manager import ProviderManager
@@ -319,7 +319,7 @@ Important:
                 else:
                     raise ValueError("No JSON found in LLM response")
 
-            analysis = json.loads(json_text)
+            analysis: dict[str, Any] = json.loads(json_text)
 
             # Validate required fields
             required_fields = ["products", "niche", "ica", "value_proposition"]

@@ -1,5 +1,7 @@
 """Website analysis API routes for extracting business insights from websites."""
 
+from typing import Any
+
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
@@ -34,7 +36,7 @@ async def get_website_analysis_service() -> WebsiteAnalysisService:
 @router.options("/scan")
 @router.options("/analysis/{domain}")
 @router.options("/bulk-scan")
-async def options_handler():
+async def options_handler() -> dict[str, Any]:
     """Handle OPTIONS preflight requests."""
     return {}
 

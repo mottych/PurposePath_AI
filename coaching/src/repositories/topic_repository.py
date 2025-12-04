@@ -169,7 +169,7 @@ class TopicRepository:
 
         try:
             item = topic.to_dynamodb_item()
-            self.table.put_item(Item=cast(dict[str, Any], item))
+            self.table.put_item(Item=item)
 
             logger.info(
                 "Topic created",
@@ -208,7 +208,7 @@ class TopicRepository:
             topic.updated_at = datetime.now(UTC)
 
             item = topic.to_dynamodb_item()
-            self.table.put_item(Item=cast(dict[str, Any], item))
+            self.table.put_item(Item=item)
 
             logger.info(
                 "Topic updated",

@@ -1,9 +1,11 @@
 """Business data and metrics API routes (Issue #65)."""
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
+from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -21,8 +23,14 @@ class ApiResponse(BaseModel, Generic[T]):
     data: T
 
 
-class BusinessDataSummaryResponse(BaseModel):
-    """Business data summary response."""
+class BusinessMetricsRequest(BaseModel):
+    """Request model for business metrics (empty for GET)."""
+
+    pass
+
+
+class BusinessMetricsResponse(BaseModel):
+    """Business metrics response."""
 
     tenant_id: str
     business_data: dict[str, Any]
@@ -30,25 +38,36 @@ class BusinessDataSummaryResponse(BaseModel):
 
 @router.get(
     "/business-data",
-    response_model=ApiResponse[BusinessDataSummaryResponse],
+    response_model=ApiResponse[BusinessMetricsResponse],
     status_code=status.HTTP_200_OK,
 )
 async def get_business_data_summary(
     context: UserContext = Depends(get_current_user),
-) -> ApiResponse[BusinessDataSummaryResponse]:
-    """Get current business data summary for the tenant."""
+    handler: GenericAIHandler = Depends(get_generic_handler),
+) -> ApiResponse[BusinessMetricsResponse]:
+    """Get current business data summary for the tenant.
+
+    Migrated to unified topic-driven architecture.
+    Uses 'business_metrics' topic.
+    """
     logger.info("business_data.fetch.started", user_id=context.user_id, tenant_id=context.tenant_id)
 
     try:
-        # Placeholder - return empty business data for now
-        summary: dict[str, Any] = {}
-        business_summary = BusinessDataSummaryResponse(
-            tenant_id=context.tenant_id, business_data=dict(summary)
+        # Create empty request for GET
+        request = BusinessMetricsRequest()
+
+        result = await handler.handle_single_shot(
+            http_method="GET",
+            endpoint_path="/multitenant/conversations/business-data",
+            request_body=request,
+            user_context=context,
+            response_model=BusinessMetricsResponse,
         )
+
         logger.info(
             "business_data.fetch.completed", user_id=context.user_id, tenant_id=context.tenant_id
         )
-        return ApiResponse(success=True, data=business_summary)
+        return ApiResponse(success=True, data=cast(BusinessMetricsResponse, result))
 
     except HTTPException:
         raise

@@ -197,13 +197,39 @@ class GenericAIHandler:
                 detail="Internal server error",
             ) from e
 
+    async def get_initial_prompt(self, topic_id: str) -> str:
+        """Get initial prompt for a topic.
+
+        Args:
+            topic_id: Topic identifier
+
+        Returns:
+            System prompt content
+
+        Raises:
+            HTTPException: If topic or prompt not found
+        """
+        try:
+            return await self.ai_engine.get_initial_prompt(topic_id)
+        except TopicNotFoundError as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Topic not found: {e.topic_id}",
+            ) from e
+        except UnifiedAIEngineError as e:
+            self.logger.error("Failed to get initial prompt", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to get initial prompt",
+            ) from e
+
     async def handle_conversation_initiate(
         self,
         *,
         topic_id: str,
         user_context: UserContext,
         initial_parameters: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         """Handle conversation initiation.
 
         Args:
@@ -212,7 +238,7 @@ class GenericAIHandler:
             initial_parameters: Optional initial context
 
         Returns:
-            Dictionary with conversation details
+            Conversation entity
 
         Raises:
             HTTPException: For all error conditions
@@ -233,12 +259,7 @@ class GenericAIHandler:
                 initial_parameters=initial_parameters,
             )
 
-            return {
-                "conversation_id": conversation.conversation_id,
-                "topic": conversation.topic,
-                "status": "active",
-                "created_at": conversation.created_at.isoformat(),
-            }
+            return conversation
 
         except TopicNotFoundError as e:
             raise HTTPException(
@@ -298,6 +319,133 @@ class GenericAIHandler:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to process message",
+            ) from e
+
+    async def handle_conversation_pause(
+        self,
+        *,
+        conversation_id: str,
+        user_context: UserContext,
+    ) -> None:
+        """Handle conversation pause.
+
+        Args:
+            conversation_id: Conversation identifier
+            user_context: User authentication context
+
+        Raises:
+            HTTPException: For all error conditions
+        """
+        self.logger.info(
+            "Pausing conversation",
+            conversation_id=conversation_id,
+            user_id=user_context.user_id,
+        )
+
+        try:
+            from coaching.src.core.types import (
+                ConversationId,
+                create_tenant_id,
+            )
+
+            await self.ai_engine.pause_conversation(
+                conversation_id=ConversationId(conversation_id),
+                tenant_id=create_tenant_id(user_context.tenant_id),
+            )
+
+        except UnifiedAIEngineError as e:
+            self.logger.error("Pause failed", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to pause conversation",
+            ) from e
+
+    async def handle_conversation_resume(
+        self,
+        *,
+        conversation_id: str,
+        user_context: UserContext,
+    ) -> Any:
+        """Handle conversation resume.
+
+        Args:
+            conversation_id: Conversation identifier
+            user_context: User authentication context
+
+        Returns:
+            Resumed Conversation entity
+
+        Raises:
+            HTTPException: For all error conditions
+        """
+        self.logger.info(
+            "Resuming conversation",
+            conversation_id=conversation_id,
+            user_id=user_context.user_id,
+        )
+
+        try:
+            from coaching.src.core.types import (
+                ConversationId,
+                create_tenant_id,
+            )
+
+            conversation = await self.ai_engine.resume_conversation(
+                conversation_id=ConversationId(conversation_id),
+                tenant_id=create_tenant_id(user_context.tenant_id),
+            )
+
+            return conversation
+
+        except UnifiedAIEngineError as e:
+            self.logger.error("Resume failed", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to resume conversation",
+            ) from e
+
+    async def handle_conversation_complete(
+        self,
+        *,
+        conversation_id: str,
+        user_context: UserContext,
+    ) -> Any:
+        """Handle conversation completion.
+
+        Args:
+            conversation_id: Conversation identifier
+            user_context: User authentication context
+
+        Returns:
+            Completed Conversation entity
+
+        Raises:
+            HTTPException: For all error conditions
+        """
+        self.logger.info(
+            "Completing conversation",
+            conversation_id=conversation_id,
+            user_id=user_context.user_id,
+        )
+
+        try:
+            from coaching.src.core.types import (
+                ConversationId,
+                create_tenant_id,
+            )
+
+            conversation = await self.ai_engine.complete_conversation(
+                conversation_id=ConversationId(conversation_id),
+                tenant_id=create_tenant_id(user_context.tenant_id),
+            )
+
+            return conversation
+
+        except UnifiedAIEngineError as e:
+            self.logger.error("Completion failed", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to complete conversation",
             ) from e
 
     def _extract_parameters(

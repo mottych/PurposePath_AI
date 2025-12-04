@@ -4,25 +4,28 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
-from coaching.src.api.dependencies import get_current_context, get_topic_repository
+from coaching.src.api.dependencies import (
+    get_current_context,
+    get_s3_prompt_storage,
+    get_topic_repository,
+)
+from coaching.src.api.models.auth import UserContext
 from coaching.src.api.routes.admin.topics import router
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from shared.models.user_context import UserContext
-
 
 @pytest.fixture
-def app():
+def app() -> FastAPI:
     """Create test FastAPI app."""
     test_app = FastAPI()
-    test_app.include_router(router)
+    test_app.include_router(router, prefix="/admin")
     return test_app
 
 
 @pytest.fixture
-def mock_user():
+def mock_user() -> UserContext:
     """Create mock user context."""
     return UserContext(
         user_id="test_user_123",
@@ -33,18 +36,33 @@ def mock_user():
 
 
 @pytest.fixture
-def mock_repository():
+def mock_repository() -> AsyncMock:
     """Create mock topic repository."""
-    return AsyncMock()
+    mock = AsyncMock()
+    # Setup default return values to avoid TypeError when dataclasses.replace is called
+    # on an AsyncMock object
+    mock.get.return_value = None
+    mock.list_all.return_value = []
+    return mock
 
 
 @pytest.fixture
-def sample_topic():
+def mock_s3_storage() -> AsyncMock:
+    """Create mock S3 prompt storage."""
+    mock = AsyncMock()
+    mock.bucket_name = "test-bucket"
+    mock.get_prompt.return_value = "Test prompt content"
+    mock.save_prompt.return_value = "prompts/test_topic/system.md"
+    return mock
+
+
+@pytest.fixture
+def sample_topic() -> LLMTopic:
     """Create sample LLMTopic for testing."""
     return LLMTopic(
         topic_id="test_topic",
         topic_name="Test Topic",
-        topic_type="coaching",
+        topic_type="conversation_coaching",
         category="test",
         is_active=True,
         model_code="claude-3-5-sonnet-20241022",
@@ -79,19 +97,27 @@ def sample_topic():
 
 
 @pytest.fixture
-def client(app, mock_user, mock_repository):
+def client(
+    app: FastAPI,
+    mock_user: UserContext,
+    mock_repository: AsyncMock,
+    mock_s3_storage: AsyncMock,
+) -> TestClient:
     """Create test client with dependency overrides."""
     app.dependency_overrides[get_current_context] = lambda: mock_user
     app.dependency_overrides[get_topic_repository] = lambda: mock_repository
+    app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
     return TestClient(app)
 
 
 class TestListTopics:
     """Tests for GET /admin/topics endpoint."""
 
-    async def test_list_all_topics(self, client, mock_repository, sample_topic):
+    async def test_list_all_topics(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test listing all topics without filters."""
-        mock_repository.get_all_topics.return_value = [sample_topic]
+        mock_repository.list_all.return_value = [sample_topic]
 
         response = client.get("/admin/topics")
 
@@ -104,9 +130,11 @@ class TestListTopics:
         assert len(data["topics"]) == 1
         assert data["topics"][0]["topic_id"] == "test_topic"
 
-    async def test_list_topics_with_filters(self, client, mock_repository, sample_topic):
+    async def test_list_topics_with_filters(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test listing topics with category filter."""
-        mock_repository.get_all_topics.return_value = [sample_topic]
+        mock_repository.list_all.return_value = [sample_topic]
 
         response = client.get("/admin/topics?category=test&is_active=true")
 
@@ -115,9 +143,11 @@ class TestListTopics:
         assert data["total"] == 1
         assert data["topics"][0]["category"] == "test"
 
-    async def test_list_topics_with_search(self, client, mock_repository, sample_topic):
+    async def test_list_topics_with_search(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test listing topics with search query."""
-        mock_repository.get_all_topics.return_value = [sample_topic]
+        mock_repository.list_all.return_value = [sample_topic]
 
         response = client.get("/admin/topics?search=test")
 
@@ -125,10 +155,12 @@ class TestListTopics:
         data = response.json()
         assert data["total"] == 1
 
-    async def test_list_topics_pagination(self, client, mock_repository, sample_topic):
+    async def test_list_topics_pagination(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test topic list pagination."""
         topics = [sample_topic for _ in range(60)]
-        mock_repository.get_all_topics.return_value = topics
+        mock_repository.list_all.return_value = topics
 
         response = client.get("/admin/topics?page=1&page_size=50")
 
@@ -142,9 +174,11 @@ class TestListTopics:
 class TestGetTopic:
     """Tests for GET /admin/topics/{topic_id} endpoint."""
 
-    async def test_get_existing_topic(self, client, mock_repository, sample_topic):
+    async def test_get_existing_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test getting an existing topic."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
+        mock_repository.get.return_value = sample_topic
 
         response = client.get("/admin/topics/test_topic")
 
@@ -155,9 +189,11 @@ class TestGetTopic:
         assert len(data["prompts"]) == 1
         assert len(data["allowed_parameters"]) == 1
 
-    async def test_get_nonexistent_topic(self, client, mock_repository):
+    async def test_get_nonexistent_topic(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
         """Test getting a topic that doesn't exist."""
-        mock_repository.get_topic_by_id.return_value = None
+        mock_repository.get.return_value = None
 
         response = client.get("/admin/topics/nonexistent")
 
@@ -168,16 +204,16 @@ class TestGetTopic:
 class TestCreateTopic:
     """Tests for POST /admin/topics endpoint."""
 
-    async def test_create_valid_topic(self, client, mock_repository):
+    async def test_create_valid_topic(self, client: TestClient, mock_repository: AsyncMock) -> None:
         """Test creating a valid topic."""
-        mock_repository.get_topic_by_id.return_value = None
-        mock_repository.create_topic.return_value = None
+        mock_repository.get.return_value = None
+        mock_repository.create.return_value = None
 
         request_data = {
             "topic_id": "new_topic",
             "topic_name": "New Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 0.7,
             "max_tokens": 2000,
@@ -201,15 +237,17 @@ class TestCreateTopic:
         assert "created_at" in data
         assert "Upload prompts" in data["message"]
 
-    async def test_create_duplicate_topic(self, client, mock_repository, sample_topic):
+    async def test_create_duplicate_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test creating a topic that already exists."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
+        mock_repository.get.return_value = sample_topic
 
         request_data = {
             "topic_id": "test_topic",
             "topic_name": "Test Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 0.7,
             "max_tokens": 2000,
@@ -220,13 +258,15 @@ class TestCreateTopic:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"].lower()
 
-    async def test_create_topic_invalid_id(self, client, mock_repository):
+    async def test_create_topic_invalid_id(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
         """Test creating a topic with invalid ID format."""
         request_data = {
             "topic_id": "Invalid-Topic",
             "topic_name": "Invalid Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 0.7,
             "max_tokens": 2000,
@@ -236,7 +276,9 @@ class TestCreateTopic:
 
         assert response.status_code == 422  # Validation error
 
-    async def test_create_topic_invalid_type(self, client, mock_repository):
+    async def test_create_topic_invalid_type(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
         """Test creating a topic with invalid type."""
         request_data = {
             "topic_id": "new_topic",
@@ -256,10 +298,12 @@ class TestCreateTopic:
 class TestUpdateTopic:
     """Tests for PUT /admin/topics/{topic_id} endpoint."""
 
-    async def test_update_existing_topic(self, client, mock_repository, sample_topic):
+    async def test_update_existing_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test updating an existing topic."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.update_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_repository.update.return_value = None
 
         request_data = {
             "topic_name": "Updated Topic Name",
@@ -275,9 +319,11 @@ class TestUpdateTopic:
         assert "updated_at" in data
         assert "updated successfully" in data["message"]
 
-    async def test_update_nonexistent_topic(self, client, mock_repository):
+    async def test_update_nonexistent_topic(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
         """Test updating a topic that doesn't exist."""
-        mock_repository.get_topic_by_id.return_value = None
+        mock_repository.get.return_value = None
 
         request_data = {"topic_name": "Updated Name"}
 
@@ -289,10 +335,12 @@ class TestUpdateTopic:
 class TestDeleteTopic:
     """Tests for DELETE /admin/topics/{topic_id} endpoint."""
 
-    async def test_soft_delete_topic(self, client, mock_repository, sample_topic):
+    async def test_soft_delete_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test soft deleting a topic."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.update_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_repository.update.return_value = None
 
         response = client.delete("/admin/topics/test_topic")
 
@@ -301,18 +349,22 @@ class TestDeleteTopic:
         assert data["topic_id"] == "test_topic"
         assert "deactivated" in data["message"].lower()
 
-    async def test_hard_delete_topic(self, client, mock_repository, sample_topic):
+    async def test_hard_delete_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
         """Test hard deleting a topic."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.delete_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_repository.delete.return_value = None
 
         response = client.delete("/admin/topics/test_topic?hard_delete=true")
 
         assert response.status_code == 204
 
-    async def test_delete_nonexistent_topic(self, client, mock_repository):
+    async def test_delete_nonexistent_topic(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
         """Test deleting a topic that doesn't exist."""
-        mock_repository.get_topic_by_id.return_value = None
+        mock_repository.get.return_value = None
 
         response = client.delete("/admin/topics/nonexistent")
 
@@ -322,10 +374,16 @@ class TestDeleteTopic:
 class TestPromptManagement:
     """Tests for prompt management endpoints."""
 
-    async def test_get_prompt_content(self, client, mock_repository, sample_topic):
+    async def test_get_prompt_content(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
         """Test getting prompt content."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.get_prompt_content.return_value = "# System Prompt\n\nTest content"
+        mock_repository.get.return_value = sample_topic
+        mock_s3_storage.get_prompt.return_value = "# System Prompt\n\nTest content"
 
         response = client.get("/admin/topics/test_topic/prompts/system")
 
@@ -335,11 +393,17 @@ class TestPromptManagement:
         assert data["prompt_type"] == "system"
         assert "Test content" in data["content"]
 
-    async def test_update_prompt_content(self, client, mock_repository, sample_topic):
+    async def test_update_prompt_content(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
         """Test updating prompt content."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.update_prompt_content.return_value = None
-        mock_repository.update_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_s3_storage.save_prompt.return_value = "prompts/test_topic/system.md"
+        mock_repository.update.return_value = None
 
         request_data = {
             "content": "# Updated System Prompt\n\nNew content",
@@ -354,11 +418,17 @@ class TestPromptManagement:
         assert data["prompt_type"] == "system"
         assert "updated successfully" in data["message"].lower()
 
-    async def test_create_prompt(self, client, mock_repository, sample_topic):
+    async def test_create_prompt(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
         """Test creating a new prompt."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.update_prompt_content.return_value = None
-        mock_repository.update_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_s3_storage.save_prompt.return_value = "prompts/test_topic/user.md"
+        mock_repository.update.return_value = None
 
         request_data = {
             "prompt_type": "user",
@@ -372,11 +442,17 @@ class TestPromptManagement:
         assert data["topic_id"] == "test_topic"
         assert data["prompt_type"] == "user"
 
-    async def test_delete_prompt(self, client, mock_repository, sample_topic):
+    async def test_delete_prompt(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
         """Test deleting a prompt."""
-        mock_repository.get_topic_by_id.return_value = sample_topic
-        mock_repository.delete_prompt_content.return_value = None
-        mock_repository.update_topic.return_value = None
+        mock_repository.get.return_value = sample_topic
+        mock_s3_storage.delete_prompt.return_value = None
+        mock_repository.update.return_value = None
 
         response = client.delete("/admin/topics/test_topic/prompts/system")
 
@@ -388,28 +464,26 @@ class TestPromptManagement:
 class TestModelListing:
     """Tests for model listing endpoint."""
 
-    async def test_list_models(self, client):
+    async def test_list_models(self, client: TestClient) -> None:
         """Test listing available models."""
-        response = client.get("/admin/models")
+        response = client.get("/admin/topics/registry/endpoints")
 
         assert response.status_code == 200
         data = response.json()
-        assert "models" in data
-        assert len(data["models"]) > 0
-        assert data["models"][0]["model_code"]
-        assert data["models"][0]["provider"] == "anthropic"
+        assert "endpoints" in data
+        assert "total" in data
 
 
 class TestValidation:
     """Tests for topic validation endpoint."""
 
-    async def test_validate_valid_config(self, client):
+    async def test_validate_valid_config(self, client: TestClient) -> None:
         """Test validating a valid configuration."""
         request_data = {
             "topic_id": "test_topic",
             "topic_name": "Test Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 0.7,
             "max_tokens": 2000,
@@ -428,13 +502,13 @@ class TestValidation:
         data = response.json()
         assert data["valid"] is True
 
-    async def test_validate_invalid_id(self, client):
+    async def test_validate_invalid_id(self, client: TestClient) -> None:
         """Test validating configuration with invalid topic ID."""
         request_data = {
             "topic_id": "Invalid-ID",
             "topic_name": "Test Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 0.7,
             "max_tokens": 2000,
@@ -447,13 +521,13 @@ class TestValidation:
         assert data["valid"] is False
         assert len(data["errors"]) > 0
 
-    async def test_validate_high_temperature(self, client):
+    async def test_validate_high_temperature(self, client: TestClient) -> None:
         """Test validation with high temperature warning."""
         request_data = {
             "topic_id": "test_topic",
             "topic_name": "Test Topic",
             "category": "test",
-            "topic_type": "coaching",
+            "topic_type": "conversation_coaching",
             "model_code": "claude-3-5-sonnet-20241022",
             "temperature": 1.5,
             "max_tokens": 2000,

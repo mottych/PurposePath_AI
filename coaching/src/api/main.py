@@ -18,7 +18,6 @@ from coaching.src.api.routes import (
     health,
     insights,
     multitenant_conversations,
-    onboarding,
     operations_ai,
     suggestions,
     topics,
@@ -127,7 +126,6 @@ app.include_router(analysis.router, prefix=f"{settings.api_prefix}")
 app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=["health"])
 app.include_router(admin.router, prefix=f"{settings.api_prefix}")
 app.include_router(insights.router, prefix=f"{settings.api_prefix}/insights", tags=["insights"])
-app.include_router(onboarding.router, prefix="")
 app.include_router(
     multitenant_conversations.router,
     prefix=f"{settings.api_prefix}/multitenant/conversations",

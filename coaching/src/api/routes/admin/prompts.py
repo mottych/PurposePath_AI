@@ -51,6 +51,17 @@ def parameter_to_response(param: ParameterDefinition) -> ParameterDefinitionResp
 
 def topic_to_response(topic: LLMTopic) -> TopicResponse:
     """Convert domain topic to response model."""
+    # Reconstruct config for backward compatibility
+    config = {
+        "model_code": topic.model_code,
+        "temperature": topic.temperature,
+        "max_tokens": topic.max_tokens,
+        "top_p": topic.top_p,
+        "frequency_penalty": topic.frequency_penalty,
+        "presence_penalty": topic.presence_penalty,
+        **topic.additional_config,
+    }
+
     return TopicResponse(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -61,7 +72,7 @@ def topic_to_response(topic: LLMTopic) -> TopicResponse:
         is_active=topic.is_active,
         available_prompts=[p.prompt_type for p in topic.prompts],
         allowed_parameters=[parameter_to_response(p) for p in topic.allowed_parameters],
-        config=topic.config,
+        config=config,
         created_at=topic.created_at.isoformat(),
         created_by=topic.created_by,
         updated_at=topic.updated_at.isoformat(),
@@ -177,6 +188,16 @@ async def create_topic(
     try:
         # Create topic entity
         now = datetime.now(UTC)
+
+        # Extract model config
+        config_dict = request.config.model_dump()
+        model_code = config_dict.pop("model_code", "claude-3-5-sonnet-20241022")
+        temperature = config_dict.pop("temperature", 0.7)
+        max_tokens = config_dict.pop("max_tokens", 2000)
+        top_p = config_dict.pop("top_p", 1.0)
+        frequency_penalty = config_dict.pop("frequency_penalty", 0.0)
+        presence_penalty = config_dict.pop("presence_penalty", 0.0)
+
         topic = LLMTopic(
             topic_id=request.topic_id,
             topic_name=request.topic_name,
@@ -195,7 +216,13 @@ async def create_topic(
                 for p in request.allowed_parameters
             ],
             prompts=[],  # Prompts added separately
-            config=request.config.model_dump(),
+            model_code=model_code,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
+            additional_config=config_dict,
             display_order=request.display_order,
             created_at=now,
             updated_at=now,
@@ -322,7 +349,23 @@ async def update_topic(
                 for p in request.allowed_parameters
             ]
         if request.config is not None:
-            topic.config = request.config.model_dump()
+            config_dict = request.config.model_dump()
+            if "model_code" in config_dict:
+                topic.model_code = config_dict.pop("model_code")
+            if "temperature" in config_dict:
+                topic.temperature = config_dict.pop("temperature")
+            if "max_tokens" in config_dict:
+                topic.max_tokens = config_dict.pop("max_tokens")
+            if "top_p" in config_dict:
+                topic.top_p = config_dict.pop("top_p")
+            if "frequency_penalty" in config_dict:
+                topic.frequency_penalty = config_dict.pop("frequency_penalty")
+            if "presence_penalty" in config_dict:
+                topic.presence_penalty = config_dict.pop("presence_penalty")
+
+            # Update additional config with remaining items
+            topic.additional_config.update(config_dict)
+
         if request.display_order is not None:
             topic.display_order = request.display_order
         if request.is_active is not None:

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import structlog
 from coaching.src.core.endpoint_registry import list_all_endpoints
-from coaching.src.core.topic_seed_data import get_seed_data_for_topic
+from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
@@ -354,7 +354,7 @@ class TopicSeedingService:
     async def _create_topic_from_seed(
         self,
         *,
-        seed_data,  # TopicSeedData type
+        seed_data: TopicSeedData,
     ) -> LLMTopic:
         """Create a new topic from seed data.
 
@@ -448,7 +448,7 @@ class TopicSeedingService:
         self,
         *,
         existing_topic: LLMTopic,
-        seed_data,  # TopicSeedData type
+        seed_data: TopicSeedData,
     ) -> LLMTopic:
         """Update an existing topic from seed data.
 

@@ -423,6 +423,14 @@ class ActionPlanResponse(BaseModel):
     data: list[ActionSuggestion] = Field(..., description="Action suggestions")
 
 
+class OptimizedActionPlanResponse(BaseModel):
+    """Response for optimized action plan."""
+
+    optimized_plan: list[ActionSuggestion] = Field(..., description="Optimized list of actions")
+    optimization_rationale: str = Field(..., description="Why this plan is optimized")
+    efficiency_gain: str = Field(..., description="Estimated efficiency gain")
+
+
 __all__ = [
     "ActionAlignmentAnalysis",
     "ActionConstraints",
@@ -441,6 +449,7 @@ __all__ = [
     "GoalInput",
     # Root Cause Analysis (Issue #64)
     "IssueContext",
+    "OptimizedActionPlanResponse",
     # Prioritization
     "PrioritizationActionInput",
     "PrioritizationRequest",

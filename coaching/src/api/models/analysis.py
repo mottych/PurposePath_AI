@@ -384,17 +384,106 @@ class OperationsAnalysisResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
+class AlignmentExplanationResponse(BaseModel):
+    """Response for alignment explanation."""
+
+    explanation: str = Field(..., description="Detailed explanation of alignment")
+    key_factors: list[str] = Field(..., description="Key factors influencing the score")
+    improvement_areas: list[str] = Field(..., description="Areas for improvement")
+
+
+class AlignmentSuggestionsResponse(BaseModel):
+    """Response for alignment suggestions."""
+
+    suggestions: list[str] = Field(..., description="List of suggestions to improve alignment")
+    impact_analysis: str = Field(..., description="Analysis of potential impact")
+
+
+class KPIRecommendationsRequest(BaseModel):
+    """Request for KPI recommendations."""
+
+    business_goals: list[str] = Field(..., description="List of business goals")
+    industry: str = Field(..., description="Industry sector")
+    current_kpis: list[str] = Field(default_factory=list, description="Current KPIs if any")
+
+
+class KPIRecommendationsResponse(BaseModel):
+    """Response for KPI recommendations."""
+
+    recommended_kpis: list[KPIRecommendation] = Field(..., description="List of recommended KPIs")
+    rationale: str = Field(..., description="Overall rationale for recommendations")
+
+
+# AI Content Models (for internal use by GenericAIHandler)
+
+
+class AlignmentAnalysisAIContent(BaseModel):
+    """AI-generated content for alignment analysis."""
+
+    scores: AlignmentScore = Field(..., description="Alignment scores")
+    overall_assessment: str = Field(..., description="Summary assessment")
+    strengths: list[str] = Field(..., description="Identified strengths")
+    misalignments: list[str] = Field(default_factory=list, description="Identified misalignments")
+    recommendations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Recommendations"
+    )
+
+
+class StrategyAnalysisAIContent(BaseModel):
+    """AI-generated content for strategy analysis."""
+
+    effectiveness_score: float = Field(..., description="Strategy effectiveness score")
+    overall_assessment: str = Field(..., description="Summary assessment")
+    strengths: list[str] = Field(..., description="Strategy strengths")
+    weaknesses: list[str] = Field(default_factory=list, description="Strategy weaknesses")
+    opportunities: list[str] = Field(default_factory=list, description="Identified opportunities")
+    recommendations: list[StrategyRecommendation] = Field(
+        default_factory=list, description="Strategic recommendations"
+    )
+
+
+class KPIAnalysisAIContent(BaseModel):
+    """AI-generated content for KPI analysis."""
+
+    kpi_effectiveness_score: float = Field(..., description="Overall KPI effectiveness score")
+    overall_assessment: str = Field(..., description="Summary assessment")
+    current_kpi_analysis: list[dict[str, Any]] = Field(..., description="Analysis of current KPIs")
+    missing_kpis: list[str] = Field(default_factory=list, description="Missing KPIs")
+    recommended_kpis: list[KPIRecommendation] = Field(
+        default_factory=list, description="Recommended KPIs"
+    )
+
+
+class OperationsAnalysisAIContent(BaseModel):
+    """AI-generated content for operational analysis."""
+
+    findings: dict[str, Any] = Field(..., description="Analysis findings")
+    recommendations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Recommendations"
+    )
+    priority_actions: list[str] = Field(default_factory=list, description="High-priority actions")
+
+
 __all__ = [
+    # AI Content Models
+    "AlignmentAnalysisAIContent",
     # Requests
     "AlignmentAnalysisRequest",
     "AlignmentAnalysisResponse",
+    "AlignmentExplanationResponse",
     # Responses
     "AlignmentScore",
+    "AlignmentSuggestionsResponse",
+    "KPIAnalysisAIContent",
     "KPIAnalysisRequest",
     "KPIAnalysisResponse",
     "KPIRecommendation",
+    "KPIRecommendationsRequest",
+    "KPIRecommendationsResponse",
+    "OperationsAnalysisAIContent",
     "OperationsAnalysisRequest",
     "OperationsAnalysisResponse",
+    "StrategyAnalysisAIContent",
     "StrategyAnalysisRequest",
     "StrategyAnalysisResponse",
     "StrategyRecommendation",

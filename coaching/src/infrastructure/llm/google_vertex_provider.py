@@ -103,9 +103,11 @@ class GoogleVertexLLMProvider:
                 if not credentials:
                     creds_dict = get_google_vertex_credentials()
                     if creds_dict:
+                        # Cast to dict[str, Any] to satisfy type checker
+                        creds_map: dict[str, Any] = creds_dict
                         credentials = service_account.Credentials.from_service_account_info(
-                            creds_dict
-                        )
+                            creds_map
+                        )  # type: ignore[no-untyped-call]
                         # Update project_id from credentials if still not set
                         if not project_id:
                             project_id = creds_dict.get("project_id")
@@ -318,7 +320,7 @@ class GoogleVertexLLMProvider:
 
             # Use Gemini's token counting API
             response = model_instance.count_tokens(text)
-            return response.total_tokens
+            return int(response.total_tokens)
 
         except Exception as e:
             logger.warning("Token counting failed, using approximation", error=str(e), model=model)
