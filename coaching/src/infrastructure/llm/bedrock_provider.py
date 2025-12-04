@@ -244,7 +244,7 @@ class BedrockLLMProvider:
             # Claude format
             content_blocks = response_body.get("content", [])
             if content_blocks and isinstance(content_blocks, list):
-                return content_blocks[0].get("text", "")
+                return cast(str, content_blocks[0].get("text", ""))
             return ""
         else:
             # Generic format
