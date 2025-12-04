@@ -66,64 +66,94 @@ jobs:
         env:
           PYTHONPATH: coaching:shared:.
 
-  build-and-deploy:
-    name: Build and Deploy to Staging
+  deploy-infrastructure:
+    name: Deploy Infrastructure
     runs-on: ubuntu-latest
     needs: [pre-deployment-checks]
     if: always() && (needs.pre-deployment-checks.result == 'success' || github.event.inputs.skip_tests == 'true')
     permissions:
       id-token: write
       contents: read
-    
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
+      - name: Install Pulumi Python dependencies
+        working-directory: infrastructure/pulumi
+        run: pip install -r requirements.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_STAGING_ROLE_ARN }}
-          role-session-name: purposepath-staging-deploy
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Build SAM Applications
-        run: |
-          sam build --template coaching/template-standalone.yaml --parallel --cached
+      - name: Deploy Infrastructure
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: staging
+          work-dir: infrastructure/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
-      - name: Resolve Staging JWT Secret ARN
-        id: secret
-        run: |
-          ARN=$(aws secretsmanager list-secrets --query "SecretList[?Name=='purposepath/jwt-secret/staging'].ARN | [0]" --output text)
-          echo "arn=$ARN" >> $GITHUB_OUTPUT
+  deploy-coaching:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure]
+    if: always() && (needs.deploy-infrastructure.result == 'success')
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Deploy Coaching Service (staging)
-        run: |
-          sam deploy \
-            --template-file coaching/template-standalone.yaml \
-            --stack-name purposepath-coaching-api-staging \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides Stage=staging LogLevel=INFO JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
-            --region us-east-1 \
-            --resolve-s3 \
-            --no-confirm-changeset \
-            --tags Environment=staging Project=PurposePath Service=Coaching
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Pulumi Python dependencies
+        working-directory: coaching/pulumi
+        run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Deploy Coaching Service
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: staging
+          work-dir: coaching/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
       - name: Get API Gateway URL
         id: api-url
+        working-directory: coaching/pulumi
         run: |
-          URL=$(aws cloudformation describe-stacks \
-            --stack-name purposepath-coaching-api-staging \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
+          URL=$(pulumi stack output customDomainUrl --stack staging)
           echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Deployment Summary
         run: |
@@ -132,7 +162,7 @@ jobs:
           echo "✅ Deployment successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
-          echo "**Stack:** purposepath-coaching-api-staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** staging" >> $GITHUB_STEP_SUMMARY
           echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
@@ -140,27 +170,32 @@ jobs:
   smoke-tests:
     name: Post-Deployment Smoke Tests
     runs-on: ubuntu-latest
-    needs: [build-and-deploy]
+    needs: [deploy-coaching]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
+        with:
+          pulumi-version: 'latest'
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_STAGING_ROLE_ARN }}
-          role-session-name: purposepath-staging-tests
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Get API Gateway URL
         id: api-url
+        working-directory: coaching/pulumi
         run: |
-          URL=$(aws cloudformation describe-stacks \
-            --stack-name purposepath-coaching-api-staging \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
+          URL=$(pulumi stack output customDomainUrl --stack staging)
           echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Health Check
         run: |

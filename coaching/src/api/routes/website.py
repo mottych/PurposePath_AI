@@ -4,6 +4,8 @@ from typing import Any
 
 import structlog
 from coaching.src.api.auth import get_current_context
+from coaching.src.core.config_multitenant import settings
+from coaching.src.llm.providers.base import ProviderConfig, ProviderType
 from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 from fastapi import APIRouter, Depends
@@ -27,7 +29,18 @@ async def get_website_analysis_service() -> WebsiteAnalysisService:
     from coaching.src.llm.providers.manager import ProviderManager
 
     provider_manager = ProviderManager()
-    # Use Bedrock as primary provider
+
+    # Configure Bedrock provider
+    config = ProviderConfig(
+        provider_type=ProviderType.BEDROCK,
+        model_name=settings.bedrock_model_id,
+        region_name=settings.bedrock_region,
+        temperature=0.7,
+        max_tokens=4096,
+    )
+
+    # Register and initialize
+    await provider_manager.register_provider("default", config)
     await provider_manager.initialize()
 
     return WebsiteAnalysisService(provider_manager=provider_manager)
