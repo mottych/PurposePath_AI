@@ -1,16 +1,18 @@
 """Test JWT token validation with the secret from AWS Secrets Manager."""
+
 import json
+
 import boto3
 import jwt
 
 # Get the secret from AWS
-secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-response = secrets_client.get_secret_value(SecretId='purposepath-jwt-secret-dev')
-secret_value = response['SecretString']
+secrets_client = boto3.client("secretsmanager", region_name="us-east-1")
+response = secrets_client.get_secret_value(SecretId="purposepath-jwt-secret-dev")
+secret_value = response["SecretString"]
 
 # Parse JSON to get the actual secret
 secret_data = json.loads(secret_value)
-jwt_secret = secret_data['jwt_secret']
+jwt_secret = secret_data["jwt_secret"]
 
 print(f"Secret retrieved: {jwt_secret[:20]}...")
 
@@ -20,10 +22,7 @@ token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZmJjMDNlYS0xZmFjLTQ1Zm
 try:
     # Try to decode with the secret from AWS
     payload = jwt.decode(
-        token,
-        jwt_secret,
-        algorithms=["HS256"],
-        options={"verify_aud": False, "verify_iss": False}
+        token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False, "verify_iss": False}
     )
     print("\n✅ Token validated successfully!")
     print(f"User: {payload.get('name')}")

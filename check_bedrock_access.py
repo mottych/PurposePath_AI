@@ -14,7 +14,7 @@ def check_credentials():
     try:
         sts = boto3.client("sts")
         identity = sts.get_caller_identity()
-        print(f"✅ AWS Credentials configured")
+        print("✅ AWS Credentials configured")
         print(f"   Account: {identity['Account']}")
         print(f"   User ARN: {identity['Arn']}")
         print(f"   User ID: {identity['UserId']}")
@@ -150,7 +150,7 @@ def test_anthropic_model():
 
         if content:
             text = content[0].get("text", "")
-            print(f"✅ Model invocation successful!")
+            print("✅ Model invocation successful!")
             print(f"   Response: {text}")
             return True
         else:

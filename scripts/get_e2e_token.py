@@ -15,8 +15,10 @@ def get_auth_token() -> str:
         response.raise_for_status()
 
         data = response.json()
-        token = data.get("access_token") or data.get("token") or data.get("data", {}).get(
-            "access_token"
+        token = (
+            data.get("access_token")
+            or data.get("token")
+            or data.get("data", {}).get("access_token")
         )
 
         if not token:

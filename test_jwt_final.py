@@ -1,16 +1,18 @@
 """Test JWT token validation with extracted secret value."""
-import jwt
+
 import json
+
 import boto3
+import jwt
 
 # Get the secret from AWS and parse it
-secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-response = secrets_client.get_secret_value(SecretId='purposepath-jwt-secret-dev')
-secret_value = response['SecretString']
+secrets_client = boto3.client("secretsmanager", region_name="us-east-1")
+response = secrets_client.get_secret_value(SecretId="purposepath-jwt-secret-dev")
+secret_value = response["SecretString"]
 
 # Parse JSON to extract jwt_secret key
 secret_data = json.loads(secret_value)
-jwt_secret = secret_data['jwt_secret']
+jwt_secret = secret_data["jwt_secret"]
 
 print(f"Secret retrieved and parsed: {jwt_secret[:30]}...")
 
@@ -22,10 +24,7 @@ print("\nTesting JWT validation with extracted secret...")
 try:
     # Decode with the extracted secret (matching what Python Lambda now does)
     payload = jwt.decode(
-        token,
-        jwt_secret,
-        algorithms=["HS256"],
-        options={"verify_aud": False, "verify_iss": False}
+        token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False, "verify_iss": False}
     )
     print("\n=== SUCCESS ===")
     print("Token validated successfully with extracted secret!")
@@ -35,8 +34,8 @@ try:
     print(f"Tenant ID: {payload.get('tenant_id')}")
     print(f"Status: {payload.get('user_status')}")
     print(f"Role: {payload.get('role')}")
-    print(f"\nThis is exactly what the Lambda will do now!")
-    
+    print("\nThis is exactly what the Lambda will do now!")
+
 except jwt.InvalidSignatureError:
     print("\n=== FAILED ===")
     print("Invalid signature - secret mismatch")
@@ -44,5 +43,5 @@ except jwt.ExpiredSignatureError:
     print("\n=== EXPIRED ===")
     print("Token has expired - need a new token")
 except Exception as e:
-    print(f"\n=== ERROR ===")
+    print("\n=== ERROR ===")
     print(f"Error: {e}")

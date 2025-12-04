@@ -108,7 +108,6 @@ async def test_website_scanning_service():
 
     try:
         from coaching.src.llm.providers.manager import ProviderManager
-        from coaching.src.services.llm_service import LLMService
         from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 
         url = "https://purposepath.ai"
@@ -191,7 +190,9 @@ async def main():
     print("=" * 60)
     print(f"Bedrock Configuration: {'✅ PASS' if bedrock_ok else '❌ FAIL'}")
     print(f"Website Fetching:      {'✅ PASS' if fetch_ok else '❌ FAIL'}")
-    print(f"AI Website Scanning:   {'✅ PASS' if scan_ok else '❌ FAIL' if bedrock_ok else '⏭️  SKIPPED'}")
+    print(
+        f"AI Website Scanning:   {'✅ PASS' if scan_ok else '❌ FAIL' if bedrock_ok else '⏭️  SKIPPED'}"
+    )
     print("=" * 60)
 
     return 0 if (bedrock_ok and fetch_ok and scan_ok) else 1

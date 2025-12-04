@@ -1,4 +1,5 @@
 """Test JWT token validation with raw JSON string as secret."""
+
 import jwt
 
 # The raw JSON string from AWS
@@ -15,7 +16,7 @@ try:
         token,
         jwt_secret_raw,
         algorithms=["HS256"],
-        options={"verify_aud": False, "verify_iss": False}
+        options={"verify_aud": False, "verify_iss": False},
     )
     print("\nSUCCESS - Token validated with RAW JSON string!")
     print(f"User: {payload.get('name')}")

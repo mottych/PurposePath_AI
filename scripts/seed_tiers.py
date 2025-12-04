@@ -7,6 +7,7 @@ Usage:
 Environment variables (override):
   TIERS_TABLE, TENANT_OVERRIDES_TABLE
 """
+
 import argparse
 import json
 import os
@@ -22,7 +23,9 @@ def main():
     args = parser.parse_args()
 
     tiers_table = os.environ.get("TIERS_TABLE") or f"purposepath-tiers-{args.stage}"
-    overrides_table = os.environ.get("TENANT_OVERRIDES_TABLE") or f"purposepath-tenant-overrides-{args.stage}"
+    overrides_table = (
+        os.environ.get("TENANT_OVERRIDES_TABLE") or f"purposepath-tenant-overrides-{args.stage}"
+    )
 
     with Path("scripts/seed_data/tiers.json").open("r", encoding="utf-8") as f:
         data = json.load(f)
@@ -47,4 +50,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

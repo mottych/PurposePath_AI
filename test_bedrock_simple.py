@@ -23,7 +23,9 @@ def test_bedrock_access():
         body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 100,
-            "messages": [{"role": "user", "content": "Say 'Hello from Bedrock!' and nothing else."}],
+            "messages": [
+                {"role": "user", "content": "Say 'Hello from Bedrock!' and nothing else."}
+            ],
         }
         print("   [PASS] Message prepared")
 

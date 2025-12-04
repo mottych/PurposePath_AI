@@ -128,19 +128,28 @@ aws.s3.BucketPublicAccessBlock(
 )
 
 # Exports
-pulumi.export("dynamoTables", {
-    "coachingConversations": conversations_table.name,
-    "coachingSessions": coaching_sessions_table.name,
-    "llmPrompts": llm_prompts_table.name,
-})
-pulumi.export("tableNames", {
-    "conversations": "purposepath-coaching-conversations-dev",
-    "sessions": "purposepath-coaching-sessions-dev",
-    "prompts": "purposepath-llm-prompts-dev",
-})
+pulumi.export(
+    "dynamoTables",
+    {
+        "coachingConversations": conversations_table.name,
+        "coachingSessions": coaching_sessions_table.name,
+        "llmPrompts": llm_prompts_table.name,
+    },
+)
+pulumi.export(
+    "tableNames",
+    {
+        "conversations": "purposepath-coaching-conversations-dev",
+        "sessions": "purposepath-coaching-sessions-dev",
+        "prompts": "purposepath-llm-prompts-dev",
+    },
+)
 pulumi.export("promptsBucket", prompts_bucket.bucket)
-pulumi.export("tableArns", {
-    "conversations": conversations_table.arn,
-    "sessions": coaching_sessions_table.arn,
-    "prompts": llm_prompts_table.arn,
-})
+pulumi.export(
+    "tableArns",
+    {
+        "conversations": conversations_table.arn,
+        "sessions": coaching_sessions_table.arn,
+        "prompts": llm_prompts_table.arn,
+    },
+)

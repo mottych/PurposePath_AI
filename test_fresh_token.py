@@ -1,17 +1,19 @@
 """Test fresh JWT token validation with extracted secret value."""
-import jwt
+
 import json
-import boto3
 from datetime import datetime
 
+import boto3
+import jwt
+
 # Get the secret from AWS and parse it
-secrets_client = boto3.client('secretsmanager', region_name='us-east-1')
-response = secrets_client.get_secret_value(SecretId='purposepath-jwt-secret-dev')
-secret_value = response['SecretString']
+secrets_client = boto3.client("secretsmanager", region_name="us-east-1")
+response = secrets_client.get_secret_value(SecretId="purposepath-jwt-secret-dev")
+secret_value = response["SecretString"]
 
 # Parse JSON to extract jwt_secret key
 secret_data = json.loads(secret_value)
-jwt_secret = secret_data['jwt_secret']
+jwt_secret = secret_data["jwt_secret"]
 
 print(f"Secret retrieved and parsed: {jwt_secret[:30]}...")
 
@@ -23,42 +25,39 @@ print("\nTesting JWT validation with extracted secret...")
 try:
     # Decode with the extracted secret (matching what Python Lambda now does)
     payload = jwt.decode(
-        token,
-        jwt_secret,
-        algorithms=["HS256"],
-        options={"verify_aud": False, "verify_iss": False}
+        token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False, "verify_iss": False}
     )
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("SUCCESS - TOKEN VALIDATED!")
-    print("="*50)
+    print("=" * 50)
     print(f"\nUser: {payload.get('name')}")
     print(f"Email: {payload.get('email')}")
     print(f"User ID: {payload.get('user_id')}")
     print(f"Tenant ID: {payload.get('tenant_id')}")
     print(f"Status: {payload.get('user_status')}")
     print(f"Role: {payload.get('role')}")
-    
+
     # Check expiration
-    exp = payload.get('exp')
+    exp = payload.get("exp")
     if exp:
         exp_time = datetime.fromtimestamp(exp)
         print(f"Expires: {exp_time}")
-    
-    print("\n" + "="*50)
+
+    print("\n" + "=" * 50)
     print("This token will work with the Lambda!")
-    print("="*50)
-    
+    print("=" * 50)
+
 except jwt.InvalidSignatureError:
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("FAILED - Invalid signature")
-    print("="*50)
+    print("=" * 50)
     print("The secret doesn't match what was used to sign the token")
 except jwt.ExpiredSignatureError:
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("FAILED - Token expired")
-    print("="*50)
+    print("=" * 50)
     print("Need a new token")
 except Exception as e:
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print(f"ERROR: {e}")
-    print("="*50)
+    print("=" * 50)

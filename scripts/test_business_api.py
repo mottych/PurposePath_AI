@@ -40,12 +40,11 @@ class BusinessApiTestRunner:
     def __init__(self) -> None:
         """Initialize test runner with configuration."""
         self.account_api_url = os.getenv(
-            "BUSINESS_API_ACCOUNT_URL",
-            "https://api.dev.purposepath.app/account/api/v1"
+            "BUSINESS_API_ACCOUNT_URL", "https://api.dev.purposepath.app/account/api/v1"
         )
         self.business_api_url = os.getenv(
             "BUSINESS_API_BASE_URL",
-            self.account_api_url  # Default to same as account
+            self.account_api_url,  # Default to same as account
         )
         self.email = os.getenv("BUSINESS_API_TEST_EMAIL", "motty@purposepath.ai")
         self.password = os.getenv("BUSINESS_API_TEST_PASSWORD", "Abcd1234")
@@ -166,9 +165,7 @@ class BusinessApiTestRunner:
         logger.info("Testing get_organizational_context...")
 
         try:
-            result = await self.client.get_organizational_context(
-                tenant_id=self.tenant_id
-            )
+            result = await self.client.get_organizational_context(tenant_id=self.tenant_id)
 
             logger.info(
                 "✅ get_organizational_context succeeded",
@@ -210,7 +207,7 @@ class BusinessApiTestRunner:
             logger.info(
                 "✅ get_user_goals succeeded",
                 result_type=type(result).__name__,
-                count=len(result) if isinstance(result, (list, dict)) else "unknown",
+                count=len(result) if isinstance(result, list | dict) else "unknown",
                 result=result,
             )
 
