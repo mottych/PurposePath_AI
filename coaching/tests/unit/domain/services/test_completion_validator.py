@@ -10,6 +10,8 @@ from coaching.src.core.types import (
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.services.completion_validator import CompletionValidator
 
+pytestmark = pytest.mark.unit
+
 
 class TestCompletionValidatorBasics:
     """Test suite for basic completion validation."""

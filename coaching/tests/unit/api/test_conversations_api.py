@@ -54,6 +54,8 @@ from coaching.src.models.prompt import (
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.unit
+
 
 class DummyConversationContext:
     """Minimal conversation context for testing."""

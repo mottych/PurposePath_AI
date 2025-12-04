@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 
 from shared.models.multitenant import RequestContext, UserRole
 
+pytestmark = pytest.mark.unit
+
 
 class DummyTopicRepository(TopicRepository):
     """In-memory TopicRepository for testing list_by_type behavior."""

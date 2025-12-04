@@ -12,6 +12,8 @@ from coaching.src.domain.services.phase_transition_service import (
     PhaseTransitionService,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestPhaseTransitionServiceBasics:
     """Test suite for basic phase transition functionality."""
