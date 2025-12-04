@@ -1,6 +1,6 @@
 """Main FastAPI application with Phase 7 architecture."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import structlog
@@ -24,7 +24,7 @@ from coaching.src.api.routes import (
     website,
 )
 from coaching.src.core.config_multitenant import settings
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -56,7 +56,9 @@ class CORSPreflightMiddleware(BaseHTTPMiddleware):
     going through authentication or other middleware that might reject them.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Handle OPTIONS requests immediately."""
         # Let CORSMiddleware handle the response
         # This just ensures we log pre-flight requests for debugging
