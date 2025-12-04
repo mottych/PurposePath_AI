@@ -375,4 +375,3 @@ class TestAnalysisErrorHandling:
         data = response.json()
         # Check for either detail or message/error depending on middleware
         assert "detail" in data or "message" in data
-

@@ -2,53 +2,46 @@
 
 from __future__ import annotations
 
-import sys
-import types
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 # Stub external AWS dependencies so imports in infrastructure layers don't fail.
 # Tests do not call real AWS services.
-if "boto3" not in sys.modules:
-    boto3_module = types.ModuleType("boto3")
-    dynamodb_module = types.ModuleType("boto3.dynamodb")
-    conditions_module = types.ModuleType("boto3.dynamodb.conditions")
-
-    class _DummyCondition:  # pragma: no cover - not used directly
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            """Lightweight stand-in for boto3.dynamodb.conditions objects."""
-
-        def __call__(self, *args: object, **kwargs: object) -> _DummyCondition:
-            return self
-
-    conditions_module.Attr = _DummyCondition  # type: ignore[attr-defined]
-    conditions_module.Key = _DummyCondition  # type: ignore[attr-defined]
-
-    sys.modules["boto3"] = boto3_module
-    sys.modules["boto3.dynamodb"] = dynamodb_module
-    sys.modules["boto3.dynamodb.conditions"] = conditions_module
-
-if "botocore" not in sys.modules:
-    botocore_module = types.ModuleType("botocore")
-    exceptions_module = types.ModuleType("botocore.exceptions")
-
-    class ClientError(Exception):  # pragma: no cover - never raised in these tests
-        """Dummy ClientError compatible with boto3 expectations."""
-
-        def __init__(self, error_response: dict[str, Any], operation_name: str) -> None:
-            super().__init__(f"{operation_name}: {error_response}")
-
-    exceptions_module.ClientError = ClientError  # type: ignore[attr-defined]
-
-    sys.modules["botocore"] = botocore_module
-    sys.modules["botocore.exceptions"] = exceptions_module
-
-from coaching.src.api.dependencies import get_conversation_service, get_prompt_service
+# if "boto3" not in sys.modules:
+#     boto3_module = types.ModuleType("boto3")
+#     dynamodb_module = types.ModuleType("boto3.dynamodb")
+#     conditions_module = types.ModuleType("boto3.dynamodb.conditions")
+#     class _DummyCondition:  # pragma: no cover - not used directly
+#         def __init__(self, *args: object, **kwargs: object) -> None:
+#             """Lightweight stand-in for boto3.dynamodb.conditions objects."""
+#         def __call__(self, *args: object, **kwargs: object) -> _DummyCondition:
+#             return self
+#     conditions_module.Attr = _DummyCondition  # type: ignore[attr-defined]
+#     conditions_module.Key = _DummyCondition  # type: ignore[attr-defined]
+#     sys.modules["boto3"] = boto3_module
+#     sys.modules["boto3.dynamodb"] = dynamodb_module
+#     sys.modules["boto3.dynamodb.conditions"] = conditions_module
+# if "botocore" not in sys.modules:
+#     botocore_module = types.ModuleType("botocore")
+#     exceptions_module = types.ModuleType("botocore.exceptions")
+#     class ClientError(Exception):  # pragma: no cover - never raised in these tests
+#         """Dummy ClientError compatible with boto3 expectations."""
+#         def __init__(self, error_response: dict[str, Any], operation_name: str) -> None:
+#             super().__init__(f"{operation_name}: {error_response}")
+#     exceptions_module.ClientError = ClientError  # type: ignore[attr-defined]
+#     sys.modules["botocore"] = botocore_module
+#     sys.modules["botocore.exceptions"] = exceptions_module
+#     # Add botocore.client mock for langchain_aws
+#     client_module = types.ModuleType("botocore.client")
+#     client_module.Config = type("Config", (), {})  # type: ignore
+#     sys.modules["botocore.client"] = client_module
+#     botocore_module.client = client_module  # type: ignore
+from coaching.src.api.auth import get_current_user
+from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.models.auth import UserContext
 from coaching.src.api.routes.conversations import router
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
@@ -58,6 +51,8 @@ from coaching.src.models.prompt import (
     LLMConfig,
     PromptTemplate,
 )
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
 
 class DummyConversationContext:
@@ -144,32 +139,54 @@ class DummyPromptService:
         )
 
 
+class DummyGenericAIHandler:
+    """Stub for GenericAIHandler."""
+
+    def __init__(self, raise_not_found: bool = False) -> None:
+        self.raise_not_found = raise_not_found
+        self.requested_topics: list[str] = []
+
+    async def get_initial_prompt(self, topic_id: str) -> str:
+        self.requested_topics.append(topic_id)
+        if self.raise_not_found:
+            raise HTTPException(status_code=404, detail=f"Topic not found: {topic_id}")
+        return f"System prompt for {topic_id}"
+
+    async def handle_conversation_initiate(
+        self, topic_id: str, user_context: Any, initial_parameters: dict[str, Any]
+    ) -> DummyConversation:
+        return DummyConversation(topic=CoachingTopic(topic_id))
+
+
 def create_test_app(
     *,
-    prompt_service_factory: Callable[[], DummyPromptService],
-    conversation_service_factory: Callable[[], DummyConversationService],
-) -> tuple[FastAPI, DummyPromptService, DummyConversationService]:
+    prompt_service_factory: Callable[[], DummyPromptService] | None = None,
+    conversation_service_factory: Callable[[], DummyConversationService] | None = None,
+    generic_handler_factory: Callable[[], DummyGenericAIHandler] | None = None,
+) -> tuple[FastAPI, DummyGenericAIHandler | None]:
     """Create a FastAPI app with dependency overrides for testing."""
 
     app = FastAPI()
     app.include_router(router)
 
-    prompt_service = prompt_service_factory()
-    conversation_service = conversation_service_factory()
+    generic_handler = generic_handler_factory() if generic_handler_factory else None
 
-    app.dependency_overrides[get_prompt_service] = lambda: prompt_service
-    app.dependency_overrides[get_conversation_service] = lambda: conversation_service
+    if generic_handler:
+        app.dependency_overrides[get_generic_handler] = lambda: generic_handler
 
-    return app, prompt_service, conversation_service
+    app.dependency_overrides[get_current_user] = lambda: UserContext(
+        user_id="user_123", tenant_id="tenant_456", roles=["user"]
+    )
+
+    return app, generic_handler
 
 
 @pytest.mark.asyncio
 async def test_initiate_conversation_uses_prompt_service() -> None:
-    """Endpoint should use PromptService system prompt as initial_message."""
+    """Endpoint should use GenericAIHandler to get initial prompt."""
 
-    app, prompt_service, conversation_service = create_test_app(
-        prompt_service_factory=lambda: DummyPromptService(),
-        conversation_service_factory=lambda: DummyConversationService(),
+    app, generic_handler = create_test_app(
+        generic_handler_factory=lambda: DummyGenericAIHandler(),
     )
 
     client = TestClient(app)
@@ -185,27 +202,20 @@ async def test_initiate_conversation_uses_prompt_service() -> None:
     assert response.status_code == 201
     data = response.json()
 
-    # initial_message should come from PromptService system_prompt
+    # initial_message should come from GenericAIHandler (which simulates system prompt)
     assert data["initial_message"] == "System prompt for core_values"
 
-    # PromptService should have been called with the topic value
-    assert prompt_service.requested_topics == [CoachingTopic.CORE_VALUES.value]
-
-    # ConversationApplicationService should receive the same initial_message
-    assert len(conversation_service.start_calls) == 1
-    assert (
-        conversation_service.start_calls[0]["initial_message_content"]
-        == "System prompt for core_values"
-    )
+    # GenericAIHandler should have been called with the topic value
+    assert generic_handler is not None
+    assert generic_handler.requested_topics == [CoachingTopic.CORE_VALUES.value]
 
 
 @pytest.mark.asyncio
 async def test_initiate_conversation_unknown_topic_returns_404() -> None:
-    """If PromptService raises TopicNotFoundError, endpoint should return 404."""
+    """If GenericAIHandler raises 404, endpoint should return 404."""
 
-    app, _prompt_service, _conversation_service = create_test_app(
-        prompt_service_factory=lambda: DummyPromptService(raise_not_found=True),
-        conversation_service_factory=lambda: DummyConversationService(),
+    app, _generic_handler = create_test_app(
+        generic_handler_factory=lambda: DummyGenericAIHandler(raise_not_found=True),
     )
 
     client = TestClient(app)

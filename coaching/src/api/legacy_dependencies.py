@@ -14,9 +14,8 @@ from coaching.src.application.analysis.kpi_service import KPIAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
-    from mypy_boto3_dynamodb import DynamoDBServiceResource
-
     from coaching.src.services.model_config_service import ModelConfigService
+    from mypy_boto3_dynamodb import DynamoDBServiceResource
 
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,

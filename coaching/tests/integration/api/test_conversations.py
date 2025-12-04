@@ -54,10 +54,12 @@ def mock_generic_handler(mock_conversation):
     handler = AsyncMock()
     handler.get_initial_prompt = AsyncMock(return_value="Welcome! Let's explore your core values.")
     handler.handle_conversation_initiate = AsyncMock(return_value=mock_conversation)
-    handler.handle_conversation_message = AsyncMock(return_value={
-        "content": "That's wonderful! Honesty is a powerful core value.",
-        "is_complete": False
-    })
+    handler.handle_conversation_message = AsyncMock(
+        return_value={
+            "content": "That's wonderful! Honesty is a powerful core value.",
+            "is_complete": False,
+        }
+    )
     handler.handle_conversation_pause = AsyncMock(return_value=None)
     handler.handle_conversation_complete = AsyncMock(return_value=None)
     return handler
@@ -282,4 +284,3 @@ class TestConversationActions:
 
         # Should return 204 No Content
         assert response.status_code == 204
-

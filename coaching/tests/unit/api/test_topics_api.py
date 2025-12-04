@@ -48,11 +48,7 @@ def create_test_app(topics: list[LLMTopic]) -> tuple[FastAPI, DummyTopicReposito
         return repo
 
     async def _get_context_override() -> RequestContext:
-        return RequestContext(
-            user_id="test-user",
-            tenant_id="test-tenant",
-            role=UserRole.MEMBER
-        )
+        return RequestContext(user_id="test-user", tenant_id="test-tenant", role=UserRole.MEMBER)
 
     app.dependency_overrides[get_topic_repository] = _get_repo_override
     app.dependency_overrides[get_current_context] = _get_context_override
@@ -126,11 +122,7 @@ async def test_list_available_topics_handles_repository_error() -> None:
         return failing_repo
 
     async def _get_context_override() -> RequestContext:
-        return RequestContext(
-            user_id="test-user",
-            tenant_id="test-tenant",
-            role=UserRole.MEMBER
-        )
+        return RequestContext(user_id="test-user", tenant_id="test-tenant", role=UserRole.MEMBER)
 
     app.dependency_overrides[get_topic_repository] = _get_repo_override
     app.dependency_overrides[get_current_context] = _get_context_override

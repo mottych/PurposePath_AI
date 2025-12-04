@@ -118,6 +118,8 @@ async def initiate_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Topic not found: {request.topic.value}",
         ) from e
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             "Failed to initiate conversation",
