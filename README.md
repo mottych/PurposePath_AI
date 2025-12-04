@@ -178,8 +178,8 @@ The PurposePath AI service uses a comprehensive shared types system for type saf
 ### Quick Usage
 
 ```python
-from shared.types import UserId, create_user_id, ConversationId
-from shared.types.coaching_models import SessionData, BusinessContext
+from shared.domain_types import UserId, create_user_id, ConversationId
+from shared.domain_types.coaching_models import SessionData, BusinessContext
 
 # Strong typing with domain IDs
 user_id = create_user_id("usr_123")

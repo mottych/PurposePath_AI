@@ -8,7 +8,7 @@ Using these constants provides:
 - Clear documentation of available interactions
 
 Usage:
-    from src.core.interaction_codes import ALIGNMENT_ANALYSIS
+    from coaching.src.core.interaction_codes import ALIGNMENT_ANALYSIS
 
     config = await config_service.resolve_configuration(
         interaction_code=ALIGNMENT_ANALYSIS,  # Type-safe constant

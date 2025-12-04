@@ -183,7 +183,7 @@ async def migrate_existing_prompts(
 
     try:
         # Try to load existing YAML file
-        import yaml  # type: ignore[import]
+        import yaml  # type: ignore
 
         response = s3_client.get_object(Bucket=settings.prompts_bucket, Key=old_s3_key)
         content = response["Body"].read().decode("utf-8")

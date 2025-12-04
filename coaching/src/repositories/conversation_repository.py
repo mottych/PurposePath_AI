@@ -18,7 +18,7 @@ from coaching.src.core.exceptions import ConversationNotFoundCompatError
 from coaching.src.domain.value_objects.message import Message
 from coaching.src.models.conversation import Conversation, ConversationContext
 
-from shared.types.common import JSONDict
+from shared.domain_types.common import JSONDict
 
 logger = structlog.get_logger()
 

@@ -264,7 +264,7 @@ class LLMService:
             }
 
         # Calculate cost
-        from src.infrastructure.llm.model_pricing import calculate_cost
+        from coaching.src.infrastructure.llm.model_pricing import calculate_cost
 
         cost = calculate_cost(
             token_usage.get("input", 0),
@@ -393,7 +393,7 @@ class LLMService:
             }
 
         # Calculate cost from token breakdown
-        from src.infrastructure.llm.model_pricing import calculate_cost
+        from coaching.src.infrastructure.llm.model_pricing import calculate_cost
 
         cost = calculate_cost(
             token_usage.get("input", 0),
@@ -465,7 +465,7 @@ class LLMService:
             }
 
             # Use workflow orchestrator for analysis
-            from src.workflows.base import WorkflowType
+            from coaching.src.workflows.base import WorkflowType
 
             workflow_state = await self.workflow_orchestrator.start_workflow(
                 workflow_type=WorkflowType.SINGLE_SHOT_ANALYSIS,

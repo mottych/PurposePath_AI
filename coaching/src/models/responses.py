@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from coaching.src.core.constants import ConversationStatus
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +14,7 @@ class ConversationResponse(BaseModel):
     status: ConversationStatus
     current_question: str
     progress: float = Field(ge=0.0, le=1.0)
+    phase: ConversationPhase | None = None
     session_data: dict[str, Any] | None = None
 
 
@@ -24,6 +25,7 @@ class MessageResponse(BaseModel):
     follow_up_question: str | None = None
     insights: list[str] | None = None
     progress: float = Field(ge=0.0, le=1.0)
+    phase: ConversationPhase | None = None
     is_complete: bool = False
     next_steps: list[str] | None = None
     identified_values: list[str] | None = None

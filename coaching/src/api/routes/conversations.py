@@ -28,6 +28,7 @@ from coaching.src.api.models.conversations import (
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )
+from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.exceptions.conversation_exceptions import (
@@ -99,7 +100,7 @@ async def initiate_conversation(
             conversation_id=conversation.conversation_id,
             user_id=conversation.user_id,
             tenant_id=conversation.tenant_id,
-            topic=conversation.topic,
+            topic=CoachingTopic(conversation.topic),
             status=conversation.status,
             initial_message=initial_prompt,
             progress=conversation.calculate_progress_percentage() / 100.0,
@@ -279,7 +280,7 @@ async def get_conversation(
             conversation_id=conversation.conversation_id,
             user_id=conversation.user_id,
             tenant_id=conversation.tenant_id,
-            topic=conversation.topic,
+            topic=CoachingTopic(conversation.topic),
             status=conversation.status,
             progress=conversation.calculate_progress_percentage() / 100.0,
             messages=[
@@ -361,7 +362,7 @@ async def list_conversations(
                 conversation_id=conv.conversation_id,
                 user_id=conv.user_id,
                 tenant_id=conv.tenant_id,
-                topic=conv.topic,
+                topic=CoachingTopic(conv.topic),
                 status=conv.status,
                 progress=conv.calculate_progress_percentage() / 100.0,
                 message_count=len(conv.messages),

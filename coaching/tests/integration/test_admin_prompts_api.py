@@ -8,15 +8,15 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.exceptions.topic_exceptions import (
+    DuplicateTopicError,
+    PromptNotFoundError,
+)
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from shared.models.multitenant import RequestContext, UserRole
-from src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
-from src.domain.exceptions.topic_exceptions import (
-    DuplicateTopicError,
-    PromptNotFoundError,
-)
 
 
 @pytest.fixture
@@ -76,8 +76,10 @@ def sample_topic() -> LLMTopic:
                 updated_by="admin_user_123",
             )
         ],
-        config={
-            "default_model": "claude-3-sonnet",
+        model_code="claude-3-sonnet",
+        temperature=0.7,
+        max_tokens=2000,
+        additional_config={
             "supports_streaming": True,
             "max_turns": 10,
         },
@@ -95,10 +97,10 @@ def app(
     mock_s3_storage: AsyncMock,
 ) -> FastAPI:
     """Create FastAPI test app with prompts router and mocked dependencies."""
-    from src.api.auth import get_current_context
-    from src.api.dependencies import get_s3_prompt_storage, get_topic_repository
-    from src.api.middleware.admin_auth import require_admin_access
-    from src.api.routes.admin.prompts import router
+    from coaching.src.api.auth import get_current_context
+    from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
+    from coaching.src.api.middleware.admin_auth import require_admin_access
+    from coaching.src.api.routes.admin.prompts import router
 
     test_app = FastAPI()
 
@@ -108,7 +110,7 @@ def app(
     test_app.dependency_overrides[get_topic_repository] = lambda: mock_topic_repository
     test_app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
 
-    test_app.include_router(router, prefix="/admin/prompts")
+    test_app.include_router(router, prefix="/admin")
     return test_app
 
 
@@ -731,11 +733,11 @@ class TestAuthentication:
         mock_s3_storage: AsyncMock,
     ) -> None:
         """Test that endpoints require authentication."""
-        from src.api.routes.admin.prompts import router
+        from coaching.src.api.routes.admin.prompts import router
 
         # Create app without auth overrides
         test_app = FastAPI()
-        test_app.include_router(router, prefix="/admin/prompts")
+        test_app.include_router(router, prefix="/admin")
         client = TestClient(test_app)
 
         # All endpoints should fail without proper auth

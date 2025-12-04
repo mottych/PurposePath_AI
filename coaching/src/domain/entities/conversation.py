@@ -9,7 +9,6 @@ from typing import Any
 
 from coaching.src.core.constants import (
     PHASE_PROGRESS_WEIGHTS,
-    CoachingTopic,
     ConversationPhase,
     ConversationStatus,
     MessageRole,
@@ -51,7 +50,7 @@ class Conversation(BaseModel):
     conversation_id: ConversationId = Field(..., description="Unique conversation ID")
     user_id: UserId = Field(..., description="User ID")
     tenant_id: TenantId = Field(..., description="Tenant ID")
-    topic: CoachingTopic = Field(..., description="Coaching topic")
+    topic: str = Field(..., description="Coaching topic")
     status: ConversationStatus = Field(
         default=ConversationStatus.ACTIVE, description="Conversation status"
     )
@@ -72,6 +71,26 @@ class Conversation(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = {"extra": "forbid"}
+
+    @classmethod
+    def create(
+        cls,
+        user_id: str,
+        tenant_id: str,
+        topic: str,
+        conversation_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> "Conversation":
+        """Factory method to create a new conversation."""
+        from uuid import uuid4
+
+        return cls(
+            conversation_id=ConversationId(conversation_id or str(uuid4())),
+            user_id=UserId(user_id),
+            tenant_id=TenantId(tenant_id),
+            topic=topic,
+            metadata=metadata or {},
+        )
 
     @field_validator("messages")
     @classmethod
@@ -111,12 +130,21 @@ class Conversation(BaseModel):
         # Update context response count for user messages
         if role == MessageRole.USER:
             new_context = ConversationContext(
+                current_phase=self.context.current_phase,
                 insights=self.context.insights,
                 response_count=self.context.response_count + 1,
                 progress_percentage=self.context.progress_percentage,
                 metadata=self.context.metadata,
             )
             object.__setattr__(self, "context", new_context)
+
+    def add_user_message(self, content: str) -> None:
+        """Alias for add_message with role=USER."""
+        self.add_message(MessageRole.USER, content)
+
+    def add_assistant_message(self, content: str) -> None:
+        """Alias for add_message with role=ASSISTANT."""
+        self.add_message(MessageRole.ASSISTANT, content)
 
     def add_insight(self, insight: str) -> None:
         """
@@ -154,10 +182,19 @@ class Conversation(BaseModel):
         if not self.is_active():
             raise ValueError(f"Cannot complete {self.status.value} conversation")
 
+        # Check phase requirements
+        allowed_phases = [ConversationPhase.VALIDATION, ConversationPhase.COMPLETION]
+        if self.context.current_phase not in allowed_phases:
+            raise ValueError(f"Cannot complete conversation in {self.context.current_phase.value} phase")
+
         now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.COMPLETED)
         object.__setattr__(self, "completed_at", now)
         object.__setattr__(self, "updated_at", now)
+
+    def complete(self) -> None:
+        """Alias for mark_completed."""
+        self.mark_completed()
 
     def mark_paused(self) -> None:
         """
@@ -171,6 +208,10 @@ class Conversation(BaseModel):
         now = datetime.now(UTC)
         object.__setattr__(self, "status", ConversationStatus.PAUSED)
         object.__setattr__(self, "updated_at", now)
+
+    def pause(self) -> None:
+        """Alias for mark_paused."""
+        self.mark_paused()
 
     def resume(self) -> None:
         """
@@ -214,19 +255,9 @@ class Conversation(BaseModel):
     def calculate_progress_percentage(self) -> float:
         """Calculate current progress percentage.
 
-        This implementation derives progress from simple heuristics based on
-        the number of user and assistant messages. It returns a value between
-        0.0 and 100.0.
+        Returns the progress percentage from the conversation context.
         """
-        total_messages = self.get_message_count()
-        if total_messages == 0:
-            return 0.0
-
-        # Simple heuristic: assume typical conversations complete around 12 messages
-        # (6 user, 6 assistant). Clamp to 100.
-        estimated_completion_messages = 12
-        progress = min(1.0, total_messages / estimated_completion_messages) * 100.0
-        return progress
+        return self.context.progress_percentage
 
     def transition_to_phase(self, new_phase: ConversationPhase) -> None:
         """
@@ -236,10 +267,20 @@ class Conversation(BaseModel):
             new_phase: The new conversation phase to transition to
 
         Business Rule: Phase transitions update the conversation context
-        and progress percentage based on the phase progress weights
+        and progress percentage based on the phase progress weights.
+        Cannot transition backward or if paused.
         """
+        if not self.is_active():
+            raise ValueError(f"Cannot transition {self.status.value} conversation")
+
+        current_weight = PHASE_PROGRESS_WEIGHTS[self.context.current_phase]
+        new_weight = PHASE_PROGRESS_WEIGHTS[new_phase]
+
+        if new_weight < current_weight:
+            raise ValueError(f"Cannot move backward from {self.context.current_phase.value} to {new_phase.value}")
+
         # Calculate progress percentage based on phase
-        progress_percentage = PHASE_PROGRESS_WEIGHTS[new_phase] * 100.0
+        progress_percentage = new_weight * 100.0
 
         new_context = ConversationContext(
             current_phase=new_phase,

@@ -18,8 +18,8 @@ def test_root_endpoint(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "TrueNorth AI Coaching API"
-    assert data["version"] == "1.0.0"
+    assert data["name"] == "PurposePath AI Coaching API"
+    assert data["version"] == "2.0.0"
     assert "docs" in data
 
 
@@ -56,7 +56,13 @@ class TestConversationEndpoints:
 
         # This will fail due to missing dependencies (DynamoDB, etc.)
         # but we can test that the endpoint exists and validates input
-        response = client.post("/api/v1/conversations/initiate", json=request_data)
+        response = client.post(
+            "/api/v1/conversations/initiate",
+            json=request_data,
+            headers={"Authorization": "Bearer test-token"}
+        )
 
         # We expect either success or a dependency error, not validation error
+        if response.status_code == 422:
+            print(f"Validation Error: {response.json()}")
         assert response.status_code != 422

@@ -88,6 +88,7 @@ class ConversationService:
             status=conversation.status,
             current_question=template.initial_message,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
         )
 
     async def process_message(
@@ -164,6 +165,7 @@ class ConversationService:
             follow_up_question=ai_response.follow_up_question,
             insights=ai_response.insights,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
             is_complete=ai_response.is_complete,
         )
 
@@ -218,6 +220,7 @@ class ConversationService:
             status=conversation.status,
             current_question=resume_message,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
         )
 
     async def complete_conversation(

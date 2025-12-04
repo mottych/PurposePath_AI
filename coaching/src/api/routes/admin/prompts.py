@@ -191,12 +191,28 @@ async def create_topic(
 
         # Extract model config
         config_dict = request.config.model_dump()
-        model_code = config_dict.pop("model_code", "claude-3-5-sonnet-20241022")
-        temperature = config_dict.pop("temperature", 0.7)
-        max_tokens = config_dict.pop("max_tokens", 2000)
-        top_p = config_dict.pop("top_p", 1.0)
-        frequency_penalty = config_dict.pop("frequency_penalty", 0.0)
-        presence_penalty = config_dict.pop("presence_penalty", 0.0)
+
+        # Map default_model to model_code
+        model_code = config_dict.pop("default_model", "claude-3-5-sonnet-20241022")
+        # Also check for model_code just in case
+        if "model_code" in config_dict:
+             model_code = config_dict.pop("model_code")
+
+        # Handle optional fields that might be None
+        temp_val = config_dict.pop("temperature", None)
+        temperature = temp_val if temp_val is not None else 0.7
+
+        max_tokens_val = config_dict.pop("max_tokens", None)
+        max_tokens = max_tokens_val if max_tokens_val is not None else 2000
+
+        top_p_val = config_dict.pop("top_p", None)
+        top_p = top_p_val if top_p_val is not None else 1.0
+
+        freq_pen_val = config_dict.pop("frequency_penalty", None)
+        frequency_penalty = freq_pen_val if freq_pen_val is not None else 0.0
+
+        pres_pen_val = config_dict.pop("presence_penalty", None)
+        presence_penalty = pres_pen_val if pres_pen_val is not None else 0.0
 
         topic = LLMTopic(
             topic_id=request.topic_id,
@@ -350,18 +366,38 @@ async def update_topic(
             ]
         if request.config is not None:
             config_dict = request.config.model_dump()
+
+            # Map default_model
+            if "default_model" in config_dict:
+                topic.model_code = config_dict.pop("default_model")
+
             if "model_code" in config_dict:
                 topic.model_code = config_dict.pop("model_code")
-            if "temperature" in config_dict:
+
+            if config_dict.get("temperature") is not None:
                 topic.temperature = config_dict.pop("temperature")
-            if "max_tokens" in config_dict:
+            elif "temperature" in config_dict:
+                config_dict.pop("temperature")
+
+            if config_dict.get("max_tokens") is not None:
                 topic.max_tokens = config_dict.pop("max_tokens")
-            if "top_p" in config_dict:
+            elif "max_tokens" in config_dict:
+                config_dict.pop("max_tokens")
+
+            if config_dict.get("top_p") is not None:
                 topic.top_p = config_dict.pop("top_p")
-            if "frequency_penalty" in config_dict:
+            elif "top_p" in config_dict:
+                config_dict.pop("top_p")
+
+            if config_dict.get("frequency_penalty") is not None:
                 topic.frequency_penalty = config_dict.pop("frequency_penalty")
-            if "presence_penalty" in config_dict:
+            elif "frequency_penalty" in config_dict:
+                config_dict.pop("frequency_penalty")
+
+            if config_dict.get("presence_penalty") is not None:
                 topic.presence_penalty = config_dict.pop("presence_penalty")
+            elif "presence_penalty" in config_dict:
+                config_dict.pop("presence_penalty")
 
             # Update additional config with remaining items
             topic.additional_config.update(config_dict)
