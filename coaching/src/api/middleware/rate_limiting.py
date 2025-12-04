@@ -64,7 +64,7 @@ class TokenBucket:
         return False
 
 
-class RateLimitingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+class RateLimitingMiddleware(BaseHTTPMiddleware):
     """Middleware to enforce rate limits on API requests.
 
     Rate limits are applied per user (extracted from auth token).

@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = structlog.get_logger()
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for structured logging of requests and responses.
 
     Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.

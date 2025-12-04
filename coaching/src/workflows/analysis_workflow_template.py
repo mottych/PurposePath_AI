@@ -41,7 +41,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph for single-shot analysis."""
         # Create StateGraph with our enhanced state type
         # LangGraph prefers TypedDict but supports dict at runtime

@@ -66,7 +66,7 @@ class AnalysisWorkflow(BaseWorkflow):
         """Get list of workflow step names."""
         return ["start", "analysis", "completion"]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 

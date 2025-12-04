@@ -20,7 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 logger = structlog.get_logger()
 
 
-class ErrorHandlingMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
+class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """Middleware to handle exceptions and return appropriate HTTP responses.
 
     Note: BaseHTTPMiddleware exists at runtime but type stubs are incomplete.

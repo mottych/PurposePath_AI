@@ -42,7 +42,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph for conversational coaching."""
         # Create StateGraph with our enhanced state type
         # LangGraph prefers TypedDict but supports dict at runtime
