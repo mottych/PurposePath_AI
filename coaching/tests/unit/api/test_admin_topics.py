@@ -15,6 +15,8 @@ from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def app() -> FastAPI:

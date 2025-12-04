@@ -13,6 +13,8 @@ from coaching.src.domain.events.conversation_events import (
     PhaseTransitioned,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestConversationInitiated:
     """Tests for ConversationInitiated event."""

@@ -3,6 +3,8 @@
 import pytest
 from coaching.src.domain.services.alignment_calculator import AlignmentCalculator
 
+pytestmark = pytest.mark.unit
+
 
 class TestAlignmentCalculatorBasics:
     """Test suite for basic alignment calculation."""

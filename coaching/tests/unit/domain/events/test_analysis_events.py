@@ -8,6 +8,8 @@ from coaching.src.domain.events.analysis_events import (
     AnalysisRequested,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestAnalysisRequested:
     """Tests for AnalysisRequested event."""
