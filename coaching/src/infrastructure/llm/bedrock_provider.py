@@ -6,7 +6,7 @@ port interface, supporting Claude and other Bedrock models.
 
 import json
 from collections.abc import AsyncIterator
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
@@ -248,7 +248,7 @@ class BedrockLLMProvider:
             return ""
         else:
             # Generic format
-            return cast(str, response_body.get("generation", ""))
+            return str(response_body.get("generation", ""))  # type: ignore[no-any-return]
 
     def _extract_usage(self, response_body: dict[str, Any], model: str) -> dict[str, int]:
         """Extract usage metrics from response body."""
