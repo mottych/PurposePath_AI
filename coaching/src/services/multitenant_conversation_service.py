@@ -665,3 +665,34 @@ class MultitenantConversationService:
         }
 
         return summary
+
+    async def get_conversation(self, conversation_id: str) -> ConversationResponse:
+        """Get conversation details with tenant isolation.
+
+        Args:
+            conversation_id: Conversation identifier
+
+        Returns:
+            Conversation response
+        """
+        conversation = await self.conversation_repo.get(conversation_id)
+        if not conversation:
+            raise ConversationNotFoundCompatError(conversation_id)
+
+        # Verify tenant isolation
+        if conversation.context.get("tenant_id") != self.context.tenant_id:
+            raise PermissionError("Access denied to this conversation")
+
+        # Get session data
+        session_data = await self.cache_service.get_session_data(conversation_id)
+
+        return ConversationResponse(
+            conversation_id=conversation.conversation_id,
+            status=conversation.status,
+            current_question=conversation.messages[-1].content
+            if conversation.messages and conversation.messages[-1].role == "assistant"
+            else "",
+            progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
+            session_data={"session_id": session_data.get("session_id")} if session_data else None,
+        )
