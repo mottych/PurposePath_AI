@@ -39,4 +39,5 @@ pytest-cov==4.1.0
 black==23.7.0
 ruff==0.8.4
 pylint==2.17.4
-mypy==1.4.1types-PyYAML
+mypy==1.4.1
+types-PyYAML
