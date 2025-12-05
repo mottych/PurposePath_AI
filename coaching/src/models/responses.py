@@ -7,6 +7,14 @@ from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
 
 
+def _default_notification_preferences() -> dict[str, bool]:
+    return {}
+
+
+def _default_metadata() -> dict[str, str]:
+    return {}
+
+
 class ConversationResponse(BaseModel):
     """Response for conversation initiation."""
 
@@ -71,8 +79,8 @@ class UserPreferences(BaseModel):
     coaching_frequency: str | None = Field(default=None, description="Preferred coaching frequency")
     focus_areas: list[str] | None = Field(default=None, description="Areas of focus")
     notification_preferences: dict[str, bool] | None = Field(
-        default_factory=dict, description="Notification settings"
-    )  # type: ignore[assignment, unused-ignore]
+        default_factory=_default_notification_preferences, description="Notification settings"
+    )
 
 
 class SessionContextData(BaseModel):
@@ -115,7 +123,9 @@ class AIResponseData(BaseModel):
 
     response: str = Field(description="AI response text")
     confidence: float | None = Field(default=None, description="Response confidence")
-    metadata: dict[str, str] | None = Field(default_factory=dict, description="Response metadata")  # type: ignore[assignment, unused-ignore]
+    metadata: dict[str, str] | None = Field(
+        default_factory=_default_metadata, description="Response metadata"
+    )
     suggested_actions: list[str] | None = Field(default=None, description="Suggested next actions")
 
 
