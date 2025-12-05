@@ -123,13 +123,33 @@ class TopicRepository:
             List of topics with enum defaults merged with DB records
         """
         try:
+            import sys
+
             from shared.models.multitenant import CoachingTopic
+
+            print(
+                f"[DEBUG] list_all_with_enum_defaults - include_inactive={include_inactive}",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(
+                f"[DEBUG] CoachingTopic enum values: {[e.value for e in CoachingTopic]}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+            logger.info("list_all_with_enum_defaults called", include_inactive=include_inactive)
+            logger.info("CoachingTopic enum values", values=[e.value for e in CoachingTopic])
 
             # Get existing topics from database
             db_topics = await self.list_all(include_inactive=include_inactive)
+            logger.info(
+                "db_topics retrieved", count=len(db_topics), ids=[t.topic_id for t in db_topics]
+            )
 
             # Build set of topic IDs already in database
             existing_ids = {topic.topic_id for topic in db_topics}
+            logger.info("existing_ids", ids=list(existing_ids))
 
             # Create default topics for any enum values not in database
             default_topics = [
@@ -137,10 +157,17 @@ class TopicRepository:
                 for topic_enum in CoachingTopic
                 if topic_enum.value not in existing_ids
             ]
+            logger.info(
+                "default_topics created",
+                count=len(default_topics),
+                ids=[t.topic_id for t in default_topics],
+            )
 
             # Filter defaults by is_active if requested
             if not include_inactive:
+                before_filter = len(default_topics)
                 default_topics = [t for t in default_topics if t.is_active]
+                logger.info("filtered_defaults", before=before_filter, after=len(default_topics))
 
             # Merge and sort by display_order
             all_topics = db_topics + default_topics

@@ -31,13 +31,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from starlette.middleware.base import BaseHTTPMiddleware
 
-# Configure Python logging to output to stdout for Lambda
+# Configure Python logging for Lambda - use stderr which Lambda captures
 logging.basicConfig(
-    format="%(message)s",
-    stream=sys.stdout,
+    format="%(levelname)s: %(message)s",
+    stream=sys.stderr,  # Lambda captures stderr
     level=logging.INFO,
+    force=True,  # Override any existing config
 )
 
+# Configure structlog to also use stderr and include plaintext for debugging
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -48,14 +50,25 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer(),
+        structlog.processors.CallsiteParameterAdder(
+            [
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
+            ]
+        ),
+        structlog.dev.ConsoleRenderer(),  # Human-readable for CloudWatch
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,
 )
 
 logger = structlog.get_logger()
+
+# Test logging immediately - this will appear in CloudWatch if configured correctly
+print("[STARTUP] Lambda handler loading - testing stderr output", file=sys.stderr, flush=True)
+logger.info("lambda_startup", message="FastAPI application initializing")
 
 
 class CORSPreflightMiddleware(BaseHTTPMiddleware):

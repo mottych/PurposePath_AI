@@ -135,8 +135,22 @@ async def list_topics(
     Requires admin:topics:read permission.
     """
     try:
+        import sys
+
+        print(
+            f"[DEBUG] list_topics called - page={page}, page_size={page_size}",
+            file=sys.stderr,
+            flush=True,
+        )
+        logger.info("list_topics called", page=page, page_size=page_size, category=category)
+
         # Get all topics (merges enum defaults with DB records)
         all_topics = await repository.list_all_with_enum_defaults(include_inactive=True)
+
+        print(f"[DEBUG] topics retrieved - count={len(all_topics)}", file=sys.stderr, flush=True)
+        logger.info(
+            "topics_retrieved", count=len(all_topics), topics=[t.topic_id for t in all_topics]
+        )
 
         # Apply filters
         filtered = all_topics
@@ -163,6 +177,8 @@ async def list_topics(
         start = (page - 1) * page_size
         end = start + page_size
         page_topics = filtered[start:end]
+
+        logger.info("topics_paginated", total=total, page_count=len(page_topics))
 
         return TopicListResponse(
             topics=[_map_topic_to_summary(t) for t in page_topics],
