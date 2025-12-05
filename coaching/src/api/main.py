@@ -31,18 +31,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from starlette.middleware.base import BaseHTTPMiddleware
 
-# Configure Python logging for Lambda - use stderr which Lambda captures
+# Configure Python logging for Lambda - Lambda captures stderr
 logging.basicConfig(
     format="%(levelname)s: %(message)s",
-    stream=sys.stderr,  # Lambda captures stderr
-    level=logging.INFO,
-    force=True,  # Override any existing config
+    stream=sys.stderr,
+    level=logging.DEBUG,  # Allow all levels, structlog will filter
+    force=True,
 )
 
-# Configure structlog to also use stderr and include plaintext for debugging
+# Set root logger level to DEBUG
+logging.getLogger().setLevel(logging.DEBUG)
+
+# Configure structlog for Lambda CloudWatch
 structlog.configure(
     processors=[
-        structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
@@ -50,13 +52,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.CallsiteParameterAdder(
-            [
-                structlog.processors.CallsiteParameter.FUNC_NAME,
-                structlog.processors.CallsiteParameter.LINENO,
-            ]
-        ),
-        structlog.dev.ConsoleRenderer(),  # Human-readable for CloudWatch
+        structlog.dev.ConsoleRenderer(),  # Human-readable output
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -66,8 +62,8 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
-# Test logging immediately - this will appear in CloudWatch if configured correctly
-print("[STARTUP] Lambda handler loading - testing stderr output", file=sys.stderr, flush=True)
+# Test logging at startup
+print("[STARTUP] Lambda handler loading", file=sys.stderr, flush=True)
 logger.info("lambda_startup", message="FastAPI application initializing")
 
 
@@ -183,6 +179,30 @@ async def root() -> dict[str, str]:
 
 
 handler = Mangum(app, lifespan="off")
+
+
+# Wrapper to add debug logging for Lambda
+def lambda_handler(event, context):
+    """Lambda handler wrapper with debug logging."""
+    import sys
+
+    # Direct print to stderr - Lambda MUST capture this
+    print(
+        f"[LAMBDA_HANDLER] Event: {event.get('httpMethod', 'unknown')} {event.get('path', 'unknown')}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+    # Call Mangum handler
+    response = handler(event, context)
+
+    print(
+        f"[LAMBDA_HANDLER] Response status: {response.get('statusCode', 'unknown')}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+    return response
 
 
 if __name__ == "__main__":
