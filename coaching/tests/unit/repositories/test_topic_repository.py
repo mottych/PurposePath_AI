@@ -323,3 +323,146 @@ class TestTopicRepositoryList:
         assert len(result) == 1
         assert result[0].topic_type == "single_shot"
         mock_table.query.assert_called_once()
+
+
+class TestTopicRepositoryEnumDefaults:
+    """Tests for list_all_with_enum_defaults method."""
+
+    @pytest.mark.asyncio
+    async def test_list_all_with_enum_defaults_empty_db(
+        self,
+        repository: TopicRepository,
+        mock_table: MagicMock,
+    ) -> None:
+        """Test that enum defaults are returned when DB is empty."""
+        # Mock empty database
+        mock_table.scan.return_value = {"Items": []}
+
+        result = await repository.list_all_with_enum_defaults(include_inactive=True)
+
+        # Should return all 4 enum values
+        assert len(result) == 4
+        topic_ids = {t.topic_id for t in result}
+        assert topic_ids == {"core_values", "purpose", "vision", "goals"}
+
+        # All should be inactive defaults
+        assert all(not t.is_active for t in result)
+        assert all(t.created_by == "system" for t in result)
+
+    @pytest.mark.asyncio
+    async def test_list_all_with_enum_defaults_partial_db(
+        self,
+        repository: TopicRepository,
+        mock_table: MagicMock,
+    ) -> None:
+        """Test merging when some topics exist in DB."""
+        # Mock DB with only core_values configured
+        db_topic = LLMTopic(
+            topic_id="core_values",
+            topic_name="Core Values (Custom)",
+            topic_type="conversation_coaching",
+            category="core_values",
+            is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.8,
+            max_tokens=3000,
+            prompts=[],
+            allowed_parameters=[],
+            additional_config={},
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="admin@test.com",
+        )
+        mock_table.scan.return_value = {"Items": [db_topic.to_dynamodb_item()]}
+
+        result = await repository.list_all_with_enum_defaults(include_inactive=True)
+
+        # Should return 4 topics: 1 from DB + 3 defaults
+        assert len(result) == 4
+
+        # Find the DB topic
+        core_values = next(t for t in result if t.topic_id == "core_values")
+        assert core_values.topic_name == "Core Values (Custom)"  # DB version
+        assert core_values.is_active is True
+        assert core_values.created_by == "admin@test.com"
+
+        # Other topics should be defaults
+        other_topics = [t for t in result if t.topic_id != "core_values"]
+        assert len(other_topics) == 3
+        assert all(not t.is_active for t in other_topics)
+        assert all(t.created_by == "system" for t in other_topics)
+
+    @pytest.mark.asyncio
+    async def test_list_all_with_enum_defaults_excludes_inactive(
+        self,
+        repository: TopicRepository,
+        mock_table: MagicMock,
+    ) -> None:
+        """Test that include_inactive=False filters defaults."""
+        # Mock empty database
+        mock_table.scan.return_value = {"Items": []}
+
+        result = await repository.list_all_with_enum_defaults(include_inactive=False)
+
+        # Should return 0 topics (all defaults are inactive)
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_list_all_with_enum_defaults_sorted_by_display_order(
+        self,
+        repository: TopicRepository,
+        mock_table: MagicMock,
+    ) -> None:
+        """Test that results are sorted by display_order."""
+        mock_table.scan.return_value = {"Items": []}
+
+        result = await repository.list_all_with_enum_defaults(include_inactive=True)
+
+        # Should be in display order
+        display_orders = [t.display_order for t in result]
+        assert display_orders == sorted(display_orders)
+
+        # Expected order: core_values (0), purpose (10), vision (20), goals (30)
+        assert result[0].topic_id == "core_values"
+        assert result[1].topic_id == "purpose"
+        assert result[2].topic_id == "vision"
+        assert result[3].topic_id == "goals"
+
+    @pytest.mark.asyncio
+    async def test_list_all_with_enum_defaults_full_db(
+        self,
+        repository: TopicRepository,
+        mock_table: MagicMock,
+    ) -> None:
+        """Test that no defaults are added when all topics exist in DB."""
+        from shared.models.multitenant import CoachingTopic
+
+        # Create DB topics for all enums
+        db_topics = [
+            LLMTopic(
+                topic_id=topic_enum.value,
+                topic_name=f"{topic_enum.value} Custom",
+                topic_type="conversation_coaching",
+                category=topic_enum.value,
+                is_active=True,
+                model_code="claude-3-5-sonnet-20241022",
+                temperature=0.7,
+                max_tokens=2000,
+                prompts=[],
+                allowed_parameters=[],
+                additional_config={},
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+                created_by="admin@test.com",
+            )
+            for topic_enum in CoachingTopic
+        ]
+
+        mock_table.scan.return_value = {"Items": [t.to_dynamodb_item() for t in db_topics]}
+
+        result = await repository.list_all_with_enum_defaults(include_inactive=True)
+
+        # Should return exactly 4 topics, all from DB
+        assert len(result) == 4
+        assert all(t.created_by == "admin@test.com" for t in result)
+        assert all("Custom" in t.topic_name for t in result)

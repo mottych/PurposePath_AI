@@ -379,3 +379,83 @@ class TestLLMTopic:
         assert topic.description is None
         assert topic.display_order == 100  # default value
         assert topic.created_by is None
+
+
+class TestLLMTopicFactory:
+    """Tests for LLMTopic factory methods."""
+
+    def test_create_default_from_enum_core_values(self) -> None:
+        """Test creating default topic from CORE_VALUES enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.CORE_VALUES)
+
+        assert topic.topic_id == "core_values"
+        assert topic.topic_name == "Core Values"
+        assert topic.category == "core_values"
+        assert topic.topic_type == "conversation_coaching"
+        assert topic.description == "Discover and clarify personal core values"
+        assert topic.is_active is False  # Default inactive
+        assert topic.display_order == 0  # First enum value
+        assert topic.model_code == "claude-3-5-sonnet-20241022"
+        assert topic.temperature == 0.7
+        assert topic.max_tokens == 2000
+        assert topic.prompts == []  # No prompts until configured
+        assert topic.allowed_parameters == []
+        assert topic.created_by == "system"
+
+    def test_create_default_from_enum_purpose(self) -> None:
+        """Test creating default topic from PURPOSE enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.PURPOSE)
+
+        assert topic.topic_id == "purpose"
+        assert topic.topic_name == "Purpose"
+        assert topic.category == "purpose"
+        assert topic.description == "Define life and business purpose"
+        assert topic.display_order == 10  # Second enum value
+
+    def test_create_default_from_enum_vision(self) -> None:
+        """Test creating default topic from VISION enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.VISION)
+
+        assert topic.topic_id == "vision"
+        assert topic.topic_name == "Vision"
+        assert topic.category == "vision"
+        assert topic.description == "Articulate vision for the future"
+        assert topic.display_order == 20  # Third enum value
+
+    def test_create_default_from_enum_goals(self) -> None:
+        """Test creating default topic from GOALS enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.GOALS)
+
+        assert topic.topic_id == "goals"
+        assert topic.topic_name == "Goals"
+        assert topic.category == "goals"
+        assert topic.description == "Set aligned and achievable goals"
+        assert topic.display_order == 30  # Fourth enum value
+
+    def test_create_default_all_enums_have_unique_ids(self) -> None:
+        """Test that all enum defaults have unique IDs."""
+        from shared.models.multitenant import CoachingTopic
+
+        topics = [LLMTopic.create_default_from_enum(enum_val) for enum_val in CoachingTopic]
+
+        topic_ids = [t.topic_id for t in topics]
+        assert len(topic_ids) == len(set(topic_ids))  # All unique
+
+    def test_create_default_all_enums_ordered_correctly(self) -> None:
+        """Test that enum defaults have correct display order."""
+        from shared.models.multitenant import CoachingTopic
+
+        topics = [LLMTopic.create_default_from_enum(enum_val) for enum_val in CoachingTopic]
+
+        # Should be ordered 0, 10, 20, 30
+        display_orders = [t.display_order for t in topics]
+        assert display_orders == sorted(display_orders)
+        assert len(set(display_orders)) == len(display_orders)  # All unique

@@ -135,8 +135,8 @@ async def list_topics(
     Requires admin:topics:read permission.
     """
     try:
-        # Get all topics
-        all_topics = await repository.list_all(include_inactive=True)
+        # Get all topics (merges enum defaults with DB records)
+        all_topics = await repository.list_all_with_enum_defaults(include_inactive=True)
 
         # Apply filters
         filtered = all_topics
