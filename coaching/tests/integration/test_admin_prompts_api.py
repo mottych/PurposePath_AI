@@ -15,7 +15,6 @@ from coaching.src.domain.exceptions.topic_exceptions import (
 )
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from shared.models.multitenant import RequestContext, UserRole
 
 

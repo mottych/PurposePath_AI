@@ -18,7 +18,6 @@ from coaching.src.services.usage_analytics_service import (
 )
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

@@ -11,7 +11,6 @@ from coaching.src.models.responses import (
     MessageResponse,
 )
 from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
-
 from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
 from shared.models.multitenant import RequestContext
 

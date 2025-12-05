@@ -24,7 +24,6 @@ from coaching.src.models.responses import (
     InsightResponse,
     InsightsSummaryResponse,
 )
-
 from shared.models.schemas import PaginatedResponse, PaginationMeta
 
 logger = structlog.get_logger()

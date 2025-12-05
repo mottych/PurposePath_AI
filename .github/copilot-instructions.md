@@ -13,7 +13,7 @@
 1. **This Document** - Development standards and workflow
 2. **Architecture Design** (`docs/Plans/AI_COACHING_ARCHITECTURE_DESIGN.md`) - System architecture
 3. **Guides** (`docs/Guides/`) - Specific technical guidance
-
+4. **Specification Documents** (`docs/Specifications/`) - API and integration specs
 ---
 
 ## 🎯 Core Development Philosophy
@@ -25,6 +25,8 @@
 * Remove all temporary code, tests, and data after use.
 * Any infrastructure changes must be done through Pulumi as IaC.
 * dev branch is the main integration branch; keep it stable. Only merge fully tested, complete features, with no warning or errors on build or tests for the whole solution, even if not related to the changes.
+* Always work in active virtual environment.
+* Always work in a feature branch off dev.
 * **When in doubt - ask me**
 
 ### Workflow & GitHub**
@@ -32,29 +34,25 @@
 * Always work under a GitHub issue; request one if missing.
 * When starting to work on an issue - mark the issue in-progress using a label.
 * Do not create status documents, only update issues.
-* Always work in a feature branch off the dev branch
+* Always work in a feature branch off the `dev` branch
 * Use issue ID in commits (e.g., `feat(#123): add API endpoint`).
-* Work in a feature branch off `dev`.
-* Use GitHub Issues: add `in-progress`, post updates, close after completion.
-* Use the issues in github to find your next step. Always upate progress (in-progress and completed). Add progress to the issue as comments, and add a in-progress' label
+* Use GitHub Issues: add `in-progress`, post updates as comments, close after completion.
 
 ### Testing & Validation**
 
 * Create unit and integration tests for all new or modified logic.
-* All tests must pass before marking complete regardless if they are related to our changes.
-* **IMPORTANT** Do NOT run full system tests with verbose output as it causes the system to hang. When running full system tests use only quiet or minimal output. You can run full tests on a specific module, or smaller scope if needed.
-* Resolve all build warnings and errors regardless if they are related to our changes.
-* Include unit and integration tests for all new or modified logic.
-* Make sure there are no errors or warnings in the build, and all tests pass.
 * The task is not complete until everything passes, regardless if failures are related to the issue being worked.
+* Do not merge to `dev` code that does not pass all tests and validations.
 
 ### Completion & Merge**
 
 1. Make sure there are no warning or errors on build or tests including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors. If there are - fix them.
-2. Commit with descriptive message referencing the issue. 
-3. Merge the feature branch into 'dev' and sync. Then delete the feature branch.
+2. Commit with descriptive message referencing the issue. Make sure all pre-commit checks pass.
+3. Merge the feature branch into 'dev' and sync.
 4. Clean temporary code and artifacts.
-5. Update labels (remove in-progress) and **close** the issue on GitHub.
+5. After successful deployment and verification using E2E test, continue to close the issue:
+   1. Update labels (remove in-progress) and **close** the issue on GitHub.
+   2. Delete the feature branch both locally and remotely.
 
 **Collaboration**
 

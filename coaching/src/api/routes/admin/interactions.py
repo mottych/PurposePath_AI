@@ -15,7 +15,6 @@ from coaching.src.models.admin_responses import (
     LLMInteractionsResponse,
 )
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

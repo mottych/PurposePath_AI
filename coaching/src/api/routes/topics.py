@@ -4,7 +4,6 @@ from coaching.src.api.dependencies import get_topic_repository
 from coaching.src.models.topics import AvailableTopic
 from coaching.src.repositories.topic_repository import TopicRepository
 from fastapi import APIRouter, Depends, HTTPException
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

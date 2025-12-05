@@ -26,7 +26,6 @@ from coaching.src.models.prompt_responses import (
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

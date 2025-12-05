@@ -8,7 +8,6 @@ from coaching.src.infrastructure.repositories.dynamodb_conversation_repository i
 )
 from coaching.src.services.insights_service import BusinessDataContext, InsightsService
 from coaching.src.services.llm_service import LLMService
-
 from shared.models.schemas import PaginatedResponse
 
 

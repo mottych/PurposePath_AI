@@ -12,7 +12,6 @@ from coaching.src.api.models.onboarding import (
     OnboardingSuggestionResponse,
 )
 from fastapi import APIRouter, Depends
-
 from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()

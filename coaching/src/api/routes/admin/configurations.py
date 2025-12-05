@@ -31,7 +31,6 @@ from coaching.src.models.admin_responses import (
     ConfigurationSummary,
 )
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

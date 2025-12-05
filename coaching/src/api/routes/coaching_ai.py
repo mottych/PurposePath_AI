@@ -34,7 +34,6 @@ from coaching.src.api.models.strategy_suggestions import (
     StrategySuggestionsResponse,
 )
 from fastapi import APIRouter, Depends, status
-
 from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()

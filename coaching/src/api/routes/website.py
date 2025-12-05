@@ -10,7 +10,6 @@ from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAn
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, HttpUrl
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

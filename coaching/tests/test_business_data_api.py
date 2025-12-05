@@ -11,7 +11,6 @@ from coaching.src.api.multitenant_dependencies import (
     get_multitenant_conversation_service,
 )
 from fastapi.testclient import TestClient
-
 from shared.models.multitenant import (
     Permission,
     RequestContext,

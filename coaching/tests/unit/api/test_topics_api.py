@@ -12,7 +12,6 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.repositories.topic_repository import TopicRepository
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from shared.models.multitenant import RequestContext, UserRole
 
 pytestmark = pytest.mark.unit

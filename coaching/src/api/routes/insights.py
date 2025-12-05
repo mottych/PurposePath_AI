@@ -21,7 +21,6 @@ from coaching.src.models.responses import (
 from coaching.src.services.insights_service import InsightsService
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse, PaginatedResponse
 

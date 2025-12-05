@@ -22,7 +22,6 @@ from coaching.src.models.responses import (
 )
 from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-
 from shared.models.multitenant import CoachingTopic, RequestContext, UserRole
 from shared.models.schemas import ApiResponse
 

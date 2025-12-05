@@ -41,7 +41,6 @@ from coaching.src.services.llm_template_service import LLMTemplateService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import Depends
-
 from shared.models.multitenant import RequestContext
 from shared.services.aws_helpers import (
     get_bedrock_client,

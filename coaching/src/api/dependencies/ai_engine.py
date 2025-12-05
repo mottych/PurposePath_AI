@@ -14,7 +14,6 @@ from coaching.src.domain.ports.llm_provider_port import LLMProviderPort
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-
 from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()

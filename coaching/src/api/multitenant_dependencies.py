@@ -5,7 +5,6 @@ from typing import Any
 
 import structlog
 from fastapi import Depends
-
 from shared.services.aws_helpers import get_bedrock_client as get_bedrock_client_helper
 from shared.services.aws_helpers import get_dynamodb_resource
 from shared.services.aws_helpers import get_s3_client as get_s3_client_helper
@@ -31,7 +30,6 @@ from coaching.src.services.multitenant_conversation_service import MultitenantCo
 from coaching.src.services.onboarding_service import OnboardingService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.workflows.orchestrator import WorkflowOrchestrator
-
 from shared.models.multitenant import RequestContext
 
 logger = structlog.get_logger()

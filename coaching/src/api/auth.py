@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from coaching.src.api.models.auth import UserContext
 from coaching.src.core.config_multitenant import settings
-
 from shared.models.multitenant import Permission, RequestContext, SubscriptionTier, UserRole
 from shared.services.aws_helpers import get_secretsmanager_client
 

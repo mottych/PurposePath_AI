@@ -9,7 +9,6 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.exceptions.topic_exceptions import DuplicateTopicError
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-
 from shared.models.multitenant import RequestContext, UserRole
 
 # Setup app

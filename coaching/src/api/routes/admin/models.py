@@ -14,7 +14,6 @@ from coaching.src.models.admin_responses import (
 from coaching.src.services.audit_log_service import AuditLogService
 from coaching.src.services.model_config_service import ModelConfigService
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 
