@@ -119,7 +119,7 @@ class TestListTopics:
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test listing all topics without filters."""
-        mock_repository.list_all.return_value = [sample_topic]
+        mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
         response = client.get("/admin/topics")
 
@@ -136,7 +136,7 @@ class TestListTopics:
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test listing topics with category filter."""
-        mock_repository.list_all.return_value = [sample_topic]
+        mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
         response = client.get("/admin/topics?category=test&is_active=true")
 
@@ -149,7 +149,7 @@ class TestListTopics:
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test listing topics with search query."""
-        mock_repository.list_all.return_value = [sample_topic]
+        mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
         response = client.get("/admin/topics?search=test")
 
@@ -162,7 +162,7 @@ class TestListTopics:
     ) -> None:
         """Test topic list pagination."""
         topics = [sample_topic for _ in range(60)]
-        mock_repository.list_all.return_value = topics
+        mock_repository.list_all_with_enum_defaults.return_value = topics
 
         response = client.get("/admin/topics?page=1&page_size=50")
 
