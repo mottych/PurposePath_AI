@@ -61,7 +61,7 @@ jobs:
       - name: Run Unit Tests
         run: |
           source .venv/bin/activate
-          python -m pytest coaching/tests/unit/ -v --cov=coaching/src --cov-fail-under=70 -m "unit"
+          python -m pytest coaching/tests/unit/ -v --cov=coaching/src --cov-fail-under=70
         shell: bash
         env:
           PYTHONPATH: coaching:shared:.
