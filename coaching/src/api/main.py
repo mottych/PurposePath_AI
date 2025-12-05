@@ -1,5 +1,7 @@
 """Main FastAPI application with Phase 7 architecture."""
 
+import logging
+import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
@@ -28,6 +30,13 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from starlette.middleware.base import BaseHTTPMiddleware
+
+# Configure Python logging to output to stdout for Lambda
+logging.basicConfig(
+    format="%(message)s",
+    stream=sys.stdout,
+    level=logging.INFO,
+)
 
 structlog.configure(
     processors=[
