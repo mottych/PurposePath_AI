@@ -7,7 +7,7 @@ pytestmark = pytest.mark.unit
 class TestInteractionCodes:
     """Test suite for interaction codes."""
 
-    def test_constants_are_strings(self):
+    def test_constants_are_strings(self) -> None:
         """Test that all constants are strings."""
         # Get all public attributes that are uppercase (constants)
         constants = [
@@ -20,7 +20,7 @@ class TestInteractionCodes:
             assert isinstance(constant, str)
             assert len(constant) > 0
 
-    def test_specific_codes_exist(self):
+    def test_specific_codes_exist(self) -> None:
         """Test that key interaction codes exist."""
         assert interaction_codes.ALIGNMENT_ANALYSIS == "ALIGNMENT_ANALYSIS"
         assert interaction_codes.COACHING_RESPONSE == "COACHING_RESPONSE"

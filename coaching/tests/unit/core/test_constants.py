@@ -19,10 +19,10 @@ class TestCoachingTopic:
     def test_coaching_topic_has_all_expected_values(self) -> None:
         """Test that CoachingTopic enum has all expected coaching topics."""
         # Assert
-        assert CoachingTopic.CORE_VALUES == "core_values"
-        assert CoachingTopic.PURPOSE == "purpose"
-        assert CoachingTopic.VISION == "vision"
-        assert CoachingTopic.GOALS == "goals"
+        assert CoachingTopic.CORE_VALUES.value == "core_values"
+        assert CoachingTopic.PURPOSE.value == "purpose"
+        assert CoachingTopic.VISION.value == "vision"
+        assert CoachingTopic.GOALS.value == "goals"
 
     def test_coaching_topic_count(self) -> None:
         """Test that CoachingTopic enum has the expected number of values."""
@@ -52,10 +52,10 @@ class TestConversationStatus:
     def test_conversation_status_has_all_expected_values(self) -> None:
         """Test that ConversationStatus enum has all expected statuses."""
         # Assert
-        assert ConversationStatus.ACTIVE == "active"
-        assert ConversationStatus.PAUSED == "paused"
-        assert ConversationStatus.COMPLETED == "completed"
-        assert ConversationStatus.ABANDONED == "abandoned"
+        assert ConversationStatus.ACTIVE.value == "active"
+        assert ConversationStatus.PAUSED.value == "paused"
+        assert ConversationStatus.COMPLETED.value == "completed"
+        assert ConversationStatus.ABANDONED.value == "abandoned"
 
     def test_conversation_status_count(self) -> None:
         """Test that ConversationStatus enum has the expected number of values."""
@@ -76,9 +76,9 @@ class TestMessageRole:
     def test_message_role_has_all_expected_values(self) -> None:
         """Test that MessageRole enum has all expected roles."""
         # Assert
-        assert MessageRole.USER == "user"
-        assert MessageRole.ASSISTANT == "assistant"
-        assert MessageRole.SYSTEM == "system"
+        assert MessageRole.USER.value == "user"
+        assert MessageRole.ASSISTANT.value == "assistant"
+        assert MessageRole.SYSTEM.value == "system"
 
     def test_message_role_count(self) -> None:
         """Test that MessageRole enum has the expected number of values."""
@@ -99,13 +99,13 @@ class TestAnalysisType:
     def test_analysis_type_has_all_expected_values(self) -> None:
         """Test that AnalysisType enum has all expected analysis types."""
         # Assert
-        assert AnalysisType.ALIGNMENT == "alignment"
-        assert AnalysisType.STRATEGY == "strategy"
-        assert AnalysisType.KPI == "kpi"
-        assert AnalysisType.SWOT == "swot"
-        assert AnalysisType.ROOT_CAUSE == "root_cause"
-        assert AnalysisType.ACTION_PLAN == "action_plan"
-        assert AnalysisType.GOAL_BREAKDOWN == "goal_breakdown"
+        assert AnalysisType.ALIGNMENT.value == "alignment"
+        assert AnalysisType.STRATEGY.value == "strategy"
+        assert AnalysisType.KPI.value == "kpi"
+        assert AnalysisType.SWOT.value == "swot"
+        assert AnalysisType.ROOT_CAUSE.value == "root_cause"
+        assert AnalysisType.ACTION_PLAN.value == "action_plan"
+        assert AnalysisType.GOAL_BREAKDOWN.value == "goal_breakdown"
 
     def test_analysis_type_count(self) -> None:
         """Test that AnalysisType enum has the expected number of values."""

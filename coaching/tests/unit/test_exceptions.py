@@ -12,7 +12,7 @@ from coaching.src.core.exceptions import (
 class TestConversationNotFoundError:
     """Test ConversationNotFoundError exception."""
 
-    def test_exception_message(self):
+    def test_exception_message(self) -> None:
         """Test exception message formatting."""
         # Arrange
         conversation_id = "conv-123"
@@ -24,7 +24,7 @@ class TestConversationNotFoundError:
         assert conversation_id in str(error)
         assert "not found" in str(error).lower()
 
-    def test_exception_can_be_raised(self):
+    def test_exception_can_be_raised(self) -> None:
         """Test that exception can be raised and caught."""
         # Arrange
         conversation_id = "conv-456"
@@ -35,7 +35,7 @@ class TestConversationNotFoundError:
 
         assert conversation_id in str(exc_info.value)
 
-    def test_exception_inherits_from_exception(self):
+    def test_exception_inherits_from_exception(self) -> None:
         """Test that custom exception inherits from Exception."""
         # Arrange & Act
         error = ConversationNotFoundError("test")
@@ -48,7 +48,7 @@ class TestConversationNotFoundError:
 class TestConversationNotFoundCompatError:
     """Test ConversationNotFoundCompatError exception."""
 
-    def test_compat_exception_message(self):
+    def test_compat_exception_message(self) -> None:
         """Test compat exception message formatting."""
         # Arrange
         conversation_id = "conv-789"
@@ -59,7 +59,7 @@ class TestConversationNotFoundCompatError:
         # Assert
         assert conversation_id in str(error)
 
-    def test_compat_exception_can_be_raised(self):
+    def test_compat_exception_can_be_raised(self) -> None:
         """Test that compat exception can be raised."""
         # Arrange
         conversation_id = "conv-compat"
@@ -73,7 +73,7 @@ class TestConversationNotFoundCompatError:
 class TestInvalidTopicError:
     """Test InvalidTopicError exception."""
 
-    def test_invalid_topic_error_message(self):
+    def test_invalid_topic_error_message(self) -> None:
         """Test invalid topic error message."""
         # Arrange
         topic = "invalid_topic"
@@ -85,7 +85,7 @@ class TestInvalidTopicError:
         assert topic in str(error)
         assert "invalid" in str(error).lower() or "topic" in str(error).lower()
 
-    def test_invalid_topic_error_can_be_raised(self):
+    def test_invalid_topic_error_can_be_raised(self) -> None:
         """Test that invalid topic error can be raised."""
         # Arrange
         topic = "bad_topic"
@@ -99,14 +99,14 @@ class TestInvalidTopicError:
 class TestExceptionHierarchy:
     """Test exception hierarchy and relationships."""
 
-    def test_all_exceptions_inherit_from_exception(self):
+    def test_all_exceptions_inherit_from_exception(self) -> None:
         """Test that all custom exceptions inherit from Exception."""
         # Act & Assert
         assert issubclass(ConversationNotFoundError, Exception)
         assert issubclass(ConversationNotFoundCompatError, Exception)
         assert issubclass(InvalidTopicError, Exception)
 
-    def test_exceptions_can_be_caught_as_exception(self):
+    def test_exceptions_can_be_caught_as_exception(self) -> None:
         """Test that custom exceptions can be caught as generic Exception."""
         # Arrange & Act & Assert
         with pytest.raises(Exception):

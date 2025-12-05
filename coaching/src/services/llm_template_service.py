@@ -177,7 +177,8 @@ class LLMTemplateService:
             cached = await self.cache.get(cache_key)
             if cached and isinstance(cached, str):
                 logger.debug("Rendered template from cache", template_id=template_id)
-                return cast(str, cached)
+                assert isinstance(cached, str)  # Type narrowing for mypy
+                return cached
 
         logger.debug("Rendering template", template_id=template_id)
 
@@ -303,7 +304,8 @@ class LLMTemplateService:
             cached = await self.cache.get(cache_key)
             if cached and isinstance(cached, str):
                 logger.debug("Template content from cache", template_id=template_id)
-                return cast(str, cached)
+                assert isinstance(cached, str)  # Type narrowing for mypy
+                return cached
 
         logger.debug(
             "Fetching template from S3",

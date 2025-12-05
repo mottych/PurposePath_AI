@@ -1,7 +1,11 @@
 """Unit tests for PhaseTransitionService domain service."""
 
 import pytest
-from coaching.src.core.constants import CoachingTopic, ConversationPhase
+from coaching.src.core.constants import (
+    CoachingTopic,
+    ConversationPhase,
+    MessageRole,
+)
 from coaching.src.core.types import (
     create_conversation_id,
     create_tenant_id,
@@ -38,7 +42,7 @@ class TestPhaseTransitionServiceBasics:
     ) -> None:
         """Test basic forward transition."""
         # Arrange - Add minimum requirements
-        conversation.add_message(role="user", content="Test message")
+        conversation.add_message(role=MessageRole.USER, content="Test message")
 
         # Act
         can_transition = service.can_transition_to_phase(
@@ -116,7 +120,7 @@ class TestPhaseTransitionRequirements:
         """Test transition with sufficient requirements met."""
         # Arrange - Add required responses
         for i in range(3):
-            conversation.add_message(role="user", content=f"Message {i}")
+            conversation.add_message(role=MessageRole.USER, content=f"Message {i}")
 
         # Add required insights
         conversation.add_insight("Insight 1")
@@ -135,7 +139,7 @@ class TestPhaseTransitionRequirements:
     ) -> None:
         """Test that insufficient responses blocks transition."""
         # Arrange - Only 1 response, need 3
-        conversation.add_message(role="user", content="Message")
+        conversation.add_message(role=MessageRole.USER, content="Message")
         conversation.add_insight("Insight 1")
         conversation.add_insight("Insight 2")
 
@@ -153,7 +157,7 @@ class TestPhaseTransitionRequirements:
         """Test that insufficient insights blocks transition."""
         # Arrange - Enough responses but not enough insights
         for i in range(3):
-            conversation.add_message(role="user", content=f"Message {i}")
+            conversation.add_message(role=MessageRole.USER, content=f"Message {i}")
 
         conversation.add_insight("Insight 1")  # Need 2
 
@@ -190,7 +194,7 @@ class TestPhaseTransitionNextPhase:
         """Test getting next phase when requirements are met."""
         # Arrange
         for i in range(3):
-            conversation.add_message(role="user", content=f"Message {i}")
+            conversation.add_message(role=MessageRole.USER, content=f"Message {i}")
         conversation.add_insight("Insight 1")
         conversation.add_insight("Insight 2")
 
@@ -260,7 +264,7 @@ class TestPhaseTransitionReadiness:
         """Test readiness calculation at 50%."""
         # Arrange - Meet response requirement but not insights
         for i in range(3):
-            conversation.add_message(role="user", content=f"Message {i}")
+            conversation.add_message(role=MessageRole.USER, content=f"Message {i}")
 
         # Act
         readiness = service.calculate_phase_readiness(conversation, ConversationPhase.EXPLORATION)
@@ -274,7 +278,7 @@ class TestPhaseTransitionReadiness:
         """Test readiness calculation at 100%."""
         # Arrange
         for i in range(3):
-            conversation.add_message(role="user", content=f"Message {i}")
+            conversation.add_message(role=MessageRole.USER, content=f"Message {i}")
         conversation.add_insight("Insight 1")
         conversation.add_insight("Insight 2")
 

@@ -2,7 +2,16 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
-from coaching.src.core.constants import ConversationStatus, MessageRole
+from coaching.src.core.constants import (
+    CoachingTopic,
+    ConversationStatus,
+    MessageRole,
+)
+from coaching.src.core.types import (
+    ConversationId,
+    create_tenant_id,
+    create_user_id,
+)
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.value_objects.conversation_context import ConversationContext
 from coaching.src.domain.value_objects.message import Message
@@ -12,7 +21,7 @@ from coaching.src.infrastructure.repositories.dynamodb_conversation_repository i
 
 
 @pytest.fixture
-def mock_dynamodb_resource():
+def mock_dynamodb_resource() -> MagicMock:
     resource = MagicMock()
     table = MagicMock()
     resource.Table.return_value = table
@@ -20,22 +29,22 @@ def mock_dynamodb_resource():
 
 
 @pytest.fixture
-def mock_table(mock_dynamodb_resource):
+def mock_table(mock_dynamodb_resource: MagicMock) -> MagicMock:
     return mock_dynamodb_resource.Table.return_value
 
 
 @pytest.fixture
-def repository(mock_dynamodb_resource):
+def repository(mock_dynamodb_resource: MagicMock) -> DynamoDBConversationRepository:
     return DynamoDBConversationRepository(mock_dynamodb_resource, "test-table")
 
 
 @pytest.fixture
-def sample_conversation():
+def sample_conversation() -> Conversation:
     return Conversation(
-        conversation_id="conv-123",
-        user_id="user-123",
-        tenant_id="tenant-123",
-        topic="goals",
+        conversation_id=ConversationId("conv-123"),
+        user_id=create_user_id("user-123"),
+        tenant_id=create_tenant_id("tenant-123"),
+        topic=CoachingTopic.GOALS,
         status=ConversationStatus.ACTIVE,
         messages=[
             Message(role=MessageRole.USER, content="Hello", timestamp=datetime.now(UTC)),
@@ -49,7 +58,11 @@ def sample_conversation():
 
 
 @pytest.mark.asyncio
-async def test_save_success(repository, mock_table, sample_conversation):
+async def test_save_success(
+    repository: DynamoDBConversationRepository,
+    mock_table: MagicMock,
+    sample_conversation: Conversation,
+) -> None:
     # Act
     await repository.save(sample_conversation)
 
@@ -68,7 +81,11 @@ async def test_save_success(repository, mock_table, sample_conversation):
 
 
 @pytest.mark.asyncio
-async def test_save_error(repository, mock_table, sample_conversation):
+async def test_save_error(
+    repository: DynamoDBConversationRepository,
+    mock_table: MagicMock,
+    sample_conversation: Conversation,
+) -> None:
     # Arrange
     mock_table.put_item.side_effect = Exception("DynamoDB Error")
 
@@ -78,7 +95,11 @@ async def test_save_error(repository, mock_table, sample_conversation):
 
 
 @pytest.mark.asyncio
-async def test_get_by_id_success(repository, mock_table, sample_conversation):
+async def test_get_by_id_success(
+    repository: DynamoDBConversationRepository,
+    mock_table: MagicMock,
+    sample_conversation: Conversation,
+) -> None:
     # Arrange
     # Mock the item returned by DynamoDB
     # We need to manually construct the item dict as it would be stored
@@ -86,7 +107,7 @@ async def test_get_by_id_success(repository, mock_table, sample_conversation):
     mock_table.get_item.return_value = {"Item": item}
 
     # Act
-    result = await repository.get_by_id("conv-123", "tenant-123")
+    result = await repository.get_by_id(ConversationId("conv-123"), create_tenant_id("tenant-123"))
 
     # Assert
     assert result is not None
@@ -96,25 +117,33 @@ async def test_get_by_id_success(repository, mock_table, sample_conversation):
 
 
 @pytest.mark.asyncio
-async def test_get_by_id_not_found(repository, mock_table):
+async def test_get_by_id_not_found(
+    repository: DynamoDBConversationRepository, mock_table: MagicMock
+) -> None:
     # Arrange
     mock_table.get_item.return_value = {}
 
     # Act
-    result = await repository.get_by_id("conv-123")
+    result = await repository.get_by_id(ConversationId("conv-123"))
 
     # Assert
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_get_by_id_tenant_mismatch(repository, mock_table, sample_conversation):
+async def test_get_by_id_tenant_mismatch(
+    repository: DynamoDBConversationRepository,
+    mock_table: MagicMock,
+    sample_conversation: Conversation,
+) -> None:
     # Arrange
     item = repository._to_dynamodb_item(sample_conversation)
     mock_table.get_item.return_value = {"Item": item}
 
     # Act
-    result = await repository.get_by_id("conv-123", "other-tenant")
+    result = await repository.get_by_id(
+        ConversationId("conv-123"), create_tenant_id("other-tenant")
+    )
 
     # Assert
     assert result is None
