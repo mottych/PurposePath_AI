@@ -24,12 +24,19 @@ class TestAPIPerformance:
     async def async_client(self, api_base_url: str) -> AsyncClient:
         """Create async HTTP client."""
         async with AsyncClient(base_url=api_base_url, timeout=30.0) as client:
+            # Check if API is running and is NOT DynamoDB Local
+            try:
+                response = await client.get("/api/v1/health")
+                if response.status_code == 400 and "MissingAuthenticationToken" in response.text:
+                    pytest.skip("Port 8000 is running DynamoDB Local, not the API server")
+            except Exception:
+                pass  # Let the test fail or handle connection error
             yield client
 
     async def test_health_endpoint_latency(self, async_client: AsyncClient) -> None:
         """Test health endpoint responds within acceptable time."""
         with measure_time("health_check", record_metric=False) as timing:
-            response = await async_client.get("/health")
+            response = await async_client.get("/api/v1/health")
 
         assert response.status_code == 200
         assert timing["duration_ms"] < 100, "Health check should respond in <100ms"
@@ -40,7 +47,7 @@ class TestAPIPerformance:
 
         async def make_request() -> dict[str, Any]:
             start = time.time()
-            response = await async_client.get("/health")
+            response = await async_client.get("/api/v1/health")
             duration = (time.time() - start) * 1000
             return {
                 "status_code": response.status_code,

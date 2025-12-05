@@ -186,9 +186,9 @@ class OpenAILLMProvider:
                     model=model,
                     completion_tokens=response.usage.completion_tokens,
                     finish_reason=finish_reason,
-                    message_dict=message.model_dump()
-                    if hasattr(message, "model_dump")
-                    else str(message),
+                    message_dict=(
+                        message.model_dump() if hasattr(message, "model_dump") else str(message)
+                    ),
                 )
 
             # Extract usage metrics

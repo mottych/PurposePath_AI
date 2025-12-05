@@ -188,11 +188,26 @@ class GoogleVertexLLMProvider:
                 temperature=temperature,
             )
 
-            response = model_instance.generate_content(
-                contents=contents,
-                generation_config=generation_config,
-                system_instruction=system_prompt,
-            )
+            try:
+                response = model_instance.generate_content(
+                    contents=contents,
+                    generation_config=generation_config,
+                    system_instruction=system_prompt,
+                )
+            except TypeError as e:
+                if "unexpected keyword argument 'system_instruction'" in str(e):
+                    logger.warning(
+                        "System instruction not supported by installed Vertex AI SDK version. "
+                        "Falling back to generating without system instruction.",
+                        model=model,
+                    )
+                    # Fallback for older SDK versions
+                    response = model_instance.generate_content(
+                        contents=contents,
+                        generation_config=generation_config,
+                    )
+                else:
+                    raise
 
             # Extract response
             content = response.text if response.text else ""
@@ -200,15 +215,21 @@ class GoogleVertexLLMProvider:
 
             # Extract usage metrics (Gemini provides token counts)
             usage = {
-                "prompt_tokens": getattr(response.usage_metadata, "prompt_token_count", 0)
-                if hasattr(response, "usage_metadata")
-                else 0,
-                "completion_tokens": getattr(response.usage_metadata, "candidates_token_count", 0)
-                if hasattr(response, "usage_metadata")
-                else 0,
-                "total_tokens": getattr(response.usage_metadata, "total_token_count", 0)
-                if hasattr(response, "usage_metadata")
-                else 0,
+                "prompt_tokens": (
+                    getattr(response.usage_metadata, "prompt_token_count", 0)
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
+                "completion_tokens": (
+                    getattr(response.usage_metadata, "candidates_token_count", 0)
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
+                "total_tokens": (
+                    getattr(response.usage_metadata, "total_token_count", 0)
+                    if hasattr(response, "usage_metadata")
+                    else 0
+                ),
             }
 
             logger.info(

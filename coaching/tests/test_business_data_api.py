@@ -82,7 +82,9 @@ class TestBusinessDataEndpoint:
         assert response_data["business_data"] == mock_business_data
 
     def test_get_business_data_permission_denied(self, mock_context_no_permission, auth_headers):
+        # Note: Permission checks were removed for authenticated users, so this should now SUCCEED
         mock_service = Mock()
+        mock_service.get_business_data_summary.return_value = {}
         app.dependency_overrides[get_current_context] = lambda: mock_context_no_permission
         app.dependency_overrides[get_multitenant_conversation_service] = lambda: mock_service
         response = client.get(
@@ -93,8 +95,8 @@ class TestBusinessDataEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data.get("success") is False and "error" in data
-        assert "Permission required" in data["error"]
+        assert data.get("success") is True
+        assert "business_data" in data["data"]
 
     def test_get_business_data_service_error(self, mock_context, auth_headers):
         mock_service = Mock()

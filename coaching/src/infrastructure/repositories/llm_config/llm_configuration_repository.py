@@ -340,9 +340,9 @@ class LLMConfigurationRepository:
             "presence_penalty": str(config.presence_penalty),
             "is_active": config.is_active,
             "effective_from": config.effective_from.isoformat(),
-            "effective_until": config.effective_until.isoformat()
-            if config.effective_until
-            else None,
+            "effective_until": (
+                config.effective_until.isoformat() if config.effective_until else None
+            ),
             "created_at": config.created_at.isoformat(),
             "updated_at": config.updated_at.isoformat(),
             "created_by": config.created_by,

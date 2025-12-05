@@ -689,9 +689,11 @@ class MultitenantConversationService:
         return ConversationResponse(
             conversation_id=conversation.conversation_id,
             status=conversation.status,
-            current_question=conversation.messages[-1].content
-            if conversation.messages and conversation.messages[-1].role == "assistant"
-            else "",
+            current_question=(
+                conversation.messages[-1].content
+                if conversation.messages and conversation.messages[-1].role == "assistant"
+                else ""
+            ),
             progress=conversation.calculate_progress(),
             phase=conversation.context.get("current_phase"),
             session_data={"session_id": session_data.get("session_id")} if session_data else None,

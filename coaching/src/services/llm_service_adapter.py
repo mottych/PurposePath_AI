@@ -180,7 +180,7 @@ class LLMServiceAdapter:
         """
         # Check for explicit provider override
         provider_override = kwargs.get("provider")
-        if provider_override and await self.provider_manager.is_provider_available(  # type: ignore[attr-defined]
+        if provider_override and await self.provider_manager.is_provider_available(
             provider_override
         ):
             provider_name = provider_override
@@ -203,10 +203,9 @@ class LLMServiceAdapter:
             )
             # Try fallback providers
             for fallback in self.fallback_providers:
-                if (
-                    await self.provider_manager.is_provider_available(fallback)  # type: ignore[attr-defined]
-                    and await self._can_provider_handle_model(fallback, model_id)
-                ):
+                if await self.provider_manager.is_provider_available(
+                    fallback
+                ) and await self._can_provider_handle_model(fallback, model_id):
                     provider_name = fallback
                     break
 
@@ -256,7 +255,8 @@ class LLMServiceAdapter:
 
         # Try each fallback provider
         for fallback_provider in self.fallback_providers:
-            if not await self.provider_manager.is_provider_available(fallback_provider):  # type: ignore[attr-defined]
+            if not await self.provider_manager.is_provider_available(fallback_provider):
+                logger.warning("Fallback provider not available", provider=fallback_provider)
                 errors.append(f"{fallback_provider}: not available")
                 continue
 
@@ -382,7 +382,7 @@ class LLMServiceAdapter:
         all_providers = [self.default_provider, *self.fallback_providers]
         for provider_name in all_providers:
             try:
-                is_available = await self.provider_manager.is_provider_available(provider_name)  # type: ignore[attr-defined]
+                is_available = await self.provider_manager.is_provider_available(provider_name)
                 provider = await self.provider_manager.get_provider(provider_name)  # type: ignore[misc]
 
                 status["providers"][provider_name] = {

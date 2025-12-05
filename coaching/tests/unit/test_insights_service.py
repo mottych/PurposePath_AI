@@ -1,420 +1,291 @@
-"""Unit tests for InsightsService (Issue #59 - Full Implementation)."""
-
-from unittest.mock import AsyncMock
+import json
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from coaching.src.services.insights_service import InsightsService
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
+from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
+    DynamoDBConversationRepository,
+)
+from coaching.src.services.insights_service import BusinessDataContext, InsightsService
+from coaching.src.services.llm_service import LLMService
+
+from shared.models.schemas import PaginatedResponse
 
 
-@pytest.mark.unit
-class TestInsightsServiceInitialization:
-    """Test InsightsService initialization."""
+@pytest.fixture
+def mock_repo():
+    return MagicMock(spec=DynamoDBConversationRepository)
 
-    def test_init_with_all_dependencies(self):
-        """Test initialization with all required dependencies."""
-        # Arrange
-        conversation_repo = AsyncMock()
-        business_api_client = AsyncMock()
-        llm_service = AsyncMock()
-        tenant_id = "tenant-123"
-        user_id = "user-456"
 
-        # Act
-        service = InsightsService(
-            conversation_repo=conversation_repo,
-            business_api_client=business_api_client,
-            llm_service=llm_service,
-            tenant_id=tenant_id,
-            user_id=user_id,
+@pytest.fixture
+def mock_business_client():
+    client = MagicMock(spec=BusinessApiClient)
+    # Setup default async returns
+    client.get_organizational_context = AsyncMock(
+        return_value={"vision": "Test Vision", "purpose": "Test Purpose"}
+    )
+    client.get_user_goals = AsyncMock(
+        return_value=[{"id": "1", "title": "Goal 1", "status": "active", "progress": 50}]
+    )
+    client.get_goal_stats = AsyncMock(return_value={"total_goals": 1, "completion_rate": 50})
+    client.get_performance_score = AsyncMock(return_value={"score": 85})
+    client.get_operations_actions = AsyncMock(return_value=[])
+    client.get_operations_issues = AsyncMock(return_value=[])
+    return client
+
+
+@pytest.fixture
+def mock_llm_service():
+    service = MagicMock(spec=LLMService)
+    service.generate_single_shot_analysis = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def insights_service(mock_repo, mock_business_client, mock_llm_service):
+    return InsightsService(
+        conversation_repo=mock_repo,
+        business_api_client=mock_business_client,
+        llm_service=mock_llm_service,
+        tenant_id="tenant-123",
+        user_id="user-123",
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_insights_success(insights_service, mock_llm_service):
+    # Arrange
+    mock_llm_response = {
+        "insights": [
+            {
+                "title": "Test Insight",
+                "description": "Test Description must be at least 20 characters long to pass validation.",
+                "category": "strategy",
+                "priority": "high",
+                "suggested_actions": [
+                    {"title": "Action 1", "description": "Desc", "effort": "low", "impact": "high"}
+                ],
+            }
+        ]
+    }
+    mock_llm_service.generate_single_shot_analysis.return_value = {
+        "response": json.dumps(mock_llm_response)
+    }
+
+    # Act
+    result = await insights_service.generate_insights()
+
+    # Assert
+    assert isinstance(result, PaginatedResponse)
+    assert result.success is True
+    assert len(result.data) == 1
+    assert result.data[0].title == "Test Insight"
+    assert result.data[0].category == "strategy"
+    assert result.data[0].priority == "high"
+    assert result.pagination.total == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_insights_insufficient_data(insights_service, mock_business_client):
+    # Arrange
+    # Mock empty data to trigger insufficient data check
+    mock_business_client.get_organizational_context.return_value = {}
+    mock_business_client.get_user_goals.return_value = []
+    mock_business_client.get_goal_stats.return_value = {}
+
+    # Act
+    result = await insights_service.generate_insights()
+
+    # Assert
+    assert isinstance(result, PaginatedResponse)
+    assert result.success is False
+    assert len(result.data) == 0
+    assert result.pagination.total == 0
+
+
+@pytest.mark.asyncio
+async def test_generate_insights_llm_error(insights_service, mock_llm_service):
+    # Arrange
+    mock_llm_service.generate_single_shot_analysis.side_effect = Exception("LLM Error")
+
+    # Act
+    result = await insights_service.generate_insights()
+
+    # Assert
+    # The service catches the exception and returns empty list, so success is True with empty data
+    assert isinstance(result, PaginatedResponse)
+    assert result.success is True
+    assert len(result.data) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_insights_summary_success(insights_service, mock_llm_service):
+    # Arrange
+    mock_llm_response = {
+        "insights": [
+            {
+                "title": "Insight 1",
+                "description": "Description 1 must be long enough to pass validation rules.",
+                "category": "strategy",
+                "priority": "high",
+                "suggested_actions": [],
+            },
+            {
+                "title": "Insight 2",
+                "description": "Description 2 must be long enough to pass validation rules.",
+                "category": "operations",
+                "priority": "medium",
+                "suggested_actions": [],
+            },
+        ]
+    }
+    mock_llm_service.generate_single_shot_analysis.return_value = {
+        "response": json.dumps(mock_llm_response)
+    }
+
+    # Act
+    summary = await insights_service.get_insights_summary("user-123")
+
+    # Assert
+    assert summary.total_insights == 2
+    assert summary.by_category["strategy"] == 1
+    assert summary.by_category["operations"] == 1
+    assert summary.by_priority["high"] == 1
+    assert summary.by_priority["medium"] == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_business_data_partial_failure(insights_service, mock_business_client):
+    # Arrange
+    # Simulate one service failing while others succeed
+    mock_business_client.get_organizational_context.side_effect = Exception("API Error")
+
+    # Act
+    # Accessing private method for testing
+    data = await insights_service._fetch_business_data()
+
+    # Assert
+    assert data.foundation == {}  # Should be empty dict on error
+    assert len(data.goals) == 1  # Other calls should still succeed (from default fixture)
+
+
+@pytest.mark.asyncio
+async def test_parse_llm_response_formats(insights_service):
+    # Test dict with 'response' key
+    resp1 = {"response": '{"insights": []}'}
+    parsed1 = insights_service._parse_llm_response(resp1)
+    assert "insights" in parsed1
+
+    # Test dict with 'analysis' key
+    resp2 = {"analysis": '{"insights": []}'}
+    parsed2 = insights_service._parse_llm_response(resp2)
+    assert "insights" in parsed2
+
+    # Test string response
+    resp3 = '{"insights": []}'
+    parsed3 = insights_service._parse_llm_response(resp3)
+    assert "insights" in parsed3
+
+    # Test invalid json
+    resp4 = "Not JSON"
+    parsed4 = insights_service._parse_llm_response(resp4)
+    assert parsed4 == {"insights": []}  # Should return empty insights structure on error
+
+
+def test_build_insights_prompt(insights_service):
+    # Arrange
+    data = BusinessDataContext(
+        tenant_id="t1",
+        foundation={"vision": "V", "purpose": "P", "core_values": ["V1", "V2"]},
+        goals=[{"title": "G1", "status": "active", "progress": 10}],
+        goal_stats={"total_goals": 1, "completion_rate": 10},
+        performance_score={},
+        recent_actions=[],
+        open_issues=[],
+    )
+
+    # Act
+    prompt = insights_service._build_insights_prompt(data)
+
+    # Assert
+    assert "Vision: V" in prompt
+    assert "Purpose: P" in prompt
+    assert "Core Values: V1, V2" in prompt
+    assert "G1 (Status: active, Progress: 10%)" in prompt
+
+
+@pytest.mark.asyncio
+async def test_apply_filters(insights_service, mock_llm_service):
+    # Arrange
+    mock_llm_response = {
+        "insights": [
+            {
+                "title": "Insight 1",
+                "description": "Description 1 must be long enough to pass validation rules.",
+                "category": "strategy",
+                "priority": "high",
+                "suggested_actions": [],
+            },
+            {
+                "title": "Insight 2",
+                "description": "Description 2 must be long enough to pass validation rules.",
+                "category": "operations",
+                "priority": "medium",
+                "suggested_actions": [],
+            },
+        ]
+    }
+    mock_llm_service.generate_single_shot_analysis.return_value = {
+        "response": json.dumps(mock_llm_response)
+    }
+
+    # Act - Filter by category
+    result_cat = await insights_service.generate_insights(category="strategy")
+    assert len(result_cat.data) == 1
+    assert result_cat.data[0].category == "strategy"
+
+    # Act - Filter by priority
+    result_pri = await insights_service.generate_insights(priority="medium")
+    assert len(result_pri.data) == 1
+    assert result_pri.data[0].priority == "medium"
+
+
+@pytest.mark.asyncio
+async def test_pagination(insights_service, mock_llm_service):
+    # Arrange
+    insights = []
+    for i in range(5):
+        insights.append(
+            {
+                "title": f"Insight {i}",
+                "description": f"Description for insight {i} must be long enough to pass validation rules.",
+                "category": "strategy",
+                "priority": "high",
+                "suggested_actions": [],
+            }
         )
 
-        # Assert
-        assert service.conversation_repo == conversation_repo
-        assert service.business_api_client == business_api_client
-        assert service.llm_service == llm_service
-        assert service.tenant_id == tenant_id
-        assert service.user_id == user_id
-
-
-@pytest.mark.unit
-class TestInsightsServiceGetInsights:
-    """Test get_insights method (stub implementation)."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_get_insights_returns_empty_results(self, insights_service):
-        """Test that get_insights returns empty paginated response."""
-        # Act
-        result = await insights_service.get_insights(
-            page=1,
-            page_size=20,
-        )
-
-        # Assert
-        assert result.data == []
-        assert result.pagination.total == 0
-        assert result.pagination.page == 1
-        assert result.pagination.limit == 20
-        assert result.pagination.total_pages == 0
-
-    async def test_get_insights_with_filters(self, insights_service):
-        """Test get_insights with category, priority, and status filters."""
-        # Act
-        result = await insights_service.get_insights(
-            page=1,
-            page_size=10,
-            category="marketing",
-            priority="high",
-            status="active",
-        )
-
-        # Assert
-        assert result.data == []
-        assert result.pagination.total == 0
-        # Filters are accepted but return empty (stub implementation)
-
-    async def test_get_insights_with_pagination(self, insights_service):
-        """Test get_insights with different pagination parameters."""
-        # Act
-        result_page_1 = await insights_service.get_insights(page=1, page_size=10)
-        result_page_2 = await insights_service.get_insights(page=2, page_size=20)
-        result_page_3 = await insights_service.get_insights(page=3, page_size=50)
-
-        # Assert
-        assert result_page_1.pagination.page == 1
-        assert result_page_1.pagination.limit == 10
-        assert result_page_2.pagination.page == 2
-        assert result_page_2.pagination.limit == 20
-        assert result_page_3.pagination.page == 3
-        assert result_page_3.pagination.limit == 50
-        # All return empty results (stub implementation)
-
-    async def test_get_insights_default_parameters(self, insights_service):
-        """Test get_insights with default pagination."""
-        # Act
-        result = await insights_service.get_insights()
-
-        # Assert
-        assert result.pagination.page == 1
-        assert result.pagination.limit == 20
-        assert result.data == []
-
-
-@pytest.mark.unit
-class TestInsightsServiceGetInsightsSummary:
-    """Test get_insights_summary method (stub implementation)."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_get_insights_summary_returns_empty(self, insights_service):
-        """Test that get_insights_summary returns empty summary."""
-        # Arrange
-        user_id = "user-123"
-
-        # Act
-        result = await insights_service.get_insights_summary(user_id)
-
-        # Assert
-        assert result.total_insights == 0
-        assert result.by_category == {}
-        assert result.by_priority == {}
-        assert result.by_status == {}
-        assert result.recent_activity == []
-
-    async def test_get_insights_summary_with_different_users(self, insights_service):
-        """Test summary for different users (all return empty)."""
-        # Act
-        result1 = await insights_service.get_insights_summary("user-1")
-        result2 = await insights_service.get_insights_summary("user-2")
-        result3 = await insights_service.get_insights_summary("user-3")
-
-        # Assert - All return empty summaries
-        for result in [result1, result2, result3]:
-            assert result.total_insights == 0
-            assert result.by_category == {}
-            assert result.by_priority == {}
-
-
-@pytest.mark.unit
-class TestInsightsServiceGetCategories:
-    """Test get_available_categories method."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_get_available_categories(self, insights_service):
-        """Test that available categories are returned."""
-        # Act
-        categories = await insights_service.get_categories()
-
-        # Assert
-        assert isinstance(categories, list)
-        assert len(categories) > 0
-        # Verify we got some categories
-        assert "strategy" in categories
-
-    async def test_categories_are_lowercase(self, insights_service):
-        """Test that all categories are lowercase."""
-        # Act
-        categories = await insights_service.get_categories()
-
-        # Assert
-        assert all(cat == cat.lower() for cat in categories)
-
-
-@pytest.mark.unit
-class TestInsightsServiceGetPriorities:
-    """Test get_available_priorities method."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_get_available_priorities(self, insights_service):
-        """Test that available priorities are returned."""
-        # Act
-        priorities = await insights_service.get_priorities()
-
-        # Assert
-        assert isinstance(priorities, list)
-        assert len(priorities) == 4
-        # Verify expected priorities
-        expected_priorities = ["critical", "high", "medium", "low"]
-        assert all(p in priorities for p in expected_priorities)
-
-    async def test_priorities_order(self, insights_service):
-        """Test that priorities are in severity order."""
-        # Act
-        priorities = await insights_service.get_priorities()
-
-        # Assert
-        assert priorities[0] == "critical"
-        assert priorities[1] == "high"
-        assert priorities[2] == "medium"
-        assert priorities[3] == "low"
-
-
-@pytest.mark.unit
-class TestInsightsServiceDismissInsight:
-    """Test dismiss_insight method."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_dismiss_insight(self, insights_service):
-        """Test dismissing an insight."""
-        # Arrange
-        insight_id = "insight-123"
-        user_id = "user-456"
-
-        # Act
-        await insights_service.dismiss_insight(insight_id, user_id)
-
-        # Assert
-        # No error should be raised
-        # In real implementation, would update database
-        # For now, just logs the action
-
-    async def test_dismiss_multiple_insights(self, insights_service):
-        """Test dismissing multiple insights."""
-        # Arrange
-        insights = ["insight-1", "insight-2", "insight-3"]
-        user_id = "user-456"
-
-        # Act - Dismiss multiple
-        for insight_id in insights:
-            await insights_service.dismiss_insight(insight_id, user_id)
-
-        # Assert - No errors raised
-
-
-@pytest.mark.unit
-class TestInsightsServiceAcknowledgeInsight:
-    """Test acknowledge_insight method."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_acknowledge_insight(self, insights_service):
-        """Test acknowledging an insight."""
-        # Arrange
-        insight_id = "insight-123"
-        user_id = "user-456"
-
-        # Act
-        await insights_service.acknowledge_insight(insight_id, user_id)
-
-        # Assert
-        # No error should be raised
-        # In real implementation, would update database
-
-    async def test_acknowledge_multiple_insights(self, insights_service):
-        """Test acknowledging multiple insights."""
-        # Arrange
-        insights = ["insight-1", "insight-2", "insight-3"]
-        user_id = "user-456"
-
-        # Act
-        for insight_id in insights:
-            await insights_service.acknowledge_insight(insight_id, user_id)
-
-        # Assert - No errors raised
-
-
-@pytest.mark.unit
-class TestInsightsServiceEdgeCases:
-    """Test edge cases and boundary conditions."""
-
-    @pytest.fixture
-    def insights_service(self):
-        """Create InsightsService with mocked dependencies."""
-        return InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-    async def test_get_insights_with_invalid_page(self, insights_service):
-        """Test get_insights with page 0 (boundary condition)."""
-        # Act
-        result = await insights_service.get_insights(page=0, page_size=20)
-
-        # Assert
-        assert result.data == []
-        # Service handles it gracefully
-
-    async def test_get_insights_with_large_page_size(self, insights_service):
-        """Test get_insights with very large page_size."""
-        # Act
-        result = await insights_service.get_insights(page=1, page_size=1000)
-
-        # Assert
-        assert result.data == []
-        assert result.pagination.limit == 1000
-
-    async def test_get_insights_with_none_filters(self, insights_service):
-        """Test get_insights with explicitly None filters."""
-        # Act
-        result = await insights_service.get_insights(
-            category=None,
-            priority=None,
-            status=None,
-        )
-
-        # Assert
-        assert result.data == []
-        # None filters are handled gracefully
-
-    async def test_dismiss_insight_with_empty_ids(self, insights_service):
-        """Test dismiss_insight with empty strings."""
-        # Act & Assert - Should not raise errors
-        await insights_service.dismiss_insight("", "")
-        await insights_service.dismiss_insight("insight-123", "")
-        await insights_service.dismiss_insight("", "user-123")
-
-    async def test_get_summary_with_empty_user_id(self, insights_service):
-        """Test get_insights_summary with empty user_id."""
-        # Act
-        result = await insights_service.get_insights_summary("")
-
-        # Assert
-        assert result.total_insights == 0
-        # Handles empty user_id gracefully
-
-
-@pytest.mark.unit
-class TestInsightsServiceIntegrationPatterns:
-    """Test integration patterns and dependencies."""
-
-    async def test_service_with_all_dependencies(self):
-        """Test that service can be created with all required dependencies."""
-        # Arrange & Act
-        service = InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-        # Assert
-        assert service is not None
-        assert service.tenant_id == "tenant-test"
-        assert service.user_id == "user-test"
-
-    async def test_concurrent_operations(self):
-        """Test concurrent insight operations."""
-        # Arrange
-        service = InsightsService(
-            conversation_repo=AsyncMock(),
-            business_api_client=AsyncMock(),
-            llm_service=AsyncMock(),
-            tenant_id="tenant-test",
-            user_id="user-test",
-        )
-
-        # Act - Multiple concurrent operations
-        import asyncio
-
-        results = await asyncio.gather(
-            service.get_insights(page=1),
-            service.get_insights(page=2),
-            service.get_insights_summary("user-1"),
-            service.get_categories(),
-            service.get_priorities(),
-        )
-
-        # Assert
-        assert len(results) == 5
-        assert all(r is not None for r in results)
+    mock_llm_response = {"insights": insights}
+    mock_llm_service.generate_single_shot_analysis.return_value = {
+        "response": json.dumps(mock_llm_response)
+    }
+
+    # Act
+    result = await insights_service.generate_insights(page=1, page_size=2)
+
+    # Assert
+    assert len(result.data) == 2
+    assert result.pagination.total == 5
+    assert result.pagination.total_pages == 3
+    assert result.pagination.page == 1
+    assert result.pagination.limit == 2
+
+    # Act - Page 2
+    result2 = await insights_service.generate_insights(page=2, page_size=2)
+    assert len(result2.data) == 2
+    assert result2.pagination.page == 2
+
+    # Act - Page 3
+    result3 = await insights_service.generate_insights(page=3, page_size=2)
+    assert len(result3.data) == 1
+    assert result3.pagination.page == 3

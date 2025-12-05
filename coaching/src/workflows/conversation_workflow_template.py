@@ -152,7 +152,10 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Generate thoughtful follow-up questions."""
         logger.info("Executing question generation", workflow_id=state.get("workflow_id"))
 
-        provider = provider_manager.get_provider(state.get("provider_id"))
+        provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
+            "provider_id"
+        )
+        provider = provider_manager.get_provider(provider_id)
 
         # Analyze conversation context to generate appropriate questions
         conversation_context = self._get_conversation_context(state)
@@ -198,6 +201,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             }
             state["messages"].append(fallback_message)
 
+        state["current_step"] = "question_generation"
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
@@ -205,7 +209,10 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Analyze user responses for insights and themes."""
         logger.info("Executing response analysis", workflow_id=state.get("workflow_id"))
 
-        provider = provider_manager.get_provider(state.get("provider_id"))
+        provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
+            "provider_id"
+        )
+        provider = provider_manager.get_provider(provider_id)
 
         # Get the latest user response
         user_messages = [msg for msg in state.get("messages", []) if msg.get("role") == "user"]

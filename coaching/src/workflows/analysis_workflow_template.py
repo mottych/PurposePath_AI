@@ -179,7 +179,10 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         if state.get("status") == "failed":
             return state
 
-        provider = provider_manager.get_provider(state.get("provider_id"))
+        provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
+            "provider_id"
+        )
+        provider = provider_manager.get_provider(provider_id)
 
         # Get analysis input - check both messages (orchestrator) and conversation_history (workflow template)
         messages = state.get("messages") or state.get("conversation_history", [])
