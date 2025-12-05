@@ -106,6 +106,60 @@ class TopicRepository:
             logger.error("Failed to list topics", error=str(e))
             raise
 
+    async def list_all_with_enum_defaults(
+        self, *, include_inactive: bool = False
+    ) -> list[LLMTopic]:
+        """List all topics, merging enum defaults with database records.
+
+        Returns topics from the database first, then adds any enum values
+        that are not yet configured in the database. This ensures all
+        defined topics are always visible to admins, even if not yet
+        configured in DynamoDB.
+
+        Args:
+            include_inactive: Whether to include inactive topics in results
+
+        Returns:
+            List of topics with enum defaults merged with DB records
+        """
+        try:
+            from shared.models.multitenant import CoachingTopic
+
+            # Get existing topics from database
+            db_topics = await self.list_all(include_inactive=include_inactive)
+
+            # Build set of topic IDs already in database
+            existing_ids = {topic.topic_id for topic in db_topics}
+
+            # Create default topics for any enum values not in database
+            default_topics = [
+                LLMTopic.create_default_from_enum(topic_enum)
+                for topic_enum in CoachingTopic
+                if topic_enum.value not in existing_ids
+            ]
+
+            # Filter defaults by is_active if requested
+            if not include_inactive:
+                default_topics = [t for t in default_topics if t.is_active]
+
+            # Merge and sort by display_order
+            all_topics = db_topics + default_topics
+            all_topics.sort(key=lambda t: t.display_order)
+
+            logger.info(
+                "Topics listed with enum defaults",
+                db_count=len(db_topics),
+                default_count=len(default_topics),
+                total_count=len(all_topics),
+                include_inactive=include_inactive,
+            )
+
+            return all_topics
+
+        except Exception as e:
+            logger.error("Failed to list topics with enum defaults", error=str(e))
+            raise
+
     async def list_by_type(
         self, *, topic_type: str, include_inactive: bool = False
     ) -> list[LLMTopic]:

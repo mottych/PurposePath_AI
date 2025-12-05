@@ -410,6 +410,77 @@ class LLMTopic:
         """
         return self.get_parameter(name=name) is not None
 
+    @classmethod
+    def create_default_from_enum(cls, topic_enum: Any) -> "LLMTopic":
+        """Create a default LLMTopic from CoachingTopic enum.
+
+        Creates an inactive topic with default configuration that can be
+        activated and configured by admins. This ensures all enum topics
+        are visible in the admin UI even if not yet configured in the database.
+
+        Args:
+            topic_enum: CoachingTopic enum value
+
+        Returns:
+            LLMTopic: Default topic instance (inactive, no prompts)
+        """
+        from datetime import UTC, datetime
+
+        # Import here to avoid circular dependency
+        from shared.models.multitenant import CoachingTopic
+
+        # Map enum values to friendly names and descriptions
+        display_names = {
+            CoachingTopic.CORE_VALUES: "Core Values",
+            CoachingTopic.PURPOSE: "Purpose",
+            CoachingTopic.VISION: "Vision",
+            CoachingTopic.GOALS: "Goals",
+        }
+
+        descriptions = {
+            CoachingTopic.CORE_VALUES: "Discover and clarify personal core values",
+            CoachingTopic.PURPOSE: "Define life and business purpose",
+            CoachingTopic.VISION: "Articulate vision for the future",
+            CoachingTopic.GOALS: "Set aligned and achievable goals",
+        }
+
+        categories = {
+            CoachingTopic.CORE_VALUES: "core_values",
+            CoachingTopic.PURPOSE: "purpose",
+            CoachingTopic.VISION: "vision",
+            CoachingTopic.GOALS: "goals",
+        }
+
+        # Get display order based on enum position
+        try:
+            display_order = list(CoachingTopic).index(topic_enum) * 10
+        except ValueError:
+            display_order = 100
+
+        return cls(
+            topic_id=topic_enum.value,
+            topic_name=display_names.get(topic_enum, topic_enum.value.replace("_", " ").title()),
+            category=categories.get(topic_enum, topic_enum.value),
+            topic_type="conversation_coaching",
+            description=descriptions.get(
+                topic_enum, f"Coaching session for {topic_enum.value.replace('_', ' ')}"
+            ),
+            display_order=display_order,
+            is_active=False,  # Inactive until configured by admin
+            model_code="claude-3-5-sonnet-20241022",  # Default model
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[],  # No prompts until configured
+            allowed_parameters=[],  # No parameters until configured
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="system",
+            additional_config={},
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """Alias for to_dynamodb_item for backward compatibility."""
         return self.to_dynamodb_item()
