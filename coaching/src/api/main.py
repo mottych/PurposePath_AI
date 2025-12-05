@@ -4,6 +4,7 @@ import logging
 import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 import structlog
 from coaching.src.api.middleware import (
@@ -182,7 +183,7 @@ handler = Mangum(app, lifespan="off")
 
 
 # Wrapper to add debug logging for Lambda
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Lambda handler wrapper with debug logging."""
     import sys
 
