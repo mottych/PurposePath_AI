@@ -6,7 +6,7 @@ LangGraph-based workflow system, ensuring backward compatibility while enabling
 multi-provider support and advanced workflow capabilities.
 """
 
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
@@ -180,7 +180,7 @@ class LLMServiceAdapter:
         """
         # Check for explicit provider override
         provider_override = kwargs.get("provider")
-        if provider_override and await self.provider_manager.is_provider_available(
+        if provider_override and await cast(Any, self.provider_manager).is_provider_available(
             provider_override
         ):
             provider_name = provider_override
@@ -255,7 +255,7 @@ class LLMServiceAdapter:
 
         # Try each fallback provider
         for fallback_provider in self.fallback_providers:
-            if not await self.provider_manager.is_provider_available(fallback_provider):
+            if not await cast(Any, self.provider_manager).is_provider_available(fallback_provider):
                 logger.warning("Fallback provider not available", provider=fallback_provider)
                 errors.append(f"{fallback_provider}: not available")
                 continue
@@ -382,7 +382,9 @@ class LLMServiceAdapter:
         all_providers = [self.default_provider, *self.fallback_providers]
         for provider_name in all_providers:
             try:
-                is_available = await self.provider_manager.is_provider_available(provider_name)
+                is_available = await cast(Any, self.provider_manager).is_provider_available(
+                    provider_name
+                )
                 provider = await self.provider_manager.get_provider(provider_name)  # type: ignore[misc]
 
                 status["providers"][provider_name] = {
