@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
+from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
@@ -124,8 +125,6 @@ class TopicRepository:
         """
         try:
             import sys
-
-            from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
 
             print(
                 f"[DEBUG] list_all_with_enum_defaults - include_inactive={include_inactive}",
