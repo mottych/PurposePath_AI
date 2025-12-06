@@ -6,6 +6,7 @@ import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import get_generic_handler
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
+from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.onboarding import (
     OnboardingSuggestionRequest,
     OnboardingSuggestionResponse,
@@ -39,11 +40,14 @@ async def suggest_onboarding(
     """
     logger.info("Generating onboarding suggestions", user_id=context.user_id, kind=request.kind)
 
+    # Convert RequestContext to UserContext for handler
+    user_context = UserContext(user_id=context.user_id, tenant_id=context.tenant_id)
+
     result = await handler.handle_single_shot(
         http_method="POST",
         endpoint_path="/suggestions/onboarding",
         request_body=request,
-        user_context=context,
+        user_context=user_context,
         response_model=OnboardingSuggestionResponse,
     )
 
