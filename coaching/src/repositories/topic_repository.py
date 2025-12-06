@@ -120,12 +120,12 @@ class TopicRepository:
             include_inactive: Whether to include inactive topics in results
 
         Returns:
-            List of topics with enum defaults merged with DB records
+            List of topics with endpoint registry defaults merged with DB records
         """
         try:
             import sys
 
-            from shared.models.multitenant import CoachingTopic
+            from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
 
             print(
                 f"[DEBUG] list_all_with_enum_defaults - include_inactive={include_inactive}",
@@ -133,32 +133,37 @@ class TopicRepository:
                 flush=True,
             )
             print(
-                f"[DEBUG] CoachingTopic enum values: {[e.value for e in CoachingTopic]}",
+                f"[DEBUG] ENDPOINT_REGISTRY count: {len(ENDPOINT_REGISTRY)}",
                 file=sys.stderr,
                 flush=True,
             )
 
             logger.info("list_all_with_enum_defaults called", include_inactive=include_inactive)
-            logger.info("CoachingTopic enum values", values=[e.value for e in CoachingTopic])
+            logger.info("ENDPOINT_REGISTRY count", count=len(ENDPOINT_REGISTRY))
 
             # Get existing topics from database
             db_topics = await self.list_all(include_inactive=include_inactive)
             logger.info(
                 "db_topics retrieved", count=len(db_topics), ids=[t.topic_id for t in db_topics]
             )
+            logger.error(
+                "DEBUG: db_topics count",
+                count=len(db_topics),
+                ids=[t.topic_id for t in db_topics],
+            )
 
             # Build set of topic IDs already in database
             existing_ids = {topic.topic_id for topic in db_topics}
             logger.info("existing_ids", ids=list(existing_ids))
 
-            # Create default topics for any enum values not in database
+            # Create default topics from endpoint registry for any not in database
             default_topics = [
-                LLMTopic.create_default_from_enum(topic_enum)
-                for topic_enum in CoachingTopic
-                if topic_enum.value not in existing_ids
+                LLMTopic.create_default_from_endpoint(endpoint_def)
+                for endpoint_def in ENDPOINT_REGISTRY.values()
+                if endpoint_def.topic_id not in existing_ids
             ]
             logger.info(
-                "default_topics created",
+                "default_topics created from registry",
                 count=len(default_topics),
                 ids=[t.topic_id for t in default_topics],
             )

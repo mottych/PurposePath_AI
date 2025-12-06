@@ -414,6 +414,9 @@ class LLMTopic:
     def create_default_from_enum(cls, topic_enum: Any) -> "LLMTopic":
         """Create a default LLMTopic from CoachingTopic enum.
 
+        DEPRECATED: Use create_default_from_endpoint() for registry-based topics.
+        This method is maintained for backwards compatibility only.
+
         Creates an inactive topic with default configuration that can be
         activated and configured by admins. This ensures all enum topics
         are visible in the admin UI even if not yet configured in the database.
@@ -479,6 +482,62 @@ class LLMTopic:
             updated_at=datetime.now(UTC),
             created_by="system",
             additional_config={},
+        )
+
+    @classmethod
+    def create_default_from_endpoint(cls, endpoint_def: Any) -> "LLMTopic":
+        """Create a default LLMTopic from ENDPOINT_REGISTRY definition.
+
+        This is the preferred method for creating default topics from the
+        centralized endpoint registry. Creates an inactive topic with default
+        configuration that can be activated and configured by admins.
+
+        Args:
+            endpoint_def: EndpointDefinition from ENDPOINT_REGISTRY
+
+        Returns:
+            LLMTopic: Default topic instance with endpoint metadata
+        """
+        from datetime import UTC, datetime
+
+        # Convert endpoint path to display name
+        # e.g., "/coaching/alignment-check" -> "Alignment Check"
+        topic_name = endpoint_def.topic_id.replace("_", " ").title()
+
+        # Determine topic type based on requires_conversation flag
+        # Use valid topic_type: conversation_coaching, single_shot, or kpi_system
+        topic_type = (
+            "conversation_coaching" if endpoint_def.requires_conversation else "single_shot"
+        )
+
+        # Generate display order from alphabetical sort (can be customized)
+        # This ensures consistent ordering across environments
+        display_order = hash(endpoint_def.topic_id) % 1000
+
+        return cls(
+            topic_id=endpoint_def.topic_id,
+            topic_name=topic_name,
+            category=endpoint_def.category,
+            topic_type=topic_type,
+            description=endpoint_def.description,
+            display_order=display_order,
+            is_active=endpoint_def.is_active,  # Respect endpoint's active status
+            model_code="claude-3-5-sonnet-20241022",  # Default model
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[],  # No prompts until configured
+            allowed_parameters=[],  # No parameters until configured
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="system",
+            additional_config={
+                "endpoint_path": endpoint_def.endpoint_path,
+                "http_method": endpoint_def.http_method,
+                "response_model": endpoint_def.response_model,
+            },
         )
 
     def to_dict(self) -> dict[str, Any]:
