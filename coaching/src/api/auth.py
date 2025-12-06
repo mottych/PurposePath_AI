@@ -109,6 +109,22 @@ async def get_current_context(
     try:
         # Decode and validate JWT token
         secret = _get_jwt_secret()
+
+        # Log secret characteristics (safe - no actual secret exposed)
+        logger.info(
+            f"JWT validation starting (get_current_context) - Secret length: {len(secret)}, "
+            f"First 10 chars: {secret[:10]}, "
+            f"Stage: {settings.stage}, "
+            f"Algorithm: {settings.jwt_algorithm}"
+        )
+
+        # Decode token header to see what algorithm it was signed with
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            logger.info(f"Token header: {unverified_header}")
+        except Exception as e:
+            logger.warning(f"Could not decode token header: {e}")
+
         # Decode token; allow flexible fields and issuer in dev
         try:
             payload = jwt.decode(
@@ -122,9 +138,16 @@ async def get_current_context(
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
                 audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
-        except JWTError:
+            logger.info(
+                "JWT signature verification succeeded with AWS secret (get_current_context)"
+            )
+        except JWTError as jwt_err:
+            logger.warning(
+                f"JWT verification failed with AWS secret (get_current_context): {jwt_err}"
+            )
             # Dev-friendly fallback to default secret
             if settings.stage == "dev":
+                logger.info("Attempting fallback to default dev secret (get_current_context)")
                 payload = jwt.decode(
                     token,
                     "change-me-in-prod",
@@ -210,6 +233,21 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         # Decode and validate JWT token
         secret = _get_jwt_secret()
 
+        # Log secret characteristics (safe - no actual secret exposed)
+        logger.info(
+            f"JWT validation starting - Secret length: {len(secret)}, "
+            f"First 10 chars: {secret[:10]}, "
+            f"Stage: {settings.stage}, "
+            f"Algorithm: {settings.jwt_algorithm}"
+        )
+
+        # Decode token header to see what algorithm it was signed with
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            logger.info(f"Token header: {unverified_header}")
+        except Exception as e:
+            logger.warning(f"Could not decode token header: {e}")
+
         # Decode token; allow flexible fields and issuer in dev
         try:
             payload = jwt.decode(
@@ -223,15 +261,19 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
                 audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
-        except JWTError:
+            logger.info("JWT signature verification succeeded with AWS secret")
+        except JWTError as jwt_err:
+            logger.warning(f"JWT verification failed with AWS secret: {jwt_err}")
             # Dev-friendly fallback to default secret
             if settings.stage == "dev":
+                logger.info("Attempting fallback to default dev secret")
                 payload = jwt.decode(
                     token,
                     "change-me-in-prod",
                     algorithms=[settings.jwt_algorithm],
                     options={"verify_aud": False, "verify_iss": False},
                 )
+                logger.info("JWT signature verification succeeded with fallback secret")
             else:
                 raise
 
