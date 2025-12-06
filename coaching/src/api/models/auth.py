@@ -4,7 +4,7 @@ This module provides models for handling authenticated user context
 extracted from JWT tokens.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class UserContext(BaseModel):
@@ -39,6 +39,14 @@ class UserContext(BaseModel):
         description="OAuth2 scopes",
         examples=[["read:conversations", "write:conversations"]],
     )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, v: str | list[str] | None) -> str | None:
+        """Normalize email field - extract first email if list."""
+        if isinstance(v, list) and v:
+            return v[0]  # Take first email from list
+        return v if isinstance(v, str) else None
 
     model_config = {
         "json_schema_extra": {
