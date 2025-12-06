@@ -251,10 +251,18 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 status_code=401, detail="Token missing required fields: user_id and tenant_id"
             )
 
+        # Normalize email: .NET API sends email as array, extract first element
+        normalized_email = None
+        if email:
+            if isinstance(email, list):
+                normalized_email = email[0] if email else None
+            elif isinstance(email, str):
+                normalized_email = email
+
         return UserContext(
             user_id=str(user_id),
             tenant_id=str(tenant_id),
-            email=email,
+            email=normalized_email,
             roles=roles,
             scopes=scopes,
         )
