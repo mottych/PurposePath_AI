@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
+import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
@@ -46,9 +47,8 @@ from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
-from structlog import get_logger
 
-logger = get_logger(__name__)
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 
