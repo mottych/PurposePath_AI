@@ -13,7 +13,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class KPIAnalysisService(BaseAnalysisService):  # type: ignore[misc]
+class KPIAnalysisService(BaseAnalysisService):
     """
     Service for KPI recommendations.
 
@@ -126,7 +126,7 @@ Recommend 5-8 specific, measurable KPIs."""
                 kpis_count=len(result["recommended_kpis"]),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse KPI JSON response", error=str(e))

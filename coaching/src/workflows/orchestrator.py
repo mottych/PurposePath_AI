@@ -108,7 +108,7 @@ class WorkflowOrchestrator:
             self._workflow_states[workflow_id] = state
 
             logger.info("Workflow started", workflow_id=workflow_id, status=state.status.value)
-            return state  # type: ignore[no-any-return]
+            return state
 
         except Exception as e:
             logger.error("Workflow start failed", workflow_id=workflow_id, error=str(e))

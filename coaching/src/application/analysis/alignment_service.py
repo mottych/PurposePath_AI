@@ -14,7 +14,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class AlignmentAnalysisService(BaseAnalysisService):  # type: ignore[misc]
+class AlignmentAnalysisService(BaseAnalysisService):
     """
     Service for alignment analysis.
 
@@ -156,7 +156,7 @@ Provide a thorough, actionable analysis."""
                 recommendations_count=len(result["recommendations"]),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse alignment JSON response", error=str(e))

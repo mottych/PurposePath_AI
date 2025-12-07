@@ -211,7 +211,7 @@ class LLMConfigurationService:
             interaction_code=interaction_code,
         )
         configs = await self.repository.list_all(interaction_code=interaction_code)
-        return configs  # type: ignore[no-any-return]
+        return configs
 
     async def invalidate_cache(self, interaction_code: str, tier: str | None = None) -> None:
         """

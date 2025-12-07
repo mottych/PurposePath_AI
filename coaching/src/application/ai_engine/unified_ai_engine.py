@@ -211,7 +211,7 @@ class UnifiedAIEngine:
             result_type=type(result).__name__,
         )
 
-        return result  # type: ignore[no-any-return]
+        return result
 
     async def _get_active_topic(self, topic_id: str) -> LLMTopic:
         """Get topic and verify it's active.
@@ -293,7 +293,7 @@ class UnifiedAIEngine:
             )
             raise PromptRenderError(topic.topic_id, prompt_type, "Prompt not found in S3")
 
-        return prompt_content  # type: ignore[no-any-return]
+        return prompt_content
 
     def _render_prompt(
         self,
@@ -529,7 +529,7 @@ class UnifiedAIEngine:
             response_length=len(llm_response.content),
         )
 
-        return response_data  # type: ignore[no-any-return]
+        return response_data
 
     async def pause_conversation(
         self,

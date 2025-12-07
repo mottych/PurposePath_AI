@@ -55,7 +55,7 @@ class SessionData(BaseModel):
 
 
 # Enhanced response models with proper Pydantic structures
-class ConversationResponse(BaseResponseModel):  # type: ignore[misc]
+class ConversationResponse(BaseResponseModel):
     """Response for conversation initiation."""
 
     conversation_id: str = Field(..., description="Unique conversation identifier")
@@ -65,7 +65,7 @@ class ConversationResponse(BaseResponseModel):  # type: ignore[misc]
     session_data: SessionData | None = Field(None, description="Session-specific data")
 
 
-class MessageResponse(BaseResponseModel):  # type: ignore[misc]
+class MessageResponse(BaseResponseModel):
     """Response for a message in conversation."""
 
     ai_response: str = Field(..., description="AI coach response")
@@ -77,7 +77,7 @@ class MessageResponse(BaseResponseModel):  # type: ignore[misc]
     identified_values: list[str] | None = Field(None, description="Newly identified values")
 
 
-class ConversationSummary(BaseResponseModel):  # type: ignore[misc]
+class ConversationSummary(BaseResponseModel):
     """Summary of a conversation."""
 
     conversation_id: str = Field(..., description="Conversation identifier")
@@ -89,7 +89,7 @@ class ConversationSummary(BaseResponseModel):  # type: ignore[misc]
     message_count: int = Field(..., ge=0, description="Number of messages in conversation")
 
 
-class ConversationListResponse(BaseResponseModel):  # type: ignore[misc]
+class ConversationListResponse(BaseResponseModel):
     """Response for listing conversations."""
 
     conversations: list[ConversationSummary] = Field(
@@ -100,7 +100,7 @@ class ConversationListResponse(BaseResponseModel):  # type: ignore[misc]
     page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page")
 
 
-class ConversationDetailResponse(BaseResponseModel):  # type: ignore[misc]
+class ConversationDetailResponse(BaseResponseModel):
     """Detailed conversation response with proper message structure."""
 
     conversation_id: str = Field(..., description="Conversation identifier")
@@ -115,7 +115,7 @@ class ConversationDetailResponse(BaseResponseModel):  # type: ignore[misc]
     completed_at: datetime | None = Field(None, description="Completion timestamp")
 
 
-class ErrorResponse(BaseResponseModel):  # type: ignore[misc]
+class ErrorResponse(BaseResponseModel):
     """Error response model."""
 
     error: str = Field(..., description="Error message")
@@ -125,7 +125,7 @@ class ErrorResponse(BaseResponseModel):  # type: ignore[misc]
 
 
 # Additional coaching-specific models
-class InsightResponse(BaseResponseModel):  # type: ignore[misc]
+class InsightResponse(BaseResponseModel):
     """Response for generated insights."""
 
     insight_id: str = Field(..., description="Unique insight identifier")
@@ -135,7 +135,7 @@ class InsightResponse(BaseResponseModel):  # type: ignore[misc]
     generated_at: datetime = Field(..., description="Generation timestamp")
 
 
-class SuggestionResponse(BaseResponseModel):  # type: ignore[misc]
+class SuggestionResponse(BaseResponseModel):
     """Response for coaching suggestions."""
 
     suggestion_id: str = Field(..., description="Unique suggestion identifier")
@@ -146,7 +146,7 @@ class SuggestionResponse(BaseResponseModel):  # type: ignore[misc]
     estimated_time: int | None = Field(None, description="Estimated time to complete (minutes)")
 
 
-class CoachingMetrics(BaseResponseModel):  # type: ignore[misc]
+class CoachingMetrics(BaseResponseModel):
     """Coaching session metrics."""
 
     total_conversations: int = Field(..., ge=0, description="Total conversations")
@@ -161,7 +161,7 @@ class CoachingMetrics(BaseResponseModel):  # type: ignore[misc]
     insights_generated: int = Field(..., ge=0, description="Total insights generated")
 
 
-class WebsiteResponse(BaseResponseModel):  # type: ignore[misc]
+class WebsiteResponse(BaseResponseModel):
     """Response for website coaching integration."""
 
     widget_config: dict[str, Any] = Field(..., description="Widget configuration")

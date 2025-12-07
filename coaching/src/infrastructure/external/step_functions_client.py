@@ -71,7 +71,7 @@ class StepFunctionsClient:
                 execution_name=execution_name,
             )
 
-            return execution_arn  # type: ignore[no-any-return]
+            return execution_arn
 
         except Exception as e:
             logger.error("Failed to start Step Functions execution", error=str(e))
@@ -109,7 +109,7 @@ class StepFunctionsClient:
                 if status == "SUCCEEDED":
                     output = json.loads(response["output"])
                     logger.info("Step Functions execution succeeded", execution_arn=execution_arn)
-                    return output  # type: ignore[no-any-return]
+                    return output
 
                 elif status in ["FAILED", "TIMED_OUT", "ABORTED"]:
                     error = response.get("error", "Unknown error")

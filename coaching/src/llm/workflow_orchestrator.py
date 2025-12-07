@@ -48,7 +48,7 @@ class GraphState(TypedDict):
     updated_at: str
 
 
-class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):  # type: ignore[misc]
+class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
     """Enhanced workflow orchestrator with LangGraph-specific features."""
 
     def __init__(self, cache_service: Any = None) -> None:

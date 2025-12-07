@@ -5,7 +5,7 @@ business rules for coaching conversations.
 """
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from coaching.src.core.constants import (
     PHASE_PROGRESS_WEIGHTS,
@@ -232,15 +232,15 @@ class Conversation(BaseModel):
 
     def is_active(self) -> bool:
         """Check if conversation is active."""
-        return cast(bool, self.status == ConversationStatus.ACTIVE)
+        return self.status == ConversationStatus.ACTIVE
 
     def is_completed(self) -> bool:
         """Check if conversation is completed."""
-        return cast(bool, self.status == ConversationStatus.COMPLETED)
+        return self.status == ConversationStatus.COMPLETED
 
     def is_paused(self) -> bool:
         """Check if conversation is paused."""
-        return cast(bool, self.status == ConversationStatus.PAUSED)
+        return self.status == ConversationStatus.PAUSED
 
     def get_message_count(self) -> int:
         """Get total number of messages."""
@@ -259,7 +259,7 @@ class Conversation(BaseModel):
 
         Returns the progress percentage from the conversation context.
         """
-        return cast(float, self.context.progress_percentage)
+        return self.context.progress_percentage
 
     def transition_to_phase(self, new_phase: ConversationPhase) -> None:
         """

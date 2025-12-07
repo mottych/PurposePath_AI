@@ -204,7 +204,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return org_context  # type: ignore[no-any-return]
+            return org_context
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -327,7 +327,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return stats  # type: ignore[no-any-return]
+            return stats
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -380,7 +380,7 @@ class BusinessApiClient:
                 status_code=response.status_code,
             )
 
-            return score  # type: ignore[no-any-return]
+            return score
 
         except httpx.HTTPStatusError as e:
             logger.error(
