@@ -237,7 +237,7 @@ class BedrockProviderLegacy(LLMProvider):
 
     def __init__(
         self,
-        client: Any,  # boto3.client('bedrock-runtime')  # type: ignore[misc]
+        client: Any,  # boto3.client('bedrock-runtime')
         model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0",
     ) -> None:
         """Initialize Bedrock provider.

@@ -70,7 +70,7 @@ class TemplateMetadata(BaseModel):
         from coaching.src.core.llm_interactions import get_interaction
 
         interaction = get_interaction(self.interaction_code)
-        return interaction.get_parameter_schema()  # type: ignore[no-any-return]
+        return interaction.get_parameter_schema()
 
     def validate_template_content(self, template_content: str) -> None:
         """

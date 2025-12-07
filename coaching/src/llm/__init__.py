@@ -8,11 +8,9 @@ This module provides:
 - Provider management and configuration
 """
 
-from .orchestrator import LLMOrchestrator
 from .workflow_orchestrator import LangGraphWorkflowOrchestrator, langgraph_orchestrator
 
 __all__ = [
-    "LLMOrchestrator",
     "LangGraphWorkflowOrchestrator",
     "langgraph_orchestrator",
 ]

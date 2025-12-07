@@ -3,7 +3,7 @@
 This service manages conversation phase transitions according to business rules.
 """
 
-from typing import ClassVar, cast
+from typing import ClassVar
 
 from coaching.src.core.constants import (
     ConversationPhase,
@@ -164,7 +164,7 @@ class PhaseTransitionService:
         )
 
         # Average of both requirements
-        return cast(float, (response_readiness + insight_readiness) / 2)
+        return (response_readiness + insight_readiness) / 2
 
     def _is_valid_phase_order(self, current: ConversationPhase, target: ConversationPhase) -> bool:
         """Check if phase transition order is valid."""

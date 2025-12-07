@@ -13,7 +13,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class StrategyAnalysisService(BaseAnalysisService):  # type: ignore[misc]
+class StrategyAnalysisService(BaseAnalysisService):
     """
     Service for strategy recommendations.
 
@@ -134,7 +134,7 @@ Provide 3-5 actionable strategies."""
                 risks_count=len(result["risks"]),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse strategy JSON response", error=str(e))

@@ -1,7 +1,7 @@
 """Conversation models."""
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.domain.value_objects.message import Message
@@ -107,7 +107,7 @@ class Conversation(BaseModel):
 
     def is_active(self) -> bool:
         """Check if conversation is active."""
-        return cast(bool, self.status == ConversationStatus.ACTIVE)
+        return self.status == ConversationStatus.ACTIVE
 
     def mark_completed(self) -> None:
         """Mark conversation as completed."""

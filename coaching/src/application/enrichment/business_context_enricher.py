@@ -12,7 +12,7 @@ from coaching.src.infrastructure.external.business_api_client import BusinessApi
 logger = structlog.get_logger()
 
 
-class BusinessContextEnricher(BaseEnrichmentService):  # type: ignore[misc]
+class BusinessContextEnricher(BaseEnrichmentService):
     """
     Service for enriching with business context.
 
