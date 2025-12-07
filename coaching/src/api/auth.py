@@ -296,18 +296,41 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         # Normalize email: .NET API sends email as array, extract first element
         normalized_email = None
         if email:
+            logger.info(f"BEFORE NORMALIZATION - email type: {type(email)}, value: {email}")
             if isinstance(email, list):
                 normalized_email = email[0] if email else None
+                logger.info(
+                    f"AFTER NORMALIZATION (from list) - normalized_email: {normalized_email}"
+                )
             elif isinstance(email, str):
                 normalized_email = email
+                logger.info(
+                    f"AFTER NORMALIZATION (already string) - normalized_email: {normalized_email}"
+                )
 
-        return UserContext(
-            user_id=str(user_id),
-            tenant_id=str(tenant_id),
-            email=normalized_email,
-            roles=roles,
-            scopes=scopes,
+        logger.info(
+            f"CREATING UserContext - user_id: {user_id}, tenant_id: {tenant_id}, "
+            f"normalized_email type: {type(normalized_email)}, value: {normalized_email}"
         )
+
+        try:
+            user_context = UserContext(
+                user_id=str(user_id),
+                tenant_id=str(tenant_id),
+                email=normalized_email,
+                roles=roles,
+                scopes=scopes,
+            )
+            logger.info("✅ UserContext created successfully")
+            return user_context
+        except Exception as ctx_error:
+            logger.error(
+                f"❌ ERROR CREATING UserContext: {ctx_error}\n"
+                f"  user_id={user_id}, tenant_id={tenant_id}\n"
+                f"  email type={type(normalized_email)}, value={normalized_email}\n"
+                f"  roles={roles}, scopes={scopes}"
+            )
+            raise
 
     except JWTError as e:
         logger.warning(f"JWT validation failed: {e}")

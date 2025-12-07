@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import pulumi_aws as aws
@@ -194,12 +195,20 @@ ecr_repo = aws.ecr.Repository(
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()
 
+# Cache-busting: use timestamp to force rebuild
+build_timestamp = datetime.datetime.utcnow().isoformat()
+
 image = docker.Image(
     "coaching-image",
     build=docker.DockerBuildArgs(
         context="../..",  # pp_ai directory
         dockerfile="../Dockerfile",
         platform="linux/amd64",
+        args={
+            "BUILDKIT_INLINE_CACHE": "0",  # Disable BuildKit cache
+            "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
+        },
+        no_cache=True,  # Disable Docker cache
     ),
     image_name=pulumi.Output.concat(ecr_repo.repository_url, ":", stack),
     registry=docker.RegistryArgs(
