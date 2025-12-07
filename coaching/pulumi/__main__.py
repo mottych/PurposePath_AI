@@ -205,15 +205,14 @@ image = docker.Image(
         dockerfile="../Dockerfile",
         platform="linux/amd64",
         args={
-            "BUILDKIT_INLINE_CACHE": "0",  # Disable BuildKit cache
             "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
         },
-        no_cache=True,  # Disable Docker cache
     ),
     image_name=pulumi.Output.concat(ecr_repo.repository_url, ":", stack),
     registry=docker.RegistryArgs(
         server=ecr_repo.repository_url, username=auth_token.user_name, password=auth_token.password
     ),
+    skip_push=False,
 )
 
 # Python Lambda function with Docker
