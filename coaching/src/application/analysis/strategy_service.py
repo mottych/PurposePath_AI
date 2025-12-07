@@ -120,7 +120,7 @@ Provide 3-5 actionable strategies."""
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
 
-            result = json.loads(response_text.strip())
+            result: dict[str, Any] = json.loads(response_text.strip())
 
             # Validate required fields
             required_fields = ["strategic_approach", "strategies", "risks", "success_metrics"]

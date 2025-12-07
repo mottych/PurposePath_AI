@@ -108,7 +108,7 @@ Recommend 5-8 specific, measurable KPIs."""
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
 
-            result = json.loads(response_text.strip())
+            result: dict[str, Any] = json.loads(response_text.strip())
 
             # Validate required fields
             required_fields = [

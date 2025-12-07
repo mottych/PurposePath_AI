@@ -152,7 +152,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
             )
 
             # Execute workflow using LangGraph
-            final_state = await workflow.execute(graph_state)
+            final_state: WorkflowState = await workflow.execute(graph_state)
 
             # final_state is already a WorkflowState from workflow.execute()
             workflow_state = final_state
@@ -375,7 +375,7 @@ class GraphUtilities:
         # Generate contextual question
         prompt = "Based on the conversation context, generate a thoughtful follow-up question."
 
-        response = await provider.generate_response(
+        response = await provider.generate_response(  # type: ignore[attr-defined]
             messages=state["messages"], system_prompt=prompt, **state.get("model_config", {})
         )
 
@@ -403,7 +403,7 @@ class GraphUtilities:
         Return insights as structured analysis.
         """
 
-        analysis = await provider.analyze_text(
+        analysis = await provider.analyze_text(  # type: ignore[attr-defined]
             text=latest_response, analysis_prompt=analysis_prompt, **state.get("model_config", {})
         )
 

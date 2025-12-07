@@ -197,7 +197,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
 
         try:
             # Execute analysis
-            analysis_result = await provider.analyze_text(
+            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
                 text=content_to_analyze,
                 analysis_prompt=analysis_prompt,
                 **state.get("model_config", {}),
