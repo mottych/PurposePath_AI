@@ -67,7 +67,7 @@ class LLMOrchestrator:
             provider_key = f"bedrock_{model_id}"
             if provider_key not in self.providers:
                 # Legacy interface - orchestrator is deprecated, use LLMServiceAdapter instead
-                self.providers[provider_key] = BedrockProvider(  # type: ignore[call-arg,assignment]
+                self.providers[provider_key] = BedrockProvider(
                     client=self.bedrock_client, model_id=model_id
                 )
 
@@ -85,7 +85,7 @@ class LLMOrchestrator:
 
         if provider_key not in self.providers:
             # Legacy interface - orchestrator is deprecated, use LLMServiceAdapter instead
-            self.providers[provider_key] = BedrockProvider(  # type: ignore[call-arg,assignment]
+            self.providers[provider_key] = BedrockProvider(
                 client=self.bedrock_client, model_id=model_id
             )
 

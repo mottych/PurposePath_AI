@@ -9,7 +9,7 @@ from typing import Any
 from coaching.src.domain.exceptions.base_exception import DomainError
 
 
-class TopicNotFoundError(DomainError):
+class TopicNotFoundError(DomainError):  # type: ignore[misc]
     """
     Raised when a requested topic does not exist.
 
@@ -30,7 +30,7 @@ class TopicNotFoundError(DomainError):
         )
 
 
-class DuplicateTopicError(DomainError):
+class DuplicateTopicError(DomainError):  # type: ignore[misc]
     """
     Raised when attempting to create a topic that already exists.
 
@@ -51,7 +51,7 @@ class DuplicateTopicError(DomainError):
         )
 
 
-class InvalidTopicTypeError(DomainError):
+class InvalidTopicTypeError(DomainError):  # type: ignore[misc]
     """
     Raised when a topic has an invalid topic_type value.
 
@@ -74,7 +74,7 @@ class InvalidTopicTypeError(DomainError):
         )
 
 
-class PromptNotFoundError(DomainError):
+class PromptNotFoundError(DomainError):  # type: ignore[misc]
     """
     Raised when a requested prompt does not exist in a topic.
 
@@ -96,7 +96,7 @@ class PromptNotFoundError(DomainError):
         )
 
 
-class InvalidParameterDefinitionError(DomainError):
+class InvalidParameterDefinitionError(DomainError):  # type: ignore[misc]
     """
     Raised when a parameter definition is invalid.
 
@@ -123,7 +123,7 @@ class InvalidParameterDefinitionError(DomainError):
         )
 
 
-class TopicUpdateError(DomainError):
+class TopicUpdateError(DomainError):  # type: ignore[misc]
     """
     Raised when a topic update operation fails.
 
@@ -145,7 +145,7 @@ class TopicUpdateError(DomainError):
         )
 
 
-class InvalidModelConfigurationError(DomainError):
+class InvalidModelConfigurationError(DomainError):  # type: ignore[misc]
     """
     Raised when LLM model configuration parameters are invalid.
 
@@ -174,7 +174,7 @@ class InvalidModelConfigurationError(DomainError):
         )
 
 
-class S3StorageError(DomainError):
+class S3StorageError(DomainError):  # type: ignore[misc]
     """
     Raised when S3 operations fail.
 

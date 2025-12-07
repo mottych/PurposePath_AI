@@ -15,6 +15,7 @@ from coaching.src.api.models.auth import UserContext
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.endpoint_registry import (
     ENDPOINT_REGISTRY,
+    get_endpoint_by_topic_id,
     get_registry_statistics,
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -56,7 +57,7 @@ router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 # Helper functions
 
 
-def _map_topic_to_summary(topic: LLMTopic) -> TopicSummary:
+def _map_topic_to_summary(topic: LLMTopic, from_database: bool = True) -> TopicSummary:
     """Map domain LLMTopic to API TopicSummary."""
     return TopicSummary(
         topic_id=topic.topic_id,
@@ -69,13 +70,14 @@ def _map_topic_to_summary(topic: LLMTopic) -> TopicSummary:
         is_active=topic.is_active,
         description=topic.description,
         display_order=topic.display_order,
+        from_database=from_database,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
     )
 
 
-def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
+def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDetail:
     """Map domain LLMTopic to API TopicDetail."""
     return TopicDetail(
         topic_id=topic.topic_id,
@@ -91,6 +93,7 @@ def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
         presence_penalty=topic.presence_penalty,
         is_active=topic.is_active,
         display_order=topic.display_order,
+        from_database=from_database,
         prompts=[
             PromptInfo(
                 prompt_type=p.prompt_type,
@@ -132,22 +135,30 @@ async def list_topics(
 ) -> TopicListResponse:
     """List all topics with optional filtering.
 
+    Returns topics from both database and registry defaults, with from_database
+    field indicating the source.
+
     Requires admin:topics:read permission.
     """
     try:
-        import sys
-
-        print(
-            f"[DEBUG] list_topics called - page={page}, page_size={page_size}",
-            file=sys.stderr,
-            flush=True,
-        )
         logger.info("list_topics called", page=page, page_size=page_size, category=category)
 
-        # Get all topics (merges enum defaults with DB records)
-        all_topics = await repository.list_all_with_enum_defaults(include_inactive=True)
+        # Get DB topics and registry defaults separately
+        db_topics = await repository.list_all(include_inactive=True)
+        db_topic_ids = {topic.topic_id for topic in db_topics}
 
-        print(f"[DEBUG] topics retrieved - count={len(all_topics)}", file=sys.stderr, flush=True)
+        # Create defaults for topics not in DB
+        from coaching.src.domain.entities.llm_topic import LLMTopic
+
+        registry_topics = [
+            LLMTopic.create_default_from_endpoint(endpoint_def)
+            for endpoint_def in ENDPOINT_REGISTRY.values()
+            if endpoint_def.topic_id not in db_topic_ids
+        ]
+
+        # Combine all topics
+        all_topics = db_topics + registry_topics
+
         logger.info(
             "topics_retrieved", count=len(all_topics), topics=[t.topic_id for t in all_topics]
         )
@@ -180,8 +191,12 @@ async def list_topics(
 
         logger.info("topics_paginated", total=total, page_count=len(page_topics))
 
+        # Map topics with from_database indicator
         return TopicListResponse(
-            topics=[_map_topic_to_summary(t) for t in page_topics],
+            topics=[
+                _map_topic_to_summary(t, from_database=(t.topic_id in db_topic_ids))
+                for t in page_topics
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -204,17 +219,30 @@ async def get_topic(
 ) -> TopicDetail:
     """Get detailed information about a specific topic.
 
+    If the topic exists in the database, returns the database configuration.
+    If not found in database, falls back to endpoint registry defaults.
+
     Requires admin:topics:read permission.
     """
     try:
+        # First, try to get from database
         topic = await repository.get(topic_id=topic_id)
-        if not topic:
+
+        if topic:
+            # Topic found in database
+            return _map_topic_to_detail(topic, from_database=True)
+
+        # Topic not in database, try to get from registry
+        endpoint_def = get_endpoint_by_topic_id(topic_id)
+        if not endpoint_def:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
-        return _map_topic_to_detail(topic)
+        # Create default topic from registry
+        default_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+        return _map_topic_to_detail(default_topic, from_database=False)
 
     except HTTPException:
         raise

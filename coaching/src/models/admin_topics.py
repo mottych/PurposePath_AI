@@ -138,6 +138,9 @@ class TopicSummary(BaseModel):
     is_active: bool = Field(..., description="Whether topic is active")
     description: str | None = Field(None, description="Topic description")
     display_order: int = Field(..., description="Display order")
+    from_database: bool = Field(
+        ..., description="Whether topic data comes from database (True) or registry (False)"
+    )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     created_by: str | None = Field(None, description="Creator user ID")
@@ -159,6 +162,9 @@ class TopicDetail(BaseModel):
     presence_penalty: float = Field(..., description="Presence penalty")
     is_active: bool = Field(..., description="Whether topic is active")
     display_order: int = Field(..., description="Display order")
+    from_database: bool = Field(
+        ..., description="Whether topic data comes from database (True) or registry (False)"
+    )
     prompts: list[PromptInfo] = Field(..., description="Associated prompts")
     allowed_parameters: list[ParameterDefinition] = Field(
         ..., description="Allowed prompt parameters"

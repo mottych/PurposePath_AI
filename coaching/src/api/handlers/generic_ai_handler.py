@@ -135,7 +135,7 @@ class GenericAIHandler:
                 result_type=type(result).__name__,
             )
 
-            return result
+            return result  # type: ignore[no-any-return]
 
         except TopicNotFoundError as e:
             self.logger.error("Topic not found", topic_id=e.topic_id)
@@ -210,7 +210,7 @@ class GenericAIHandler:
             HTTPException: If topic or prompt not found
         """
         try:
-            return await self.ai_engine.get_initial_prompt(topic_id)
+            return await self.ai_engine.get_initial_prompt(topic_id)  # type: ignore[no-any-return]
         except TopicNotFoundError as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -312,7 +312,7 @@ class GenericAIHandler:
                 tenant_id=create_tenant_id(user_context.tenant_id),
             )
 
-            return response
+            return response  # type: ignore[no-any-return]
 
         except UnifiedAIEngineError as e:
             self.logger.error("Message send failed", error=str(e))

@@ -106,7 +106,7 @@ class PromptApplicationService:
 
         logger.debug("Template versions listed", topic=topic.value, count=len(versions))
 
-        return versions
+        return versions  # type: ignore[no-any-return]
 
     async def template_exists(self, topic: CoachingTopic, version: str = "latest") -> bool:
         """
@@ -127,7 +127,7 @@ class PromptApplicationService:
             "Template existence checked", topic=topic.value, version=version, exists=exists
         )
 
-        return exists
+        return exists  # type: ignore[no-any-return]
 
     # ========== Write Operations (Admin UI) ==========
 
@@ -222,7 +222,7 @@ class PromptApplicationService:
                     "Template version not found for deletion", topic=topic.value, version=version
                 )
 
-            return deleted
+            return deleted  # type: ignore[no-any-return]
 
         except ValueError as e:
             logger.error(

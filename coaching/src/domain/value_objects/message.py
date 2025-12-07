@@ -5,7 +5,7 @@ a single message within a coaching conversation.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from coaching.src.core.constants import MessageRole
 from coaching.src.core.types import MessageId, create_message_id
@@ -92,7 +92,7 @@ class Message(BaseModel):
         Returns:
             bool: True if the message role is USER
         """
-        return self.role == MessageRole.USER
+        return cast(bool, self.role == MessageRole.USER)
 
     def is_from_assistant(self) -> bool:
         """
@@ -101,7 +101,7 @@ class Message(BaseModel):
         Returns:
             bool: True if the message role is ASSISTANT
         """
-        return self.role == MessageRole.ASSISTANT
+        return cast(bool, self.role == MessageRole.ASSISTANT)
 
     def is_system_message(self) -> bool:
         """
@@ -110,7 +110,7 @@ class Message(BaseModel):
         Returns:
             bool: True if the message role is SYSTEM
         """
-        return self.role == MessageRole.SYSTEM
+        return cast(bool, self.role == MessageRole.SYSTEM)
 
     def get_content_length(self) -> int:
         """

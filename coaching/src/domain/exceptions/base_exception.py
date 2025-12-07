@@ -77,7 +77,7 @@ class DomainError(Exception):
         }
 
 
-__all__ = ["DomainError"]
-
-# Backwards compatibility alias (deprecated)
+# Backwards compatibility alias (deprecated - use DomainError)
 DomainException = DomainError
+
+__all__ = ["DomainError", "DomainException"]

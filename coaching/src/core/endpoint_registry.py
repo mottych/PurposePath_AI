@@ -582,6 +582,21 @@ def get_topic_for_endpoint(method: str, path: str) -> str | None:
     return endpoint.topic_id if endpoint else None
 
 
+def get_endpoint_by_topic_id(topic_id: str) -> EndpointDefinition | None:
+    """Get endpoint definition by topic ID.
+
+    Args:
+        topic_id: Topic identifier
+
+    Returns:
+        EndpointDefinition if found, None otherwise
+    """
+    for endpoint in ENDPOINT_REGISTRY.values():
+        if endpoint.topic_id == topic_id:
+            return endpoint
+    return None
+
+
 def validate_registry() -> dict[str, list[str]]:
     """Validate the endpoint registry for consistency.
 

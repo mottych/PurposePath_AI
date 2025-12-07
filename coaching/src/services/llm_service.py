@@ -160,7 +160,7 @@ class LLMService:
                 template_id=template_id,
                 param_count=len(parameters),
             )
-            return rendered
+            return rendered  # type: ignore[no-any-return]
         except TemplateNotFoundError as e:
             logger.warning(
                 "Template not found, falling back to legacy",

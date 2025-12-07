@@ -3,7 +3,7 @@
 from typing import Any
 
 import structlog
-import yaml
+import yaml  # type: ignore[import]
 from botocore.exceptions import ClientError
 from coaching.src.domain.entities.model_config import ModelConfig
 

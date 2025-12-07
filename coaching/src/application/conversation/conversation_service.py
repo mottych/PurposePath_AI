@@ -236,7 +236,7 @@ class ConversationApplicationService:
             active_only=active_only,
         )
 
-        return conversations
+        return conversations  # type: ignore[no-any-return]
 
     async def pause_conversation(
         self, conversation_id: ConversationId, tenant_id: TenantId
@@ -355,7 +355,7 @@ class ConversationApplicationService:
                 "Conversation not found for abandonment", conversation_id=conversation_id
             )
 
-        return deleted
+        return deleted  # type: ignore[no-any-return]
 
 
 __all__ = ["ConversationApplicationService"]

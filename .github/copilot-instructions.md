@@ -46,7 +46,7 @@
 
 ### Completion & Merge**
 
-1. Make sure there are no warning or errors on build or tests including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors. If there are - fix them.
+1. Make sure there are no warning or errors on build or tests including MyPy, PyLant, ruff, PyDent, Black, or any other errors or warning or errors. If there are - fix them even if they are pre-existing or not related to the last change..
 2. Commit with descriptive message referencing the issue. Make sure all pre-commit checks pass.
 3. Merge the feature branch into 'dev' and sync.
 4. Clean temporary code and artifacts.

@@ -59,6 +59,7 @@ GET /api/v1/admin/topics
       "is_active": true,
       "description": "Explore core values through conversation",
       "display_order": 1,
+      "from_database": true,
       "created_at": "2024-11-01T10:00:00Z",
       "updated_at": "2024-11-13T15:30:00Z",
       "created_by": "admin_123"
@@ -112,6 +113,7 @@ GET /api/v1/admin/topics/{topic_id}
   "presence_penalty": 0.0,
   "is_active": true,
   "display_order": 1,
+  "from_database": true,
   "prompts": [
     {
       "prompt_type": "system",

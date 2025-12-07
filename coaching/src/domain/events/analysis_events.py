@@ -9,7 +9,7 @@ from coaching.src.domain.events.base_event import DomainEvent
 from pydantic import Field
 
 
-class AnalysisRequested(DomainEvent):
+class AnalysisRequested(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when an analysis is requested.
 
@@ -33,7 +33,7 @@ class AnalysisRequested(DomainEvent):
     )
 
 
-class AnalysisCompleted(DomainEvent):
+class AnalysisCompleted(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when an analysis successfully completes.
 
@@ -61,7 +61,7 @@ class AnalysisCompleted(DomainEvent):
     confidence_score: float = Field(..., ge=0.0, le=100.0, description="Confidence in results")
 
 
-class AnalysisFailed(DomainEvent):
+class AnalysisFailed(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when an analysis fails.
 

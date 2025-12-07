@@ -4,7 +4,7 @@ This module defines the AnalysisRequest for requesting business analysis.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from coaching.src.core.constants import AnalysisType
 from coaching.src.core.types import AnalysisRequestId, ConversationId, UserId
@@ -47,15 +47,15 @@ class AnalysisRequest(BaseModel):
 
     def is_alignment_analysis(self) -> bool:
         """Check if this is an alignment analysis."""
-        return self.analysis_type == AnalysisType.ALIGNMENT
+        return cast(bool, self.analysis_type == AnalysisType.ALIGNMENT)
 
     def is_strategy_analysis(self) -> bool:
         """Check if this is a strategy analysis."""
-        return self.analysis_type == AnalysisType.STRATEGY
+        return cast(bool, self.analysis_type == AnalysisType.STRATEGY)
 
     def is_swot_analysis(self) -> bool:
         """Check if this is a SWOT analysis."""
-        return self.analysis_type == AnalysisType.SWOT
+        return cast(bool, self.analysis_type == AnalysisType.SWOT)
 
 
 __all__ = ["AnalysisRequest"]

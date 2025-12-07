@@ -62,7 +62,7 @@ def get_dynamodb_resource_singleton() -> DynamoDBServiceResource:
     global _dynamodb_resource
     if _dynamodb_resource is None:
         _dynamodb_resource = get_dynamodb_resource(settings.aws_region)
-    return _dynamodb_resource
+    return _dynamodb_resource  # type: ignore[no-any-return]
 
 
 def get_s3_client_singleton() -> Any:

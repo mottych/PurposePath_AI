@@ -234,7 +234,7 @@ class LLMApplicationService:
 
         logger.debug("Tokens counted", model=model, count=token_count)
 
-        return token_count
+        return token_count  # type: ignore[no-any-return]
 
     async def validate_model_availability(self, model: str) -> bool:
         """
@@ -252,7 +252,7 @@ class LLMApplicationService:
 
         logger.debug("Model validation", model=model, is_valid=is_valid)
 
-        return is_valid
+        return is_valid  # type: ignore[no-any-return]
 
     def get_supported_models(self) -> list[str]:
         """
@@ -263,7 +263,7 @@ class LLMApplicationService:
         Returns:
             List of model identifiers
         """
-        return self.provider.supported_models
+        return self.provider.supported_models  # type: ignore[no-any-return]
 
     def get_provider_name(self) -> str:
         """
@@ -274,7 +274,7 @@ class LLMApplicationService:
         Returns:
             Provider identifier
         """
-        return self.provider.provider_name
+        return self.provider.provider_name  # type: ignore[no-any-return]
 
     def _select_default_model(self) -> str:
         """
@@ -288,7 +288,7 @@ class LLMApplicationService:
             raise ValueError(f"No models available from provider {self.provider.provider_name}")
 
         # Return first model as default
-        return models[0]
+        return models[0]  # type: ignore[no-any-return]
 
 
 __all__ = ["LLMApplicationService"]

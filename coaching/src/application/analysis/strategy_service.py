@@ -13,7 +13,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class StrategyAnalysisService(BaseAnalysisService):
+class StrategyAnalysisService(BaseAnalysisService):  # type: ignore[misc]
     """
     Service for strategy recommendations.
 

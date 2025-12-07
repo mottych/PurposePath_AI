@@ -175,7 +175,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            response = await provider.generate_response(  # type: ignore[attr-defined]
+            response = await provider.generate_response(
                 messages=state.get("messages", []),
                 system_prompt=system_prompt,
                 **state.get("model_config", {}),
@@ -234,7 +234,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
+            analysis_result = await provider.analyze_text(
                 text=latest_response,
                 analysis_prompt=analysis_prompt,
                 **state.get("model_config", {}),
