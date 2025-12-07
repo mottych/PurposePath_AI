@@ -196,7 +196,7 @@ class BusinessApiClient:
             response.raise_for_status()
 
             data = response.json()
-            org_context = data.get("data", {})
+            org_context: dict[str, Any] = dict(data.get("data", {}))
 
             logger.debug(
                 "Organizational context retrieved",
@@ -319,7 +319,7 @@ class BusinessApiClient:
             response.raise_for_status()
 
             data = response.json()
-            stats = data.get("data", {})
+            stats: dict[str, Any] = dict(data.get("data", {}))
 
             logger.debug(
                 "Goal stats retrieved",
@@ -372,7 +372,7 @@ class BusinessApiClient:
             response.raise_for_status()
 
             data = response.json()
-            score = data.get("data", {})
+            score: dict[str, Any] = dict(data.get("data", {}))
 
             logger.debug(
                 "Performance score retrieved",

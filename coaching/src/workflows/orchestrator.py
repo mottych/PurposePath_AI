@@ -102,7 +102,7 @@ class WorkflowOrchestrator:
                 workflow_type=workflow_type.value,
                 user_id=user_id,
             )
-            state = await workflow.execute(workflow_input)
+            state: WorkflowState = await workflow.execute(workflow_input)
 
             # Store state
             self._workflow_states[workflow_id] = state

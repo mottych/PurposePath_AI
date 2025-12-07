@@ -385,7 +385,7 @@ class LLMServiceAdapter:
                 is_available = await cast(Any, self.provider_manager).is_provider_available(
                     provider_name
                 )
-                provider = await self.provider_manager.get_provider(provider_name)
+                provider = self.provider_manager.get_provider(provider_name)  # Not async
 
                 status["providers"][provider_name] = {
                     "available": is_available,
