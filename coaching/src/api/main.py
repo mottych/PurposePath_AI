@@ -113,7 +113,7 @@ app = FastAPI(
 app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[call-arg,arg-type]
 app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[call-arg,arg-type]
 app.add_middleware(LoggingMiddleware)  # type: ignore[call-arg,arg-type]
-app.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
+app.add_middleware(CORSPreflightMiddleware)  # type: ignore[call-arg,arg-type]
 
 # CORS middleware must be added LAST so it runs FIRST in the middleware chain
 # This ensures CORS headers are added before any authentication or error handling
