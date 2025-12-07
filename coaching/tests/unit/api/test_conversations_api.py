@@ -51,7 +51,7 @@ from coaching.src.models.prompt import (
     LLMConfig,
     PromptTemplate,
 )
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.unit
@@ -151,7 +151,7 @@ class DummyGenericAIHandler:
     async def get_initial_prompt(self, topic_id: str) -> str:
         self.requested_topics.append(topic_id)
         if self.raise_not_found:
-            raise HTTPException(status_code=404, detail=f"Topic not found: {topic_id}")
+            raise TopicNotFoundError(topic_id=topic_id)
         return f"System prompt for {topic_id}"
 
     async def handle_conversation_initiate(
@@ -213,8 +213,8 @@ async def test_initiate_conversation_uses_prompt_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_initiate_conversation_unknown_topic_returns_404() -> None:
-    """If GenericAIHandler raises 404, endpoint should return 404."""
+async def test_initiate_conversation_unknown_topic_returns_422() -> None:
+    """If GenericAIHandler raises TopicNotFoundError, endpoint should return 422."""
 
     app, _generic_handler = create_test_app(
         generic_handler_factory=lambda: DummyGenericAIHandler(raise_not_found=True),
@@ -230,5 +230,5 @@ async def test_initiate_conversation_unknown_topic_returns_404() -> None:
 
     response = client.post("/conversations/initiate", json=payload)
 
-    assert response.status_code == 404
-    assert "Topic not found" in response.json()["detail"]
+    assert response.status_code == 422
+    assert "Topic configuration not found" in response.json()["detail"]

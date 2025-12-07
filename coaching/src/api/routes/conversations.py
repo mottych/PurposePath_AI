@@ -115,8 +115,8 @@ async def initiate_conversation(
             error=str(e),
         )
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Topic not found: {request.topic.value}",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Topic configuration not found: {request.topic.value}. Please check the topic ID and ensure it is properly configured.",
         ) from e
     except HTTPException:
         raise
