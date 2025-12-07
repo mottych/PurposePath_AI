@@ -34,14 +34,14 @@ GET /api/v1/admin/topics
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `page` | integer | No | 1 | Page number |
-| `page_size` | integer | No | 50 | Items per page (max 100) |
-| `category` | string | No | - | Filter by category |
-| `topic_type` | string | No | - | Filter by type |
-| `is_active` | boolean | No | - | Filter by active status |
-| `search` | string | No | - | Search in name/description |
+| Parameter | Type | Required | Default | Description | Allowed Values |
+|-----------|------|----------|---------|-------------|----------------|
+| `page` | integer | No | 1 | Page number | >= 1 |
+| `page_size` | integer | No | 50 | Items per page (max 100) | 1-100 |
+| `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
+| `topic_type` | string | No | - | Filter by type | `coaching`, `assessment`, `analysis`, `kpi` |
+| `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
+| `search` | string | No | - | Search in name/description | Max 100 chars |
 
 **Response:**
 
@@ -92,9 +92,9 @@ GET /api/v1/admin/topics/{topic_id}
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `topic_id` | string | Yes | Unique topic identifier |
+| Parameter | Type | Required | Description | Format |
+|-----------|------|----------|-------------|--------|
+| `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
 
 **Response:**
 
@@ -185,27 +185,91 @@ POST /api/v1/admin/topics
       "name": "user_name",
       "type": "string",
       "required": true,
-      "description": "User's display name"
+      "description": "User's display name",
+      "validation": {
+        "min_length": 1,
+        "max_length": 100,
+        "pattern": null
+      }
     }
   ]
+}
+
+**Allowed Parameter Types:**
+
+- `string`: Text value
+- `integer`: Whole number
+- `float`: Decimal number
+- `boolean`: true/false
+- `array`: List of values
+- `object`: Nested structure
+
+**Parameter Validation Schema:**
+
+```json
+{
+  "name": "parameter_name",
+  "type": "string|integer|float|boolean|array|object",
+  "required": true,
+  "description": "Human-readable description",
+  "validation": {
+    "min_length": 1,          // For strings
+    "max_length": 100,        // For strings
+    "pattern": "^[a-z]+$",    // Regex for strings
+    "min_value": 0,           // For numbers
+    "max_value": 100,         // For numbers
+    "allowed_values": [],     // Enum list
+    "default": null           // Default value if not provided
+  }
 }
 ```
 
 **Validation Rules:**
 
-| Field | Rules |
-|-------|-------|
-| `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars |
-| `topic_name` | Required, 3-100 chars |
-| `category` | Required, 3-50 chars |
-| `topic_type` | Required, one of: `coaching`, `assessment`, `analysis`, `kpi` |
-| `model_code` | Required, must be valid model code |
-| `temperature` | Required, 0.0-2.0 |
-| `max_tokens` | Required, > 0 |
-| `top_p` | Optional, 0.0-1.0, default 1.0 |
-| `frequency_penalty` | Optional, -2.0 to 2.0, default 0.0 |
-| `presence_penalty` | Optional, -2.0 to 2.0, default 0.0 |
-| `display_order` | Optional, integer, default 100 |
+| Field | Rules | Allowed Values / Format |
+|-------|-------|------------------------|
+| `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
+| `topic_name` | Required, 3-100 chars | Any printable characters |
+| `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
+| `topic_type` | Required | Enum: `coaching`, `assessment`, `analysis`, `kpi` |
+| `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
+| `temperature` | Required, float | 0.0-2.0 |
+| `max_tokens` | Required, integer | 1-100000 (model dependent) |
+| `top_p` | Optional, float, default 1.0 | 0.0-1.0 |
+| `frequency_penalty` | Optional, float, default 0.0 | -2.0 to 2.0 |
+| `presence_penalty` | Optional, float, default 0.0 | -2.0 to 2.0 |
+| `display_order` | Optional, integer, default 100 | 1-1000 |
+| `description` | Optional | Max 500 chars |
+| `is_active` | Optional, boolean, default false | `true`, `false` |
+
+**Supported Model Codes:**
+
+- `claude-3-5-sonnet-20241022` (recommended)
+- `claude-3-5-haiku-20241022`
+- `claude-3-opus-20240229`
+- `claude-3-sonnet-20240229`
+- `claude-3-haiku-20240307`
+- `gpt-4o`
+- `gpt-4-turbo`
+- `gpt-4`
+- `gpt-3.5-turbo`
+
+**Category Descriptions:**
+
+- `core_values`: Topics related to identifying and exploring personal values
+- `purpose`: Life purpose and meaning discovery
+- `vision`: Future vision and aspiration setting
+- `goals`: Goal setting and achievement planning
+- `strategy`: Strategic planning and decision making
+- `kpi`: Key performance indicators and metrics
+- `custom`: Custom topics not fitting standard categories
+
+**Topic Type Descriptions:**
+
+- `coaching`: Interactive conversational coaching sessions
+- `assessment`: One-shot evaluations and assessments
+- `analysis`: Deep analytical processing of user data
+- `kpi`: KPI calculation and tracking
 
 **Response:**
 
@@ -254,9 +318,9 @@ PUT /api/v1/admin/topics/{topic_id}
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `topic_id` | string | Yes | Unique topic identifier |
+| Parameter | Type | Required | Description | Format |
+|-----------|------|----------|-------------|--------|
+| `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
 
 **Request Body:**
 
@@ -311,9 +375,9 @@ DELETE /api/v1/admin/topics/{topic_id}
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `hard_delete` | boolean | No | false | If true, permanently delete (use with caution) |
+| Parameter | Type | Required | Default | Description | Allowed Values |
+|-----------|------|----------|---------|-------------|----------------|
+| `hard_delete` | boolean | No | false | If true, permanently delete (use with caution) | `true`, `false` |
 
 **Response:**
 
@@ -347,10 +411,10 @@ GET /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `topic_id` | string | Yes | Unique topic identifier |
-| `prompt_type` | string | Yes | Type: `system`, `user`, `assistant` |
+| Parameter | Type | Required | Description | Allowed Values |
+|-----------|------|----------|-------------|----------------|
+| `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
+| `prompt_type` | string | Yes | Type of prompt | Enum: `system`, `user`, `assistant` |
 
 **Response:**
 
@@ -386,10 +450,10 @@ PUT /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `topic_id` | string | Yes | Unique topic identifier |
-| `prompt_type` | string | Yes | Type: `system`, `user`, `assistant` |
+| Parameter | Type | Required | Description | Allowed Values |
+|-----------|------|----------|-------------|----------------|
+| `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
+| `prompt_type` | string | Yes | Type of prompt | Enum: `system`, `user`, `assistant` |
 
 **Request Body:**
 
@@ -402,8 +466,8 @@ PUT /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 
 **Validation:**
 
-- `content`: Required, markdown text, max 50,000 chars
-- `commit_message`: Optional, for audit trail
+- `content`: Required, markdown text, 1-50,000 chars, UTF-8 encoded
+- `commit_message`: Optional, for audit trail, max 200 chars
 
 **Response:**
 
@@ -446,6 +510,11 @@ POST /api/v1/admin/topics/{topic_id}/prompts
   "content": "# Assistant Prompt\n\nProvide helpful guidance..."
 }
 ```
+
+**Validation:**
+
+- `prompt_type`: Required, enum: `system`, `user`, `assistant`
+- `content`: Required, markdown text, 1-50,000 chars, UTF-8 encoded
 
 **Response:**
 
@@ -645,6 +714,13 @@ POST /api/v1/admin/topics/{topic_id}/clone
 }
 ```
 
+**Validation:**
+
+- `new_topic_id`: Required, must follow topic_id format (snake_case, 3-50 chars)
+- `new_topic_name`: Required, 3-100 chars
+- `copy_prompts`: Optional, boolean, default true
+- `is_active`: Optional, boolean, default false
+
 **Response:**
 
 ```json
@@ -678,10 +754,10 @@ GET /api/v1/admin/topics/{topic_id}/stats
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `start_date` | string | No | 30 days ago | ISO 8601 date |
-| `end_date` | string | No | now | ISO 8601 date |
+| Parameter | Type | Required | Default | Description | Format |
+|-----------|------|----------|---------|-------------|--------|
+| `start_date` | string | No | 30 days ago | ISO 8601 date | `YYYY-MM-DDTHH:mm:ssZ` |
+| `end_date` | string | No | now | ISO 8601 date | `YYYY-MM-DDTHH:mm:ssZ` |
 
 **Response:**
 
@@ -738,6 +814,13 @@ PATCH /api/v1/admin/topics/bulk
   }
 }
 ```
+
+**Validation:**
+
+- `topic_ids`: Required, array of topic IDs, max 50 topics per request
+- `updates`: Required, object containing fields to update
+- Updatable fields: `model_code`, `temperature`, `max_tokens`, `top_p`, `frequency_penalty`, `presence_penalty`, `is_active`, `display_order`, `description`, `topic_name`
+- Cannot bulk update: `topic_id`, `category`, `topic_type`, `created_at`, `created_by`
 
 **Response:**
 
