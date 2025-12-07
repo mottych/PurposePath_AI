@@ -4,7 +4,7 @@ This module defines the immutable ConversationContext that tracks the state
 and progress of a coaching conversation.
 """
 
-from typing import Any
+from typing import Any, cast
 
 from coaching.src.core.constants import ConversationPhase
 from pydantic import BaseModel, Field, field_validator
@@ -94,31 +94,31 @@ class ConversationContext(BaseModel):
 
     def is_in_phase(self, phase: ConversationPhase) -> bool:
         """Check if currently in specific phase."""
-        return self.current_phase == phase
+        return cast(bool, self.current_phase == phase)
 
     def is_introduction_phase(self) -> bool:
         """Check if in introduction phase."""
-        return self.current_phase == ConversationPhase.INTRODUCTION
+        return cast(bool, self.current_phase == ConversationPhase.INTRODUCTION)
 
     def is_exploration_phase(self) -> bool:
         """Check if in exploration phase."""
-        return self.current_phase == ConversationPhase.EXPLORATION
+        return cast(bool, self.current_phase == ConversationPhase.EXPLORATION)
 
     def is_deepening_phase(self) -> bool:
         """Check if in deepening phase."""
-        return self.current_phase == ConversationPhase.DEEPENING
+        return cast(bool, self.current_phase == ConversationPhase.DEEPENING)
 
     def is_synthesis_phase(self) -> bool:
         """Check if in synthesis phase."""
-        return self.current_phase == ConversationPhase.SYNTHESIS
+        return cast(bool, self.current_phase == ConversationPhase.SYNTHESIS)
 
     def is_validation_phase(self) -> bool:
         """Check if in validation phase."""
-        return self.current_phase == ConversationPhase.VALIDATION
+        return cast(bool, self.current_phase == ConversationPhase.VALIDATION)
 
     def is_completion_phase(self) -> bool:
         """Check if in completion phase."""
-        return self.current_phase == ConversationPhase.COMPLETION
+        return cast(bool, self.current_phase == ConversationPhase.COMPLETION)
 
 
 __all__ = ["ConversationContext"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict, cast
 
 import structlog
 from boto3.dynamodb.conditions import Attr, ConditionBase, Key
@@ -22,12 +22,12 @@ from shared.domain_types.common import JSONDict
 logger = structlog.get_logger()
 
 # Type aliases for conversation repository
-ConversationContextDict = JSONDict
-LLMConfigDict = JSONDict
-MessageMetadataDict = dict[str, str]
-BusinessContextDict = JSONDict
-UserPreferencesDict = JSONDict
-ProgressMarkersDict = JSONDict
+ConversationContextDict: TypeAlias = JSONDict
+LLMConfigDict: TypeAlias = JSONDict
+MessageMetadataDict: TypeAlias = dict[str, str]
+BusinessContextDict: TypeAlias = JSONDict
+UserPreferencesDict: TypeAlias = JSONDict
+ProgressMarkersDict: TypeAlias = JSONDict
 
 
 class MessageItemDict(TypedDict):

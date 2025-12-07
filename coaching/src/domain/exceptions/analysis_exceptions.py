@@ -10,7 +10,7 @@ from coaching.src.core.constants import AnalysisType
 from coaching.src.domain.exceptions.base_exception import DomainException
 
 
-class InvalidAnalysisRequest(DomainException):
+class InvalidAnalysisRequest(DomainException):  # type: ignore[misc]
     """
     Raised when an analysis request fails validation.
 
@@ -45,7 +45,7 @@ class InvalidAnalysisRequest(DomainException):
         )
 
 
-class EnrichmentFailed(DomainException):
+class EnrichmentFailed(DomainException):  # type: ignore[misc]
     """
     Raised when business context enrichment fails.
 
@@ -87,7 +87,7 @@ class EnrichmentFailed(DomainException):
         )
 
 
-class AnalysisNotFound(DomainException):
+class AnalysisNotFound(DomainException):  # type: ignore[misc]
     """
     Raised when a requested analysis does not exist.
 
@@ -113,7 +113,7 @@ class AnalysisNotFound(DomainException):
         )
 
 
-class UnsupportedAnalysisType(DomainException):
+class UnsupportedAnalysisType(DomainException):  # type: ignore[misc]
     """
     Raised when an unsupported analysis type is requested.
 
@@ -139,7 +139,7 @@ class UnsupportedAnalysisType(DomainException):
         )
 
 
-class AnalysisTimeout(DomainException):
+class AnalysisTimeout(DomainException):  # type: ignore[misc]
     """
     Raised when an analysis operation times out.
 
@@ -175,7 +175,7 @@ class AnalysisTimeout(DomainException):
         )
 
 
-class InsufficientDataForAnalysis(DomainException):
+class InsufficientDataForAnalysis(DomainException):  # type: ignore[misc]
     """
     Raised when there is insufficient data to perform analysis.
 

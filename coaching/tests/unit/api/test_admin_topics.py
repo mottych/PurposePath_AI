@@ -118,24 +118,38 @@ class TestListTopics:
     async def test_list_all_topics(
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
-        """Test listing all topics without filters."""
+        """Test listing all topics without filters.
+
+        Should return topics from both database and registry defaults.
+        """
+        # Mock returns only the sample topic from DB
+        mock_repository.list_all.return_value = [sample_topic]
         mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
         response = client.get("/admin/topics")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["total"] == 1
+
+        # Should have many topics (1 from DB + many from registry)
+        assert data["total"] > 1  # At least DB topic + registry topics
         assert data["page"] == 1
         assert data["page_size"] == 50
-        assert data["has_more"] is False
-        assert len(data["topics"]) == 1
-        assert data["topics"][0]["topic_id"] == "test_topic"
+
+        # Find our sample topic in the results
+        sample_topic_data = next((t for t in data["topics"] if t["topic_id"] == "test_topic"), None)
+        assert sample_topic_data is not None
+        assert sample_topic_data["from_database"] is True  # From DB
+
+        # Check that registry topics are marked correctly
+        registry_topics = [t for t in data["topics"] if not t["from_database"]]
+        assert len(registry_topics) > 0  # Should have registry topics
 
     async def test_list_topics_with_filters(
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test listing topics with category filter."""
+        mock_repository.list_all.return_value = [sample_topic]
         mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
         response = client.get("/admin/topics?category=test&is_active=true")
@@ -149,28 +163,38 @@ class TestListTopics:
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test listing topics with search query."""
+        mock_repository.list_all.return_value = [sample_topic]
         mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
-        response = client.get("/admin/topics?search=test")
+        response = client.get(
+            "/admin/topics?search=Test"
+        )  # Search for "Test" which is in topic_name
 
         assert response.status_code == 200
         data = response.json()
-        assert data["total"] == 1
+        assert data["total"] >= 1  # Should find at least our test topic
+
+        # Verify our test topic is in results
+        topic_ids = [t["topic_id"] for t in data["topics"]]
+        assert "test_topic" in topic_ids
 
     async def test_list_topics_pagination(
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
         """Test topic list pagination."""
-        topics = [sample_topic for _ in range(60)]
-        mock_repository.list_all_with_enum_defaults.return_value = topics
+        # Mock returns only test topic from DB
+        mock_repository.list_all.return_value = [sample_topic]
+        mock_repository.list_all_with_enum_defaults.return_value = [sample_topic]
 
-        response = client.get("/admin/topics?page=1&page_size=50")
+        response = client.get("/admin/topics?page=1&page_size=10")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["total"] == 60
-        assert len(data["topics"]) == 50
-        assert data["has_more"] is True
+        # Should have registry topics (48) but only 10 per page
+        assert len(data["topics"]) == 10
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert data["has_more"] is True  # More than 10 topics available
 
 
 class TestGetTopic:
@@ -179,7 +203,7 @@ class TestGetTopic:
     async def test_get_existing_topic(
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
-        """Test getting an existing topic."""
+        """Test getting an existing topic from database."""
         mock_repository.get.return_value = sample_topic
 
         response = client.get("/admin/topics/test_topic")
@@ -188,16 +212,31 @@ class TestGetTopic:
         data = response.json()
         assert data["topic_id"] == "test_topic"
         assert data["topic_name"] == "Test Topic"
+        assert data["from_database"] is True  # From DB
         assert len(data["prompts"]) == 1
         assert len(data["allowed_parameters"]) == 1
+
+    async def test_get_topic_fallback_to_registry(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test getting a topic that exists in registry but not in database."""
+        mock_repository.get.return_value = None  # Not in DB
+
+        # Use a topic_id that exists in ENDPOINT_REGISTRY
+        response = client.get("/admin/topics/onboarding_suggestions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "onboarding_suggestions"
+        assert data["from_database"] is False  # From registry
 
     async def test_get_nonexistent_topic(
         self, client: TestClient, mock_repository: AsyncMock
     ) -> None:
-        """Test getting a topic that doesn't exist."""
+        """Test getting a topic that doesn't exist in DB or registry."""
         mock_repository.get.return_value = None
 
-        response = client.get("/admin/topics/nonexistent")
+        response = client.get("/admin/topics/completely_nonexistent_topic")
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()

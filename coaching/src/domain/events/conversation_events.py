@@ -9,7 +9,7 @@ from coaching.src.domain.events.base_event import DomainEvent
 from pydantic import Field
 
 
-class ConversationInitiated(DomainEvent):
+class ConversationInitiated(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when a new conversation is created.
 
@@ -31,7 +31,7 @@ class ConversationInitiated(DomainEvent):
     initial_phase: ConversationPhase = Field(..., description="Starting phase")
 
 
-class MessageAdded(DomainEvent):
+class MessageAdded(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when a message is added to a conversation.
 
@@ -53,7 +53,7 @@ class MessageAdded(DomainEvent):
     phase: ConversationPhase = Field(..., description="Current conversation phase")
 
 
-class PhaseTransitioned(DomainEvent):
+class PhaseTransitioned(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when conversation transitions between phases.
 
@@ -75,7 +75,7 @@ class PhaseTransitioned(DomainEvent):
     progress_percentage: float = Field(..., ge=0.0, le=100.0, description="Overall progress")
 
 
-class ConversationCompleted(DomainEvent):
+class ConversationCompleted(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when a conversation successfully completes.
 
@@ -99,7 +99,7 @@ class ConversationCompleted(DomainEvent):
     final_phase: ConversationPhase = Field(..., description="Final phase reached")
 
 
-class ConversationPaused(DomainEvent):
+class ConversationPaused(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when a conversation is paused.
 
@@ -121,7 +121,7 @@ class ConversationPaused(DomainEvent):
     can_resume: bool = Field(default=True, description="Whether conversation can be resumed")
 
 
-class ConversationResumed(DomainEvent):
+class ConversationResumed(DomainEvent):  # type: ignore[misc]
     """
     Event emitted when a paused conversation is resumed.
 

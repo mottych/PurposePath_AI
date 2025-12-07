@@ -13,7 +13,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class KPIAnalysisService(BaseAnalysisService):
+class KPIAnalysisService(BaseAnalysisService):  # type: ignore[misc]
     """
     Service for KPI recommendations.
 

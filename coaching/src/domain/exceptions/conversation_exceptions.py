@@ -10,7 +10,7 @@ from coaching.src.core.constants import ConversationStatus
 from coaching.src.domain.exceptions.base_exception import DomainException
 
 
-class ConversationNotFound(DomainException):
+class ConversationNotFound(DomainException):  # type: ignore[misc]
     """
     Raised when a requested conversation does not exist.
 
@@ -36,7 +36,7 @@ class ConversationNotFound(DomainException):
         )
 
 
-class InvalidPhaseTransition(DomainException):
+class InvalidPhaseTransition(DomainException):  # type: ignore[misc]
     """
     Raised when attempting an invalid phase transition.
 
@@ -76,7 +76,7 @@ class InvalidPhaseTransition(DomainException):
         )
 
 
-class ConversationNotActive(DomainException):
+class ConversationNotActive(DomainException):  # type: ignore[misc]
     """
     Raised when attempting to modify a conversation that is not active.
 
@@ -105,7 +105,7 @@ class ConversationNotActive(DomainException):
         )
 
 
-class InvalidMessageContent(DomainException):
+class InvalidMessageContent(DomainException):  # type: ignore[misc]
     """
     Raised when message content fails validation.
 
@@ -134,7 +134,7 @@ class InvalidMessageContent(DomainException):
         )
 
 
-class ConversationTTLExpired(DomainException):
+class ConversationTTLExpired(DomainException):  # type: ignore[misc]
     """
     Raised when attempting to access a conversation past its TTL.
 
@@ -159,7 +159,7 @@ class ConversationTTLExpired(DomainException):
         )
 
 
-class ConversationCompletionError(DomainException):
+class ConversationCompletionError(DomainException):  # type: ignore[misc]
     """
     Raised when conversation cannot be marked complete due to unmet criteria.
 

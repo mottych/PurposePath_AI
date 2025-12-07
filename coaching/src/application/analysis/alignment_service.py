@@ -14,7 +14,7 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class AlignmentAnalysisService(BaseAnalysisService):
+class AlignmentAnalysisService(BaseAnalysisService):  # type: ignore[misc]
     """
     Service for alignment analysis.
 
