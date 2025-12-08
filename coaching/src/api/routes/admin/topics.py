@@ -914,7 +914,14 @@ async def list_endpoint_registry(
                 "category": e.category.value,
                 "description": e.description,
                 "is_active": e.is_active,
-                "parameter_refs": list(e.parameter_refs),
+                "parameter_refs": [
+                    {
+                        "name": p.name,
+                        "source": p.source.value,
+                        "source_path": p.source_path,
+                    }
+                    for p in e.parameter_refs
+                ],
             }
             for e in filtered
         ]

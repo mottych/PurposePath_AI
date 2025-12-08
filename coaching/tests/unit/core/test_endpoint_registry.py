@@ -3,12 +3,14 @@
 Tests for Issue #123 - Coaching Engine Improvement.
 """
 
-from coaching.src.core.constants import TopicCategory, TopicType
+from coaching.src.core.constants import ParameterSource, TopicCategory, TopicType
 from coaching.src.core.endpoint_registry import (
     ENDPOINT_REGISTRY,
     EndpointDefinition,
+    ParameterRef,
     get_endpoint_by_topic_id,
     get_endpoint_definition,
+    get_parameters_by_source_for_endpoint,
     get_registry_statistics,
     get_topic_for_endpoint,
     list_all_endpoints,
@@ -49,10 +51,15 @@ class TestEndpointDefinition:
             topic_type=TopicType.SINGLE_SHOT,
             category=TopicCategory.ANALYSIS,
             description="Test endpoint",
-            parameter_refs=("goal", "business_foundation"),
+            parameter_refs=(
+                ParameterRef(name="goal", source=ParameterSource.GOAL),
+                ParameterRef(name="business_foundation", source=ParameterSource.ONBOARDING),
+            ),
         )
         assert len(endpoint.parameter_refs) == 2
-        assert "goal" in endpoint.parameter_refs
+        param_names = [p.name for p in endpoint.parameter_refs]
+        assert "goal" in param_names
+        assert "business_foundation" in param_names
 
 
 class TestEndpointRegistry:
@@ -67,7 +74,7 @@ class TestEndpointRegistry:
         expected_keys = [
             "POST:/coaching/alignment-check",
             "POST:/conversations/initiate",
-            "POST:/analysis/alignment",
+            "POST:/analysis/goal-alignment",
         ]
         for key in expected_keys:
             assert key in ENDPOINT_REGISTRY, f"Missing endpoint: {key}"
@@ -237,3 +244,58 @@ class TestGetRegistryStatistics:
         """Test that endpoint counts match registry size."""
         stats = get_registry_statistics()
         assert stats["total_endpoints"] == len(ENDPOINT_REGISTRY)
+
+
+class TestParameterRef:
+    """Tests for ParameterRef dataclass."""
+
+    def test_parameter_ref_creation(self) -> None:
+        """Test creating a ParameterRef."""
+        ref = ParameterRef(
+            name="goal",
+            source=ParameterSource.GOAL,
+            source_path="goal_id",
+        )
+        assert ref.name == "goal"
+        assert ref.source == ParameterSource.GOAL
+        assert ref.source_path == "goal_id"
+
+    def test_parameter_ref_default_source_path(self) -> None:
+        """Test ParameterRef default source_path is empty."""
+        ref = ParameterRef(name="url", source=ParameterSource.REQUEST)
+        assert ref.source_path == ""
+
+    def test_parameter_ref_frozen(self) -> None:
+        """Test that ParameterRef is immutable."""
+        ref = ParameterRef(name="goal", source=ParameterSource.GOAL)
+        try:
+            ref.name = "changed"  # type: ignore[misc]
+            assert False, "Should have raised FrozenInstanceError"
+        except AttributeError:
+            pass  # Expected for frozen dataclass
+
+
+class TestGetParametersBySourceForEndpoint:
+    """Tests for get_parameters_by_source_for_endpoint function."""
+
+    def test_groups_parameters_by_source(self) -> None:
+        """Test that parameters are grouped by source."""
+        # Get an endpoint with multiple parameter sources
+        endpoint = get_endpoint_definition("POST", "/coaching/alignment-check")
+        assert endpoint is not None
+
+        grouped = get_parameters_by_source_for_endpoint(endpoint)
+        assert isinstance(grouped, dict)
+
+        # All keys should be ParameterSource values
+        for source in grouped:
+            assert isinstance(source, ParameterSource)
+
+    def test_all_parameters_accounted_for(self) -> None:
+        """Test that all parameters are in grouped result."""
+        endpoint = get_endpoint_definition("POST", "/coaching/alignment-check")
+        assert endpoint is not None
+
+        grouped = get_parameters_by_source_for_endpoint(endpoint)
+        total_in_groups = sum(len(params) for params in grouped.values())
+        assert total_in_groups == len(endpoint.parameter_refs)
