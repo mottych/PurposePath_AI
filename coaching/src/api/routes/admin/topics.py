@@ -133,6 +133,10 @@ def _map_topic_to_detail(
                 TemplateStatus(
                     prompt_type=prompt_type,
                     is_defined=False,
+                    s3_bucket=None,
+                    s3_key=None,
+                    updated_at=None,
+                    updated_by=None,
                 )
             )
 

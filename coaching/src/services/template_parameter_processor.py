@@ -362,7 +362,7 @@ class TemplateParameterProcessor:
         path = extraction_path if extraction_path else param_name
 
         # Navigate the path
-        current = data
+        current: Any = data
         for key in path.split("."):
             if isinstance(current, dict):
                 current = current.get(key)

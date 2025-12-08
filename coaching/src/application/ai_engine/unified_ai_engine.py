@@ -189,8 +189,8 @@ class UnifiedAIEngine:
             system_prompt=system_prompt_content,
             user_prompt=user_prompt_content,
             topic=topic,
-            user_id=user_id or parameters.get("user_id", ""),
-            tenant_id=tenant_id or parameters.get("tenant_id", ""),
+            user_id=str(user_id or parameters.get("user_id", "")),
+            tenant_id=str(tenant_id or parameters.get("tenant_id", "")),
             template_processor=template_processor,
         )
 
