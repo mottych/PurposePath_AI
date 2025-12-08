@@ -880,8 +880,8 @@ class TestResponseModel(BaseModel):
 async def list_endpoint_registry(
     category: str | None = Query(None, description="Filter by category"),
     is_active: bool | None = Query(None, description="Filter by active status"),
-    requires_conversation: bool | None = Query(
-        None, description="Filter by conversation requirement"
+    topic_type: str | None = Query(
+        None, description="Filter by topic type (conversation_coaching, single_shot, kpi_system)"
     ),
     _user: UserContext = Depends(get_current_context),
 ) -> EndpointRegistryResponse:
@@ -897,11 +897,11 @@ async def list_endpoint_registry(
         # Apply filters
         filtered = all_endpoints
         if category:
-            filtered = [e for e in filtered if e.category == category]
+            filtered = [e for e in filtered if e.category.value == category]
         if is_active is not None:
             filtered = [e for e in filtered if e.is_active == is_active]
-        if requires_conversation is not None:
-            filtered = [e for e in filtered if e.requires_conversation == requires_conversation]
+        if topic_type is not None:
+            filtered = [e for e in filtered if e.topic_type.value == topic_type]
 
         # Convert to dicts
         endpoint_dicts = [
@@ -910,10 +910,11 @@ async def list_endpoint_registry(
                 "http_method": e.http_method,
                 "topic_id": e.topic_id,
                 "response_model": e.response_model,
-                "requires_conversation": e.requires_conversation,
-                "category": e.category,
+                "topic_type": e.topic_type.value,
+                "category": e.category.value,
                 "description": e.description,
                 "is_active": e.is_active,
+                "parameter_refs": list(e.parameter_refs),
             }
             for e in filtered
         ]

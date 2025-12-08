@@ -504,11 +504,11 @@ class LLMTopic:
         # e.g., "/coaching/alignment-check" -> "Alignment Check"
         topic_name = endpoint_def.topic_id.replace("_", " ").title()
 
-        # Determine topic type based on requires_conversation flag
-        # Use valid topic_type: conversation_coaching, single_shot, or kpi_system
-        topic_type = (
-            "conversation_coaching" if endpoint_def.requires_conversation else "single_shot"
-        )
+        # Get topic type directly from endpoint definition
+        topic_type = endpoint_def.topic_type.value
+
+        # Get category value from enum
+        category = endpoint_def.category.value
 
         # Generate display order from alphabetical sort (can be customized)
         # This ensures consistent ordering across environments
@@ -517,7 +517,7 @@ class LLMTopic:
         return cls(
             topic_id=endpoint_def.topic_id,
             topic_name=topic_name,
-            category=endpoint_def.category,
+            category=category,
             topic_type=topic_type,
             description=endpoint_def.description,
             display_order=display_order,

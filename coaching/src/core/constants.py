@@ -12,6 +12,97 @@ class CoachingTopic(str, Enum):
     GOALS = "goals"
 
 
+class TopicType(str, Enum):
+    """Type of topic determining conversation behavior.
+
+    - conversation_coaching: Multi-turn coaching conversations with phases
+    - single_shot: One-time analysis or generation requests
+    - kpi_system: KPI-specific operations with scoring thresholds
+    """
+
+    CONVERSATION_COACHING = "conversation_coaching"
+    SINGLE_SHOT = "single_shot"
+    KPI_SYSTEM = "kpi_system"
+
+
+class TopicCategory(str, Enum):
+    """Logical grouping of topics by functional area.
+
+    Categories align with API route groupings and business domains.
+    """
+
+    ONBOARDING = "onboarding"
+    CONVERSATION = "conversation"
+    INSIGHTS = "insights"
+    STRATEGIC_PLANNING = "strategic_planning"
+    OPERATIONS_AI = "operations_ai"
+    OPERATIONS_STRATEGIC_INTEGRATION = "operations_strategic_integration"
+    ANALYSIS = "analysis"
+
+
+class PromptType(str, Enum):
+    """Types of prompts in a prompt template.
+
+    - system: System-level instructions for the LLM
+    - user: User message templates
+    - assistant: Pre-filled assistant response templates
+    - function: Function/tool call definitions
+    """
+
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    FUNCTION = "function"
+
+
+class ParameterType(str, Enum):
+    """Data types for parameters in prompt templates."""
+
+    STRING = "string"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    ARRAY = "array"
+    OBJECT = "object"
+
+
+class ParameterSource(str, Enum):
+    """Source of parameter data for prompt templates.
+
+    Parameters are grouped by source to enable efficient batch retrieval.
+    One API call is made per source group, then individual values extracted.
+    """
+
+    # Request-provided parameters (from API call)
+    REQUEST = "request"
+
+    # Onboarding data from Account Service
+    ONBOARDING = "onboarding"
+
+    # Single goal from Traction Service
+    GOAL = "goal"
+
+    # All goals list from Traction Service
+    GOALS = "goals"
+
+    # Single KPI from Traction Service
+    KPI = "kpi"
+
+    # All KPIs list from Traction Service
+    KPIS = "kpis"
+
+    # Action item from Traction Service
+    ACTION = "action"
+
+    # Issue from Traction Service
+    ISSUE = "issue"
+
+    # Conversation context (computed from current conversation)
+    CONVERSATION = "conversation"
+
+    # Computed values derived from other parameters
+    COMPUTED = "computed"
+
+
 class ConversationStatus(str, Enum):
     """Conversation status values."""
 

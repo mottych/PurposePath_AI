@@ -1,4 +1,5 @@
 import pytest
+from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.topic_seed_data import TOPIC_SEED_DATA, TopicSeedData
 
 pytestmark = pytest.mark.unit
@@ -12,14 +13,16 @@ class TestTopicSeedData:
         seed = TopicSeedData(
             topic_id="test_topic",
             topic_name="Test Topic",
-            topic_type="test_type",
-            category="test_category",
+            topic_type=TopicType.SINGLE_SHOT.value,
+            category=TopicCategory.ANALYSIS.value,
             description="Test description",
             default_system_prompt="System prompt",
             default_user_prompt="User prompt",
         )
 
         assert seed.topic_id == "test_topic"
+        assert seed.topic_type == "single_shot"
+        assert seed.category == "analysis"
         assert seed.temperature == 0.7  # Default value
         assert seed.max_tokens == 4096  # Default value
 
@@ -43,3 +46,19 @@ class TestTopicSeedData:
         """Test retrieving seed data for a nonexistent topic."""
         seed = TOPIC_SEED_DATA.get("nonexistent_topic_id_12345")
         assert seed is None
+
+    def test_all_topics_use_valid_topic_types(self) -> None:
+        """Test that all topics use valid TopicType enum values."""
+        valid_types = {t.value for t in TopicType}
+        for topic_id, seed in TOPIC_SEED_DATA.items():
+            assert (
+                seed.topic_type in valid_types
+            ), f"Topic '{topic_id}' has invalid type: {seed.topic_type}"
+
+    def test_all_topics_use_valid_categories(self) -> None:
+        """Test that all topics use valid TopicCategory enum values."""
+        valid_categories = {c.value for c in TopicCategory}
+        for topic_id, seed in TOPIC_SEED_DATA.items():
+            assert (
+                seed.category in valid_categories
+            ), f"Topic '{topic_id}' has invalid category: {seed.category}"
