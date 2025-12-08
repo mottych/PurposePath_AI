@@ -85,6 +85,8 @@ GET /api/v1/admin/topics
       "description": "Explore core values through conversation",
       "display_order": 1,
       "from_database": true,
+      "allowed_prompt_types": ["system", "user"],
+      "defined_prompt_types": ["system", "user"],
       "created_at": "2024-11-01T10:00:00Z",
       "updated_at": "2024-11-13T15:30:00Z",
       "created_by": "admin_123"
@@ -96,6 +98,14 @@ GET /api/v1/admin/topics
   "has_more": false
 }
 ```
+
+**Response Field Descriptions:**
+
+| Field | Description |
+|-------|-------------|
+| `from_database` | `true` = Topic config stored in DB, `false` = Using registry defaults |
+| `allowed_prompt_types` | Prompt types allowed for this topic (from endpoint registry) |
+| `defined_prompt_types` | Prompt types that have been uploaded to S3 |
 
 **Status Codes:**
 
@@ -155,6 +165,26 @@ GET /api/v1/admin/topics/{topic_id}
       "updated_by": "admin_123"
     }
   ],
+  "template_status": [
+    {
+      "prompt_type": "system",
+      "is_allowed": true,
+      "is_defined": true,
+      "s3_bucket": "purposepath-prompts-prod",
+      "s3_key": "prompts/core_values_coaching/system.md",
+      "updated_at": "2024-11-13T15:30:00Z",
+      "updated_by": "admin_123"
+    },
+    {
+      "prompt_type": "user",
+      "is_allowed": true,
+      "is_defined": true,
+      "s3_bucket": "purposepath-prompts-prod",
+      "s3_key": "prompts/core_values_coaching/user.md",
+      "updated_at": "2024-11-13T15:30:00Z",
+      "updated_by": "admin_123"
+    }
+  ],
   "allowed_parameters": [
     {
       "name": "user_name",
@@ -180,6 +210,17 @@ GET /api/v1/admin/topics/{topic_id}
   "created_by": "admin_123"
 }
 ```
+
+**Template Status:**
+
+The `template_status` array shows which templates are allowed for this topic and their current state:
+
+| Field | Description |
+|-------|-------------|
+| `is_allowed` | `true` if this prompt type is allowed by the endpoint registry |
+| `is_defined` | `true` if this prompt has been uploaded to S3 |
+| `s3_bucket`, `s3_key` | S3 location (only present if `is_defined` is `true`) |
+| `updated_at`, `updated_by` | Last update info (only present if `is_defined` is `true`) |
 
 **Status Codes:**
 
