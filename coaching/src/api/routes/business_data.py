@@ -4,7 +4,11 @@ from typing import Any, Generic, TypeVar, cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -44,6 +48,7 @@ class BusinessMetricsResponse(BaseModel):
 async def get_business_data_summary(
     context: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> ApiResponse[BusinessMetricsResponse]:
     """Get current business data summary for the tenant.
 
@@ -56,12 +61,15 @@ async def get_business_data_summary(
         # Create empty request for GET
         request = BusinessMetricsRequest()
 
+        template_processor = create_template_processor(jwt_token) if jwt_token else None
+
         result = await handler.handle_single_shot(
             http_method="GET",
             endpoint_path="/multitenant/conversations/business-data",
             request_body=request,
             user_context=context,
             response_model=BusinessMetricsResponse,
+            template_processor=template_processor,
         )
 
         logger.info(

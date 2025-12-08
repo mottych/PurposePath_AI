@@ -10,7 +10,11 @@ from typing import cast
 import structlog
 from coaching.src.api.auth import get_current_context, get_current_user
 from coaching.src.api.dependencies import get_insights_service
-from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
 from coaching.src.models.responses import (
@@ -47,6 +51,7 @@ async def generate_coaching_insights(
     status: str | None = Query(None, description="Filter by status"),
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> PaginatedResponse[InsightResponse]:
     """Generate fresh coaching insights using topic-driven architecture.
 
@@ -70,12 +75,15 @@ async def generate_coaching_insights(
         page=page, page_size=page_size, category=category, priority=priority, status=status
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     result = await handler.handle_single_shot(
         http_method="POST",
         endpoint_path="/insights/generate",
         request_body=request,
         user_context=user,
         response_model=PaginatedResponse[InsightResponse],
+        template_processor=template_processor,
     )
     return cast(PaginatedResponse[InsightResponse], result)
 

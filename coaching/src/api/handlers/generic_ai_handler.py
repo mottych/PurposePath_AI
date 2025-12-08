@@ -4,7 +4,7 @@ This module provides a generic handler that routes all AI requests through
 the UnifiedAIEngine, eliminating the need for endpoint-specific service classes.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.api.models.auth import UserContext
@@ -19,6 +19,9 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
 from coaching.src.core.endpoint_registry import get_endpoint_definition
 from fastapi import HTTPException, status
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
 
@@ -54,6 +57,7 @@ class GenericAIHandler:
         request_body: BaseModel,
         user_context: UserContext,
         response_model: type[BaseModel],
+        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> BaseModel:
         """Handle single-shot AI request.
 
@@ -72,6 +76,8 @@ class GenericAIHandler:
             request_body: Validated request model
             user_context: User authentication context
             response_model: Expected response model class
+            template_processor: Optional processor for automatic parameter enrichment
+                (created per-request with user's JWT token)
 
         Returns:
             Instance of response_model with AI-generated data
@@ -127,6 +133,9 @@ class GenericAIHandler:
                 topic_id=topic_id,
                 parameters=parameters,
                 response_model=response_model,
+                user_id=user_context.user_id,
+                tenant_id=user_context.tenant_id,
+                template_processor=template_processor,
             )
 
             self.logger.info(

@@ -112,7 +112,6 @@ class UnifiedAIEngine:
         llm_provider: LLMProviderPort,
         response_serializer: ResponseSerializer,
         conversation_repo: ConversationRepositoryPort | None = None,
-        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> None:
         """Initialize unified AI engine.
 
@@ -122,14 +121,12 @@ class UnifiedAIEngine:
             llm_provider: LLM provider for AI generation
             response_serializer: Serializer for response formatting
             conversation_repo: Optional repository for conversation persistence
-            template_processor: Optional processor for automatic parameter enrichment
         """
         self.topic_repo = topic_repo
         self.s3_storage = s3_storage
         self.llm_provider = llm_provider
         self.response_serializer = response_serializer
         self.conversation_repo = conversation_repo
-        self.template_processor = template_processor
         self.logger = logger.bind(service="unified_ai_engine")
 
     async def execute_single_shot(
@@ -140,13 +137,14 @@ class UnifiedAIEngine:
         response_model: type[BaseModel],
         user_id: str | None = None,
         tenant_id: str | None = None,
+        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
         Flow:
         1. Get topic configuration from DynamoDB
         2. Load prompts from S3
-        3. Enrich parameters (if template_processor is configured)
+        3. Enrich parameters (if template_processor is provided)
         4. Validate parameters against topic schema
         5. Render prompts with enriched parameters
         6. Call LLM using topic model config
@@ -159,6 +157,8 @@ class UnifiedAIEngine:
             response_model: Expected response model class
             user_id: Optional user ID for parameter enrichment
             tenant_id: Optional tenant ID for parameter enrichment
+            template_processor: Optional processor for automatic parameter enrichment
+                (created per-request with user's JWT token for API calls)
 
         Returns:
             Instance of response_model with AI-generated data
@@ -183,7 +183,7 @@ class UnifiedAIEngine:
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
 
-        # Step 3: Enrich parameters if template processor is configured
+        # Step 3: Enrich parameters if template processor is provided
         enriched_params = await self._enrich_parameters(
             parameters=parameters,
             system_prompt=system_prompt_content,
@@ -191,6 +191,7 @@ class UnifiedAIEngine:
             topic=topic,
             user_id=user_id or parameters.get("user_id", ""),
             tenant_id=tenant_id or parameters.get("tenant_id", ""),
+            template_processor=template_processor,
         )
 
         # Step 4: Validate parameters (after enrichment)
@@ -245,10 +246,11 @@ class UnifiedAIEngine:
         topic: LLMTopic,
         user_id: str,
         tenant_id: str,
+        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> dict[str, Any]:
         """Enrich parameters by fetching missing values via retrieval methods.
 
-        If template_processor is not configured, returns parameters unchanged.
+        If template_processor is not provided, returns parameters unchanged.
         Otherwise, analyzes templates to find needed parameters and enriches
         any that are missing from the provided parameters.
 
@@ -259,11 +261,12 @@ class UnifiedAIEngine:
             topic: Topic configuration (for required params info)
             user_id: User ID for API calls
             tenant_id: Tenant ID for API calls
+            template_processor: Optional processor for parameter enrichment
 
         Returns:
             Enriched parameters dictionary
         """
-        if self.template_processor is None:
+        if template_processor is None:
             # No enrichment - return original parameters
             return parameters
 
@@ -281,7 +284,7 @@ class UnifiedAIEngine:
         )
 
         # Process templates and enrich missing parameters
-        result = await self.template_processor.process_template_parameters(
+        result = await template_processor.process_template_parameters(
             template=combined_template,
             payload=parameters,
             user_id=user_id,
