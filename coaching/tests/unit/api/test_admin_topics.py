@@ -502,19 +502,6 @@ class TestPromptManagement:
         assert "deleted successfully" in data["message"].lower()
 
 
-class TestModelListing:
-    """Tests for model listing endpoint."""
-
-    async def test_list_models(self, client: TestClient) -> None:
-        """Test listing available models."""
-        response = client.get("/admin/topics/registry/endpoints")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "endpoints" in data
-        assert "total" in data
-
-
 class TestValidation:
     """Tests for topic validation endpoint."""
 

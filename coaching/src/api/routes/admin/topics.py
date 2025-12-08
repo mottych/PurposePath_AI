@@ -20,7 +20,6 @@ from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.endpoint_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_by_topic_id,
-    get_registry_statistics,
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
@@ -923,14 +922,6 @@ async def validate_topic_config(
 # ========== New Endpoints for Issue #113 ==========
 
 
-class EndpointRegistryResponse(BaseModel):
-    """Response model for endpoint registry listing."""
-
-    endpoints: list[dict[str, Any]]
-    total: int
-    statistics: dict[str, Any]
-
-
 class TopicTestRequest(BaseModel):
     """Request model for testing a topic."""
 
@@ -952,74 +943,6 @@ class TestResponseModel(BaseModel):
     """Generic response model for testing."""
 
     model_config = {"extra": "allow"}
-
-
-@router.get("/registry/endpoints", response_model=EndpointRegistryResponse)
-async def list_endpoint_registry(
-    category: str | None = Query(None, description="Filter by category"),
-    is_active: bool | None = Query(None, description="Filter by active status"),
-    topic_type: str | None = Query(
-        None, description="Filter by topic type (conversation_coaching, single_shot, kpi_system)"
-    ),
-    _user: UserContext = Depends(get_current_context),
-) -> EndpointRegistryResponse:
-    """List all endpoints from the endpoint registry.
-
-    Requires admin:topics:read permission.
-    Enhanced for Issue #113 - Topic-Driven Endpoint Architecture.
-    """
-    try:
-        # Get all endpoints
-        all_endpoints = list(ENDPOINT_REGISTRY.values())
-
-        # Apply filters
-        filtered = all_endpoints
-        if category:
-            filtered = [e for e in filtered if e.category.value == category]
-        if is_active is not None:
-            filtered = [e for e in filtered if e.is_active == is_active]
-        if topic_type is not None:
-            filtered = [e for e in filtered if e.topic_type.value == topic_type]
-
-        # Convert to dicts
-        endpoint_dicts = [
-            {
-                "endpoint_path": e.endpoint_path,
-                "http_method": e.http_method,
-                "topic_id": e.topic_id,
-                "response_model": e.response_model,
-                "topic_type": e.topic_type.value,
-                "category": e.category.value,
-                "description": e.description,
-                "is_active": e.is_active,
-                "allowed_prompt_types": [pt.value for pt in e.allowed_prompt_types],
-                "parameter_refs": [
-                    {
-                        "name": p.name,
-                        "source": p.source.value,
-                        "source_path": p.source_path,
-                    }
-                    for p in e.parameter_refs
-                ],
-            }
-            for e in filtered
-        ]
-
-        # Get statistics
-        stats = get_registry_statistics()
-
-        return EndpointRegistryResponse(
-            endpoints=endpoint_dicts,
-            total=len(endpoint_dicts),
-            statistics=stats,
-        )
-
-    except Exception as e:
-        logger.error("Failed to list endpoint registry", error=str(e), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list endpoint registry",
-        ) from e
 
 
 @router.post("/{topic_id}/test", response_model=TopicTestResponse)
