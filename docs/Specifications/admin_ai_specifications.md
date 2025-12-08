@@ -761,6 +761,7 @@ GET /api/v1/admin/topics/registry/endpoints
       "category": "core_values",
       "description": "Check alignment between actions and core values",
       "is_active": true,
+      "allowed_prompt_types": ["system", "user"],
       "parameter_refs": [
         {
           "name": "user_input",
@@ -788,6 +789,7 @@ GET /api/v1/admin/topics/registry/endpoints
       "category": "goals",
       "description": "AI coaching for goal achievement",
       "is_active": true,
+      "allowed_prompt_types": ["system", "user"],
       "parameter_refs": [
         {
           "name": "goal",
@@ -822,6 +824,16 @@ GET /api/v1/admin/topics/registry/endpoints
   }
 }
 ```
+
+**Allowed Prompt Types:**
+
+Each endpoint specifies which prompt types it can use:
+
+| Prompt Type | Description |
+|-------------|-------------|
+| `system` | System prompt that sets AI behavior and context |
+| `user` | User prompt template for formatting user input |
+| `assistant` | Assistant prompt for multi-turn conversations |
 
 **Parameter Sources:**
 

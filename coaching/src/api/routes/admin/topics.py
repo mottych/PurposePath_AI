@@ -918,6 +918,7 @@ async def list_endpoint_registry(
                 "category": e.category.value,
                 "description": e.description,
                 "is_active": e.is_active,
+                "allowed_prompt_types": [pt.value for pt in e.allowed_prompt_types],
                 "parameter_refs": [
                     {
                         "name": p.name,
