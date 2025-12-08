@@ -10,7 +10,11 @@ from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
 )
-from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_jwt_token,
+    get_unified_ai_engine,
+)
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.endpoint_registry import (
@@ -949,6 +953,7 @@ async def test_topic(
     request: TopicTestRequest,
     user: UserContext = Depends(get_current_context),
     unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> TopicTestResponse:
     """Test a topic with sample parameters.
 
@@ -970,6 +975,9 @@ async def test_topic(
             use_draft=request.use_draft_prompts,
         )
 
+        # Create template processor for parameter enrichment (if token available)
+        template_processor = create_template_processor(jwt_token) if jwt_token else None
+
         # Execute single-shot with topic
         # Note: This is a simplified version - in full implementation,
         # we'd need to determine the response_model from topic metadata
@@ -977,6 +985,9 @@ async def test_topic(
             topic_id=topic_id,
             parameters=request.parameters,
             response_model=TestResponseModel,  # Use generic model for testing
+            user_id=user.user_id,
+            tenant_id=user.tenant_id,
+            template_processor=template_processor,
         )
 
         execution_time = (time.time() - start_time) * 1000  # Convert to ms
