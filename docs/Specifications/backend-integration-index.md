@@ -22,7 +22,7 @@ This specification is split into multiple documents for efficient AI assistant c
    - Coaching Conversations
    - Strategic Planning AI
 
-3. **[Traction Service](./backend-integration-traction-service-v2.md)**
+3. **[Traction Service](./backend-integration-traction-service-v5.md)**
    - Goals Management
    - Strategies & KPIs
    - Operations (Actions & Issues)

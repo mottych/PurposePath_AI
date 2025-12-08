@@ -1,10 +1,33 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Created on 11/13/2025
+- Last Updated: December 7, 2025
 
 ## Overview
 
-This document specifies all admin endpoints required to manage the LLM Topic system. Admin users can create, update, activate/deactivate topics, and manage prompts.
+This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, and test topics.
+
+**Important:** Topics are defined in the code-based `endpoint_registry` and cannot be created or deleted by admins. Admins can only:
+- Update topic configurations (model, temperature, prompts, etc.)
+- Manage prompt content (system, user, assistant prompts)
+- Test topic configurations before activation
+
+---
+
+## Implementation Status
+
+| Endpoint | Status | Notes |
+|----------|--------|-------|
+| GET /topics | ✅ Implemented | List topics from registry + DB overrides |
+| GET /topics/{topic_id} | ✅ Implemented | |
+| PUT /topics/{topic_id} | ✅ Implemented | Update topic config |
+| GET /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
+| PUT /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
+| POST /topics/{topic_id}/prompts | ✅ Implemented | |
+| DELETE /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
+| GET /models | ✅ Implemented | |
+| POST /topics/validate | ✅ Implemented | |
+| POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
+| GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
 
 ---
 
@@ -39,7 +62,7 @@ GET /api/v1/admin/topics
 | `page` | integer | No | 1 | Page number | >= 1 |
 | `page_size` | integer | No | 50 | Items per page (max 100) | 1-100 |
 | `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
-| `topic_type` | string | No | - | Filter by type | `coaching`, `assessment`, `analysis`, `kpi` |
+| `topic_type` | string | No | - | Filter by type | `conversation_coaching`, `single_shot`, `kpi_system` |
 | `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
 | `search` | string | No | - | Search in name/description | Max 100 chars |
 
@@ -52,7 +75,7 @@ GET /api/v1/admin/topics
       "topic_id": "core_values_coaching",
       "topic_name": "Core Values - Coaching Session",
       "category": "core_values",
-      "topic_type": "coaching",
+      "topic_type": "conversation_coaching",
       "model_code": "claude-3-5-sonnet-20241022",
       "temperature": 0.7,
       "max_tokens": 2000,
@@ -60,6 +83,10 @@ GET /api/v1/admin/topics
       "description": "Explore core values through conversation",
       "display_order": 1,
       "from_database": true,
+      "templates": [
+        {"prompt_type": "system", "is_defined": true},
+        {"prompt_type": "user", "is_defined": false}
+      ],
       "created_at": "2024-11-01T10:00:00Z",
       "updated_at": "2024-11-13T15:30:00Z",
       "created_by": "admin_123"
@@ -72,6 +99,13 @@ GET /api/v1/admin/topics
 }
 ```
 
+**Response Field Descriptions:**
+
+| Field | Description |
+|-------|-------------|
+| `from_database` | `true` = Topic config stored in DB, `false` = Using registry defaults |
+| `templates` | Array of allowed templates with `is_defined` indicating if uploaded to S3 |
+
 **Status Codes:**
 
 - `200 OK`: Success
@@ -82,7 +116,7 @@ GET /api/v1/admin/topics
 
 ### 2. Get Topic Details
 
-**Purpose:** Get complete details for a specific topic including prompts
+**Purpose:** Get complete details for a specific topic including prompts and allowed parameters
 
 **Endpoint:**
 
@@ -103,7 +137,7 @@ GET /api/v1/admin/topics/{topic_id}
   "topic_id": "core_values_coaching",
   "topic_name": "Core Values - Coaching Session",
   "category": "core_values",
-  "topic_type": "coaching",
+  "topic_type": "conversation_coaching",
   "description": "Explore your core values through conversation",
   "model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
@@ -130,12 +164,42 @@ GET /api/v1/admin/topics/{topic_id}
       "updated_by": "admin_123"
     }
   ],
+  "template_status": [
+    {
+      "prompt_type": "system",
+      "is_defined": true,
+      "s3_bucket": "purposepath-prompts-prod",
+      "s3_key": "prompts/core_values_coaching/system.md",
+      "updated_at": "2024-11-13T15:30:00Z",
+      "updated_by": "admin_123"
+    },
+    {
+      "prompt_type": "user",
+      "is_defined": false,
+      "s3_bucket": null,
+      "s3_key": null,
+      "updated_at": null,
+      "updated_by": null
+    }
+  ],
   "allowed_parameters": [
     {
       "name": "user_name",
       "type": "string",
       "required": true,
       "description": "User's display name"
+    },
+    {
+      "name": "core_values",
+      "type": "string",
+      "required": false,
+      "description": "User's defined core values (auto-enriched from profile)"
+    },
+    {
+      "name": "purpose",
+      "type": "string",
+      "required": false,
+      "description": "User's purpose statement (auto-enriched from profile)"
     }
   ],
   "created_at": "2024-11-01T10:00:00Z",
@@ -143,6 +207,16 @@ GET /api/v1/admin/topics/{topic_id}
   "created_by": "admin_123"
 }
 ```
+
+**Template Status:**
+
+The `template_status` array shows each allowed template and its definition status:
+
+| Field | Description |
+|-------|-------------|
+| `is_defined` | `true` if this prompt has been uploaded to S3 |
+| `s3_bucket`, `s3_key` | S3 location (null if not defined) |
+| `updated_at`, `updated_by` | Last update info (null if not defined) |
 
 **Status Codes:**
 
@@ -170,7 +244,7 @@ POST /api/v1/admin/topics
   "topic_id": "purpose_discovery",
   "topic_name": "Purpose Discovery Session",
   "category": "purpose",
-  "topic_type": "coaching",
+  "topic_type": "conversation_coaching",
   "description": "Discover your life's purpose through guided conversation",
   "model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
@@ -185,15 +259,17 @@ POST /api/v1/admin/topics
       "name": "user_name",
       "type": "string",
       "required": true,
-      "description": "User's display name",
-      "validation": {
-        "min_length": 1,
-        "max_length": 100,
-        "pattern": null
-      }
+      "description": "User's display name"
+    },
+    {
+      "name": "core_values",
+      "type": "string",
+      "required": false,
+      "description": "User's defined core values"
     }
   ]
 }
+```
 
 **Allowed Parameter Types:**
 
@@ -204,23 +280,14 @@ POST /api/v1/admin/topics
 - `array`: List of values
 - `object`: Nested structure
 
-**Parameter Validation Schema:**
+**Parameter Definition Schema:**
 
 ```json
 {
   "name": "parameter_name",
   "type": "string|integer|float|boolean|array|object",
   "required": true,
-  "description": "Human-readable description",
-  "validation": {
-    "min_length": 1,          // For strings
-    "max_length": 100,        // For strings
-    "pattern": "^[a-z]+$",    // Regex for strings
-    "min_value": 0,           // For numbers
-    "max_value": 100,         // For numbers
-    "allowed_values": [],     // Enum list
-    "default": null           // Default value if not provided
-  }
+  "description": "Human-readable description"
 }
 ```
 
@@ -231,7 +298,7 @@ POST /api/v1/admin/topics
 | `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
 | `topic_name` | Required, 3-100 chars | Any printable characters |
 | `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
-| `topic_type` | Required | Enum: `coaching`, `assessment`, `analysis`, `kpi` |
+| `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `kpi_system` |
 | `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
 | `temperature` | Required, float | 0.0-2.0 |
 | `max_tokens` | Required, integer | 1-100000 (model dependent) |
@@ -266,10 +333,9 @@ POST /api/v1/admin/topics
 
 **Topic Type Descriptions:**
 
-- `coaching`: Interactive conversational coaching sessions
-- `assessment`: One-shot evaluations and assessments
-- `analysis`: Deep analytical processing of user data
-- `kpi`: KPI calculation and tracking
+- `conversation_coaching`: Interactive conversational coaching sessions (multi-turn)
+- `single_shot`: One-shot evaluations, assessments, and analysis
+- `kpi_system`: KPI calculation and tracking
 
 **Response:**
 
@@ -332,7 +398,15 @@ PUT /api/v1/admin/topics/{topic_id}
   "temperature": 0.5,
   "max_tokens": 1500,
   "is_active": true,
-  "display_order": 5
+  "display_order": 5,
+  "allowed_parameters": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true,
+      "description": "User's display name"
+    }
+  ]
 }
 ```
 
@@ -342,6 +416,7 @@ PUT /api/v1/admin/topics/{topic_id}
 - Cannot update `topic_id`
 - Cannot update `category` or `topic_type` (create new topic instead)
 - Cannot update `created_at` or `created_by`
+- `allowed_parameters` replaces entire list when provided
 
 **Response:**
 
@@ -630,8 +705,8 @@ POST /api/v1/admin/topics/validate
 {
   "topic_id": "test_topic",
   "topic_name": "Test Topic",
-  "category": "test",
-  "topic_type": "coaching",
+  "category": "custom",
+  "topic_type": "single_shot",
   "model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
   "max_tokens": 2000,
@@ -693,56 +768,78 @@ POST /api/v1/admin/topics/validate
 
 ---
 
-### 12. Clone Topic
+### 12. Test Topic
 
-**Purpose:** Create a copy of an existing topic for modification
+**Purpose:** Test a topic configuration by executing it with sample parameters. Allows admins to verify prompts work correctly before activating a topic.
 
 **Endpoint:**
 
 ```http
-POST /api/v1/admin/topics/{topic_id}/clone
+POST /api/v1/admin/topics/{topic_id}/test
 ```
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description | Format |
+|-----------|------|----------|-------------|--------|
+| `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
 
 **Request Body:**
 
 ```json
 {
-  "new_topic_id": "core_values_coaching_v2",
-  "new_topic_name": "Core Values Coaching v2",
-  "copy_prompts": true,
-  "is_active": false
+  "parameters": {
+    "user_name": "Test User",
+    "core_values": "integrity, growth, compassion",
+    "user_input": "How can I stay aligned with my values at work?"
+  },
+  "use_draft_prompts": false
 }
 ```
 
-**Validation:**
+**Notes:**
 
-- `new_topic_id`: Required, must follow topic_id format (snake_case, 3-50 chars)
-- `new_topic_name`: Required, 3-100 chars
-- `copy_prompts`: Optional, boolean, default true
-- `is_active`: Optional, boolean, default false
+- Parameters not provided in the request will be auto-enriched from the user's profile if the admin has a valid JWT token
+- `use_draft_prompts`: Reserved for future A/B testing (currently ignored)
 
-**Response:**
+**Response (Success):**
 
 ```json
 {
-  "topic_id": "core_values_coaching_v2",
-  "cloned_from": "core_values_coaching",
-  "created_at": "2024-11-13T17:00:00Z",
-  "message": "Topic cloned successfully"
+  "success": true,
+  "result": {
+    "response": "Based on your core values of integrity, growth, and compassion...",
+    "recommendations": ["..."]
+  },
+  "execution_time_ms": 1245.5,
+  "tokens_used": null
+}
+```
+
+**Response (Error):**
+
+```json
+{
+  "success": false,
+  "result": null,
+  "execution_time_ms": 150.2,
+  "tokens_used": null,
+  "error": "Missing required parameter: user_input"
 }
 ```
 
 **Status Codes:**
 
-- `201 Created`: Success
-- `404 Not Found`: Source topic not found
-- `409 Conflict`: New topic ID already exists
+- `200 OK`: Test completed (check `success` field)
+- `404 Not Found`: Topic not found
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 
 ---
 
-### 13. Get Topic Usage Statistics
+### 14. Get Topic Usage Statistics (Planned)
+
+**Status:** ⏳ Not yet implemented
 
 **Purpose:** View usage metrics for a topic
 
@@ -754,10 +851,10 @@ GET /api/v1/admin/topics/{topic_id}/stats
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Default | Description | Format |
-|-----------|------|----------|---------|-------------|--------|
-| `start_date` | string | No | 30 days ago | ISO 8601 date | `YYYY-MM-DDTHH:mm:ssZ` |
-| `end_date` | string | No | now | ISO 8601 date | `YYYY-MM-DDTHH:mm:ssZ` |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `start_date` | string | No | 30 days ago | ISO 8601 date |
+| `end_date` | string | No | now | ISO 8601 date |
 
 **Response:**
 
@@ -770,118 +867,35 @@ GET /api/v1/admin/topics/{topic_id}/stats
   },
   "usage": {
     "total_conversations": 1247,
-    "active_conversations": 89,
-    "completed_conversations": 1158,
-    "average_messages_per_conversation": 12.4,
     "total_tokens_used": 1850000,
     "estimated_cost": 27.75
-  },
-  "performance": {
-    "average_conversation_duration_minutes": 18.5,
-    "completion_rate": 0.93,
-    "user_satisfaction_rating": 4.7
   }
 }
 ```
-
-**Status Codes:**
-
-- `200 OK`: Success
-- `404 Not Found`: Topic not found
-- `401 Unauthorized`: Missing or invalid auth token
-- `403 Forbidden`: Insufficient permissions
-
----
-
-### 14. Bulk Update Topics
-
-**Purpose:** Update multiple topics at once (e.g., activate/deactivate, change model)
-
-**Endpoint:**
-
-```http
-PATCH /api/v1/admin/topics/bulk
-```
-
-**Request Body:**
-
-```json
-{
-  "topic_ids": ["core_values_coaching", "purpose_discovery"],
-  "updates": {
-    "model_code": "claude-3-5-haiku-20241022",
-    "is_active": false
-  }
-}
-```
-
-**Validation:**
-
-- `topic_ids`: Required, array of topic IDs, max 50 topics per request
-- `updates`: Required, object containing fields to update
-- Updatable fields: `model_code`, `temperature`, `max_tokens`, `top_p`, `frequency_penalty`, `presence_penalty`, `is_active`, `display_order`, `description`, `topic_name`
-- Cannot bulk update: `topic_id`, `category`, `topic_type`, `created_at`, `created_by`
-
-**Response:**
-
-```json
-{
-  "updated": 2,
-  "results": [
-    {
-      "topic_id": "core_values_coaching",
-      "success": true
-    },
-    {
-      "topic_id": "purpose_discovery",
-      "success": true
-    }
-  ]
-}
-```
-
-**Status Codes:**
-
-- `200 OK`: Success (check individual results)
-- `400 Bad Request`: Validation error
-- `401 Unauthorized`: Missing or invalid auth token
-- `403 Forbidden`: Insufficient permissions
 
 ---
 
 ## Admin UI Workflows
 
-### Creating a New Topic
+### Configuring a Topic
 
-1. **GET** `/api/v1/admin/models` - Get available models
-2. **POST** `/api/v1/admin/topics` - Create topic (inactive)
-3. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload system prompt
-4. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload user prompt
-5. **POST** `/api/v1/admin/topics/validate` - Validate configuration
-6. **PUT** `/api/v1/admin/topics/{topic_id}` - Activate topic
+Topics are defined in the `endpoint_registry` code. Admins configure them by:
+
+1. **GET** `/api/v1/admin/topics` - View all topics with `templates` (showing allowed and defined prompts)
+2. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details with `template_status` and `allowed_parameters`
+3. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload required prompts (system, user, etc.)
+4. **PUT** `/api/v1/admin/topics/{topic_id}` - Update model config (temperature, max_tokens, etc.)
+5. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test with sample parameters
+6. **PUT** `/api/v1/admin/topics/{topic_id}` - Activate topic (`is_active: true`)
 
 ### Editing Prompts
 
-1. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details
-2. **GET** `/api/v1/admin/topics/{topic_id}/prompts/system` - Get current content
-3. Edit in UI
-4. **PUT** `/api/v1/admin/topics/{topic_id}/prompts/system` - Save changes
-5. Cache cleared automatically
-
-### A/B Testing
-
-1. **POST** `/api/v1/admin/topics/{original_id}/clone` - Clone topic
-2. **PUT** `/api/v1/admin/topics/{clone_id}/prompts/system` - Modify prompts
-3. **PUT** `/api/v1/admin/topics/{clone_id}` - Activate clone
-4. **GET** `/api/v1/admin/topics/{original_id}/stats` - Compare metrics
-5. **GET** `/api/v1/admin/topics/{clone_id}/stats` - Compare metrics
-6. Deactivate losing variant
-
-### Updating Model for All Topics
-
-1. **GET** `/api/v1/admin/topics?category=core_values` - Get topics
-2. **PATCH** `/api/v1/admin/topics/bulk` - Update all to new model
-3. Monitor performance
+1. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details with `template_status` and `allowed_parameters`
+2. **GET** `/api/v1/admin/topics/{topic_id}/prompts/{prompt_type}` - Get current content
+3. Edit in UI using `allowed_parameters` as available placeholders
+4. **PUT** `/api/v1/admin/topics/{topic_id}/prompts/{prompt_type}` - Save changes
+5. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test the changes
+6. Cache cleared automatically
 
 ---
 
@@ -921,24 +935,6 @@ X-RateLimit-Reset: 1699987200
 
 ---
 
-## Audit Logging
-
-All admin actions are logged:
-
-- User ID and timestamp
-- Action performed
-- Topic/prompt affected
-- Changes made (before/after)
-- IP address
-
-Logs accessible via:
-
-```http
-GET /api/v1/admin/audit-logs?topic_id={topic_id}
-```
-
----
-
 ## Permissions
 
 Required permission scopes:
@@ -952,8 +948,8 @@ Required permission scopes:
 | Delete topic | `admin:topics:delete` |
 | View prompts | `admin:topics:read` |
 | Update prompts | `admin:prompts:write` |
+| Test topic | `admin:topics:write` |
 | View stats | `admin:topics:stats` |
-| Bulk operations | `admin:topics:bulk` |
 
 ---
 

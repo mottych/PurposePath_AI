@@ -10,13 +10,16 @@ from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
 )
-from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_jwt_token,
+    get_unified_ai_engine,
+)
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.endpoint_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_by_topic_id,
-    get_registry_statistics,
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
@@ -34,6 +37,8 @@ from coaching.src.models.admin_topics import (
     ParameterDefinition,
     PromptContentResponse,
     PromptInfo,
+    TemplateStatus,
+    TemplateSummary,
     TopicDetail,
     TopicListResponse,
     TopicSummary,
@@ -57,8 +62,25 @@ router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 # Helper functions
 
 
-def _map_topic_to_summary(topic: LLMTopic, from_database: bool = True) -> TopicSummary:
-    """Map domain LLMTopic to API TopicSummary."""
+def _map_topic_to_summary(
+    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+) -> TopicSummary:
+    """Map domain LLMTopic to API TopicSummary.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+    """
+    # Get defined prompt types from the topic's prompts
+    defined_prompt_types = {p.prompt_type for p in topic.prompts}
+
+    # Build templates array with is_defined indicator
+    templates = [
+        TemplateSummary(prompt_type=pt, is_defined=(pt in defined_prompt_types))
+        for pt in (allowed_prompt_types or [])
+    ]
+
     return TopicSummary(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -71,14 +93,49 @@ def _map_topic_to_summary(topic: LLMTopic, from_database: bool = True) -> TopicS
         description=topic.description,
         display_order=topic.display_order,
         from_database=from_database,
+        templates=templates,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
     )
 
 
-def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDetail:
-    """Map domain LLMTopic to API TopicDetail."""
+def _map_topic_to_detail(
+    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+) -> TopicDetail:
+    """Map domain LLMTopic to API TopicDetail.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+    """
+    # Create a lookup of defined prompts by type
+    defined_prompts = {p.prompt_type: p for p in topic.prompts}
+
+    # Build template status for all allowed prompt types
+    template_status_list: list[TemplateStatus] = []
+    for prompt_type in allowed_prompt_types or []:
+        if prompt_type in defined_prompts:
+            p = defined_prompts[prompt_type]
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_defined=True,
+                    s3_bucket=p.s3_bucket,
+                    s3_key=p.s3_key,
+                    updated_at=p.updated_at,
+                    updated_by=p.updated_by,
+                )
+            )
+        else:
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_defined=False,
+                )
+            )
+
     return TopicDetail(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -104,6 +161,7 @@ def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDe
             )
             for p in topic.prompts
         ],
+        template_status=template_status_list,
         allowed_parameters=[
             ParameterDefinition(
                 name=p.name,
@@ -120,6 +178,14 @@ def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDe
 
 
 # Endpoints
+
+
+def _get_allowed_prompt_types(topic_id: str) -> list[str]:
+    """Get allowed prompt types for a topic from the endpoint registry."""
+    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    if endpoint_def:
+        return [pt.value for pt in endpoint_def.allowed_prompt_types]
+    return []
 
 
 @router.get("", response_model=TopicListResponse)
@@ -191,10 +257,14 @@ async def list_topics(
 
         logger.info("topics_paginated", total=total, page_count=len(page_topics))
 
-        # Map topics with from_database indicator
+        # Map topics with from_database indicator and allowed_prompt_types
         return TopicListResponse(
             topics=[
-                _map_topic_to_summary(t, from_database=(t.topic_id in db_topic_ids))
+                _map_topic_to_summary(
+                    t,
+                    from_database=(t.topic_id in db_topic_ids),
+                    allowed_prompt_types=_get_allowed_prompt_types(t.topic_id),
+                )
                 for t in page_topics
             ],
             total=total,
@@ -228,9 +298,14 @@ async def get_topic(
         # First, try to get from database
         topic = await repository.get(topic_id=topic_id)
 
+        # Get allowed prompt types from registry (used for both DB and default)
+        allowed_prompt_types = _get_allowed_prompt_types(topic_id)
+
         if topic:
             # Topic found in database
-            return _map_topic_to_detail(topic, from_database=True)
+            return _map_topic_to_detail(
+                topic, from_database=True, allowed_prompt_types=allowed_prompt_types
+            )
 
         # Topic not in database, try to get from registry
         endpoint_def = get_endpoint_by_topic_id(topic_id)
@@ -242,7 +317,9 @@ async def get_topic(
 
         # Create default topic from registry
         default_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
-        return _map_topic_to_detail(default_topic, from_database=False)
+        return _map_topic_to_detail(
+            default_topic, from_database=False, allowed_prompt_types=allowed_prompt_types
+        )
 
     except HTTPException:
         raise
@@ -845,14 +922,6 @@ async def validate_topic_config(
 # ========== New Endpoints for Issue #113 ==========
 
 
-class EndpointRegistryResponse(BaseModel):
-    """Response model for endpoint registry listing."""
-
-    endpoints: list[dict[str, Any]]
-    total: int
-    statistics: dict[str, Any]
-
-
 class TopicTestRequest(BaseModel):
     """Request model for testing a topic."""
 
@@ -876,71 +945,13 @@ class TestResponseModel(BaseModel):
     model_config = {"extra": "allow"}
 
 
-@router.get("/registry/endpoints", response_model=EndpointRegistryResponse)
-async def list_endpoint_registry(
-    category: str | None = Query(None, description="Filter by category"),
-    is_active: bool | None = Query(None, description="Filter by active status"),
-    requires_conversation: bool | None = Query(
-        None, description="Filter by conversation requirement"
-    ),
-    _user: UserContext = Depends(get_current_context),
-) -> EndpointRegistryResponse:
-    """List all endpoints from the endpoint registry.
-
-    Requires admin:topics:read permission.
-    Enhanced for Issue #113 - Topic-Driven Endpoint Architecture.
-    """
-    try:
-        # Get all endpoints
-        all_endpoints = list(ENDPOINT_REGISTRY.values())
-
-        # Apply filters
-        filtered = all_endpoints
-        if category:
-            filtered = [e for e in filtered if e.category == category]
-        if is_active is not None:
-            filtered = [e for e in filtered if e.is_active == is_active]
-        if requires_conversation is not None:
-            filtered = [e for e in filtered if e.requires_conversation == requires_conversation]
-
-        # Convert to dicts
-        endpoint_dicts = [
-            {
-                "endpoint_path": e.endpoint_path,
-                "http_method": e.http_method,
-                "topic_id": e.topic_id,
-                "response_model": e.response_model,
-                "requires_conversation": e.requires_conversation,
-                "category": e.category,
-                "description": e.description,
-                "is_active": e.is_active,
-            }
-            for e in filtered
-        ]
-
-        # Get statistics
-        stats = get_registry_statistics()
-
-        return EndpointRegistryResponse(
-            endpoints=endpoint_dicts,
-            total=len(endpoint_dicts),
-            statistics=stats,
-        )
-
-    except Exception as e:
-        logger.error("Failed to list endpoint registry", error=str(e), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list endpoint registry",
-        ) from e
-
-
 @router.post("/{topic_id}/test", response_model=TopicTestResponse)
 async def test_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: TopicTestRequest,
     user: UserContext = Depends(get_current_context),
     unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> TopicTestResponse:
     """Test a topic with sample parameters.
 
@@ -962,6 +973,9 @@ async def test_topic(
             use_draft=request.use_draft_prompts,
         )
 
+        # Create template processor for parameter enrichment (if token available)
+        template_processor = create_template_processor(jwt_token) if jwt_token else None
+
         # Execute single-shot with topic
         # Note: This is a simplified version - in full implementation,
         # we'd need to determine the response_model from topic metadata
@@ -969,6 +983,9 @@ async def test_topic(
             topic_id=topic_id,
             parameters=request.parameters,
             response_model=TestResponseModel,  # Use generic model for testing
+            user_id=user.user_id,
+            tenant_id=user.tenant_id,
+            template_processor=template_processor,
         )
 
         execution_time = (time.time() - start_time) * 1000  # Convert to ms

@@ -14,7 +14,11 @@ from typing import cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
@@ -49,6 +53,7 @@ async def get_onboarding_coaching(
     request: OnboardingCoachingRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> OnboardingCoachingResponse:
     """Get AI coaching assistance for onboarding topics using topic-driven architecture.
 
@@ -56,6 +61,8 @@ async def get_onboarding_coaching(
     Uses 'onboarding_coaching' topic.
     """
     logger.info("Providing onboarding coaching", user_id=user.user_id, topic=request.topic)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         OnboardingCoachingResponse,
@@ -65,6 +72,7 @@ async def get_onboarding_coaching(
             request_body=request,
             user_context=user,
             response_model=OnboardingCoachingResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -78,12 +86,15 @@ async def check_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> AlignmentAnalysisResponse:
     """Check alignment using topic-driven architecture.
 
     Uses 'alignment_check' topic.
     """
     logger.info("Checking alignment", user_id=user.user_id)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         AlignmentAnalysisResponse,
@@ -93,6 +104,7 @@ async def check_alignment(
             request_body=request,
             user_context=user,
             response_model=AlignmentAnalysisResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -106,6 +118,7 @@ async def get_alignment_explanation(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> AlignmentExplanationResponse:
     """Generate AI-powered alignment explanation using topic-driven architecture.
 
@@ -113,6 +126,8 @@ async def get_alignment_explanation(
     Uses 'alignment_explanation' topic for consistent prompt management.
     """
     logger.info("Generating alignment explanation", user_id=user.user_id)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         AlignmentExplanationResponse,
@@ -122,6 +137,7 @@ async def get_alignment_explanation(
             request_body=request,
             user_context=user,
             response_model=AlignmentExplanationResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -135,6 +151,7 @@ async def get_alignment_suggestions(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> AlignmentSuggestionsResponse:
     """Generate AI-powered alignment suggestions using topic-driven architecture.
 
@@ -142,6 +159,8 @@ async def get_alignment_suggestions(
     Uses 'alignment_suggestions' topic for consistent prompt management.
     """
     logger.info("Generating alignment suggestions", user_id=user.user_id)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         AlignmentSuggestionsResponse,
@@ -151,6 +170,7 @@ async def get_alignment_suggestions(
             request_body=request,
             user_context=user,
             response_model=AlignmentSuggestionsResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -164,12 +184,15 @@ async def get_kpi_recommendations(
     request: KPIRecommendationsRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> KPIRecommendationsResponse:
     """Generate KPI recommendations using topic-driven architecture.
 
     Uses 'kpi_recommendations' topic.
     """
     logger.info("Generating KPI recommendations", user_id=user.user_id)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         KPIRecommendationsResponse,
@@ -179,6 +202,7 @@ async def get_kpi_recommendations(
             request_body=request,
             user_context=user,
             response_model=KPIRecommendationsResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -192,6 +216,7 @@ async def get_strategy_suggestions(
     request: StrategySuggestionsRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> ApiResponse[StrategySuggestionsResponse]:
     """Get AI-generated strategy recommendations using topic-driven architecture.
 
@@ -207,6 +232,8 @@ async def get_strategy_suggestions(
         goal_intent=request.goal_intent[:100],
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     # Use generic handler with direct response model
     response_data = cast(
         StrategySuggestionsResponse,
@@ -216,6 +243,7 @@ async def get_strategy_suggestions(
             request_body=request,
             user_context=user,
             response_model=StrategySuggestionsResponse,
+            template_processor=template_processor,
         ),
     )
 

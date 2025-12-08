@@ -2,6 +2,10 @@
 
 This module provides FastAPI dependency factories for the AI engine
 and its components, enabling proper dependency injection in route handlers.
+
+Design:
+- Singletons: Used for stateless/reusable components (TopicRepository, S3Storage, LLMProvider)
+- Per-request: Used for components needing per-request state (BusinessApiClient, TemplateParameterProcessor)
 """
 
 import boto3
@@ -11,15 +15,18 @@ from coaching.src.application.ai_engine.response_serializer import ResponseSeria
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.config_multitenant import settings
 from coaching.src.domain.ports.llm_provider_port import LLMProviderPort
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
+from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
+from fastapi import Header
 from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()
 
 
-# Singleton instances (cached for performance)
+# Singleton instances (cached for performance - stateless components only)
 _topic_repo: TopicRepository | None = None
 _s3_storage: S3PromptStorage | None = None
 _response_serializer: ResponseSerializer | None = None
@@ -135,6 +142,79 @@ async def get_generic_handler() -> GenericAIHandler:
     return _generic_handler
 
 
+# --- Per-request factories (JWT token required) ---
+
+
+async def get_jwt_token(
+    authorization: str | None = Header(None, description="Authorization header with Bearer token"),
+) -> str | None:
+    """Extract JWT token from Authorization header.
+
+    This dependency extracts the raw JWT token for forwarding to
+    downstream services (Business API) for app-to-app authentication.
+
+    Args:
+        authorization: Authorization header value (Bearer token)
+
+    Returns:
+        JWT token string (without 'Bearer ' prefix), or None if not provided
+    """
+    if authorization and authorization.startswith("Bearer "):
+        return authorization.split(" ", 1)[1]
+    return None
+
+
+def create_template_processor(jwt_token: str | None = None) -> TemplateParameterProcessor:
+    """Create a TemplateParameterProcessor instance for the current request.
+
+    This factory creates fresh instances per-request, each with its own
+    BusinessApiClient configured with the user's JWT token. This ensures:
+    - Thread safety (no shared state between concurrent requests)
+    - Proper authentication (each request uses its own token)
+    - Clean isolation (no risk of token leakage)
+
+    Args:
+        jwt_token: JWT token for authenticating Business API calls
+
+    Returns:
+        TemplateParameterProcessor configured for the current request
+    """
+    business_api_client = BusinessApiClient(
+        base_url=settings.business_api_base_url,
+        jwt_token=jwt_token,
+    )
+
+    processor = TemplateParameterProcessor(business_api_client=business_api_client)
+
+    logger.debug(
+        "Created per-request TemplateParameterProcessor",
+        has_jwt=jwt_token is not None,
+    )
+
+    return processor
+
+
+async def get_template_processor(
+    jwt_token: str | None = None,
+) -> TemplateParameterProcessor | None:
+    """Dependency factory for per-request TemplateParameterProcessor.
+
+    Creates a fresh processor with the user's JWT token for Business API calls.
+    Returns None if no JWT token is provided (parameter enrichment will be skipped).
+
+    Args:
+        jwt_token: JWT token from get_jwt_token dependency
+
+    Returns:
+        TemplateParameterProcessor if jwt_token provided, else None
+    """
+    if jwt_token is None:
+        logger.debug("No JWT token provided, skipping template processor creation")
+        return None
+
+    return create_template_processor(jwt_token)
+
+
 def reset_singletons() -> None:
     """Reset all singleton instances (useful for testing).
 
@@ -154,10 +234,13 @@ def reset_singletons() -> None:
 
 
 __all__ = [
+    "create_template_processor",
     "get_generic_handler",
+    "get_jwt_token",
     "get_llm_provider",
     "get_response_serializer",
     "get_s3_prompt_storage",
+    "get_template_processor",
     "get_topic_repository",
     "get_unified_ai_engine",
     "reset_singletons",

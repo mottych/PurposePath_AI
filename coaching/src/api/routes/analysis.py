@@ -11,7 +11,11 @@ from typing import cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
@@ -38,6 +42,7 @@ async def analyze_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> AlignmentAnalysisResponse:
     """Analyze alignment between goals/actions and purpose/values.
 
@@ -61,6 +66,8 @@ async def analyze_alignment(
         text_length=len(request.text_to_analyze),
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         AlignmentAnalysisResponse,
         await handler.handle_single_shot(
@@ -69,6 +76,7 @@ async def analyze_alignment(
             request_body=request,
             user_context=user,
             response_model=AlignmentAnalysisResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -81,6 +89,7 @@ async def analyze_strategy(
     request: StrategyAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> StrategyAnalysisResponse:
     """Analyze business strategy effectiveness.
 
@@ -104,6 +113,8 @@ async def analyze_strategy(
         strategy_length=len(request.current_strategy),
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         StrategyAnalysisResponse,
         await handler.handle_single_shot(
@@ -112,6 +123,7 @@ async def analyze_strategy(
             request_body=request,
             user_context=user,
             response_model=StrategyAnalysisResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -124,6 +136,7 @@ async def analyze_kpis(
     request: KPIAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> KPIAnalysisResponse:
     """Analyze KPI effectiveness and provide recommendations.
 
@@ -147,6 +160,8 @@ async def analyze_kpis(
         kpi_count=len(request.current_kpis),
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         KPIAnalysisResponse,
         await handler.handle_single_shot(
@@ -155,6 +170,7 @@ async def analyze_kpis(
             request_body=request,
             user_context=user,
             response_model=KPIAnalysisResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -169,6 +185,7 @@ async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> OperationsAnalysisResponse:
     """Perform operational analysis (SWOT, root cause, action plan).
 
@@ -197,6 +214,8 @@ async def analyze_operations(
         analysis_type=request.analysis_type,
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         OperationsAnalysisResponse,
         await handler.handle_single_shot(
@@ -205,6 +224,7 @@ async def analyze_operations(
             request_body=request,
             user_context=user,
             response_model=OperationsAnalysisResponse,
+            template_processor=template_processor,
         ),
     )
 

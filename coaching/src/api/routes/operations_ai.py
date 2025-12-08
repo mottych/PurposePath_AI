@@ -16,7 +16,11 @@ from typing import cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies.ai_engine import get_generic_handler
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.operations import (
@@ -47,6 +51,7 @@ async def analyze_strategic_alignment(
     request: StrategicAlignmentRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> StrategicAlignmentResponse:
     """Analyze strategic alignment using topic-driven architecture.
 
@@ -57,6 +62,8 @@ async def analyze_strategic_alignment(
         "Analyzing strategic alignment", user_id=user.user_id, action_count=len(request.actions)
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         StrategicAlignmentResponse,
         await handler.handle_single_shot(
@@ -65,6 +72,7 @@ async def analyze_strategic_alignment(
             request_body=request,
             user_context=user,
             response_model=StrategicAlignmentResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -78,6 +86,7 @@ async def suggest_prioritization(
     request: PrioritizationRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> PrioritizationResponse:
     """Generate prioritization suggestions using topic-driven architecture.
 
@@ -88,6 +97,8 @@ async def suggest_prioritization(
         "Generating prioritization", user_id=user.user_id, action_count=len(request.actions)
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         PrioritizationResponse,
         await handler.handle_single_shot(
@@ -96,6 +107,7 @@ async def suggest_prioritization(
             request_body=request,
             user_context=user,
             response_model=PrioritizationResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -107,6 +119,7 @@ async def suggest_scheduling(
     request: SchedulingRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> SchedulingResponse:
     """Generate scheduling suggestions using topic-driven architecture.
 
@@ -114,6 +127,8 @@ async def suggest_scheduling(
     Uses 'scheduling_suggestions' topic for consistent prompt management.
     """
     logger.info("Generating scheduling", user_id=user.user_id, action_count=len(request.actions))
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         SchedulingResponse,
@@ -123,6 +138,7 @@ async def suggest_scheduling(
             request_body=request,
             user_context=user,
             response_model=SchedulingResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -134,6 +150,7 @@ async def suggest_root_cause_methods(
     request: RootCauseRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> RootCauseResponse:
     """Suggest root cause methods using topic-driven architecture.
 
@@ -144,6 +161,8 @@ async def suggest_root_cause_methods(
         "Suggesting root cause methods", user_id=user.user_id, issue_title=request.issue_title
     )
 
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return cast(
         RootCauseResponse,
         await handler.handle_single_shot(
@@ -152,6 +171,7 @@ async def suggest_root_cause_methods(
             request_body=request,
             user_context=user,
             response_model=RootCauseResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -163,6 +183,7 @@ async def generate_action_plan(
     request: ActionPlanRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> ActionPlanResponse:
     """Generate action plan using topic-driven architecture.
 
@@ -170,6 +191,8 @@ async def generate_action_plan(
     Uses 'action_suggestions' topic for consistent prompt management.
     """
     logger.info("Generating action plan", user_id=user.user_id, issue_title=request.issue.title)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         ActionPlanResponse,
@@ -179,6 +202,7 @@ async def generate_action_plan(
             request_body=request,
             user_context=user,
             response_model=ActionPlanResponse,
+            template_processor=template_processor,
         ),
     )
 
@@ -192,12 +216,15 @@ async def optimize_action_plan(
     request: ActionPlanRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> OptimizedActionPlanResponse:
     """Optimize action plan using topic-driven architecture.
 
     Uses 'optimize_action_plan' topic.
     """
     logger.info("Optimizing action plan", user_id=user.user_id, issue_title=request.issue.title)
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
         OptimizedActionPlanResponse,
@@ -207,6 +234,7 @@ async def optimize_action_plan(
             request_body=request,
             user_context=user,
             response_model=OptimizedActionPlanResponse,
+            template_processor=template_processor,
         ),
     )
 
