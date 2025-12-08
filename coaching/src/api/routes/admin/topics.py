@@ -45,13 +45,13 @@ from coaching.src.models.admin_topics import (
     UpdatePromptRequest,
     UpdatePromptResponse,
     UpdateTopicRequest,
-    UpdateTopicResponse,
+    UpsertTopicResponse,
     ValidateTopicRequest,
     ValidationResult,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel
 
 logger = structlog.get_logger()
@@ -424,79 +424,197 @@ async def create_topic(
         ) from e
 
 
-@router.put("/{topic_id}", response_model=UpdateTopicResponse)
-async def update_topic(
+@router.put("/{topic_id}", response_model=UpsertTopicResponse)
+async def upsert_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: UpdateTopicRequest,
+    response: Response,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
-) -> UpdateTopicResponse:
-    """Update an existing topic.
+) -> UpsertTopicResponse:
+    """Create or update a topic (UPSERT).
+
+    If the topic exists, it will be updated with the provided fields.
+    If the topic doesn't exist, it will be created using registry defaults
+    (if available) merged with the provided fields.
+
+    Returns:
+        - 201 Created: If the topic was created
+        - 200 OK: If the topic was updated
 
     Requires admin:topics:write permission.
     """
     try:
-        # Get existing topic
-        topic = await repository.get(topic_id=topic_id)
-        if not topic:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+        now = datetime.now(UTC)
+
+        # Try to get existing topic
+        existing_topic = await repository.get(topic_id=topic_id)
+
+        if existing_topic:
+            # UPDATE existing topic
+            updates: dict[str, Any] = {}
+            if request.topic_name is not None:
+                updates["topic_name"] = request.topic_name
+            if request.description is not None:
+                updates["description"] = request.description
+            if request.model_code is not None:
+                updates["model_code"] = request.model_code
+            if request.temperature is not None:
+                updates["temperature"] = request.temperature
+            if request.max_tokens is not None:
+                updates["max_tokens"] = request.max_tokens
+            if request.top_p is not None:
+                updates["top_p"] = request.top_p
+            if request.frequency_penalty is not None:
+                updates["frequency_penalty"] = request.frequency_penalty
+            if request.presence_penalty is not None:
+                updates["presence_penalty"] = request.presence_penalty
+            if request.is_active is not None:
+                updates["is_active"] = request.is_active
+            if request.display_order is not None:
+                updates["display_order"] = request.display_order
+            if request.allowed_parameters is not None:
+                updates["allowed_parameters"] = [
+                    DomainParameter(
+                        name=p["name"],
+                        type=p["type"],
+                        required=p.get("required", False),
+                        description=p.get("description"),
+                    )
+                    for p in request.allowed_parameters
+                ]
+
+            updates["updated_at"] = now
+            updated_topic = replace(existing_topic, **updates)
+            await repository.update(topic=updated_topic)
+
+            logger.info(
+                "Topic updated",
+                topic_id=topic_id,
+                updated_by=user.user_id,
+                updates=list(updates.keys()),
             )
 
-        # Update fields
-        updates: dict[str, Any] = {}
-        if request.topic_name is not None:
-            updates["topic_name"] = request.topic_name
-        if request.description is not None:
-            updates["description"] = request.description
-        if request.model_code is not None:
-            updates["model_code"] = request.model_code
-        if request.temperature is not None:
-            updates["temperature"] = request.temperature
-        if request.max_tokens is not None:
-            updates["max_tokens"] = request.max_tokens
-        if request.top_p is not None:
-            updates["top_p"] = request.top_p
-        if request.frequency_penalty is not None:
-            updates["frequency_penalty"] = request.frequency_penalty
-        if request.presence_penalty is not None:
-            updates["presence_penalty"] = request.presence_penalty
-        if request.is_active is not None:
-            updates["is_active"] = request.is_active
-        if request.display_order is not None:
-            updates["display_order"] = request.display_order
-        if request.allowed_parameters is not None:
-            updates["allowed_parameters"] = [
-                DomainParameter(
-                    name=p["name"],
-                    type=p["type"],
-                    required=p.get("required", False),
-                    description=p.get("description"),
+            response.status_code = status.HTTP_200_OK
+            return UpsertTopicResponse(
+                topic_id=topic_id,
+                created=False,
+                timestamp=now,
+                message="Topic updated successfully",
+            )
+
+        else:
+            # CREATE new topic - try to get defaults from registry
+            endpoint_def = get_endpoint_by_topic_id(topic_id)
+
+            if endpoint_def:
+                # Use registry defaults as base
+                base_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+                # Override with request values
+                new_topic = replace(
+                    base_topic,
+                    topic_name=request.topic_name or base_topic.topic_name,
+                    description=request.description
+                    if request.description is not None
+                    else base_topic.description,
+                    model_code=request.model_code or base_topic.model_code,
+                    temperature=request.temperature
+                    if request.temperature is not None
+                    else base_topic.temperature,
+                    max_tokens=request.max_tokens
+                    if request.max_tokens is not None
+                    else base_topic.max_tokens,
+                    top_p=request.top_p if request.top_p is not None else base_topic.top_p,
+                    frequency_penalty=request.frequency_penalty
+                    if request.frequency_penalty is not None
+                    else base_topic.frequency_penalty,
+                    presence_penalty=request.presence_penalty
+                    if request.presence_penalty is not None
+                    else base_topic.presence_penalty,
+                    is_active=request.is_active
+                    if request.is_active is not None
+                    else base_topic.is_active,
+                    display_order=request.display_order
+                    if request.display_order is not None
+                    else base_topic.display_order,
+                    allowed_parameters=[
+                        DomainParameter(
+                            name=p["name"],
+                            type=p["type"],
+                            required=p.get("required", False),
+                            description=p.get("description"),
+                        )
+                        for p in request.allowed_parameters
+                    ]
+                    if request.allowed_parameters is not None
+                    else base_topic.allowed_parameters,
+                    created_at=now,
+                    updated_at=now,
+                    created_by=user.user_id,
                 )
-                for p in request.allowed_parameters
-            ]
+            else:
+                # No registry entry - require topic_name at minimum
+                if not request.topic_name:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Topic '{topic_id}' not found in registry. "
+                        "topic_name is required to create a new topic.",
+                    )
 
-        updates["updated_at"] = datetime.now(UTC)
+                # Create with defaults and provided values
+                new_topic = LLMTopic(
+                    topic_id=topic_id,
+                    topic_name=request.topic_name,
+                    category="custom",
+                    topic_type="single_shot",
+                    description=request.description,
+                    display_order=request.display_order
+                    if request.display_order is not None
+                    else 100,
+                    is_active=request.is_active if request.is_active is not None else False,
+                    model_code=request.model_code or "claude-3-5-sonnet-20241022",
+                    temperature=request.temperature if request.temperature is not None else 0.7,
+                    max_tokens=request.max_tokens if request.max_tokens is not None else 2000,
+                    top_p=request.top_p if request.top_p is not None else 1.0,
+                    frequency_penalty=request.frequency_penalty
+                    if request.frequency_penalty is not None
+                    else 0.0,
+                    presence_penalty=request.presence_penalty
+                    if request.presence_penalty is not None
+                    else 0.0,
+                    prompts=[],
+                    allowed_parameters=[
+                        DomainParameter(
+                            name=p["name"],
+                            type=p["type"],
+                            required=p.get("required", False),
+                            description=p.get("description"),
+                        )
+                        for p in request.allowed_parameters
+                    ]
+                    if request.allowed_parameters
+                    else [],
+                    created_at=now,
+                    updated_at=now,
+                    created_by=user.user_id,
+                )
 
-        # Update topic
-        updated_topic = replace(topic, **updates)
-        # updated_topic.validate() # Validated in __post_init__
+            await repository.create(topic=new_topic)
 
-        await repository.update(topic=updated_topic)
+            logger.info(
+                "Topic created via upsert",
+                topic_id=topic_id,
+                created_by=user.user_id,
+                from_registry=endpoint_def is not None,
+            )
 
-        logger.info(
-            "Topic updated",
-            topic_id=topic_id,
-            updated_by=user.user_id,
-            updates=list(updates.keys()),
-        )
-
-        return UpdateTopicResponse(
-            topic_id=topic_id,
-            updated_at=updated_topic.updated_at,
-            message="Topic updated successfully",
-        )
+            response.status_code = status.HTTP_201_CREATED
+            return UpsertTopicResponse(
+                topic_id=topic_id,
+                created=True,
+                timestamp=now,
+                message="Topic created successfully",
+            )
 
     except HTTPException:
         raise

@@ -336,13 +336,13 @@ class TestCreateTopic:
         assert response.status_code == 422  # Validation error
 
 
-class TestUpdateTopic:
-    """Tests for PUT /admin/topics/{topic_id} endpoint."""
+class TestUpsertTopic:
+    """Tests for PUT /admin/topics/{topic_id} endpoint (UPSERT behavior)."""
 
     async def test_update_existing_topic(
         self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
     ) -> None:
-        """Test updating an existing topic."""
+        """Test updating an existing topic returns 200."""
         mock_repository.get.return_value = sample_topic
         mock_repository.update.return_value = None
 
@@ -357,20 +357,58 @@ class TestUpdateTopic:
         assert response.status_code == 200
         data = response.json()
         assert data["topic_id"] == "test_topic"
-        assert "updated_at" in data
+        assert data["created"] is False
+        assert "timestamp" in data
         assert "updated successfully" in data["message"]
 
-    async def test_update_nonexistent_topic(
+    async def test_create_topic_via_upsert_with_registry(
         self, client: TestClient, mock_repository: AsyncMock
     ) -> None:
-        """Test updating a topic that doesn't exist."""
+        """Test creating a topic via upsert when it doesn't exist but is in registry."""
+        mock_repository.get.return_value = None
+        mock_repository.create.return_value = None
+
+        # Use a topic_id that exists in the ENDPOINT_REGISTRY
+        request_data = {"topic_name": "Business Metrics", "is_active": True}
+
+        response = client.put("/admin/topics/business_metrics", json=request_data)
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["topic_id"] == "business_metrics"
+        assert data["created"] is True
+        assert "created successfully" in data["message"]
+
+    async def test_create_topic_via_upsert_without_registry(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test creating a new topic via upsert when not in registry."""
+        mock_repository.get.return_value = None
+        mock_repository.create.return_value = None
+
+        # Use a topic_id that doesn't exist in registry, must provide topic_name
+        request_data = {"topic_name": "Custom Topic", "is_active": False}
+
+        response = client.put("/admin/topics/custom_new_topic", json=request_data)
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["topic_id"] == "custom_new_topic"
+        assert data["created"] is True
+
+    async def test_create_topic_via_upsert_without_registry_requires_name(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test that creating via upsert without registry requires topic_name."""
         mock_repository.get.return_value = None
 
-        request_data = {"topic_name": "Updated Name"}
+        # No topic_name provided and topic not in registry
+        request_data = {"is_active": True}
 
-        response = client.put("/admin/topics/nonexistent", json=request_data)
+        response = client.put("/admin/topics/unknown_topic_xyz", json=request_data)
 
-        assert response.status_code == 404
+        assert response.status_code == 400
+        assert "topic_name is required" in response.json()["detail"]
 
 
 class TestDeleteTopic:
