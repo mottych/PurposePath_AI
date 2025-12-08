@@ -85,8 +85,10 @@ GET /api/v1/admin/topics
       "description": "Explore core values through conversation",
       "display_order": 1,
       "from_database": true,
-      "allowed_prompt_types": ["system", "user"],
-      "defined_prompt_types": ["system", "user"],
+      "templates": [
+        {"prompt_type": "system", "is_defined": true},
+        {"prompt_type": "user", "is_defined": false}
+      ],
       "created_at": "2024-11-01T10:00:00Z",
       "updated_at": "2024-11-13T15:30:00Z",
       "created_by": "admin_123"
@@ -104,8 +106,7 @@ GET /api/v1/admin/topics
 | Field | Description |
 |-------|-------------|
 | `from_database` | `true` = Topic config stored in DB, `false` = Using registry defaults |
-| `allowed_prompt_types` | Prompt types allowed for this topic (from endpoint registry) |
-| `defined_prompt_types` | Prompt types that have been uploaded to S3 |
+| `templates` | Array of allowed templates with `is_defined` indicating if uploaded to S3 |
 
 **Status Codes:**
 
@@ -168,7 +169,6 @@ GET /api/v1/admin/topics/{topic_id}
   "template_status": [
     {
       "prompt_type": "system",
-      "is_allowed": true,
       "is_defined": true,
       "s3_bucket": "purposepath-prompts-prod",
       "s3_key": "prompts/core_values_coaching/system.md",
@@ -177,12 +177,11 @@ GET /api/v1/admin/topics/{topic_id}
     },
     {
       "prompt_type": "user",
-      "is_allowed": true,
-      "is_defined": true,
-      "s3_bucket": "purposepath-prompts-prod",
-      "s3_key": "prompts/core_values_coaching/user.md",
-      "updated_at": "2024-11-13T15:30:00Z",
-      "updated_by": "admin_123"
+      "is_defined": false,
+      "s3_bucket": null,
+      "s3_key": null,
+      "updated_at": null,
+      "updated_by": null
     }
   ],
   "allowed_parameters": [
@@ -213,14 +212,13 @@ GET /api/v1/admin/topics/{topic_id}
 
 **Template Status:**
 
-The `template_status` array shows which templates are allowed for this topic and their current state:
+The `template_status` array shows each allowed template and its definition status:
 
 | Field | Description |
 |-------|-------------|
-| `is_allowed` | `true` if this prompt type is allowed by the endpoint registry |
 | `is_defined` | `true` if this prompt has been uploaded to S3 |
-| `s3_bucket`, `s3_key` | S3 location (only present if `is_defined` is `true`) |
-| `updated_at`, `updated_by` | Last update info (only present if `is_defined` is `true`) |
+| `s3_bucket`, `s3_key` | S3 location (null if not defined) |
+| `updated_at`, `updated_by` | Last update info (null if not defined) |
 
 **Status Codes:**
 
