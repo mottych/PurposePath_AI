@@ -4,7 +4,7 @@ This module provides a unified interface for executing AI requests using
 topic-driven configuration, supporting both single-shot and conversation flows.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
@@ -18,6 +18,9 @@ from coaching.src.domain.value_objects.conversation_context import ConversationC
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
 
@@ -109,6 +112,7 @@ class UnifiedAIEngine:
         llm_provider: LLMProviderPort,
         response_serializer: ResponseSerializer,
         conversation_repo: ConversationRepositoryPort | None = None,
+        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> None:
         """Initialize unified AI engine.
 
@@ -118,12 +122,14 @@ class UnifiedAIEngine:
             llm_provider: LLM provider for AI generation
             response_serializer: Serializer for response formatting
             conversation_repo: Optional repository for conversation persistence
+            template_processor: Optional processor for automatic parameter enrichment
         """
         self.topic_repo = topic_repo
         self.s3_storage = s3_storage
         self.llm_provider = llm_provider
         self.response_serializer = response_serializer
         self.conversation_repo = conversation_repo
+        self.template_processor = template_processor
         self.logger = logger.bind(service="unified_ai_engine")
 
     async def execute_single_shot(
@@ -132,22 +138,27 @@ class UnifiedAIEngine:
         topic_id: str,
         parameters: dict[str, Any],
         response_model: type[BaseModel],
+        user_id: str | None = None,
+        tenant_id: str | None = None,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
         Flow:
         1. Get topic configuration from DynamoDB
-        2. Validate parameters against topic schema
-        3. Load prompts from S3
-        4. Render prompts with parameters
-        5. Call LLM using topic model config
-        6. Serialize response to expected model
-        7. Return typed result
+        2. Load prompts from S3
+        3. Enrich parameters (if template_processor is configured)
+        4. Validate parameters against topic schema
+        5. Render prompts with enriched parameters
+        6. Call LLM using topic model config
+        7. Serialize response to expected model
+        8. Return typed result
 
         Args:
             topic_id: Topic identifier
             parameters: Request parameters to inject into prompts
             response_model: Expected response model class
+            user_id: Optional user ID for parameter enrichment
+            tenant_id: Optional tenant ID for parameter enrichment
 
         Returns:
             Instance of response_model with AI-generated data
@@ -168,18 +179,30 @@ class UnifiedAIEngine:
         # Step 1: Get topic configuration
         topic = await self._get_active_topic(topic_id)
 
-        # Step 2: Validate parameters
-        self._validate_parameters(topic, parameters)
-
-        # Step 3: Load prompts from S3
+        # Step 2: Load prompts from S3
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
 
-        # Step 4: Render prompts with parameters
-        rendered_system = self._render_prompt(topic_id, "system", system_prompt_content, parameters)
-        rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, parameters)
+        # Step 3: Enrich parameters if template processor is configured
+        enriched_params = await self._enrich_parameters(
+            parameters=parameters,
+            system_prompt=system_prompt_content,
+            user_prompt=user_prompt_content,
+            topic=topic,
+            user_id=user_id or parameters.get("user_id", ""),
+            tenant_id=tenant_id or parameters.get("tenant_id", ""),
+        )
 
-        # Step 5: Call LLM with topic configuration
+        # Step 4: Validate parameters (after enrichment)
+        self._validate_parameters(topic, enriched_params)
+
+        # Step 5: Render prompts with enriched parameters
+        rendered_system = self._render_prompt(
+            topic_id, "system", system_prompt_content, enriched_params
+        )
+        rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, enriched_params)
+
+        # Step 6: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
 
         llm_response = await self.llm_provider.generate(
@@ -198,7 +221,7 @@ class UnifiedAIEngine:
             finish_reason=llm_response.finish_reason,
         )
 
-        # Step 6: Serialize response
+        # Step 7: Serialize response
         result = await self.response_serializer.serialize(
             ai_response=llm_response.content,
             response_model=response_model,
@@ -212,6 +235,90 @@ class UnifiedAIEngine:
         )
 
         return result
+
+    async def _enrich_parameters(
+        self,
+        *,
+        parameters: dict[str, Any],
+        system_prompt: str,
+        user_prompt: str,
+        topic: LLMTopic,
+        user_id: str,
+        tenant_id: str,
+    ) -> dict[str, Any]:
+        """Enrich parameters by fetching missing values via retrieval methods.
+
+        If template_processor is not configured, returns parameters unchanged.
+        Otherwise, analyzes templates to find needed parameters and enriches
+        any that are missing from the provided parameters.
+
+        Args:
+            parameters: Original request parameters
+            system_prompt: System prompt template
+            user_prompt: User prompt template
+            topic: Topic configuration (for required params info)
+            user_id: User ID for API calls
+            tenant_id: Tenant ID for API calls
+
+        Returns:
+            Enriched parameters dictionary
+        """
+        if self.template_processor is None:
+            # No enrichment - return original parameters
+            return parameters
+
+        # Combine both templates for parameter detection
+        combined_template = f"{system_prompt}\n{user_prompt}"
+
+        # Get required parameter names from topic
+        required_params = {param.name for param in topic.allowed_parameters if param.required}
+
+        self.logger.debug(
+            "Enriching parameters",
+            topic_id=topic.topic_id,
+            required_params=list(required_params),
+            provided_params=list(parameters.keys()),
+        )
+
+        # Process templates and enrich missing parameters
+        result = await self.template_processor.process_template_parameters(
+            template=combined_template,
+            payload=parameters,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            required_params=required_params,
+        )
+
+        # Log any warnings
+        if result.warnings:
+            for warning in result.warnings:
+                self.logger.warning(
+                    "Parameter enrichment warning",
+                    topic_id=topic.topic_id,
+                    warning=warning,
+                )
+
+        # Check for missing required params
+        if result.missing_required:
+            self.logger.error(
+                "Required parameters could not be resolved",
+                topic_id=topic.topic_id,
+                missing=result.missing_required,
+            )
+            raise ParameterValidationError(topic.topic_id, result.missing_required)
+
+        # Merge enriched params with original (original takes precedence)
+        enriched = {**result.parameters, **parameters}
+
+        self.logger.info(
+            "Parameter enrichment completed",
+            topic_id=topic.topic_id,
+            original_count=len(parameters),
+            enriched_count=len(enriched),
+            added_count=len(enriched) - len(parameters),
+        )
+
+        return enriched
 
     async def _get_active_topic(self, topic_id: str) -> LLMTopic:
         """Get topic and verify it's active.
