@@ -125,6 +125,20 @@ class ParameterDefinition(BaseModel):
     description: str | None = Field(None, description="Parameter description")
 
 
+class TemplateStatus(BaseModel):
+    """Status of a prompt template - whether it's allowed and if it exists."""
+
+    prompt_type: str = Field(..., description="Prompt type (system, user, assistant)")
+    is_allowed: bool = Field(
+        ..., description="Whether this prompt type is allowed for this topic (from registry)"
+    )
+    is_defined: bool = Field(..., description="Whether this prompt has been uploaded to S3")
+    s3_bucket: str | None = Field(None, description="S3 bucket if defined")
+    s3_key: str | None = Field(None, description="S3 key if defined")
+    updated_at: datetime | None = Field(None, description="Last update if defined")
+    updated_by: str | None = Field(None, description="Last updater if defined")
+
+
 class TopicSummary(BaseModel):
     """Summary information about a topic."""
 
@@ -140,6 +154,12 @@ class TopicSummary(BaseModel):
     display_order: int = Field(..., description="Display order")
     from_database: bool = Field(
         ..., description="Whether topic data comes from database (True) or registry (False)"
+    )
+    allowed_prompt_types: list[str] = Field(
+        ..., description="Prompt types allowed for this topic (from registry)"
+    )
+    defined_prompt_types: list[str] = Field(
+        ..., description="Prompt types that have been uploaded to S3"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
@@ -165,9 +185,13 @@ class TopicDetail(BaseModel):
     from_database: bool = Field(
         ..., description="Whether topic data comes from database (True) or registry (False)"
     )
-    prompts: list[PromptInfo] = Field(..., description="Associated prompts")
+    prompts: list[PromptInfo] = Field(..., description="Associated prompts (defined in S3)")
+    template_status: list[TemplateStatus] = Field(
+        ...,
+        description="Status of all allowed templates - shows which are allowed and which are defined",
+    )
     allowed_parameters: list[ParameterDefinition] = Field(
-        ..., description="Allowed prompt parameters"
+        ..., description="Allowed prompt parameters for use in templates"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

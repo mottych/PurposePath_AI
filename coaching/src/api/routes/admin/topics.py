@@ -38,6 +38,7 @@ from coaching.src.models.admin_topics import (
     ParameterDefinition,
     PromptContentResponse,
     PromptInfo,
+    TemplateStatus,
     TopicDetail,
     TopicListResponse,
     TopicSummary,
@@ -61,8 +62,19 @@ router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 # Helper functions
 
 
-def _map_topic_to_summary(topic: LLMTopic, from_database: bool = True) -> TopicSummary:
-    """Map domain LLMTopic to API TopicSummary."""
+def _map_topic_to_summary(
+    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+) -> TopicSummary:
+    """Map domain LLMTopic to API TopicSummary.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+    """
+    # Get defined prompt types from the topic's prompts
+    defined_prompt_types = [p.prompt_type for p in topic.prompts]
+
     return TopicSummary(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -75,14 +87,52 @@ def _map_topic_to_summary(topic: LLMTopic, from_database: bool = True) -> TopicS
         description=topic.description,
         display_order=topic.display_order,
         from_database=from_database,
+        allowed_prompt_types=allowed_prompt_types or [],
+        defined_prompt_types=defined_prompt_types,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
     )
 
 
-def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDetail:
-    """Map domain LLMTopic to API TopicDetail."""
+def _map_topic_to_detail(
+    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+) -> TopicDetail:
+    """Map domain LLMTopic to API TopicDetail.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+    """
+    # Create a lookup of defined prompts by type
+    defined_prompts = {p.prompt_type: p for p in topic.prompts}
+
+    # Build template status for all allowed prompt types
+    template_status_list: list[TemplateStatus] = []
+    for prompt_type in allowed_prompt_types or []:
+        if prompt_type in defined_prompts:
+            p = defined_prompts[prompt_type]
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_allowed=True,
+                    is_defined=True,
+                    s3_bucket=p.s3_bucket,
+                    s3_key=p.s3_key,
+                    updated_at=p.updated_at,
+                    updated_by=p.updated_by,
+                )
+            )
+        else:
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_allowed=True,
+                    is_defined=False,
+                )
+            )
+
     return TopicDetail(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -108,6 +158,7 @@ def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDe
             )
             for p in topic.prompts
         ],
+        template_status=template_status_list,
         allowed_parameters=[
             ParameterDefinition(
                 name=p.name,
@@ -124,6 +175,14 @@ def _map_topic_to_detail(topic: LLMTopic, from_database: bool = True) -> TopicDe
 
 
 # Endpoints
+
+
+def _get_allowed_prompt_types(topic_id: str) -> list[str]:
+    """Get allowed prompt types for a topic from the endpoint registry."""
+    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    if endpoint_def:
+        return [pt.value for pt in endpoint_def.allowed_prompt_types]
+    return []
 
 
 @router.get("", response_model=TopicListResponse)
@@ -195,10 +254,14 @@ async def list_topics(
 
         logger.info("topics_paginated", total=total, page_count=len(page_topics))
 
-        # Map topics with from_database indicator
+        # Map topics with from_database indicator and allowed_prompt_types
         return TopicListResponse(
             topics=[
-                _map_topic_to_summary(t, from_database=(t.topic_id in db_topic_ids))
+                _map_topic_to_summary(
+                    t,
+                    from_database=(t.topic_id in db_topic_ids),
+                    allowed_prompt_types=_get_allowed_prompt_types(t.topic_id),
+                )
                 for t in page_topics
             ],
             total=total,
@@ -232,9 +295,14 @@ async def get_topic(
         # First, try to get from database
         topic = await repository.get(topic_id=topic_id)
 
+        # Get allowed prompt types from registry (used for both DB and default)
+        allowed_prompt_types = _get_allowed_prompt_types(topic_id)
+
         if topic:
             # Topic found in database
-            return _map_topic_to_detail(topic, from_database=True)
+            return _map_topic_to_detail(
+                topic, from_database=True, allowed_prompt_types=allowed_prompt_types
+            )
 
         # Topic not in database, try to get from registry
         endpoint_def = get_endpoint_by_topic_id(topic_id)
@@ -246,7 +314,9 @@ async def get_topic(
 
         # Create default topic from registry
         default_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
-        return _map_topic_to_detail(default_topic, from_database=False)
+        return _map_topic_to_detail(
+            default_topic, from_database=False, allowed_prompt_types=allowed_prompt_types
+        )
 
     except HTTPException:
         raise
