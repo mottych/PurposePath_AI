@@ -225,6 +225,15 @@ class UpdateTopicResponse(BaseModel):
     message: str = Field(..., description="Success message")
 
 
+class UpsertTopicResponse(BaseModel):
+    """Response after upserting (create or update) a topic."""
+
+    topic_id: str = Field(..., description="Topic ID")
+    created: bool = Field(..., description="True if created, False if updated")
+    timestamp: datetime = Field(..., description="Creation or update timestamp")
+    message: str = Field(..., description="Success message")
+
+
 class DeleteTopicResponse(BaseModel):
     """Response after deleting a topic."""
 
