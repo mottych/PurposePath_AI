@@ -216,11 +216,14 @@ image = docker.Image(
 )
 
 # Python Lambda function with Docker
+# NOTE: Using repo_digest instead of image_name to ensure Lambda updates when image changes.
+# image_name uses the tag (e.g., :dev) which doesn't change, so Pulumi doesn't detect updates.
+# repo_digest uses the SHA256 digest which changes with each new image push.
 coaching_lambda = aws.lambda_.Function(
     "coaching-api",
     package_type="Image",
     role=lambda_role.arn,
-    image_uri=image.image_name,
+    image_uri=image.repo_digest,
     timeout=300,
     memory_size=1024,
     environment=aws.lambda_.FunctionEnvironmentArgs(
