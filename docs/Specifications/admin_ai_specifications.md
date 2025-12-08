@@ -4,7 +4,13 @@
 
 ## Overview
 
-This document specifies all admin endpoints for managing the LLM Topic system. Admin users can create, update, activate/deactivate topics, manage prompts, and view the endpoint registry with parameter source mappings.
+This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, test topics, and view the endpoint registry.
+
+**Important:** Topics are defined in the code-based `endpoint_registry` and cannot be created or deleted by admins. Admins can only:
+- Update topic configurations (model, temperature, prompts, etc.)
+- Manage prompt content (system, user, assistant prompts)
+- Test topic configurations before activation
+- View endpoint registry with parameter source mappings
 
 ---
 
@@ -12,22 +18,18 @@ This document specifies all admin endpoints for managing the LLM Topic system. A
 
 | Endpoint | Status | Notes |
 |----------|--------|-------|
-| GET /topics | ✅ Implemented | |
+| GET /topics | ✅ Implemented | List topics from registry + DB overrides |
 | GET /topics/{topic_id} | ✅ Implemented | |
-| POST /topics | ✅ Implemented | |
-| PUT /topics/{topic_id} | ✅ Implemented | |
-| DELETE /topics/{topic_id} | ✅ Implemented | |
+| PUT /topics/{topic_id} | ✅ Implemented | Update topic config |
 | GET /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
 | PUT /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
 | POST /topics/{topic_id}/prompts | ✅ Implemented | |
 | DELETE /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
 | GET /models | ✅ Implemented | |
 | POST /topics/validate | ✅ Implemented | |
-| GET /topics/registry/endpoints | ✅ Implemented | New - Issue #113 |
-| POST /topics/{topic_id}/test | ✅ Implemented | New - Issue #113 |
-| POST /topics/{topic_id}/clone | ⏳ Planned | |
-| GET /topics/{topic_id}/stats | ⏳ Planned | |
-| PATCH /topics/bulk | ⏳ Planned | |
+| GET /topics/registry/endpoints | ✅ Implemented | **New** - Shows allowed_prompt_types & parameter_refs |
+| POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
+| GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
 
 ---
 
@@ -927,43 +929,7 @@ POST /api/v1/admin/topics/{topic_id}/test
 
 ---
 
-### 14. Clone Topic (Planned)
-
-**Status:** ⏳ Not yet implemented
-
-**Purpose:** Create a copy of an existing topic for modification
-
-**Endpoint:**
-
-```http
-POST /api/v1/admin/topics/{topic_id}/clone
-```
-
-**Request Body:**
-
-```json
-{
-  "new_topic_id": "core_values_coaching_v2",
-  "new_topic_name": "Core Values Coaching v2",
-  "copy_prompts": true,
-  "is_active": false
-}
-```
-
-**Response:**
-
-```json
-{
-  "topic_id": "core_values_coaching_v2",
-  "cloned_from": "core_values_coaching",
-  "created_at": "2024-11-13T17:00:00Z",
-  "message": "Topic cloned successfully"
-}
-```
-
----
-
-### 15. Get Topic Usage Statistics (Planned)
+### 14. Get Topic Usage Statistics (Planned)
 
 **Status:** ⏳ Not yet implemented
 
@@ -1001,44 +967,18 @@ GET /api/v1/admin/topics/{topic_id}/stats
 
 ---
 
-### 16. Bulk Update Topics (Planned)
-
-**Status:** ⏳ Not yet implemented
-
-**Purpose:** Update multiple topics at once
-
-**Endpoint:**
-
-```http
-PATCH /api/v1/admin/topics/bulk
-```
-
-**Request Body:**
-
-```json
-{
-  "topic_ids": ["core_values_coaching", "purpose_discovery"],
-  "updates": {
-    "model_code": "claude-3-5-haiku-20241022",
-    "is_active": false
-  }
-}
-```
-
----
-
 ## Admin UI Workflows
 
-### Creating a New Topic
+### Configuring a Topic
 
-1. **GET** `/api/v1/admin/models` - Get available models
-2. **GET** `/api/v1/admin/topics/registry/endpoints` - View existing endpoint mappings (optional)
-3. **POST** `/api/v1/admin/topics` - Create topic (inactive) with `allowed_parameters`
-4. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload system prompt
-5. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload user prompt
-6. **POST** `/api/v1/admin/topics/validate` - Validate configuration
-7. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test with sample parameters
-8. **PUT** `/api/v1/admin/topics/{topic_id}` - Activate topic
+Topics are defined in the `endpoint_registry` code. Admins configure them by:
+
+1. **GET** `/api/v1/admin/topics/registry/endpoints` - View all endpoints with `allowed_prompt_types` and `parameter_refs`
+2. **GET** `/api/v1/admin/topics/{topic_id}` - Get current topic configuration
+3. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload required prompts (system, user, etc.)
+4. **PUT** `/api/v1/admin/topics/{topic_id}` - Update model config (temperature, max_tokens, etc.)
+5. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test with sample parameters
+6. **PUT** `/api/v1/admin/topics/{topic_id}` - Activate topic (`is_active: true`)
 
 ### Editing Prompts
 
