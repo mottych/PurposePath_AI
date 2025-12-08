@@ -125,13 +125,17 @@ class ParameterDefinition(BaseModel):
     description: str | None = Field(None, description="Parameter description")
 
 
-class TemplateStatus(BaseModel):
-    """Status of a prompt template - whether it's allowed and if it exists."""
+class TemplateSummary(BaseModel):
+    """Summary of a prompt template for list view."""
 
     prompt_type: str = Field(..., description="Prompt type (system, user, assistant)")
-    is_allowed: bool = Field(
-        ..., description="Whether this prompt type is allowed for this topic (from registry)"
-    )
+    is_defined: bool = Field(..., description="Whether this prompt has been uploaded to S3")
+
+
+class TemplateStatus(BaseModel):
+    """Full status of a prompt template for detail view."""
+
+    prompt_type: str = Field(..., description="Prompt type (system, user, assistant)")
     is_defined: bool = Field(..., description="Whether this prompt has been uploaded to S3")
     s3_bucket: str | None = Field(None, description="S3 bucket if defined")
     s3_key: str | None = Field(None, description="S3 key if defined")
@@ -155,11 +159,8 @@ class TopicSummary(BaseModel):
     from_database: bool = Field(
         ..., description="Whether topic data comes from database (True) or registry (False)"
     )
-    allowed_prompt_types: list[str] = Field(
-        ..., description="Prompt types allowed for this topic (from registry)"
-    )
-    defined_prompt_types: list[str] = Field(
-        ..., description="Prompt types that have been uploaded to S3"
+    templates: list[TemplateSummary] = Field(
+        ..., description="Allowed templates with their definition status"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

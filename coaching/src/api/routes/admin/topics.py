@@ -39,6 +39,7 @@ from coaching.src.models.admin_topics import (
     PromptContentResponse,
     PromptInfo,
     TemplateStatus,
+    TemplateSummary,
     TopicDetail,
     TopicListResponse,
     TopicSummary,
@@ -73,7 +74,13 @@ def _map_topic_to_summary(
         allowed_prompt_types: List of allowed prompt types from endpoint registry
     """
     # Get defined prompt types from the topic's prompts
-    defined_prompt_types = [p.prompt_type for p in topic.prompts]
+    defined_prompt_types = {p.prompt_type for p in topic.prompts}
+
+    # Build templates array with is_defined indicator
+    templates = [
+        TemplateSummary(prompt_type=pt, is_defined=(pt in defined_prompt_types))
+        for pt in (allowed_prompt_types or [])
+    ]
 
     return TopicSummary(
         topic_id=topic.topic_id,
@@ -87,8 +94,7 @@ def _map_topic_to_summary(
         description=topic.description,
         display_order=topic.display_order,
         from_database=from_database,
-        allowed_prompt_types=allowed_prompt_types or [],
-        defined_prompt_types=defined_prompt_types,
+        templates=templates,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
@@ -116,7 +122,6 @@ def _map_topic_to_detail(
             template_status_list.append(
                 TemplateStatus(
                     prompt_type=prompt_type,
-                    is_allowed=True,
                     is_defined=True,
                     s3_bucket=p.s3_bucket,
                     s3_key=p.s3_key,
@@ -128,7 +133,6 @@ def _map_topic_to_detail(
             template_status_list.append(
                 TemplateStatus(
                     prompt_type=prompt_type,
-                    is_allowed=True,
                     is_defined=False,
                 )
             )
