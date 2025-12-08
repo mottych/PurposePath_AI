@@ -131,6 +131,7 @@ app.add_middleware(
         "X-Api-Key",
         "X-Tenant-Id",
         "X-User-Id",
+        "X-CSRF-Token",
     ],
     expose_headers=[
         "X-Request-Id",
