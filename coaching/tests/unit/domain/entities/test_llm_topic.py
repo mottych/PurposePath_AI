@@ -247,6 +247,8 @@ class TestLLMTopic:
 
     def test_to_dynamodb_item(self, sample_topic: LLMTopic) -> None:
         """Test conversion to DynamoDB item."""
+        from decimal import Decimal
+
         item = sample_topic.to_dynamodb_item()
 
         assert item["topic_id"] == "core_values"
@@ -257,7 +259,8 @@ class TestLLMTopic:
         assert len(item["allowed_parameters"]) == 1
         assert len(item["prompts"]) == 1
         assert item["model_code"] == "claude-3-5-sonnet-20241022"
-        assert item["temperature"] == 0.7
+        # DynamoDB requires Decimal for float values
+        assert item["temperature"] == Decimal("0.7")
         assert item["max_tokens"] == 2000
         assert item["additional_config"]["default_model"] == "claude-3-sonnet"
         assert item["created_at"] == "2025-01-15T10:00:00+00:00"

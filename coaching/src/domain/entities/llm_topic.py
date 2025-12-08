@@ -6,6 +6,7 @@ conversation coaching, single-shot analysis, and KPI system templates.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, ClassVar
 
 from coaching.src.domain.exceptions.topic_exceptions import (
@@ -258,6 +259,7 @@ class LLMTopic:
         """Convert to DynamoDB item format.
 
         Serializes all nested objects and converts datetimes to ISO 8601 strings.
+        Float values are converted to Decimal for DynamoDB compatibility.
 
         Returns:
             dict: Complete DynamoDB item ready for storage
@@ -269,11 +271,12 @@ class LLMTopic:
             "category": self.category,
             "is_active": self.is_active,
             "model_code": self.model_code,
-            "temperature": self.temperature,
+            # Convert floats to Decimal for DynamoDB
+            "temperature": Decimal(str(self.temperature)),
             "max_tokens": self.max_tokens,
-            "top_p": self.top_p,
-            "frequency_penalty": self.frequency_penalty,
-            "presence_penalty": self.presence_penalty,
+            "top_p": Decimal(str(self.top_p)),
+            "frequency_penalty": Decimal(str(self.frequency_penalty)),
+            "presence_penalty": Decimal(str(self.presence_penalty)),
             "allowed_parameters": [param.to_dict() for param in self.allowed_parameters],
             "prompts": [prompt.to_dict() for prompt in self.prompts],
             "additional_config": self.additional_config,
@@ -309,11 +312,11 @@ class LLMTopic:
             # Old format: extract from config dict
             config = item["config"]
             model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
-            temperature = config.get("temperature", 0.7)
+            temperature = float(config.get("temperature", 0.7))
             max_tokens = config.get("max_tokens", 2000)
-            top_p = config.get("top_p", 1.0)
-            frequency_penalty = config.get("frequency_penalty", 0.0)
-            presence_penalty = config.get("presence_penalty", 0.0)
+            top_p = float(config.get("top_p", 1.0))
+            frequency_penalty = float(config.get("frequency_penalty", 0.0))
+            presence_penalty = float(config.get("presence_penalty", 0.0))
             additional_config = {
                 k: v
                 for k, v in config.items()
@@ -329,11 +332,12 @@ class LLMTopic:
             }
         else:
             # New format: explicit fields
-            temperature = item.get("temperature", 0.7)
+            # Convert Decimal to float for DynamoDB compatibility
+            temperature = float(item.get("temperature", 0.7))
             max_tokens = item.get("max_tokens", 2000)
-            top_p = item.get("top_p", 1.0)
-            frequency_penalty = item.get("frequency_penalty", 0.0)
-            presence_penalty = item.get("presence_penalty", 0.0)
+            top_p = float(item.get("top_p", 1.0))
+            frequency_penalty = float(item.get("frequency_penalty", 0.0))
+            presence_penalty = float(item.get("presence_penalty", 0.0))
             additional_config = item.get("additional_config", {})
 
         return cls(
