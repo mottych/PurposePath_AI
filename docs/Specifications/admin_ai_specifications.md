@@ -4,13 +4,12 @@
 
 ## Overview
 
-This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, test topics, and view the endpoint registry.
+This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, and test topics.
 
 **Important:** Topics are defined in the code-based `endpoint_registry` and cannot be created or deleted by admins. Admins can only:
 - Update topic configurations (model, temperature, prompts, etc.)
 - Manage prompt content (system, user, assistant prompts)
 - Test topic configurations before activation
-- View endpoint registry with parameter source mappings
 
 ---
 
@@ -27,7 +26,6 @@ This document specifies all admin endpoints for managing the LLM Topic system. A
 | DELETE /topics/{topic_id}/prompts/{prompt_type} | ✅ Implemented | |
 | GET /models | ✅ Implemented | |
 | POST /topics/validate | ✅ Implemented | |
-| GET /topics/registry/endpoints | ✅ Implemented | **New** - Shows allowed_prompt_types & parameter_refs |
 | POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
 | GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
 
@@ -770,136 +768,7 @@ POST /api/v1/admin/topics/validate
 
 ---
 
-### 12. List Endpoint Registry
-
-**Purpose:** Get all API endpoints mapped to topics with parameter source information. This endpoint shows which parameters each endpoint uses and where those parameters are sourced from (request body, user profile, goals, etc.).
-
-**Endpoint:**
-
-```http
-GET /api/v1/admin/topics/registry/endpoints
-```
-
-**Query Parameters:**
-
-| Parameter | Type | Required | Default | Description | Allowed Values |
-|-----------|------|----------|---------|-------------|----------------|
-| `category` | string | No | - | Filter by category | `onboarding`, `conversation`, `core_values`, etc. |
-| `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
-| `topic_type` | string | No | - | Filter by topic type | `conversation_coaching`, `single_shot`, `kpi_system` |
-
-**Response:**
-
-```json
-{
-  "endpoints": [
-    {
-      "endpoint_path": "/coaching/alignment-check",
-      "http_method": "POST",
-      "topic_id": "alignment_check",
-      "response_model": "AlignmentAnalysisResponse",
-      "topic_type": "single_shot",
-      "category": "core_values",
-      "description": "Check alignment between actions and core values",
-      "is_active": true,
-      "allowed_prompt_types": ["system", "user"],
-      "parameter_refs": [
-        {
-          "name": "user_input",
-          "source": "REQUEST",
-          "source_path": "user_input"
-        },
-        {
-          "name": "core_values",
-          "source": "ONBOARDING",
-          "source_path": "core_values"
-        },
-        {
-          "name": "purpose",
-          "source": "ONBOARDING",
-          "source_path": "purpose"
-        }
-      ]
-    },
-    {
-      "endpoint_path": "/coaching/goal-coach",
-      "http_method": "POST",
-      "topic_id": "goal_coaching",
-      "response_model": "GoalCoachingResponse",
-      "topic_type": "single_shot",
-      "category": "goals",
-      "description": "AI coaching for goal achievement",
-      "is_active": true,
-      "allowed_prompt_types": ["system", "user"],
-      "parameter_refs": [
-        {
-          "name": "goal",
-          "source": "GOAL",
-          "source_path": "goal"
-        },
-        {
-          "name": "progress",
-          "source": "GOAL",
-          "source_path": "progress"
-        }
-      ]
-    }
-  ],
-  "total": 24,
-  "statistics": {
-    "total_endpoints": 24,
-    "active_endpoints": 22,
-    "inactive_endpoints": 2,
-    "by_category": {
-      "core_values": 5,
-      "goals": 8,
-      "onboarding": 4,
-      "conversation": 3,
-      "analysis": 4
-    },
-    "by_topic_type": {
-      "single_shot": 18,
-      "conversation_coaching": 4,
-      "kpi_system": 2
-    }
-  }
-}
-```
-
-**Allowed Prompt Types:**
-
-Each endpoint specifies which prompt types it can use:
-
-| Prompt Type | Description |
-|-------------|-------------|
-| `system` | System prompt that sets AI behavior and context |
-| `user` | User prompt template for formatting user input |
-| `assistant` | Assistant prompt for multi-turn conversations |
-
-**Parameter Sources:**
-
-| Source | Description |
-|--------|-------------|
-| `REQUEST` | Parameter comes from the API request body |
-| `ONBOARDING` | Auto-enriched from user's onboarding profile (core_values, purpose, vision) |
-| `GOAL` | Auto-enriched from a specific goal context |
-| `GOALS` | Auto-enriched from user's goals list |
-| `KPI` | Auto-enriched from a specific KPI |
-| `KPIS` | Auto-enriched from user's KPIs list |
-| `ACTION` | Auto-enriched from action item context |
-| `ISSUE` | Auto-enriched from issue context |
-| `CONVERSATION` | Auto-enriched from conversation history |
-| `COMPUTED` | Computed at runtime (tenant_id, user_id, etc.) |
-
-**Status Codes:**
-
-- `200 OK`: Success
-- `401 Unauthorized`: Missing or invalid auth token
-- `403 Forbidden`: Insufficient permissions
-
----
-
-### 13. Test Topic
+### 12. Test Topic
 
 **Purpose:** Test a topic configuration by executing it with sample parameters. Allows admins to verify prompts work correctly before activating a topic.
 
@@ -1012,8 +881,8 @@ GET /api/v1/admin/topics/{topic_id}/stats
 
 Topics are defined in the `endpoint_registry` code. Admins configure them by:
 
-1. **GET** `/api/v1/admin/topics/registry/endpoints` - View all endpoints with `allowed_prompt_types` and `parameter_refs`
-2. **GET** `/api/v1/admin/topics/{topic_id}` - Get current topic configuration
+1. **GET** `/api/v1/admin/topics` - View all topics with `templates` (showing allowed and defined prompts)
+2. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details with `template_status` and `allowed_parameters`
 3. **POST** `/api/v1/admin/topics/{topic_id}/prompts` - Upload required prompts (system, user, etc.)
 4. **PUT** `/api/v1/admin/topics/{topic_id}` - Update model config (temperature, max_tokens, etc.)
 5. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test with sample parameters
@@ -1021,20 +890,12 @@ Topics are defined in the `endpoint_registry` code. Admins configure them by:
 
 ### Editing Prompts
 
-1. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details (includes `allowed_parameters`)
-2. **GET** `/api/v1/admin/topics/{topic_id}/prompts/system` - Get current content
-3. Edit in UI
-4. **PUT** `/api/v1/admin/topics/{topic_id}/prompts/system` - Save changes
+1. **GET** `/api/v1/admin/topics/{topic_id}` - Get topic details with `template_status` and `allowed_parameters`
+2. **GET** `/api/v1/admin/topics/{topic_id}/prompts/{prompt_type}` - Get current content
+3. Edit in UI using `allowed_parameters` as available placeholders
+4. **PUT** `/api/v1/admin/topics/{topic_id}/prompts/{prompt_type}` - Save changes
 5. **POST** `/api/v1/admin/topics/{topic_id}/test` - Test the changes
 6. Cache cleared automatically
-
-### Understanding Parameter Sources
-
-1. **GET** `/api/v1/admin/topics/registry/endpoints` - View all endpoints with parameter mappings
-2. Review `parameter_refs` to understand:
-   - Which parameters each endpoint uses
-   - Where each parameter is sourced from (REQUEST, ONBOARDING, GOAL, etc.)
-   - This helps admins understand which parameters they need to define vs. which are auto-enriched
 
 ---
 
@@ -1087,10 +948,8 @@ Required permission scopes:
 | Delete topic | `admin:topics:delete` |
 | View prompts | `admin:topics:read` |
 | Update prompts | `admin:prompts:write` |
-| View endpoint registry | `admin:topics:read` |
 | Test topic | `admin:topics:write` |
 | View stats | `admin:topics:stats` |
-| Bulk operations | `admin:topics:bulk` |
 
 ---
 
