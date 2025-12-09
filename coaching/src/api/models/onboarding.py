@@ -113,11 +113,48 @@ class OnboardingCoachingResponse(BaseModel):
     )
 
 
+# Onboarding review endpoint models (niche, ICA, value proposition)
+class SuggestionVariation(BaseModel):
+    """A suggested variation for an onboarding field."""
+
+    text: str = Field(
+        ...,
+        description="The suggested text variation",
+    )
+    reasoning: str = Field(
+        ...,
+        description="Explanation of why this variation is recommended",
+    )
+
+
+class OnboardingReviewResponse(BaseModel):
+    """Response from onboarding review endpoint (niche, ICA, value proposition).
+
+    Used by topics: niche_review, ica_review, value_proposition_review
+    """
+
+    quality_review: str = Field(
+        ...,
+        alias="qualityReview",
+        description="AI review of the current content quality with feedback",
+    )
+    suggestions: list[SuggestionVariation] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+        description="Exactly 3 suggested variations",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
     "OnboardingCoachingRequest",
     "OnboardingCoachingResponse",
+    "OnboardingReviewResponse",
     "OnboardingSuggestionRequest",
     "OnboardingSuggestionResponse",
+    "SuggestionVariation",
     "WebsiteScanRequest",
     "WebsiteScanResponse",
 ]

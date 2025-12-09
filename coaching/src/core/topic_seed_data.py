@@ -175,6 +175,106 @@ Metrics Type: {metrics_type}
 Summarize key metrics, trends, and insights.""",
         display_order=13,
     ),
+    # Onboarding Review Topics (niche, ICA, value proposition)
+    "niche_review": TopicSeedData(
+        topic_id="niche_review",
+        topic_name="Niche Review",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.ONBOARDING.value,
+        description="Review and suggest variations for business niche definition",
+        temperature=0.8,
+        max_tokens=2048,
+        default_system_prompt="""You are an expert business strategist specializing in market positioning and niche definition.
+
+Your role is to:
+1. Evaluate the quality of a business niche definition
+2. Provide constructive feedback on clarity, specificity, and market viability
+3. Suggest improved variations that are more compelling and differentiated
+
+Consider the business context (ICA, value proposition, products) when evaluating.""",
+        default_user_prompt="""Review this business niche definition:
+
+Current Niche: {current_value}
+
+Business Context:
+- Ideal Client Avatar (ICA): {onboarding_ica}
+- Value Proposition: {onboarding_value_proposition}
+- Products/Services: {onboarding_products}
+- Business Name: {onboarding_business_name}
+
+Provide:
+1. A quality review of the current niche (strengths, weaknesses, suggestions for improvement)
+2. Exactly 3 alternative niche variations with reasoning for each
+
+Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+        display_order=14,
+    ),
+    "ica_review": TopicSeedData(
+        topic_id="ica_review",
+        topic_name="ICA Review",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.ONBOARDING.value,
+        description="Review and suggest variations for Ideal Client Avatar (ICA)",
+        temperature=0.8,
+        max_tokens=2048,
+        default_system_prompt="""You are an expert marketing strategist specializing in customer persona development.
+
+Your role is to:
+1. Evaluate the quality of an Ideal Client Avatar (ICA) definition
+2. Provide constructive feedback on specificity, demographics, psychographics, and pain points
+3. Suggest improved variations that better target the ideal customer
+
+Consider the business context (niche, value proposition, products) when evaluating.""",
+        default_user_prompt="""Review this Ideal Client Avatar (ICA):
+
+Current ICA: {current_value}
+
+Business Context:
+- Niche: {onboarding_niche}
+- Value Proposition: {onboarding_value_proposition}
+- Products/Services: {onboarding_products}
+- Business Name: {onboarding_business_name}
+
+Provide:
+1. A quality review of the current ICA (strengths, weaknesses, suggestions for improvement)
+2. Exactly 3 alternative ICA variations with reasoning for each
+
+Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+        display_order=15,
+    ),
+    "value_proposition_review": TopicSeedData(
+        topic_id="value_proposition_review",
+        topic_name="Value Proposition Review",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.ONBOARDING.value,
+        description="Review and suggest variations for value proposition statement",
+        temperature=0.8,
+        max_tokens=2048,
+        default_system_prompt="""You are an expert brand strategist specializing in value proposition development.
+
+Your role is to:
+1. Evaluate the quality of a value proposition statement
+2. Provide constructive feedback on clarity, uniqueness, and customer appeal
+3. Suggest improved variations that better communicate value and differentiation
+
+Consider the business context (niche, ICA, products) when evaluating.""",
+        default_user_prompt="""Review this value proposition:
+
+Current Value Proposition: {current_value}
+
+Business Context:
+- Niche: {onboarding_niche}
+- Ideal Client Avatar (ICA): {onboarding_ica}
+- Products/Services: {onboarding_products}
+- Business Name: {onboarding_business_name}
+
+Provide:
+1. A quality review of the current value proposition (strengths, weaknesses, suggestions for improvement)
+2. Exactly 3 alternative value proposition variations with reasoning for each
+
+Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+        display_order=16,
+    ),
     # ========== Section 2: Conversation API (3 topics) ==========
     # Note: Conversation topics use the existing conversation coaching topics
     "conversation_initiate": TopicSeedData(

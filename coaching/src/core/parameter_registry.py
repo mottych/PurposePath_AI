@@ -824,6 +824,73 @@ _register(
 )
 
 # -----------------------------------------------------------------------------
+# Onboarding Review Parameters (from get_onboarding_data)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="current_value",
+        param_type=ParameterType.STRING,
+        description="The current draft value being reviewed (niche, ICA, or value proposition).",
+        default="",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="onboarding_niche",
+        param_type=ParameterType.STRING,
+        description="The business niche from onboarding data.",
+        default="",
+        retrieval_method="get_onboarding_data",
+        extraction_path="onboarding_niche",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="onboarding_ica",
+        param_type=ParameterType.STRING,
+        description="The Ideal Client Avatar (ICA) from onboarding data.",
+        default="",
+        retrieval_method="get_onboarding_data",
+        extraction_path="onboarding_ica",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="onboarding_value_proposition",
+        param_type=ParameterType.STRING,
+        description="The value proposition from onboarding data.",
+        default="",
+        retrieval_method="get_onboarding_data",
+        extraction_path="onboarding_value_proposition",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="onboarding_products",
+        param_type=ParameterType.LIST,
+        description="List of products/services with name and problem solved.",
+        default=[],
+        retrieval_method="get_onboarding_data",
+        extraction_path="onboarding_products",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="onboarding_business_name",
+        param_type=ParameterType.STRING,
+        description="The business name from onboarding data.",
+        default="",
+        retrieval_method="get_onboarding_data",
+        extraction_path="onboarding_business_name",
+    )
+)
+
+# -----------------------------------------------------------------------------
 # Formatting and Metadata Parameters
 # -----------------------------------------------------------------------------
 _register(

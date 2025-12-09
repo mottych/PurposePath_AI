@@ -601,6 +601,56 @@ class BusinessApiClient:
             # Graceful degradation - skip validation if service down
             return True
 
+    async def get_onboarding_data(self) -> dict[str, Any]:
+        """
+        Get onboarding data from Account Service.
+
+        Endpoint: GET /business/onboarding
+        Reference: backend-integration-account-service.md (lines 918-963)
+
+        Returns:
+            Onboarding data including:
+            - businessName, website, address
+            - products: list of {id, name, problem}
+            - step3: {niche, ica, valueProposition}
+            - step4: {coreValues, purpose, vision, ...Status fields}
+
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
+            httpx.RequestError: If request fails
+        """
+        try:
+            logger.info("Fetching onboarding data from Account Service")
+
+            response = await self.client.get(
+                "/business/onboarding",
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            onboarding_data: dict[str, Any] = dict(data.get("data", {}))
+
+            logger.debug(
+                "Onboarding data retrieved",
+                has_step3=bool(onboarding_data.get("step3")),
+                products_count=len(onboarding_data.get("products", [])),
+                status_code=response.status_code,
+            )
+
+            return onboarding_data
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching onboarding data",
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching onboarding data", error=str(e))
+            raise
+
     async def close(self) -> None:
         """
         Close the HTTP client and cleanup resources.

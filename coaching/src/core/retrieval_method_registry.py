@@ -535,6 +535,62 @@ async def get_all_issues(context: RetrievalContext) -> dict[str, Any]:
         return {"issues": [], "issues_count": 0, "critical_issues_count": 0}
 
 
+@register_retrieval_method(
+    name="get_onboarding_data",
+    description="Retrieves onboarding data including niche, ICA, value proposition, and products",
+    provides_params=(
+        "onboarding_niche",
+        "onboarding_ica",
+        "onboarding_value_proposition",
+        "onboarding_products",
+        "onboarding_business_name",
+    ),
+)
+async def get_onboarding_data(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve onboarding data from Account Service.
+
+    Extracts step3 data (niche, ica, valueProposition) and products list.
+    """
+    try:
+        logger.debug(
+            "retrieval_method.get_onboarding_data",
+            tenant_id=context.tenant_id,
+        )
+        data = await context.client.get_onboarding_data()
+
+        # Extract step3 data
+        step3 = data.get("step3", {}) or {}
+        products = data.get("products", []) or []
+
+        # Format products as list of dicts with name and problem
+        formatted_products = [
+            {"name": p.get("name", ""), "problem": p.get("problem", "")}
+            for p in products
+            if p.get("name")
+        ]
+
+        return {
+            "onboarding_niche": step3.get("niche", ""),
+            "onboarding_ica": step3.get("ica", ""),
+            "onboarding_value_proposition": step3.get("valueProposition", ""),
+            "onboarding_products": formatted_products,
+            "onboarding_business_name": data.get("businessName", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_onboarding_data.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {
+            "onboarding_niche": "",
+            "onboarding_ica": "",
+            "onboarding_value_proposition": "",
+            "onboarding_products": [],
+            "onboarding_business_name": "",
+        }
+
+
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
