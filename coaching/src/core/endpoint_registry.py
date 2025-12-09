@@ -10,8 +10,18 @@ parameter may come from different sources depending on the endpoint context.
 """
 
 from dataclasses import dataclass, field
+from typing import TypedDict
 
 from coaching.src.core.constants import ParameterSource, PromptType, TopicCategory, TopicType
+
+
+class ParameterInfo(TypedDict):
+    """Type-safe dict for parameter info returned by get_parameters_for_topic."""
+
+    name: str
+    type: str
+    required: bool
+    description: str | None
 
 
 @dataclass(frozen=True)
@@ -934,7 +944,7 @@ def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
     return required_names
 
 
-def get_parameters_for_topic(topic_id: str) -> list[dict[str, str | bool]]:
+def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
     """Get basic parameter info for a topic (for API responses).
 
     Returns parameter definitions with basic info only (name, type, required, description).
@@ -944,7 +954,7 @@ def get_parameters_for_topic(topic_id: str) -> list[dict[str, str | bool]]:
         topic_id: Topic identifier
 
     Returns:
-        List of dicts with name, type, required, description.
+        List of ParameterInfo dicts with name, type, required, description.
         Empty list if topic not found.
     """
     from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
@@ -952,27 +962,27 @@ def get_parameters_for_topic(topic_id: str) -> list[dict[str, str | bool]]:
     param_refs = get_parameter_refs_for_topic(topic_id)
     required_names = get_required_parameter_names_for_topic(topic_id)
 
-    result: list[dict[str, str | bool]] = []
+    result: list[ParameterInfo] = []
     for ref in param_refs:
         param_def = PARAMETER_REGISTRY.get(ref.name)
         if param_def:
             result.append(
-                {
-                    "name": param_def.name,
-                    "type": param_def.param_type.value,
-                    "required": ref.name in required_names,
-                    "description": param_def.description,
-                }
+                ParameterInfo(
+                    name=param_def.name,
+                    type=param_def.param_type.value,
+                    required=ref.name in required_names,
+                    description=param_def.description,
+                )
             )
         else:
             # Parameter not in registry - include with minimal info
             result.append(
-                {
-                    "name": ref.name,
-                    "type": "string",
-                    "required": ref.name in required_names,
-                    "description": "",
-                }
+                ParameterInfo(
+                    name=ref.name,
+                    type="string",
+                    required=ref.name in required_names,
+                    description="",
+                )
             )
 
     return result
@@ -1094,6 +1104,7 @@ __all__ = [
     "ENDPOINT_REGISTRY",
     "TOPIC_INDEX",
     "EndpointDefinition",
+    "ParameterInfo",
     "ParameterRef",
     "get_endpoint_by_topic_id",
     "get_endpoint_definition",
