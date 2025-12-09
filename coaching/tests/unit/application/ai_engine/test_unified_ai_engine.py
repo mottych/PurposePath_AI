@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
@@ -173,20 +173,30 @@ async def test_execute_single_shot_topic_inactive(
 async def test_execute_single_shot_missing_parameters(
     engine,
     mock_topic_repo,
+    mock_s3_storage,
     sample_topic,
 ):
     # Arrange
     mock_topic_repo.get.return_value = sample_topic
+    # Set up prompts - these are loaded BEFORE parameter validation
+    mock_s3_storage.get_prompt.side_effect = [
+        "System prompt with {param1}",
+        "User prompt with {param1}",
+    ]
     parameters = {}  # Missing param1 which is required
 
-    # Act & Assert
-    with pytest.raises(ParameterValidationError) as exc_info:
-        await engine.execute_single_shot(
-            topic_id=sample_topic.topic_id,
-            parameters=parameters,
-            response_model=TestResponseModel,
-        )
-    assert "param1" in str(exc_info.value)
+    # Act & Assert - mock the registry to return param1 as required
+    with patch(
+        "coaching.src.application.ai_engine.unified_ai_engine.get_required_parameter_names_for_topic",
+        return_value={"param1"},
+    ):
+        with pytest.raises(ParameterValidationError) as exc_info:
+            await engine.execute_single_shot(
+                topic_id=sample_topic.topic_id,
+                parameters=parameters,
+                response_model=TestResponseModel,
+            )
+        assert "param1" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
