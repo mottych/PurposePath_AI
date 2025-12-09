@@ -1,7 +1,6 @@
 """Request and response models for admin topic management API."""
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -24,9 +23,6 @@ class CreateTopicRequest(BaseModel):
     presence_penalty: float = Field(0.0, ge=-2.0, le=2.0, description="Presence penalty")
     is_active: bool = Field(False, description="Whether topic is active")
     display_order: int = Field(100, description="Display order")
-    allowed_parameters: list[dict[str, Any]] = Field(
-        default_factory=list, description="Allowed prompt parameters"
-    )
 
     @field_validator("topic_id")
     @classmethod
@@ -59,9 +55,6 @@ class UpdateTopicRequest(BaseModel):
     presence_penalty: float | None = Field(None, ge=-2.0, le=2.0, description="Presence penalty")
     is_active: bool | None = Field(None, description="Whether topic is active")
     display_order: int | None = Field(None, description="Display order")
-    allowed_parameters: list[dict[str, Any]] | None = Field(
-        None, description="Allowed prompt parameters"
-    )
 
 
 class CreatePromptRequest(BaseModel):
@@ -98,9 +91,6 @@ class ValidateTopicRequest(BaseModel):
     temperature: float = Field(..., description="Model temperature")
     max_tokens: int = Field(..., description="Maximum tokens")
     prompts: list[dict[str, str]] = Field(default_factory=list, description="Prompts to validate")
-    allowed_parameters: list[dict[str, Any]] = Field(
-        default_factory=list, description="Allowed parameters"
-    )
 
 
 # Response Models
@@ -192,7 +182,7 @@ class TopicDetail(BaseModel):
         description="Status of all allowed templates - shows which are allowed and which are defined",
     )
     allowed_parameters: list[ParameterDefinition] = Field(
-        ..., description="Allowed prompt parameters for use in templates"
+        ..., description="Allowed prompt parameters computed from endpoint registry"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

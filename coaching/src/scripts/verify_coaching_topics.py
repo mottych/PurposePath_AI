@@ -59,13 +59,17 @@ async def verify_topics() -> dict[str, Any]:
             topic = await repo.get(topic_id=topic_id)
 
             if topic:
+                # Get parameters from registry, not from entity
+                from coaching.src.core.endpoint_registry import get_parameters_for_topic
+
+                params = get_parameters_for_topic(topic_id)
                 logger.info(
                     "Topic found",
                     topic_id=topic_id,
                     name=topic.topic_name,
                     type=topic.topic_type,
                     prompts=len(topic.prompts),
-                    parameters=len(topic.allowed_parameters),
+                    parameters=len(params),
                     active=topic.is_active,
                 )
                 results["found"].append(
@@ -73,7 +77,7 @@ async def verify_topics() -> dict[str, Any]:
                         "topic_id": topic_id,
                         "name": topic.topic_name,
                         "prompts": len(topic.prompts),
-                        "parameters": len(topic.allowed_parameters),
+                        "parameters": len(params),
                         "active": topic.is_active,
                     }
                 )

@@ -29,7 +29,7 @@ class TopicResponse(BaseModel):
         ..., description="List of prompt types that exist for this topic"
     )
     allowed_parameters: list[ParameterDefinitionResponse] = Field(
-        ..., description="Allowed parameters"
+        ..., description="Allowed parameters computed from endpoint registry"
     )
     config: dict[str, Any] = Field(..., description="Topic configuration")
     created_at: str = Field(..., description="Creation timestamp (ISO 8601)")
@@ -44,7 +44,7 @@ class PromptDetailResponse(BaseModel):
     prompt_type: str = Field(..., description="Prompt type")
     content: str = Field(..., description="Markdown prompt content")
     allowed_parameters: list[ParameterDefinitionResponse] = Field(
-        ..., description="Parameters available for this prompt"
+        ..., description="Parameters available for this prompt (computed from endpoint registry)"
     )
     s3_location: dict[str, str] = Field(..., description="S3 storage location (bucket, key)")
     updated_at: str = Field(..., description="Last update timestamp (ISO 8601)")

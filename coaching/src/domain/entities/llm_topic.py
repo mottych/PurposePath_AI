@@ -157,7 +157,6 @@ class LLMTopic:
         top_p: Nucleus sampling parameter (0.0-1.0)
         frequency_penalty: Frequency penalty parameter (-2.0 to 2.0)
         presence_penalty: Presence penalty parameter (-2.0 to 2.0)
-        allowed_parameters: List of parameter definitions
         prompts: List of prompt information entries
         created_at: When topic was created
         updated_at: When topic was last updated
@@ -182,8 +181,7 @@ class LLMTopic:
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
 
-    # Prompts and Parameters
-    allowed_parameters: list[ParameterDefinition] = field(default_factory=list)
+    # Prompts
     prompts: list[PromptInfo] = field(default_factory=list)
 
     # Metadata
@@ -277,7 +275,6 @@ class LLMTopic:
             "top_p": Decimal(str(self.top_p)),
             "frequency_penalty": Decimal(str(self.frequency_penalty)),
             "presence_penalty": Decimal(str(self.presence_penalty)),
-            "allowed_parameters": [param.to_dict() for param in self.allowed_parameters],
             "prompts": [prompt.to_dict() for prompt in self.prompts],
             "additional_config": self.additional_config,
             "created_at": self.created_at.isoformat(),
@@ -352,9 +349,6 @@ class LLMTopic:
             top_p=top_p,
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
-            allowed_parameters=[
-                ParameterDefinition.from_dict(param) for param in item.get("allowed_parameters", [])
-            ],
             prompts=[PromptInfo.from_dict(prompt) for prompt in item.get("prompts", [])],
             additional_config=additional_config,
             created_at=datetime.fromisoformat(item["created_at"]),
@@ -388,31 +382,6 @@ class LLMTopic:
             bool: True if prompt exists
         """
         return self.get_prompt(prompt_type=prompt_type) is not None
-
-    def get_parameter(self, *, name: str) -> ParameterDefinition | None:
-        """Get parameter definition by name.
-
-        Args:
-            name: Parameter name to retrieve
-
-        Returns:
-            ParameterDefinition if found, None otherwise
-        """
-        for param in self.allowed_parameters:
-            if param.name == name:
-                return param
-        return None
-
-    def has_parameter(self, *, name: str) -> bool:
-        """Check if topic has a specific parameter.
-
-        Args:
-            name: Parameter name to check
-
-        Returns:
-            bool: True if parameter exists
-        """
-        return self.get_parameter(name=name) is not None
 
     @classmethod
     def create_default_from_enum(cls, topic_enum: Any) -> "LLMTopic":
@@ -481,7 +450,6 @@ class LLMTopic:
             frequency_penalty=0.0,
             presence_penalty=0.0,
             prompts=[],  # No prompts until configured
-            allowed_parameters=[],  # No parameters until configured
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
             created_by="system",
@@ -533,7 +501,6 @@ class LLMTopic:
             frequency_penalty=0.0,
             presence_penalty=0.0,
             prompts=[],  # No prompts until configured
-            allowed_parameters=[],  # No parameters until configured
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
             created_by="system",

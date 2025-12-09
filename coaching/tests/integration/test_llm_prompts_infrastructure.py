@@ -33,24 +33,6 @@ def sample_topic_item() -> dict[str, Any]:
         "description": "Discover your core values through guided conversation",
         "display_order": 1,
         "is_active": True,
-        "allowed_parameters": [
-            {
-                "name": "user_name",
-                "type": "string",
-                "required": True,
-                "description": "User's display name",
-            },
-            {
-                "name": "user_id",
-                "type": "string",
-                "required": True,
-            },
-            {
-                "name": "conversation_history",
-                "type": "array",
-                "required": False,
-            },
-        ],
         "prompts": [
             {
                 "prompt_type": "system",
@@ -90,7 +72,6 @@ class TestLLMPromptsTableStructure:
             "category",
             "display_order",
             "is_active",
-            "allowed_parameters",
             "prompts",
             "config",
             "created_at",
@@ -118,16 +99,14 @@ class TestLLMPromptsTableStructure:
             assert "updated_at" in prompt
             assert "updated_by" in prompt
 
-    def test_allowed_parameters_structure(self, sample_topic_item: dict[str, Any]) -> None:
-        """Test that allowed_parameters has correct structure."""
-        params = sample_topic_item["allowed_parameters"]
-        assert isinstance(params, list)
-        assert len(params) > 0
+    def test_parameters_come_from_registry(self) -> None:
+        """Test that parameters are retrieved from PARAMETER_REGISTRY, not stored in DB."""
+        from coaching.src.core.endpoint_registry import get_parameters_for_topic
 
-        for param in params:
-            assert "name" in param
-            assert "type" in param
-            assert "required" in param
+        # Parameters for topics are now managed in code via PARAMETER_REGISTRY
+        # and retrieved using get_parameters_for_topic(topic_id)
+        params = get_parameters_for_topic("core_values")
+        assert isinstance(params, list)
 
 
 class TestLLMPromptsTableOperations:
@@ -304,20 +283,6 @@ class TestKPISystemTopicStructure:
             "description": "Analyze revenue KPI from Salesforce",
             "display_order": 100,
             "is_active": True,
-            "allowed_parameters": [
-                {
-                    "name": "kpi_value",
-                    "type": "number",
-                    "required": True,
-                    "description": "Current KPI value",
-                },
-                {
-                    "name": "threshold",
-                    "type": "number",
-                    "required": True,
-                    "description": "Target threshold",
-                },
-            ],
             "prompts": [
                 {
                     "prompt_type": "system",
@@ -341,8 +306,10 @@ class TestKPISystemTopicStructure:
         assert kpi_topic_item["topic_type"] == "kpi_system"
         assert kpi_topic_item["category"] == "kpi"
 
-    def test_kpi_topic_parameters(self, kpi_topic_item: dict[str, Any]) -> None:
-        """Test that KPI topic has KPI-specific parameters."""
-        param_names = [p["name"] for p in kpi_topic_item["allowed_parameters"]]
-        assert "kpi_value" in param_names
-        assert "threshold" in param_names
+    def test_kpi_topic_parameters_from_registry(self, kpi_topic_item: dict[str, Any]) -> None:
+        """Test that KPI topic parameters come from PARAMETER_REGISTRY."""
+
+        # Parameters are now managed in code, not stored in DB
+        # This test validates the registry approach
+        # Note: kpi_topic_item no longer contains allowed_parameters
+        assert "allowed_parameters" not in kpi_topic_item

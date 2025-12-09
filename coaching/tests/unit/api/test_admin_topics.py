@@ -11,7 +11,7 @@ from coaching.src.api.dependencies import (
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.routes.admin.topics import router
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -73,14 +73,6 @@ def sample_topic() -> LLMTopic:
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="user_name",
-                type="string",
-                required=True,
-                description="User's name",
-            )
-        ],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -214,7 +206,7 @@ class TestGetTopic:
         assert data["topic_name"] == "Test Topic"
         assert data["from_database"] is True  # From DB
         assert len(data["prompts"]) == 1
-        assert len(data["allowed_parameters"]) == 1
+        # allowed_parameters now comes from registry, not from DB
 
     async def test_get_topic_fallback_to_registry(
         self, client: TestClient, mock_repository: AsyncMock
@@ -260,14 +252,6 @@ class TestCreateTopic:
             "max_tokens": 2000,
             "is_active": False,
             "display_order": 10,
-            "allowed_parameters": [
-                {
-                    "name": "user_name",
-                    "type": "string",
-                    "required": True,
-                    "description": "User's name",
-                }
-            ],
         }
 
         response = client.post("/admin/topics", json=request_data)
@@ -559,7 +543,6 @@ class TestValidation:
                     "content": "You are a helpful assistant. User: {user_name}",
                 }
             ],
-            "allowed_parameters": [{"name": "user_name", "type": "string", "required": True}],
         }
 
         response = client.post("/admin/topics/validate", json=request_data)

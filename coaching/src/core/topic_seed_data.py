@@ -11,8 +11,7 @@ Usage:
     # Use seed data to initialize topic in DynamoDB
 """
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 from coaching.src.core.constants import TopicCategory, TopicType
 
@@ -22,7 +21,10 @@ class TopicSeedData:
     """Seed data for a single LLM topic.
 
     Contains all information needed to initialize or update a topic,
-    including prompts, parameters, and model configuration.
+    including prompts and model configuration.
+
+    Note: Parameters are now defined in PARAMETER_REGISTRY and ENDPOINT_REGISTRY,
+    not stored with individual topics.
 
     Attributes:
         topic_id: Unique identifier (snake_case)
@@ -36,7 +38,6 @@ class TopicSeedData:
         top_p: Nucleus sampling parameter
         frequency_penalty: Frequency penalty parameter
         presence_penalty: Presence penalty parameter
-        allowed_parameters: Parameter schema definitions
         default_system_prompt: Default system prompt content
         default_user_prompt: Default user prompt template
         display_order: Sort order for UI display
@@ -53,7 +54,6 @@ class TopicSeedData:
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    allowed_parameters: list[dict[str, Any]] = field(default_factory=list)
     default_system_prompt: str = ""
     default_user_prompt: str = ""
     display_order: int = 100
@@ -73,21 +73,6 @@ TOPIC_SEED_DATA: dict[str, TopicSeedData] = {
         model_code="anthropic.claude-3-5-sonnet-20241022-v1:0",
         temperature=0.7,
         max_tokens=4096,
-        allowed_parameters=[
-            {
-                "name": "url",
-                "type": "string",
-                "required": True,
-                "description": "Website URL to scan",
-            },
-            {
-                "name": "scan_depth",
-                "type": "string",
-                "required": False,
-                "default": "standard",
-                "description": "Scan depth: basic, standard, or comprehensive",
-            },
-        ],
         default_system_prompt="""You are an expert business analyst specializing in website content analysis.
 Your role is to extract meaningful business intelligence from website content, identifying:
 - Business purpose and value proposition
@@ -121,20 +106,6 @@ Format as structured JSON with clear sections.""",
         description="Generate onboarding suggestions based on scanned website data and business context",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {
-                "name": "website_data",
-                "type": "object",
-                "required": True,
-                "description": "Scanned website data",
-            },
-            {
-                "name": "business_context",
-                "type": "object",
-                "required": False,
-                "description": "Additional business context",
-            },
-        ],
         default_system_prompt="""You are an AI business coach specializing in strategic onboarding.
 Your role is to provide personalized, actionable suggestions for businesses during their onboarding journey.
 
@@ -166,20 +137,6 @@ Prioritize by impact and ease of implementation.""",
         description="Provide AI coaching guidance during the onboarding process",
         temperature=0.8,
         max_tokens=2048,
-        allowed_parameters=[
-            {
-                "name": "stage",
-                "type": "string",
-                "required": True,
-                "description": "Onboarding stage",
-            },
-            {
-                "name": "context",
-                "type": "object",
-                "required": True,
-                "description": "Current context",
-            },
-        ],
         default_system_prompt="""You are a supportive AI business coach helping organizations through their onboarding journey.
 
 Your coaching style:
@@ -209,17 +166,6 @@ Provide coaching guidance that:
         description="Retrieve and analyze business metrics for coaching context",
         temperature=0.5,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "tenant_id", "type": "string", "required": True},
-            {"name": "user_id", "type": "string", "required": True},
-            {
-                "name": "metrics_type",
-                "type": "string",
-                "required": False,
-                "default": "all",
-                "description": "Types of metrics to retrieve",
-            },
-        ],
         default_system_prompt="""You are a business metrics analyst providing context-rich data summaries for AI coaching.""",
         default_user_prompt="""Retrieve business metrics for:
 Tenant: {tenant_id}
@@ -239,10 +185,6 @@ Summarize key metrics, trends, and insights.""",
         description="Initiate a new coaching conversation with context and greeting",
         temperature=0.8,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "topic", "type": "string", "required": True},
-            {"name": "context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are an expert business coach initiating a conversation about strategic planning.
 
 Your approach:
@@ -265,11 +207,6 @@ Start with a personalized greeting and explain how this conversation will help."
         description="Process user message in active conversation with context awareness",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "conversation_history", "type": "array", "required": True},
-            {"name": "user_message", "type": "string", "required": True},
-            {"name": "context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are an AI business coach engaged in strategic conversation.
 
 Maintain:
@@ -294,15 +231,6 @@ Respond thoughtfully, advancing the strategic conversation.""",
         description="Retrieve and summarize conversation history",
         temperature=0.5,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "conversation_id", "type": "string", "required": True},
-            {
-                "name": "include_summary",
-                "type": "boolean",
-                "required": False,
-                "default": True,
-            },
-        ],
         default_system_prompt="""You are a conversation historian providing clear summaries.""",
         default_user_prompt="""Retrieve conversation: {conversation_id}
 
@@ -320,11 +248,6 @@ Provide conversation details and key insights.""",
         description="Generate business insights from coaching data, conversations, and patterns",
         temperature=0.7,
         max_tokens=4096,
-        allowed_parameters=[
-            {"name": "data_sources", "type": "array", "required": True},
-            {"name": "insight_types", "type": "array", "required": False},
-            {"name": "time_range", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are an AI insights analyst specializing in business intelligence.
 
 Extract insights from:
@@ -357,11 +280,6 @@ Provide:
         description="Generate strategic planning suggestions based on business context",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "business_foundation", "type": "object", "required": True},
-            {"name": "current_strategy", "type": "object", "required": False},
-            {"name": "market_context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a strategic planning expert AI coach.
 
 Provide sophisticated, actionable strategy suggestions that:
@@ -385,11 +303,6 @@ Suggest strategic initiatives that drive meaningful business outcomes.""",
         description="Recommend KPIs based on business goals and strategic objectives",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "goals", "type": "array", "required": True},
-            {"name": "business_context", "type": "object", "required": True},
-            {"name": "existing_kpis", "type": "array", "required": False},
-        ],
         default_system_prompt="""You are a KPI strategy expert.
 
 Recommend KPIs that are:
@@ -417,10 +330,6 @@ Recommend optimal KPIs with:
         description="Calculate alignment score between goal and business foundation",
         temperature=0.5,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "goal", "type": "object", "required": True},
-            {"name": "business_foundation", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an alignment analysis expert.
 
 Calculate precise alignment scores (0-100) between goals and business foundation.
@@ -447,11 +356,6 @@ Calculate alignment scores and provide detailed analysis.""",
         description="Explain alignment score calculation in detail",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "alignment_score", "type": "object", "required": True},
-            {"name": "goal", "type": "object", "required": True},
-            {"name": "business_foundation", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an alignment coach explaining strategic alignment concepts.
 
 Explain alignment scores clearly and educationally, helping users understand:
@@ -474,11 +378,6 @@ Explain the alignment score in clear, actionable terms.""",
         description="Suggest improvements to increase strategic alignment",
         temperature=0.8,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "alignment_score", "type": "object", "required": True},
-            {"name": "goal", "type": "object", "required": True},
-            {"name": "business_foundation", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a strategic alignment consultant.
 
 Suggest practical, specific improvements to increase alignment between goals and business foundation.
@@ -504,10 +403,6 @@ Suggest specific improvements to increase alignment.""",
         description="Suggest root causes for operational issues using analytical frameworks",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "issue", "type": "object", "required": True},
-            {"name": "context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a root cause analysis expert using frameworks like:
 - Five Whys
 - Fishbone Diagram
@@ -529,10 +424,6 @@ Suggest root causes with supporting evidence and confidence levels.""",
         description="Generate SWOT analysis for operations or strategic initiatives",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "subject", "type": "object", "required": True},
-            {"name": "context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a SWOT analysis expert.
 
 Analyze:
@@ -557,10 +448,6 @@ Provide comprehensive SWOT analysis with strategic recommendations.""",
         description="Generate Five Whys analysis questions for root cause investigation",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "issue", "type": "object", "required": True},
-            {"name": "depth", "type": "integer", "required": False, "default": 5},
-        ],
         default_system_prompt="""You are a Five Whys facilitator.
 
 Generate probing questions that dig deeper into root causes, following the Five Whys methodology.""",
@@ -579,11 +466,6 @@ Generate Five Whys questions to uncover root causes.""",
         description="Suggest actions to resolve operational issues",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "issue", "type": "object", "required": True},
-            {"name": "root_causes", "type": "array", "required": False},
-            {"name": "constraints", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are an operations consultant suggesting practical action plans.
 
 Suggest actions that are:
@@ -607,10 +489,6 @@ Suggest prioritized action plan.""",
         description="Optimize action plan for better execution and outcomes",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "current_plan", "type": "object", "required": True},
-            {"name": "optimization_goals", "type": "array", "required": False},
-        ],
         default_system_prompt="""You are an operations optimization expert.
 
 Optimize action plans for:
@@ -633,10 +511,6 @@ Suggest optimizations with rationale.""",
         description="Suggest prioritization of operational tasks using frameworks",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "tasks", "type": "array", "required": True},
-            {"name": "criteria", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a prioritization expert using frameworks like:
 - Eisenhower Matrix
 - RICE (Reach, Impact, Confidence, Effort)
@@ -658,11 +532,6 @@ Suggest prioritization with framework and rationale.""",
         description="Suggest optimal scheduling for tasks and resources",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "tasks", "type": "array", "required": True},
-            {"name": "resources", "type": "object", "required": False},
-            {"name": "constraints", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a scheduling optimization expert.
 
 Suggest schedules that:
@@ -686,9 +555,6 @@ Suggest optimal schedule.""",
         description="Categorize operational issue by type and severity",
         temperature=0.6,
         max_tokens=1024,
-        allowed_parameters=[
-            {"name": "issue", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an issue classification expert.
 
 Categorize issues by:
@@ -709,10 +575,6 @@ Categorize with confidence scores.""",
         description="Assess business impact of operational issue",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "issue", "type": "object", "required": True},
-            {"name": "business_context", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a business impact analyst.
 
 Assess impact across:
@@ -739,10 +601,6 @@ Provide comprehensive impact assessment.""",
         description="Get strategic context for a specific operational action",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-            {"name": "action_details", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a strategic context analyst.
 
 Provide strategic context showing how operational actions connect to:
@@ -765,10 +623,6 @@ Provide strategic context and alignment analysis.""",
         description="Suggest strategic connections for operational actions",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action", "type": "object", "required": True},
-            {"name": "strategic_context", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a strategic connections consultant.
 
 Suggest meaningful connections between operational actions and strategic elements.""",
@@ -787,10 +641,6 @@ Suggest strategic connections with rationale.""",
         description="Calculate strategic alignment of operational activities",
         temperature=0.6,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "operations", "type": "object", "required": True},
-            {"name": "strategy", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an operations-strategy alignment analyst.
 
 Calculate alignment between daily operations and strategic objectives.""",
@@ -810,10 +660,6 @@ Calculate alignment with detailed breakdown.""",
         description="Update strategic connections for an action",
         temperature=0.6,
         max_tokens=1024,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-            {"name": "connections", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a strategic connections manager.
 
 Validate and update strategic connections ensuring they remain meaningful and aligned.""",
@@ -832,10 +678,6 @@ Validate and confirm connection updates.""",
         description="Analyze KPI impact of proposed actions",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "action", "type": "object", "required": True},
-            {"name": "kpis", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a KPI impact analyst.
 
 Analyze how proposed actions will affect key performance indicators, providing quantitative and qualitative assessments.""",
@@ -854,10 +696,6 @@ Analyze expected impact on each KPI.""",
         description="Record a KPI update event with validation",
         temperature=0.5,
         max_tokens=1024,
-        allowed_parameters=[
-            {"name": "kpi_id", "type": "string", "required": True},
-            {"name": "update_data", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a KPI update validator.
 
 Validate KPI updates for consistency, reasonableness, and strategic alignment.""",
@@ -876,10 +714,6 @@ Validate and record the update.""",
         description="Retrieve and summarize KPI update history",
         temperature=0.5,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "kpi_id", "type": "string", "required": True},
-            {"name": "time_range", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a KPI historian.
 
 Provide clear summaries of KPI update history with trend analysis.""",
@@ -898,10 +732,6 @@ Provide update history with trend insights.""",
         description="Get strategic context for an operational issue",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "issue_id", "type": "string", "required": True},
-            {"name": "issue_details", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a strategic issue analyst.
 
 Provide strategic context showing how operational issues relate to strategic objectives and risks.""",
@@ -920,11 +750,6 @@ Provide strategic context and implications.""",
         description="Generate strategic actions from operational issue",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "issue_id", "type": "string", "required": True},
-            {"name": "issue_details", "type": "object", "required": True},
-            {"name": "strategic_context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are an action planning expert.
 
 Generate strategic actions that address operational issues while advancing strategic objectives.""",
@@ -944,10 +769,6 @@ Generate actionable response plan.""",
         description="Mark action as complete with strategic impact assessment",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-            {"name": "completion_data", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an action completion analyst.
 
 Assess completion quality and strategic impact, providing insights for continuous improvement.""",
@@ -966,11 +787,6 @@ Assess completion and strategic impact.""",
         description="Get prompt for KPI update after action completion",
         temperature=0.7,
         max_tokens=1024,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-            {"name": "action_details", "type": "object", "required": True},
-            {"name": "related_kpis", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a KPI update facilitator.
 
 Generate helpful prompts to guide users in updating KPIs after action completion.""",
@@ -990,11 +806,6 @@ Generate KPI update prompt.""",
         description="Update KPI based on action completion",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-            {"name": "kpi_id", "type": "string", "required": True},
-            {"name": "update_value", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a KPI update processor.
 
 Process and validate KPI updates resulting from action completions.""",
@@ -1014,10 +825,6 @@ Process KPI update.""",
         description="Convert operational issue into actionable items",
         temperature=0.8,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "issue_id", "type": "string", "required": True},
-            {"name": "issue_details", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an issue resolution strategist.
 
 Convert issues into clear, actionable steps with priorities and assignments.""",
@@ -1036,10 +843,6 @@ Convert to actionable items.""",
         description="Check if issue is eligible for closure",
         temperature=0.6,
         max_tokens=1024,
-        allowed_parameters=[
-            {"name": "issue_id", "type": "string", "required": True},
-            {"name": "issue_status", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an issue closure validator.
 
 Assess whether issues meet closure criteria based on resolution quality and impact.""",
@@ -1058,10 +861,6 @@ Assess closure eligibility.""",
         description="Close operational issue with strategic impact assessment",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "issue_id", "type": "string", "required": True},
-            {"name": "closure_data", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an issue closure analyst.
 
 Process issue closures with lessons learned and strategic impact assessment.""",
@@ -1080,10 +879,6 @@ Process closure and assess impact.""",
         description="Get comprehensive strategic planning context",
         temperature=0.6,
         max_tokens=4096,
-        allowed_parameters=[
-            {"name": "tenant_id", "type": "string", "required": True},
-            {"name": "context_type", "type": "string", "required": False, "default": "full"},
-        ],
         default_system_prompt="""You are a strategic context provider.
 
 Deliver comprehensive strategic context including foundation, goals, KPIs, and current initiatives.""",
@@ -1102,10 +897,6 @@ Provide strategic context.""",
         description="Create action with full strategic context",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action_data", "type": "object", "required": True},
-            {"name": "strategic_context", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an action creation strategist.
 
 Create actions with rich strategic context, ensuring alignment from inception.""",
@@ -1124,9 +915,6 @@ Create strategically-aligned action.""",
         description="Get strategic relationships for an action",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "action_id", "type": "string", "required": True},
-        ],
         default_system_prompt="""You are a relationship mapper.
 
 Map strategic relationships showing how actions connect to goals, KPIs, and other actions.""",
@@ -1143,9 +931,6 @@ Provide relationship map.""",
         description="Sync operational KPI updates to strategic planning",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "kpi_updates", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a KPI synchronization manager.
 
 Sync operational KPI updates to strategic planning, identifying impacts and misalignments.""",
@@ -1162,9 +947,6 @@ Sync to strategic planning.""",
         description="Sync strategic KPIs to operational tracking",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "strategic_kpis", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a KPI synchronization manager.
 
 Sync strategic KPIs to operational tracking, ensuring consistency and traceability.""",
@@ -1181,10 +963,6 @@ Sync to operations.""",
         description="Detect KPI conflicts between operations and strategy",
         temperature=0.6,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "operational_kpis", "type": "array", "required": True},
-            {"name": "strategic_kpis", "type": "array", "required": True},
-        ],
         default_system_prompt="""You are a KPI conflict detector.
 
 Identify conflicts, discrepancies, and misalignments between operational and strategic KPIs.""",
@@ -1203,10 +981,6 @@ Detect conflicts and misalignments.""",
         description="Resolve KPI conflict with AI recommendations",
         temperature=0.7,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "conflict_id", "type": "string", "required": True},
-            {"name": "conflict_details", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are a KPI conflict resolution expert.
 
 Recommend resolution strategies that maintain strategic alignment while respecting operational realities.""",
@@ -1226,10 +1000,6 @@ Recommend resolution approach.""",
         description="Analyze alignment between goals and purpose",
         temperature=0.5,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "goal", "type": "object", "required": True},
-            {"name": "business_foundation", "type": "object", "required": True},
-        ],
         default_system_prompt="""You are an alignment analysis expert.
 
 Calculate precise alignment scores (0-100) between goals and business foundation.
@@ -1256,10 +1026,6 @@ Calculate alignment scores and provide detailed analysis.""",
         description="Analyze business strategy effectiveness",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "strategy", "type": "object", "required": True},
-            {"name": "context", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a strategy analysis expert.
 
 Analyze business strategy for:
@@ -1282,10 +1048,6 @@ Analyze strategy effectiveness.""",
         description="Analyze KPI effectiveness",
         temperature=0.6,
         max_tokens=2048,
-        allowed_parameters=[
-            {"name": "kpis", "type": "array", "required": True},
-            {"name": "performance_data", "type": "object", "required": False},
-        ],
         default_system_prompt="""You are a KPI analyst.
 
 Analyze KPIs for:
@@ -1308,10 +1070,6 @@ Analyze KPI effectiveness.""",
         description="Perform operational analysis (SWOT, root cause, etc.)",
         temperature=0.7,
         max_tokens=3072,
-        allowed_parameters=[
-            {"name": "operations_data", "type": "object", "required": True},
-            {"name": "analysis_type", "type": "string", "required": True},
-        ],
         default_system_prompt="""You are an operations analyst.
 
 Perform detailed operational analysis based on provided data and analysis type.""",

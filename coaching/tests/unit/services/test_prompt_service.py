@@ -104,7 +104,6 @@ def sample_topic() -> LLMTopic:
         top_p=0.9,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[],
         prompts=[],
         created_at=datetime.now(tz=UTC),
         updated_at=datetime.now(tz=UTC),

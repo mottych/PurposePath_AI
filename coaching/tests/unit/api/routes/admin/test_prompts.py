@@ -109,7 +109,6 @@ class TestCreateTopic:
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
-            "allowed_parameters": [],
         }
 
         response = client.post("/prompts", json=payload)
@@ -132,7 +131,6 @@ class TestCreateTopic:
             "description": "Existing Description",
             "display_order": 2,
             "config": {"default_model": "claude-3-sonnet", "supports_streaming": True},
-            "allowed_parameters": [],
         }
 
         response = client.post("/prompts", json=payload)

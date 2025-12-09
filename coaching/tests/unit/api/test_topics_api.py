@@ -69,7 +69,6 @@ def _make_topic(topic_id: str, name: str, order: int, *, active: bool = True) ->
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[],
         prompts=[],
         created_at=datetime.now(tz=UTC),
         updated_at=datetime.now(tz=UTC),
