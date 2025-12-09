@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.core.constants import CoachingTopic, MessageRole
+from coaching.src.core.endpoint_registry import get_required_parameter_names_for_topic
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -273,8 +274,8 @@ class UnifiedAIEngine:
         # Combine both templates for parameter detection
         combined_template = f"{system_prompt}\n{user_prompt}"
 
-        # Get required parameter names from topic
-        required_params = {param.name for param in topic.allowed_parameters if param.required}
+        # Get required parameter names from endpoint registry
+        required_params = get_required_parameter_names_for_topic(topic.topic_id)
 
         self.logger.debug(
             "Enriching parameters",
@@ -350,6 +351,8 @@ class UnifiedAIEngine:
     def _validate_parameters(self, topic: LLMTopic, parameters: dict[str, Any]) -> None:
         """Validate request parameters against topic schema.
 
+        Uses endpoint registry to determine required parameters.
+
         Args:
             topic: Topic with parameter definitions
             parameters: Request parameters to validate
@@ -357,11 +360,9 @@ class UnifiedAIEngine:
         Raises:
             ParameterValidationError: If required parameters are missing
         """
-        missing_params = []
-
-        for param_def in topic.allowed_parameters:
-            if param_def.required and param_def.name not in parameters:
-                missing_params.append(param_def.name)
+        # Get required parameters from endpoint registry
+        required_params = get_required_parameter_names_for_topic(topic.topic_id)
+        missing_params = [name for name in required_params if name not in parameters]
 
         if missing_params:
             self.logger.error(

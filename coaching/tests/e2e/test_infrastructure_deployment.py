@@ -272,7 +272,6 @@ class TestTableOperations:
             "category": "analysis",
             "display_order": 999,
             "is_active": True,
-            "allowed_parameters": [{"name": "test_param", "type": "string", "required": True}],
             "prompts": [
                 {
                     "prompt_type": "system",
@@ -323,7 +322,6 @@ class TestTableOperations:
             "category": "coaching",
             "display_order": 998,
             "is_active": True,
-            "allowed_parameters": [],
             "prompts": [],
             "config": {},
             "created_at": "2025-01-20T00:00:00Z",

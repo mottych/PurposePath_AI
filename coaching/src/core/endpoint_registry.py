@@ -796,6 +796,16 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
 
 
 # =============================================================================
+# TOPIC INDEX - O(1) lookup by topic_id
+# =============================================================================
+
+# Build reverse index: topic_id -> endpoint_key for O(1) lookup
+TOPIC_INDEX: dict[str, str] = {
+    endpoint.topic_id: key for key, endpoint in ENDPOINT_REGISTRY.items()
+}
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
@@ -872,16 +882,100 @@ def get_topic_for_endpoint(method: str, path: str) -> str | None:
 def get_endpoint_by_topic_id(topic_id: str) -> EndpointDefinition | None:
     """Get endpoint definition by topic ID.
 
+    Uses TOPIC_INDEX for O(1) lookup.
+
     Args:
         topic_id: Topic identifier
 
     Returns:
         EndpointDefinition if found, None otherwise
     """
-    for endpoint in ENDPOINT_REGISTRY.values():
-        if endpoint.topic_id == topic_id:
-            return endpoint
-    return None
+    endpoint_key = TOPIC_INDEX.get(topic_id)
+    if endpoint_key is None:
+        return None
+    return ENDPOINT_REGISTRY.get(endpoint_key)
+
+
+def get_parameter_refs_for_topic(topic_id: str) -> tuple[ParameterRef, ...]:
+    """Get parameter references for a topic.
+
+    Args:
+        topic_id: Topic identifier
+
+    Returns:
+        Tuple of ParameterRef objects, empty tuple if topic not found
+    """
+    endpoint = get_endpoint_by_topic_id(topic_id)
+    if endpoint is None:
+        return ()
+    return endpoint.parameter_refs
+
+
+def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
+    """Get names of required parameters for a topic.
+
+    A parameter is required if its ParameterRef.required is True,
+    or if required is None and source is REQUEST (request params default to required).
+
+    Args:
+        topic_id: Topic identifier
+
+    Returns:
+        Set of required parameter names, empty set if topic not found
+    """
+    param_refs = get_parameter_refs_for_topic(topic_id)
+    required_names: set[str] = set()
+
+    for ref in param_refs:
+        # If explicitly set, use that
+        if ref.required is True or (ref.required is None and ref.source == ParameterSource.REQUEST):
+            required_names.add(ref.name)
+
+    return required_names
+
+
+def get_parameters_for_topic(topic_id: str) -> list[dict[str, str | bool]]:
+    """Get basic parameter info for a topic (for API responses).
+
+    Returns parameter definitions with basic info only (name, type, required, description).
+    This is used for GET /admin/topics responses where full retrieval details are not needed.
+
+    Args:
+        topic_id: Topic identifier
+
+    Returns:
+        List of dicts with name, type, required, description.
+        Empty list if topic not found.
+    """
+    from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
+
+    param_refs = get_parameter_refs_for_topic(topic_id)
+    required_names = get_required_parameter_names_for_topic(topic_id)
+
+    result: list[dict[str, str | bool]] = []
+    for ref in param_refs:
+        param_def = PARAMETER_REGISTRY.get(ref.name)
+        if param_def:
+            result.append(
+                {
+                    "name": param_def.name,
+                    "type": param_def.param_type.value,
+                    "required": ref.name in required_names,
+                    "description": param_def.description,
+                }
+            )
+        else:
+            # Parameter not in registry - include with minimal info
+            result.append(
+                {
+                    "name": ref.name,
+                    "type": "string",
+                    "required": ref.name in required_names,
+                    "description": "",
+                }
+            )
+
+    return result
 
 
 def get_parameters_by_source_for_endpoint(
@@ -998,12 +1092,16 @@ def get_registry_statistics() -> dict[str, int]:
 
 __all__ = [
     "ENDPOINT_REGISTRY",
+    "TOPIC_INDEX",
     "EndpointDefinition",
     "ParameterRef",
     "get_endpoint_by_topic_id",
     "get_endpoint_definition",
+    "get_parameter_refs_for_topic",
     "get_parameters_by_source_for_endpoint",
+    "get_parameters_for_topic",
     "get_registry_statistics",
+    "get_required_parameter_names_for_topic",
     "get_topic_for_endpoint",
     "list_all_endpoints",
     "list_endpoints_by_category",

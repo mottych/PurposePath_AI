@@ -20,9 +20,9 @@ from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.endpoint_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_by_topic_id,
+    get_parameters_for_topic,
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
-from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
@@ -168,12 +168,12 @@ def _map_topic_to_detail(
         template_status=template_status_list,
         allowed_parameters=[
             ParameterDefinition(
-                name=p.name,
-                type=p.type,
-                required=p.required,
-                description=p.description,
+                name=p["name"],
+                type=p["type"],
+                required=p["required"],
+                description=p.get("description"),
             )
-            for p in topic.allowed_parameters
+            for p in get_parameters_for_topic(topic.topic_id)
         ],
         created_at=topic.created_at,
         updated_at=topic.updated_at,
@@ -368,15 +368,6 @@ async def create_topic(
             top_p=request.top_p,
             frequency_penalty=request.frequency_penalty,
             presence_penalty=request.presence_penalty,
-            allowed_parameters=[
-                DomainParameter(
-                    name=p["name"],
-                    type=p["type"],
-                    required=p.get("required", False),
-                    description=p.get("description"),
-                )
-                for p in request.allowed_parameters
-            ],
             prompts=[],
             created_at=now,
             updated_at=now,
@@ -473,16 +464,6 @@ async def upsert_topic(
                 updates["is_active"] = request.is_active
             if request.display_order is not None:
                 updates["display_order"] = request.display_order
-            if request.allowed_parameters is not None:
-                updates["allowed_parameters"] = [
-                    DomainParameter(
-                        name=p["name"],
-                        type=p["type"],
-                        required=p.get("required", False),
-                        description=p.get("description"),
-                    )
-                    for p in request.allowed_parameters
-                ]
 
             updates["updated_at"] = now
             updated_topic = replace(existing_topic, **updates)
@@ -537,17 +518,6 @@ async def upsert_topic(
                     display_order=request.display_order
                     if request.display_order is not None
                     else base_topic.display_order,
-                    allowed_parameters=[
-                        DomainParameter(
-                            name=p["name"],
-                            type=p["type"],
-                            required=p.get("required", False),
-                            description=p.get("description"),
-                        )
-                        for p in request.allowed_parameters
-                    ]
-                    if request.allowed_parameters is not None
-                    else base_topic.allowed_parameters,
                     created_at=now,
                     updated_at=now,
                     created_by=user.user_id,
@@ -583,17 +553,6 @@ async def upsert_topic(
                     if request.presence_penalty is not None
                     else 0.0,
                     prompts=[],
-                    allowed_parameters=[
-                        DomainParameter(
-                            name=p["name"],
-                            type=p["type"],
-                            required=p.get("required", False),
-                            description=p.get("description"),
-                        )
-                        for p in request.allowed_parameters
-                    ]
-                    if request.allowed_parameters
-                    else [],
                     created_at=now,
                     updated_at=now,
                     created_by=user.user_id,
@@ -1019,18 +978,20 @@ async def validate_topic_config(
                 warnings.append(f"Prompt '{prompt.get('prompt_type')}' is very short")
 
     # Check parameter usage in prompts
-    if request.allowed_parameters and request.prompts:
-        param_names = {p["name"] for p in request.allowed_parameters}
+    # Get parameters from registry for this topic
+    registry_params = get_parameters_for_topic(request.topic_id)
+    if registry_params and request.prompts:
+        param_names = {p["name"] for p in registry_params}
         for prompt in request.prompts:
             content = prompt.get("content", "")
             # Simple check for {param_name} patterns
             import re
 
-            used_params = set(re.findall(r"\{(\w+)\}", content))
+            used_params = set(re.findall(r"\\{(\\w+)\\}", content))
             unused = param_names - used_params
             if unused:
                 suggestions.append(
-                    f"Parameters {unused} are defined but not used in {prompt.get('prompt_type')} prompt"
+                    f"Parameters {unused} are defined in registry but not used in {prompt.get('prompt_type')} prompt"
                 )
 
     return ValidationResult(

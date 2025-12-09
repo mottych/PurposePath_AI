@@ -61,9 +61,6 @@ class CreateTopicRequest(BaseModel):
         description="Topic category for grouping",
     )
     description: str | None = Field(None, max_length=1000, description="Detailed topic description")
-    allowed_parameters: list[ParameterDefinitionRequest] = Field(
-        ..., description="List of allowed parameters for this topic"
-    )
     config: TopicConfigRequest = Field(..., description="LLM configuration settings")
     display_order: int = Field(default=100, ge=0, le=9999, description="Sort order for UI display")
     is_active: bool = Field(default=True, description="Whether topic is active and available")
@@ -74,9 +71,6 @@ class UpdateTopicRequest(BaseModel):
 
     topic_name: str | None = Field(None, min_length=3, max_length=128, description="New topic name")
     description: str | None = Field(None, max_length=1000, description="New description")
-    allowed_parameters: list[ParameterDefinitionRequest] | None = Field(
-        None, description="Updated parameter definitions"
-    )
     config: TopicConfigRequest | None = Field(None, description="Updated configuration settings")
     display_order: int | None = Field(None, ge=0, le=9999, description="New display order")
     is_active: bool | None = Field(None, description="New active status")

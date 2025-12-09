@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import pytest
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 
 
 @pytest.fixture
@@ -26,20 +26,6 @@ def coaching_topic():
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="user_name",
-                type="string",
-                required=True,
-                description="User's name",
-            ),
-            ParameterDefinition(
-                name="user_context",
-                type="string",
-                required=False,
-                description="Additional user context",
-            ),
-        ],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -72,14 +58,6 @@ def assessment_topic():
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="assessment_type",
-                type="string",
-                required=True,
-                description="Type of assessment",
-            )
-        ],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -403,11 +381,13 @@ class TestTopicAsSourceOfTruth:
         assert all(p.s3_key for p in coaching_topic.prompts)
 
     @pytest.mark.asyncio
-    async def test_topic_owns_parameters(self, coaching_topic):
-        """Verify topic owns parameter definitions."""
-        assert len(coaching_topic.allowed_parameters) > 0
-        assert all(p.name for p in coaching_topic.allowed_parameters)
-        assert all(p.type for p in coaching_topic.allowed_parameters)
+    async def test_topic_parameters_from_registry(self, coaching_topic):
+        """Verify topic parameters come from PARAMETER_REGISTRY."""
+        from coaching.src.core.endpoint_registry import get_parameters_for_topic
+
+        # Parameters are now managed in the registry, not on the entity
+        params = get_parameters_for_topic(coaching_topic.topic_id)
+        assert isinstance(params, list)
 
     @pytest.mark.asyncio
     async def test_no_template_id_references(self, coaching_topic):

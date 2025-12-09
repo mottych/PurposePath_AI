@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 import structlog
 from coaching.src.core.endpoint_registry import list_all_endpoints
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 
@@ -334,11 +334,8 @@ class TopicSeedingService:
                 if prompt_content is None:
                     report.missing_prompts.append(f"{topic.topic_id}:{prompt_info.prompt_type}")
 
-        # Check parameter schemas (basic validation)
-        for topic in all_topics:
-            for param in topic.allowed_parameters:
-                if not param.name or not param.type:
-                    report.invalid_parameters.append(f"{topic.topic_id}:{param.name}")
+        # Note: Parameter validation now uses PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # instead of topic.allowed_parameters
 
         logger.info(
             "Topic validation completed",
@@ -366,18 +363,6 @@ class TopicSeedingService:
         """
         now = datetime.now(UTC)
 
-        # Convert seed parameters to ParameterDefinition
-        parameters = [
-            ParameterDefinition(
-                name=param["name"],
-                type=param["type"],
-                required=param["required"],
-                description=param.get("description"),
-                default=param.get("default"),
-            )
-            for param in seed_data.allowed_parameters
-        ]
-
         # Create topic entity
         topic = LLMTopic(
             topic_id=seed_data.topic_id,
@@ -391,7 +376,6 @@ class TopicSeedingService:
             top_p=seed_data.top_p,
             frequency_penalty=seed_data.frequency_penalty,
             presence_penalty=seed_data.presence_penalty,
-            allowed_parameters=parameters,
             prompts=[],  # Will be added after S3 upload
             created_at=now,
             updated_at=now,
@@ -475,18 +459,8 @@ class TopicSeedingService:
         existing_topic.display_order = seed_data.display_order
         existing_topic.updated_at = now
 
-        # Update parameters
-        parameters = [
-            ParameterDefinition(
-                name=param["name"],
-                type=param["type"],
-                required=param["required"],
-                description=param.get("description"),
-                default=param.get("default"),
-            )
-            for param in seed_data.allowed_parameters
-        ]
-        existing_topic.allowed_parameters = parameters
+        # Note: Parameters are now managed in PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # No need to update allowed_parameters on the topic entity
 
         # Update prompts in S3 (if they have content)
         prompts = existing_topic.prompts.copy()

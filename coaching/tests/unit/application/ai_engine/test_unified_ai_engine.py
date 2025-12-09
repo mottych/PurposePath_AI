@@ -12,7 +12,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
 from coaching.src.core.constants import CoachingTopic, MessageRole
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition
+from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 from coaching.src.domain.ports.llm_provider_port import LLMProviderPort, LLMResponse
 from coaching.src.domain.value_objects.conversation_context import ConversationContext
@@ -79,14 +79,6 @@ def sample_topic():
         temperature=0.7,
         max_tokens=100,
         is_active=True,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="param1", type="string", required=True, description="Parameter 1"
-            ),
-            ParameterDefinition(
-                name="param2", type="string", required=False, description="Parameter 2"
-            ),
-        ],
         prompts=[],  # Prompts are loaded from S3 in the engine
     )
 
@@ -229,7 +221,6 @@ def conversation_topic():
         temperature=0.7,
         max_tokens=100,
         is_active=True,
-        allowed_parameters=[],
         prompts=[],
     )
 

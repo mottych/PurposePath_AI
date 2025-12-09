@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 from coaching.src.core.config_multitenant import settings
 from coaching.src.core.constants import CoachingTopic
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 
@@ -296,6 +296,7 @@ async def seed_coaching_topics() -> dict[str, int]:
         }
 
         # Create topic entity with explicit model configuration
+        # Note: allowed_parameters is now managed via registry, not stored on entity
         topic = LLMTopic(
             topic_id=topic_id,
             topic_name=config["topic_name"],
@@ -310,7 +311,6 @@ async def seed_coaching_topics() -> dict[str, int]:
             top_p=top_p,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            allowed_parameters=[ParameterDefinition(**p) for p in config["allowed_parameters"]],
             prompts=prompts,
             additional_config=additional_config,
             created_at=datetime.now(UTC),

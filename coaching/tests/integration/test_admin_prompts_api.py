@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
     PromptNotFoundError,
@@ -44,7 +44,7 @@ def mock_s3_storage() -> AsyncMock:
 
 @pytest.fixture
 def sample_topic() -> LLMTopic:
-    """Sample topic for testing."""
+    """Sample topic for testing (custom topic NOT in registry)."""
     return LLMTopic(
         topic_id="revenue_analysis",
         topic_name="Revenue Analysis",
@@ -52,20 +52,6 @@ def sample_topic() -> LLMTopic:
         category="kpi",
         description="Analyze revenue trends and patterns",
         is_active=True,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="company_id",
-                type="string",
-                required=True,
-                description="Company identifier",
-            ),
-            ParameterDefinition(
-                name="period",
-                type="string",
-                required=False,
-                default="monthly",
-            ),
-        ],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -82,6 +68,28 @@ def sample_topic() -> LLMTopic:
             "supports_streaming": True,
             "max_turns": 10,
         },
+        created_at=datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC),
+        updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
+        created_by="admin_user_123",
+        display_order=1,
+    )
+
+
+@pytest.fixture
+def registered_topic() -> LLMTopic:
+    """Topic that IS in PARAMETER_REGISTRY for parameter validation tests."""
+    return LLMTopic(
+        topic_id="website_scan",
+        topic_name="Website Scan",
+        topic_type="single_shot",
+        category="onboarding",
+        description="Scan website for business information",
+        is_active=True,
+        prompts=[],
+        model_code="claude-3-sonnet",
+        temperature=0.7,
+        max_tokens=2000,
+        additional_config={},
         created_at=datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC),
         updated_at=datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC),
         created_by="admin_user_123",
@@ -215,7 +223,7 @@ class TestGetTopic:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["topic_id"] == "revenue_analysis"
-        assert len(data["data"]["allowed_parameters"]) == 2
+        # allowed_parameters now comes from registry, may be empty for unknown topics
         mock_topic_repository.get.assert_awaited_once_with(topic_id="revenue_analysis")
 
     @pytest.mark.asyncio
@@ -253,14 +261,6 @@ class TestCreateTopic:
             "topic_type": "kpi_system",
             "category": "kpi",
             "description": "Analyze revenue trends",
-            "allowed_parameters": [
-                {
-                    "name": "company_id",
-                    "type": "string",
-                    "required": True,
-                    "description": "Company identifier",
-                }
-            ],
             "config": {
                 "default_model": "claude-3-sonnet",
                 "supports_streaming": True,
@@ -292,7 +292,6 @@ class TestCreateTopic:
             "topic_name": "Revenue Analysis",
             "topic_type": "kpi_system",
             "category": "kpi",
-            "allowed_parameters": [],
             "config": {"default_model": "test", "supports_streaming": False},
         }
 
@@ -313,7 +312,6 @@ class TestCreateTopic:
             "topic_name": "Test",
             "topic_type": "conversation_coaching",  # Not allowed via API
             "category": "coaching",
-            "allowed_parameters": [],
             "config": {"default_model": "test", "supports_streaming": False},
         }
 
@@ -332,7 +330,6 @@ class TestCreateTopic:
             "topic_name": "Test",
             "topic_type": "kpi_system",
             "category": "kpi",
-            "allowed_parameters": [],
             "config": {"default_model": "test", "supports_streaming": False},
         }
 
@@ -349,7 +346,7 @@ class TestCreateTopic:
         request_data = {
             "topic_id": "test",
             "topic_name": "Test",
-            # Missing topic_type, category, allowed_parameters, config
+            # Missing topic_type, category, config
         }
 
         response = client.post("/admin/prompts", json=request_data)
@@ -510,16 +507,20 @@ class TestCreatePrompt:
         self,
         client: TestClient,
         mock_topic_repository: AsyncMock,
-        sample_topic: LLMTopic,
+        registered_topic: LLMTopic,
     ) -> None:
-        """Test creating prompt with invalid parameters."""
-        mock_topic_repository.get.return_value = sample_topic
+        """Test creating prompt with invalid parameters.
+
+        Uses a registered topic (website_scan) so parameter validation actually
+        occurs. Custom topics not in the registry skip validation.
+        """
+        mock_topic_repository.get.return_value = registered_topic
 
         request_data = {
-            "content": "Use {{invalid_param}} that doesn't exist"  # Not in allowed_parameters
+            "content": "Use {{invalid_param}} that doesn't exist"  # Not in parameter registry
         }
 
-        response = client.post("/admin/prompts/revenue_analysis/user", json=request_data)
+        response = client.post("/admin/prompts/website_scan/user", json=request_data)
 
         assert response.status_code == 400
         data = response.json()
@@ -673,7 +674,7 @@ class TestParameterValidation:
         mock_s3_storage.save_prompt.return_value = "key"
         mock_topic_repository.add_prompt.return_value = sample_topic
 
-        # Both parameters are in allowed_parameters
+        # Parameters are validated against the registry
         request_data = {"content": "Analyze {{company_id}} for {{period}} with valid params"}
 
         response = client.post("/admin/prompts/revenue_analysis/user", json=request_data)
@@ -685,14 +686,18 @@ class TestParameterValidation:
         self,
         client: TestClient,
         mock_topic_repository: AsyncMock,
-        sample_topic: LLMTopic,
+        registered_topic: LLMTopic,
     ) -> None:
-        """Test that multiple invalid parameters are reported."""
-        mock_topic_repository.get.return_value = sample_topic
+        """Test that multiple invalid parameters are reported.
+
+        Uses a registered topic (website_scan) so parameter validation actually
+        occurs. Custom topics not in the registry skip validation.
+        """
+        mock_topic_repository.get.return_value = registered_topic
 
         request_data = {"content": "Use {{invalid1}} and {{invalid2}} and {{invalid3}}"}
 
-        response = client.post("/admin/prompts/revenue_analysis/user", json=request_data)
+        response = client.post("/admin/prompts/website_scan/user", json=request_data)
 
         assert response.status_code == 400
         data = response.json()

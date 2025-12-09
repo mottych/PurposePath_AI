@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
-from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
+from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.prompt_service import PromptService
 
@@ -27,14 +27,6 @@ def test_topic():
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[
-            ParameterDefinition(
-                name="user_name",
-                type="string",
-                required=True,
-                description="User's name",
-            )
-        ],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -99,7 +91,7 @@ class TestTopicCreationAndRetrieval:
         assert retrieved.model_code == "claude-3-5-sonnet-20241022"
         assert retrieved.temperature == 0.7
         assert len(retrieved.prompts) == 1
-        assert len(retrieved.allowed_parameters) == 1
+        # allowed_parameters now comes from registry, not stored on entity
 
     @pytest.mark.asyncio
     async def test_retrieve_nonexistent_topic(self, mock_topic_repository):
@@ -145,7 +137,6 @@ class TestTopicListing:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -171,7 +162,6 @@ class TestTopicListing:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -197,7 +187,6 @@ class TestTopicListing:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             display_order=2,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
@@ -213,7 +202,6 @@ class TestTopicListing:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             display_order=1,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
@@ -310,7 +298,6 @@ class TestTopicValidation:
                 temperature=3.0,  # Invalid - too high
                 max_tokens=2000,
                 prompts=[],
-                allowed_parameters=[],
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
             )
@@ -328,7 +315,6 @@ class TestTopicValidation:
                 temperature=0.7,
                 max_tokens=-100,  # Invalid - negative
                 prompts=[],
-                allowed_parameters=[],
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
             )
@@ -350,7 +336,6 @@ class TestMultipleTopics:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -365,7 +350,6 @@ class TestMultipleTopics:
             temperature=0.5,
             max_tokens=1000,
             prompts=[],
-            allowed_parameters=[],
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -410,7 +394,6 @@ class TestErrorHandling:
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
-            allowed_parameters=[],
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -466,7 +449,7 @@ class TestBackwardCompatibility:
         assert topic_dict["topic_id"] == "test_coaching_e2e"
         assert topic_dict["model_code"] == "claude-3-5-sonnet-20241022"
         assert "prompts" in topic_dict
-        assert "allowed_parameters" in topic_dict
+        # allowed_parameters no longer stored on entity
 
     def test_topic_deserialization(self, test_topic):
         """Test that topics can be deserialized from dict."""

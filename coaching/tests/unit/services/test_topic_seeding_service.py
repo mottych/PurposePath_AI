@@ -86,7 +86,6 @@ class TestTopicSeedingService:
             mock_seed.top_p = 1.0
             mock_seed.frequency_penalty = 0.0
             mock_seed.presence_penalty = 0.0
-            mock_seed.allowed_parameters = []
             mock_seed.default_system_prompt = "system"
             mock_seed.default_user_prompt = "user"
             mock_seed.display_order = 1
@@ -170,7 +169,6 @@ class TestTopicSeedingService:
             mock_seed.top_p = 1.0
             mock_seed.frequency_penalty = 0.0
             mock_seed.presence_penalty = 0.0
-            mock_seed.allowed_parameters = []
             mock_seed.default_system_prompt = "system"
             mock_seed.default_user_prompt = "user"
             mock_seed.display_order = 1

@@ -132,17 +132,19 @@ class TestTopicSeedData:
         for topic_id in migrated_topics:
             assert topic_id in TOPIC_SEED_DATA, f"Migrated topic {topic_id} not found in seed data"
 
-    def test_topic_parameters_validation(self):
-        """Verify topic parameters are properly defined."""
-        for topic_id, topic_data in TOPIC_SEED_DATA.items():
-            for param in topic_data.allowed_parameters:
-                assert "name" in param
-                assert "type" in param
-                # Type should be valid JSON schema type
-                valid_types = ["string", "number", "integer", "boolean", "object", "array"]
-                assert (
-                    param["type"] in valid_types
-                ), f"Invalid parameter type in topic {topic_id}: {param['type']}"
+    def test_topic_parameters_come_from_registry(self):
+        """Verify topic parameters are defined in PARAMETER_REGISTRY, not seed data."""
+        from coaching.src.core.endpoint_registry import get_parameters_for_topic
+
+        # Topics in seed data should have their parameters defined in the registry
+        for topic_id in TOPIC_SEED_DATA.keys():
+            params = get_parameters_for_topic(topic_id)
+            # Parameters is a list (may be empty for some topics)
+            assert isinstance(params, list), f"Parameters for {topic_id} should be a list"
+            # If parameters exist, they should have required fields
+            for param in params:
+                assert "name" in param, f"Parameter in topic {topic_id} missing 'name'"
+                assert "type" in param, f"Parameter in topic {topic_id} missing 'type'"
 
 
 class TestUnifiedAIEngine:

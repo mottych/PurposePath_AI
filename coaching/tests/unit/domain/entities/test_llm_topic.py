@@ -160,14 +160,6 @@ class TestLLMTopic:
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            allowed_parameters=[
-                ParameterDefinition(
-                    name="user_name",
-                    type="string",
-                    required=True,
-                    description="User's display name",
-                )
-            ],
             prompts=[
                 PromptInfo(
                     prompt_type="system",
@@ -200,7 +192,6 @@ class TestLLMTopic:
             model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -218,7 +209,6 @@ class TestLLMTopic:
             model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -238,7 +228,6 @@ class TestLLMTopic:
                 model_code="claude-3-5-sonnet-20241022",
                 temperature=0.7,
                 max_tokens=2000,
-                allowed_parameters=[],
                 prompts=[],
                 additional_config={},
                 created_at=datetime.now(tz=UTC),
@@ -256,7 +245,6 @@ class TestLLMTopic:
         assert item["topic_type"] == "conversation_coaching"
         assert item["category"] == "coaching"
         assert item["is_active"] is True
-        assert len(item["allowed_parameters"]) == 1
         assert len(item["prompts"]) == 1
         assert item["model_code"] == "claude-3-5-sonnet-20241022"
         # DynamoDB requires Decimal for float values
@@ -277,7 +265,6 @@ class TestLLMTopic:
             "topic_type": "single_shot",
             "category": "analysis",
             "is_active": False,
-            "allowed_parameters": [{"name": "param1", "type": "string", "required": True}],
             "prompts": [
                 {
                     "prompt_type": "user",
@@ -302,7 +289,6 @@ class TestLLMTopic:
         assert topic.topic_type == "single_shot"
         assert topic.category == "analysis"
         assert topic.is_active is False
-        assert len(topic.allowed_parameters) == 1
         assert len(topic.prompts) == 1
         assert topic.additional_config["key"] == "value"
         assert topic.model_code == "claude-3-5-sonnet-20241022"
@@ -322,7 +308,6 @@ class TestLLMTopic:
         assert roundtrip.topic_type == sample_topic.topic_type
         assert roundtrip.category == sample_topic.category
         assert roundtrip.is_active == sample_topic.is_active
-        assert len(roundtrip.allowed_parameters) == len(sample_topic.allowed_parameters)
         assert len(roundtrip.prompts) == len(sample_topic.prompts)
         assert roundtrip.additional_config == sample_topic.additional_config
         assert roundtrip.model_code == sample_topic.model_code
@@ -346,21 +331,6 @@ class TestLLMTopic:
         assert sample_topic.has_prompt(prompt_type="system") is True
         assert sample_topic.has_prompt(prompt_type="user") is False
 
-    def test_get_parameter(self, sample_topic: LLMTopic) -> None:
-        """Test getting parameter by name."""
-        param = sample_topic.get_parameter(name="user_name")
-
-        assert param is not None
-        assert param.name == "user_name"
-
-        # Non-existent parameter
-        assert sample_topic.get_parameter(name="nonexistent") is None
-
-    def test_has_parameter(self, sample_topic: LLMTopic) -> None:
-        """Test checking if parameter exists."""
-        assert sample_topic.has_parameter(name="user_name") is True
-        assert sample_topic.has_parameter(name="nonexistent") is False
-
     def test_minimal_topic(self) -> None:
         """Test creating topic with minimal required fields."""
         topic = LLMTopic(
@@ -372,7 +342,6 @@ class TestLLMTopic:
             model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -404,7 +373,6 @@ class TestLLMTopicFactory:
         assert topic.temperature == 0.7
         assert topic.max_tokens == 2000
         assert topic.prompts == []  # No prompts until configured
-        assert topic.allowed_parameters == []
         assert topic.created_by == "system"
 
     def test_create_default_from_enum_purpose(self) -> None:

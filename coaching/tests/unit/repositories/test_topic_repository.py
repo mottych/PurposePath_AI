@@ -53,7 +53,6 @@ def sample_topic() -> LLMTopic:
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0,
-        allowed_parameters=[],
         prompts=[
             PromptInfo(
                 prompt_type="system",
@@ -368,7 +367,6 @@ class TestTopicRepositoryEnumDefaults:
             temperature=0.8,
             max_tokens=3000,
             prompts=[],
-            allowed_parameters=[],
             additional_config={},
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
@@ -449,7 +447,6 @@ class TestTopicRepositoryEnumDefaults:
                 temperature=0.7,
                 max_tokens=2000,
                 prompts=[],
-                allowed_parameters=[],
                 additional_config={},
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
