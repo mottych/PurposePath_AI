@@ -1,6 +1,6 @@
 """Business data and metrics API routes (Issue #65)."""
 
-from typing import Any, Generic, TypeVar, cast
+from typing import Generic, TypeVar, cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
@@ -11,6 +11,10 @@ from coaching.src.api.dependencies.ai_engine import (
 )
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.auth import UserContext
+from coaching.src.api.models.business_data import (
+    BusinessMetricsRequest,
+    BusinessMetricsResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
@@ -25,19 +29,6 @@ class ApiResponse(BaseModel, Generic[T]):
 
     success: bool
     data: T
-
-
-class BusinessMetricsRequest(BaseModel):
-    """Request model for business metrics (empty for GET)."""
-
-    pass
-
-
-class BusinessMetricsResponse(BaseModel):
-    """Business metrics response."""
-
-    tenant_id: str
-    business_data: dict[str, Any]
 
 
 @router.get(

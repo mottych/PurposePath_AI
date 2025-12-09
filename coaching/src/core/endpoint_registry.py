@@ -875,6 +875,21 @@ def list_all_endpoints(active_only: bool = True) -> list[EndpointDefinition]:
     return endpoints
 
 
+def get_response_model_name_for_topic(topic_id: str) -> str | None:
+    """Get the response model name for a topic.
+
+    Args:
+        topic_id: Topic identifier
+
+    Returns:
+        Response model name string if found, None otherwise
+    """
+    endpoint = get_endpoint_by_topic_id(topic_id)
+    if endpoint is None:
+        return None
+    return endpoint.response_model
+
+
 def get_topic_for_endpoint(method: str, path: str) -> str | None:
     """Get topic ID for an endpoint.
 
@@ -1113,6 +1128,7 @@ __all__ = [
     "get_parameters_for_topic",
     "get_registry_statistics",
     "get_required_parameter_names_for_topic",
+    "get_response_model_name_for_topic",
     "get_topic_for_endpoint",
     "list_all_endpoints",
     "list_endpoints_by_category",
