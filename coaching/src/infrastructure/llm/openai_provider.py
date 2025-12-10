@@ -1,7 +1,10 @@
 """OpenAI LLM provider implementation.
 
 This module provides an OpenAI-backed implementation of the LLM provider
-port interface, supporting GPT-4o, GPT-5, and other OpenAI models.
+port interface, supporting GPT-4o, GPT-5 series (including GPT-5 Pro), and other OpenAI models.
+
+Uses the Responses API (/v1/responses) which supports all models including
+GPT-5 Pro which is exclusive to this API.
 """
 
 from collections.abc import AsyncIterator
@@ -17,11 +20,12 @@ class OpenAILLMProvider:
     """
     OpenAI adapter implementing LLMProviderPort.
 
-    This adapter provides OpenAI-backed LLM access,
+    This adapter provides OpenAI-backed LLM access using the Responses API,
     implementing the provider port interface defined in the domain layer.
 
     Design:
-        - Supports multiple OpenAI models (GPT-4o, GPT-5 series)
+        - Uses Responses API (/v1/responses) for all models
+        - Supports all OpenAI models including GPT-5 Pro (exclusive to Responses API)
         - Handles both streaming and non-streaming
         - Includes retry logic and error handling
         - Provides usage metrics
@@ -100,14 +104,14 @@ class OpenAILLMProvider:
         system_prompt: str | None = None,
     ) -> LLMResponse:
         """
-        Generate a completion from OpenAI.
+        Generate a completion from OpenAI using the Responses API.
 
         Args:
             messages: Conversation history
             model: Model identifier
             temperature: Sampling temperature (0.0-2.0 for OpenAI)
             max_tokens: Maximum tokens to generate
-            system_prompt: Optional system prompt
+            system_prompt: Optional system prompt (passed as instructions)
 
         Returns:
             LLMResponse with generated content and metadata
@@ -125,81 +129,93 @@ class OpenAILLMProvider:
         try:
             client = await self._get_client()
 
-            # Build messages for OpenAI API
-            api_messages = []
-
-            # Add system prompt if provided
-            if system_prompt:
-                api_messages.append({"role": "system", "content": system_prompt})
-
-            # Add conversation messages
+            # Build input for Responses API
+            # Convert messages to the input format expected by Responses API
+            input_items: list[dict[str, Any]] = []
             for msg in messages:
-                api_messages.append({"role": msg.role, "content": msg.content})
+                input_items.append(
+                    {
+                        "role": msg.role,
+                        "content": msg.content,
+                    }
+                )
 
-            # Call OpenAI API
+            # Call OpenAI Responses API
             logger.info(
-                "Calling OpenAI API",
+                "Calling OpenAI Responses API",
                 model=model,
-                num_messages=len(api_messages),
+                num_messages=len(input_items),
                 temperature=temperature,
             )
 
-            # Build API parameters based on model requirements
+            # Build API parameters
             params: dict[str, Any] = {
                 "model": model,
-                "messages": api_messages,
+                "input": input_items,
+                "store": False,  # Don't store responses by default
             }
 
-            # GPT-5 models have special requirements
-            if model.startswith("gpt-5") or model.startswith("o1"):
-                # Use max_completion_tokens instead of max_tokens
-                params["max_completion_tokens"] = max_tokens
+            # Add system prompt as instructions if provided
+            if system_prompt:
+                params["instructions"] = system_prompt
 
-                # GPT-5 Mini only supports temperature=1.0 (default)
-                if model == "gpt-5-mini":
-                    # Don't set temperature - use default
-                    pass
-                else:
-                    params["temperature"] = temperature
+            # Add max_output_tokens if specified
+            if max_tokens:
+                params["max_output_tokens"] = max_tokens
+
+            # GPT-5 Pro only supports high reasoning effort - don't set temperature
+            # For other models, set temperature
+            if model == "gpt-5-pro":
+                # GPT-5 Pro has fixed reasoning settings, don't override
+                pass
+            elif model == "gpt-5-mini":
+                # GPT-5 Mini only supports default temperature (1.0)
+                pass
             else:
-                # Older models use max_tokens and support custom temperature
-                params["max_tokens"] = max_tokens
                 params["temperature"] = temperature
 
-            response = await client.chat.completions.create(**params)
+            response = await client.responses.create(**params)
 
-            # Extract response
-            message = response.choices[0].message
-            content = str(message.content or "")
+            # Extract response content from Responses API format
+            content = ""
+            if response.output:
+                for output_item in response.output:
+                    if output_item.type == "message":
+                        for content_part in output_item.content:
+                            if content_part.type == "output_text":
+                                content += content_part.text
 
-            # For newer models, check for refusal field
-            if hasattr(message, "refusal") and message.refusal:
-                logger.warning("OpenAI model refused request", refusal=message.refusal, model=model)
-                content = f"[Model refused: {message.refusal}]"
+            # Determine finish reason from response status
+            finish_reason = "stop" if response.status == "completed" else response.status
 
-            finish_reason = str(response.choices[0].finish_reason or "stop")
+            # Check for errors
+            if response.error:
+                logger.warning(
+                    "OpenAI response contains error",
+                    error_code=response.error.code,
+                    error_message=response.error.message,
+                    model=model,
+                )
+                content = f"[Error: {response.error.message}]"
 
             # Debug log for empty responses
-            if not content and response.usage and response.usage.completion_tokens > 0:
+            if not content and response.usage and response.usage.output_tokens > 0:
                 logger.warning(
-                    "OpenAI returned empty content despite completion tokens",
+                    "OpenAI returned empty content despite output tokens",
                     model=model,
-                    completion_tokens=response.usage.completion_tokens,
-                    finish_reason=finish_reason,
-                    message_dict=(
-                        message.model_dump() if hasattr(message, "model_dump") else str(message)
-                    ),
+                    output_tokens=response.usage.output_tokens,
+                    status=response.status,
                 )
 
             # Extract usage metrics
             usage = {
-                "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+                "prompt_tokens": response.usage.input_tokens if response.usage else 0,
+                "completion_tokens": response.usage.output_tokens if response.usage else 0,
                 "total_tokens": response.usage.total_tokens if response.usage else 0,
             }
 
             logger.info(
-                "OpenAI API call successful",
+                "OpenAI Responses API call successful",
                 model=model,
                 usage=usage,
                 finish_reason=finish_reason,
@@ -214,7 +230,7 @@ class OpenAILLMProvider:
             )
 
         except Exception as e:
-            logger.error("OpenAI API call failed", error=str(e), model=model)
+            logger.error("OpenAI Responses API call failed", error=str(e), model=model)
             raise RuntimeError(f"OpenAI API call failed: {e}") from e
 
     async def generate_stream(
@@ -226,7 +242,7 @@ class OpenAILLMProvider:
         system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
-        Generate a completion with token streaming.
+        Generate a completion with token streaming using Responses API.
 
         Args:
             messages: Conversation history
@@ -251,40 +267,64 @@ class OpenAILLMProvider:
         try:
             client = await self._get_client()
 
-            # Build messages for OpenAI API
-            api_messages = []
-
-            # Add system prompt if provided
-            if system_prompt:
-                api_messages.append({"role": "system", "content": system_prompt})
-
-            # Add conversation messages
+            # Build input for Responses API
+            input_items: list[dict[str, Any]] = []
             for msg in messages:
-                api_messages.append({"role": msg.role, "content": msg.content})
+                input_items.append(
+                    {
+                        "role": msg.role,
+                        "content": msg.content,
+                    }
+                )
 
-            # Call OpenAI streaming API
+            # Call OpenAI Responses API with streaming
             logger.info(
-                "Calling OpenAI streaming API",
+                "Calling OpenAI Responses API (streaming)",
                 model=model,
-                num_messages=len(api_messages),
+                num_messages=len(input_items),
                 temperature=temperature,
             )
 
-            stream = await client.chat.completions.create(
-                model=model,
-                messages=api_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=True,
-            )
+            # Build API parameters
+            params: dict[str, Any] = {
+                "model": model,
+                "input": input_items,
+                "store": False,
+                "stream": True,
+            }
 
-            # Stream tokens
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+            # Add system prompt as instructions if provided
+            if system_prompt:
+                params["instructions"] = system_prompt
+
+            # Add max_output_tokens if specified
+            if max_tokens:
+                params["max_output_tokens"] = max_tokens
+
+            # Set temperature for models that support it
+            if model not in ("gpt-5-pro", "gpt-5-mini"):
+                params["temperature"] = temperature
+
+            # Use the streaming interface
+            async with client.responses.stream(**params) as stream:
+                async for event in stream:
+                    # Handle different event types from Responses API streaming
+                    if hasattr(event, "type"):
+                        if (
+                            event.type == "response.output_text.delta"
+                            and hasattr(event, "delta")
+                            and event.delta
+                        ):
+                            yield event.delta
+                        elif (
+                            event.type == "response.content_part.delta"
+                            and hasattr(event, "delta")
+                            and hasattr(event.delta, "text")
+                        ):
+                            yield event.delta.text
 
         except Exception as e:
-            logger.error("OpenAI streaming API call failed", error=str(e), model=model)
+            logger.error("OpenAI Responses API streaming failed", error=str(e), model=model)
             raise RuntimeError(f"OpenAI streaming API call failed: {e}") from e
 
     async def count_tokens(self, text: str, _model: str) -> int:
