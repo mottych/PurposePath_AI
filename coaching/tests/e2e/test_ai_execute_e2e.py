@@ -22,11 +22,12 @@ def validate_onboarding_review_response(data: dict) -> None:
     assert "data" in data, "Response should contain 'data' field"
     response_data = data["data"]
 
-    # qualityReview validation
-    assert "qualityReview" in response_data, "Response should contain qualityReview"
-    quality_review = response_data["qualityReview"]
-    assert isinstance(quality_review, str), "qualityReview should be a string"
-    assert len(quality_review) > 50, "qualityReview should be substantive (>50 chars)"
+    # quality_review validation (API uses snake_case)
+    quality_review_key = "quality_review" if "quality_review" in response_data else "qualityReview"
+    assert quality_review_key in response_data, "Response should contain quality_review"
+    quality_review = response_data[quality_review_key]
+    assert isinstance(quality_review, str), "quality_review should be a string"
+    assert len(quality_review) > 50, "quality_review should be substantive (>50 chars)"
 
     # suggestions validation
     assert "suggestions" in response_data, "Response should contain suggestions"
@@ -47,8 +48,10 @@ def validate_response_metadata(data: dict, expected_topic: str) -> None:
     assert data.get("topic_id") == expected_topic, f"topic_id should be {expected_topic}"
     assert "metadata" in data, "Response should contain metadata"
     metadata = data["metadata"]
-    assert "execution_time_ms" in metadata, "Metadata should contain execution_time_ms"
-    assert metadata["execution_time_ms"] > 0, "Execution time should be positive"
+    # API uses processing_time_ms (not execution_time_ms)
+    time_key = "processing_time_ms" if "processing_time_ms" in metadata else "execution_time_ms"
+    assert time_key in metadata, f"Metadata should contain {time_key}"
+    assert metadata[time_key] > 0, "Processing time should be positive"
 
 
 # =============================================================================
