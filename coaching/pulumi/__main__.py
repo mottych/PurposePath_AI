@@ -260,7 +260,7 @@ integration = aws.apigatewayv2.Integration(
     integration_type="AWS_PROXY",
     integration_uri=coaching_lambda.arn,
     payload_format_version="2.0",
-    timeout_millis=30000,  # Max 30 seconds for HTTP API (API Gateway limit)
+    timeout_milliseconds=30000,  # Max 30 seconds for HTTP API (API Gateway limit)
 )
 
 aws.apigatewayv2.Route(
