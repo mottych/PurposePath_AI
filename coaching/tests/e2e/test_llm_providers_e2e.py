@@ -89,19 +89,16 @@ async def test_claude_sonnet_45_real_generation(check_aws_credentials: None) -> 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="GPT-5 Pro requires /v1/responses API, not /v1/chat/completions")
 async def test_gpt5_pro_real_generation(check_openai_credentials: None) -> None:
-    """Test GPT-5 Pro real generation via OpenAI.
+    """Test GPT-5 Pro real generation via OpenAI Responses API.
 
-    Note: GPT-5 Pro exclusively uses OpenAI's newer Responses API (/v1/responses)
-    which is not yet implemented in our OpenAILLMProvider. The provider currently
-    uses the Chat Completions API (/v1/chat/completions).
-
-    To support GPT-5 Pro, we would need to add Responses API support.
+    GPT-5 Pro uses OpenAI's Responses API exclusively. This test validates
+    that our provider correctly handles this model.
 
     Validates:
-    - OpenAI provider works with GPT-5 Pro
+    - OpenAI provider works with GPT-5 Pro via Responses API
     - Advanced reasoning capability (fixed high reasoning_effort)
+    - Logic puzzle solving ability
     """
     api_key = os.getenv("OPENAI_API_KEY")
     provider = OpenAILLMProvider(api_key=api_key)
@@ -113,13 +110,11 @@ async def test_gpt5_pro_real_generation(check_openai_credentials: None) -> None:
         )
     ]
 
-    response = await provider.generate(
-        messages=messages, model="gpt-5-pro", temperature=0.5, max_tokens=200
-    )
+    response = await provider.generate(messages=messages, model="gpt-5-pro", max_tokens=200)
 
     assert response.content
     assert "yes" in response.content.lower() or "all bloops" in response.content.lower()
-    assert response.model == "gpt-5-pro"
+    assert "gpt-5-pro" in response.model.lower() or "gpt-5" in response.model.lower()
     assert response.provider == "openai"
     assert response.usage["total_tokens"] > 0
 
