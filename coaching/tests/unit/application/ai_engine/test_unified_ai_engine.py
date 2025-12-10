@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
@@ -16,12 +16,15 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 from coaching.src.domain.ports.llm_provider_port import LLMProviderPort, LLMResponse
 from coaching.src.domain.value_objects.conversation_context import ConversationContext
+from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from pydantic import BaseModel
 
 
-class TestResponseModel(BaseModel):
+class SampleResponseModel(BaseModel):
+    """Sample response model for testing."""
+
     result: str
 
 
@@ -41,6 +44,14 @@ def mock_llm_provider():
 
 
 @pytest.fixture
+def mock_provider_factory(mock_llm_provider):
+    """Create a mock provider factory that returns the mock LLM provider."""
+    factory = MagicMock(spec=LLMProviderFactory)
+    factory.get_provider_for_model.return_value = (mock_llm_provider, "gpt-4")
+    return factory
+
+
+@pytest.fixture
 def mock_response_serializer():
     return AsyncMock(spec=ResponseSerializer)
 
@@ -54,14 +65,14 @@ def mock_conversation_repo():
 def engine(
     mock_topic_repo,
     mock_s3_storage,
-    mock_llm_provider,
+    mock_provider_factory,
     mock_response_serializer,
     mock_conversation_repo,
 ):
     return UnifiedAIEngine(
         topic_repo=mock_topic_repo,
         s3_storage=mock_s3_storage,
-        llm_provider=mock_llm_provider,
+        provider_factory=mock_provider_factory,
         response_serializer=mock_response_serializer,
         conversation_repo=mock_conversation_repo,
     )
@@ -88,6 +99,7 @@ async def test_execute_single_shot_success(
     engine,
     mock_topic_repo,
     mock_s3_storage,
+    mock_provider_factory,
     mock_llm_provider,
     mock_response_serializer,
     sample_topic,
@@ -95,7 +107,7 @@ async def test_execute_single_shot_success(
     # Arrange
     topic_id = "test_topic"
     parameters = {"param1": "value1"}
-    response_model = TestResponseModel
+    response_model = SampleResponseModel
 
     mock_topic_repo.get.return_value = sample_topic
     mock_s3_storage.get_prompt.side_effect = ["System prompt content", "User prompt content"]
@@ -109,7 +121,7 @@ async def test_execute_single_shot_success(
     )
     mock_llm_provider.generate.return_value = mock_llm_response
 
-    expected_result = TestResponseModel(result="success")
+    expected_result = SampleResponseModel(result="success")
     mock_response_serializer.serialize.return_value = expected_result
 
     # Act
@@ -146,7 +158,7 @@ async def test_execute_single_shot_topic_not_found(
         await engine.execute_single_shot(
             topic_id=topic_id,
             parameters={},
-            response_model=TestResponseModel,
+            response_model=SampleResponseModel,
         )
 
 
@@ -165,7 +177,7 @@ async def test_execute_single_shot_topic_inactive(
         await engine.execute_single_shot(
             topic_id=sample_topic.topic_id,
             parameters={},
-            response_model=TestResponseModel,
+            response_model=SampleResponseModel,
         )
 
 
@@ -194,7 +206,7 @@ async def test_execute_single_shot_missing_parameters(
             await engine.execute_single_shot(
                 topic_id=sample_topic.topic_id,
                 parameters=parameters,
-                response_model=TestResponseModel,
+                response_model=SampleResponseModel,
             )
         assert "param1" in str(exc_info.value)
 
@@ -215,7 +227,7 @@ async def test_execute_single_shot_prompt_not_found(
         await engine.execute_single_shot(
             topic_id=sample_topic.topic_id,
             parameters={"param1": "value1"},
-            response_model=TestResponseModel,
+            response_model=SampleResponseModel,
         )
 
 
@@ -303,6 +315,7 @@ async def test_send_message_success(
     mock_topic_repo,
     mock_conversation_repo,
     mock_s3_storage,
+    mock_provider_factory,
     mock_llm_provider,
     mock_response_serializer,
     conversation_topic,
