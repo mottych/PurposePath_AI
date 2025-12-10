@@ -204,9 +204,7 @@ Business Context:
 
 Provide:
 1. A quality review of the current niche (strengths, weaknesses, suggestions for improvement)
-2. Exactly 3 alternative niche variations with reasoning for each
-
-Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+2. Exactly 3 alternative niche variations with reasoning for each""",
         display_order=14,
     ),
     "ica_review": TopicSeedData(
@@ -237,9 +235,7 @@ Business Context:
 
 Provide:
 1. A quality review of the current ICA (strengths, weaknesses, suggestions for improvement)
-2. Exactly 3 alternative ICA variations with reasoning for each
-
-Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+2. Exactly 3 alternative ICA variations with reasoning for each""",
         display_order=15,
     ),
     "value_proposition_review": TopicSeedData(
@@ -270,9 +266,7 @@ Business Context:
 
 Provide:
 1. A quality review of the current value proposition (strengths, weaknesses, suggestions for improvement)
-2. Exactly 3 alternative value proposition variations with reasoning for each
-
-Format response as JSON with qualityReview (string) and suggestions (array of objects with text and reasoning).""",
+2. Exactly 3 alternative value proposition variations with reasoning for each""",
         display_order=16,
     ),
     # ========== Section 2: Conversation API (3 topics) ==========

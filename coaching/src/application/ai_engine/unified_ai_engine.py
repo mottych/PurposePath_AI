@@ -4,6 +4,7 @@ This module provides a unified interface for executing AI requests using
 topic-driven configuration, supporting both single-shot and conversation flows.
 """
 
+import json
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -24,6 +25,24 @@ if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
+
+
+# Response format instructions template appended to system prompts
+RESPONSE_FORMAT_INSTRUCTIONS = """
+
+## Response Format Instructions
+
+You MUST respond with valid JSON that matches this exact schema:
+
+```json
+{schema}
+```
+
+**Important:**
+- Use the exact field names shown above (including camelCase where specified by "alias")
+- Do not include any text before or after the JSON
+- Ensure all required fields are present
+- Follow any constraints (min/max length, enum values, etc.)"""
 
 
 class UnifiedAIEngineError(Exception):
@@ -203,6 +222,9 @@ class UnifiedAIEngine:
             topic_id, "system", system_prompt_content, enriched_params
         )
         rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, enriched_params)
+
+        # Step 5.5: Inject response format instructions into system prompt
+        rendered_system = self._inject_response_format(rendered_system, response_model)
 
         # Step 6: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
@@ -469,6 +491,123 @@ class UnifiedAIEngine:
                 exc_info=True,
             )
             raise PromptRenderError(topic_id, prompt_type, error_msg) from e
+
+    def _inject_response_format(
+        self,
+        system_prompt: str,
+        response_model: type[BaseModel],
+    ) -> str:
+        """Inject JSON response format instructions into system prompt.
+
+        Appends structured format instructions based on the response model's
+        JSON schema, ensuring the LLM knows exactly what structure to return.
+
+        Args:
+            system_prompt: Rendered system prompt
+            response_model: Target response model class
+
+        Returns:
+            System prompt with appended format instructions
+        """
+        try:
+            # Get schema with aliases resolved for proper field names
+            schema = response_model.model_json_schema()
+
+            # Create a simplified schema for the prompt (remove internal details)
+            simplified = self._simplify_schema_for_prompt(schema)
+
+            # Format as pretty JSON
+            schema_json = json.dumps(simplified, indent=2)
+
+            # Append format instructions to system prompt
+            format_instructions = RESPONSE_FORMAT_INSTRUCTIONS.format(schema=schema_json)
+
+            self.logger.debug(
+                "Injected response format instructions",
+                response_model=response_model.__name__,
+                schema_size=len(schema_json),
+            )
+
+            return system_prompt + format_instructions
+
+        except Exception as e:
+            # If schema generation fails, log warning but don't fail the request
+            self.logger.warning(
+                "Failed to inject response format instructions",
+                response_model=response_model.__name__,
+                error=str(e),
+            )
+            return system_prompt
+
+    def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """Simplify JSON schema for LLM prompt injection.
+
+        Removes internal Pydantic details and creates a cleaner schema
+        that's easier for the LLM to understand.
+
+        Args:
+            schema: Full Pydantic JSON schema
+
+        Returns:
+            Simplified schema dict
+        """
+        result: dict[str, Any] = {}
+
+        # Include title if present
+        if "title" in schema:
+            result["title"] = schema["title"]
+
+        # Process properties
+        if "properties" in schema:
+            result["properties"] = {}
+            for name, prop in schema["properties"].items():
+                simplified_prop: dict[str, Any] = {}
+
+                # Include type
+                if "type" in prop:
+                    simplified_prop["type"] = prop["type"]
+                elif "anyOf" in prop:
+                    # Handle Optional types
+                    types = [t.get("type") for t in prop["anyOf"] if "type" in t]
+                    simplified_prop["type"] = types[0] if types else "any"
+
+                # Include description
+                if "description" in prop:
+                    simplified_prop["description"] = prop["description"]
+
+                # Include constraints
+                for constraint in [
+                    "minLength",
+                    "maxLength",
+                    "minimum",
+                    "maximum",
+                    "minItems",
+                    "maxItems",
+                    "enum",
+                ]:
+                    if constraint in prop:
+                        simplified_prop[constraint] = prop[constraint]
+
+                # Handle array items
+                if prop.get("type") == "array" and "items" in prop:
+                    items = prop["items"]
+                    if "$ref" in items:
+                        # Resolve reference from $defs
+                        ref_name = items["$ref"].split("/")[-1]
+                        if "$defs" in schema and ref_name in schema["$defs"]:
+                            simplified_prop["items"] = self._simplify_schema_for_prompt(
+                                schema["$defs"][ref_name]
+                            )
+                    else:
+                        simplified_prop["items"] = self._simplify_schema_for_prompt(items)
+
+                result["properties"][name] = simplified_prop
+
+        # Include required fields
+        if "required" in schema:
+            result["required"] = schema["required"]
+
+        return result
 
     # ========== Conversation Methods ==========
 
