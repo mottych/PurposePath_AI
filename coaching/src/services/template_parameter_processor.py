@@ -33,10 +33,11 @@ from coaching.src.infrastructure.external.business_api_client import BusinessApi
 
 logger = structlog.get_logger()
 
-# Regex pattern to find {parameter_name} placeholders in templates
-# Matches: {param}, {param_name}, {param_name_123}
-# Does not match: {{escaped}}, {param.nested} (those are different patterns)
-PARAMETER_PATTERN = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+# Regex pattern to find {{parameter_name}} placeholders in templates (Jinja2-style)
+# Matches: {{param}}, {{param_name}}, {{param_name_123}}
+# Also supports single braces for backward compatibility: {param}
+PARAMETER_PATTERN_DOUBLE = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}")
+PARAMETER_PATTERN_SINGLE = re.compile(r"(?<!\{)\{([a-zA-Z_][a-zA-Z0-9_]*)\}(?!\})")
 
 
 @dataclass
@@ -94,16 +95,20 @@ class TemplateParameterProcessor:
     def extract_parameters_from_template(self, template: str) -> set[str]:
         """Extract all parameter names from a template string.
 
-        Finds all {parameter_name} placeholders in the template.
+        Finds all {{parameter_name}} placeholders (Jinja2-style) in the template.
+        Also supports single brace {param} for backward compatibility.
 
         Args:
-            template: Template string with {param} placeholders
+            template: Template string with {{param}} or {param} placeholders
 
         Returns:
             Set of unique parameter names found in template
         """
-        matches = PARAMETER_PATTERN.findall(template)
-        return set(matches)
+        # First try double braces (Jinja2-style) - preferred
+        double_matches = PARAMETER_PATTERN_DOUBLE.findall(template)
+        # Also check single braces for backward compatibility
+        single_matches = PARAMETER_PATTERN_SINGLE.findall(template)
+        return set(double_matches) | set(single_matches)
 
     async def process_template_parameters(
         self,
@@ -384,10 +389,11 @@ class TemplateParameterProcessor:
     ) -> str:
         """Substitute parameters into a template string.
 
-        Replaces all {param_name} placeholders with their values.
+        Replaces all {{param_name}} (Jinja2-style) and {param_name} (Python-style)
+        placeholders with their values.
 
         Args:
-            template: Template string with {param} placeholders
+            template: Template string with {{param}} or {param} placeholders
             parameters: Dictionary of parameter values
 
         Returns:
@@ -408,7 +414,11 @@ class TemplateParameterProcessor:
                 return str(value)
             return str(value)
 
-        return PARAMETER_PATTERN.sub(replace_param, template)
+        # First substitute double braces (Jinja2-style)
+        result = PARAMETER_PATTERN_DOUBLE.sub(replace_param, template)
+        # Then substitute single braces (Python-style, backward compat)
+        result = PARAMETER_PATTERN_SINGLE.sub(replace_param, result)
+        return result
 
 
 __all__ = [

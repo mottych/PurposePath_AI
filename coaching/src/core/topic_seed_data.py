@@ -194,13 +194,13 @@ Your role is to:
 Consider the business context (ICA, value proposition, products) when evaluating.""",
         default_user_prompt="""Review this business niche definition:
 
-Current Niche: {current_value}
+Current Niche: {{current_value}}
 
 Business Context:
-- Ideal Client Avatar (ICA): {onboarding_ica}
-- Value Proposition: {onboarding_value_proposition}
-- Products/Services: {onboarding_products}
-- Business Name: {onboarding_business_name}
+- Ideal Client Avatar (ICA): {{onboarding_ica}}
+- Value Proposition: {{onboarding_value_proposition}}
+- Products/Services: {{onboarding_products}}
+- Business Name: {{onboarding_business_name}}
 
 Provide:
 1. A quality review of the current niche (strengths, weaknesses, suggestions for improvement)
@@ -225,13 +225,13 @@ Your role is to:
 Consider the business context (niche, value proposition, products) when evaluating.""",
         default_user_prompt="""Review this Ideal Client Avatar (ICA):
 
-Current ICA: {current_value}
+Current ICA: {{current_value}}
 
 Business Context:
-- Niche: {onboarding_niche}
-- Value Proposition: {onboarding_value_proposition}
-- Products/Services: {onboarding_products}
-- Business Name: {onboarding_business_name}
+- Niche: {{onboarding_niche}}
+- Value Proposition: {{onboarding_value_proposition}}
+- Products/Services: {{onboarding_products}}
+- Business Name: {{onboarding_business_name}}
 
 Provide:
 1. A quality review of the current ICA (strengths, weaknesses, suggestions for improvement)
@@ -256,13 +256,13 @@ Your role is to:
 Consider the business context (niche, ICA, products) when evaluating.""",
         default_user_prompt="""Review this value proposition:
 
-Current Value Proposition: {current_value}
+Current Value Proposition: {{current_value}}
 
 Business Context:
-- Niche: {onboarding_niche}
-- Ideal Client Avatar (ICA): {onboarding_ica}
-- Products/Services: {onboarding_products}
-- Business Name: {onboarding_business_name}
+- Niche: {{onboarding_niche}}
+- Ideal Client Avatar (ICA): {{onboarding_ica}}
+- Products/Services: {{onboarding_products}}
+- Business Name: {{onboarding_business_name}}
 
 Provide:
 1. A quality review of the current value proposition (strengths, weaknesses, suggestions for improvement)

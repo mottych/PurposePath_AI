@@ -5,6 +5,7 @@ topic-driven configuration, supporting both single-shot and conversation flows.
 """
 
 import json
+import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -459,7 +460,8 @@ class UnifiedAIEngine:
                 for k, v in parameters.items()
             }
 
-            rendered = template.format(**safe_params)
+            # Support both Jinja2-style {{param}} and Python-style {param}
+            rendered = self._substitute_template_params(template, safe_params)
 
             self.logger.debug(
                 "Prompt rendered",
@@ -491,6 +493,39 @@ class UnifiedAIEngine:
                 exc_info=True,
             )
             raise PromptRenderError(topic_id, prompt_type, error_msg) from e
+
+    def _substitute_template_params(
+        self,
+        template: str,
+        params: dict[str, str],
+    ) -> str:
+        """Substitute parameters into template with support for both brace styles.
+
+        Supports:
+        - Jinja2-style: {{param_name}} -> value
+        - Python-style: {param_name} -> value (backward compatibility)
+
+        Args:
+            template: Template string with placeholders
+            params: Parameter name to value mapping
+
+        Returns:
+            Template with all placeholders substituted
+        """
+        result = template
+
+        # First, substitute Jinja2-style double braces {{param}}
+        for name, value in params.items():
+            result = result.replace(f"{{{{{name}}}}}", value)
+
+        # Then, substitute Python-style single braces {param}
+        # Use regex to avoid matching {{escaped}} patterns
+        for name, value in params.items():
+            # Match {name} but not {{name}}
+            pattern = r"(?<!\{)\{" + re.escape(name) + r"\}(?!\})"
+            result = re.sub(pattern, value.replace("\\", "\\\\"), result)
+
+        return result
 
     def _inject_response_format(
         self,

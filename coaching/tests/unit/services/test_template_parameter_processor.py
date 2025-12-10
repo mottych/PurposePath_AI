@@ -1,7 +1,8 @@
 """Tests for TemplateParameterProcessor.
 
 Tests the core template processing functionality:
-- Template parsing for {parameter} placeholders
+- Template parsing for {{parameter}} placeholders (Jinja2-style)
+- Template parsing for {parameter} placeholders (Python-style, backward compatible)
 - Grouping parameters by retrieval method
 - Calling retrieval methods efficiently
 - Extracting values using extraction_path
@@ -15,7 +16,8 @@ import pytest
 from coaching.src.core.parameter_registry import ParameterDefinition, ParameterType
 from coaching.src.core.retrieval_method_registry import RetrievalContext
 from coaching.src.services.template_parameter_processor import (
-    PARAMETER_PATTERN,
+    PARAMETER_PATTERN_DOUBLE,
+    PARAMETER_PATTERN_SINGLE,
     ParameterExtractionResult,
     ParameterRequirement,
     TemplateParameterProcessor,
@@ -54,46 +56,58 @@ def processor(mock_business_client: MagicMock) -> TemplateParameterProcessor:
 
 
 # =============================================================================
-# Test: PARAMETER_PATTERN regex
+# Test: PARAMETER_PATTERN regex (both double and single brace styles)
 # =============================================================================
 
 
 class TestParameterPattern:
-    """Tests for the parameter detection regex."""
+    """Tests for the parameter detection regex patterns."""
 
-    def test_matches_simple_param(self) -> None:
-        """Test: Matches simple parameter names."""
-        matches = PARAMETER_PATTERN.findall("Hello {name}!")
+    def test_double_brace_matches_simple_param(self) -> None:
+        """Test: Double braces match simple parameter names."""
+        matches = PARAMETER_PATTERN_DOUBLE.findall("Hello {{name}}!")
         assert matches == ["name"]
 
-    def test_matches_underscored_param(self) -> None:
-        """Test: Matches parameter names with underscores."""
-        matches = PARAMETER_PATTERN.findall("User: {user_name}")
+    def test_double_brace_matches_underscored_param(self) -> None:
+        """Test: Double braces match parameter names with underscores."""
+        matches = PARAMETER_PATTERN_DOUBLE.findall("User: {{user_name}}")
         assert matches == ["user_name"]
 
-    def test_matches_numbered_param(self) -> None:
-        """Test: Matches parameter names with numbers."""
-        matches = PARAMETER_PATTERN.findall("Value: {param_123}")
+    def test_double_brace_matches_numbered_param(self) -> None:
+        """Test: Double braces match parameter names with numbers."""
+        matches = PARAMETER_PATTERN_DOUBLE.findall("Value: {{param_123}}")
         assert matches == ["param_123"]
 
-    def test_matches_multiple_params(self) -> None:
-        """Test: Matches multiple parameters in one string."""
-        template = "Hello {first_name} {last_name}, your ID is {user_id}."
-        matches = PARAMETER_PATTERN.findall(template)
+    def test_double_brace_matches_multiple_params(self) -> None:
+        """Test: Double braces match multiple parameters in one string."""
+        template = "Hello {{first_name}} {{last_name}}, your ID is {{user_id}}."
+        matches = PARAMETER_PATTERN_DOUBLE.findall(template)
         assert set(matches) == {"first_name", "last_name", "user_id"}
 
-    def test_ignores_escaped_braces(self) -> None:
+    def test_single_brace_matches_simple_param(self) -> None:
+        """Test: Single braces match simple parameter names (backward compat)."""
+        matches = PARAMETER_PATTERN_SINGLE.findall("Hello {name}!")
+        assert matches == ["name"]
+
+    def test_single_brace_matches_underscored_param(self) -> None:
+        """Test: Single braces match parameter names with underscores."""
+        matches = PARAMETER_PATTERN_SINGLE.findall("User: {user_name}")
+        assert matches == ["user_name"]
+
+    def test_single_brace_does_not_match_double_brace(self) -> None:
+        """Test: Single brace pattern does not match double braces."""
+        matches = PARAMETER_PATTERN_SINGLE.findall("Hello {{name}}!")
+        assert matches == []
+
+    def test_ignores_invalid_param_names(self) -> None:
         """Test: Does not match content without valid parameter name format."""
-        # Note: This pattern doesn't handle {{escaped}} specially,
-        # but invalid formats won't match
-        matches = PARAMETER_PATTERN.findall("Value: {123invalid}")
+        matches = PARAMETER_PATTERN_DOUBLE.findall("Value: {{123invalid}}")
         assert matches == []
 
     def test_no_match_for_dot_notation(self) -> None:
         """Test: Does not match dot-notation paths at all."""
-        # {user.name} doesn't match because '.' is not in [a-zA-Z0-9_]
-        # This is by design - nested paths should be handled differently
-        matches = PARAMETER_PATTERN.findall("Hello {user.name}!")
+        # {{user.name}} doesn't match because '.' is not in [a-zA-Z0-9_]
+        matches = PARAMETER_PATTERN_DOUBLE.findall("Hello {{user.name}}!")
         assert matches == []  # No match because of the dot
 
 
@@ -105,9 +119,25 @@ class TestParameterPattern:
 class TestExtractParametersFromTemplate:
     """Tests for template parameter extraction."""
 
-    def test_extracts_unique_params(self, processor: TemplateParameterProcessor) -> None:
-        """Test: Returns unique set of parameter names."""
+    def test_extracts_unique_params_double_braces(
+        self, processor: TemplateParameterProcessor
+    ) -> None:
+        """Test: Returns unique set of parameter names from double braces."""
+        template = "Hello {{name}}! Your name is {{name}} and id is {{user_id}}."
+        params = processor.extract_parameters_from_template(template)
+        assert params == {"name", "user_id"}
+
+    def test_extracts_unique_params_single_braces(
+        self, processor: TemplateParameterProcessor
+    ) -> None:
+        """Test: Returns unique set of parameter names from single braces (backward compat)."""
         template = "Hello {name}! Your name is {name} and id is {user_id}."
+        params = processor.extract_parameters_from_template(template)
+        assert params == {"name", "user_id"}
+
+    def test_extracts_mixed_brace_styles(self, processor: TemplateParameterProcessor) -> None:
+        """Test: Returns params from both double and single brace styles."""
+        template = "Hello {{name}}! Your id is {user_id}."
         params = processor.extract_parameters_from_template(template)
         assert params == {"name", "user_id"}
 
@@ -119,13 +149,13 @@ class TestExtractParametersFromTemplate:
     def test_complex_template(self, processor: TemplateParameterProcessor) -> None:
         """Test: Handles complex template with many parameters."""
         template = """
-        Welcome {user_name}!
+        Welcome {{user_name}}!
 
         Your goals:
-        {goals}
+        {{goals}}
 
-        Based on your {vision} and {core_values}, we recommend:
-        {recommendations}
+        Based on your {{vision}} and {{core_values}}, we recommend:
+        {{recommendations}}
         """
         params = processor.extract_parameters_from_template(template)
         assert params == {"user_name", "goals", "vision", "core_values", "recommendations"}
