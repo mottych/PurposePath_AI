@@ -15,6 +15,7 @@ from coaching.src.api.middleware import (
 from coaching.src.api.routes import (
     admin,
     ai_execute,
+    ai_execute_async,
     analysis,
     business_data,
     coaching_ai,
@@ -167,6 +168,7 @@ app.include_router(
 app.include_router(topics.router, prefix=f"{settings.api_prefix}")
 app.include_router(website.router, prefix=f"{settings.api_prefix}/website", tags=["website"])
 app.include_router(ai_execute.router, prefix=f"{settings.api_prefix}")
+app.include_router(ai_execute_async.router, prefix=f"{settings.api_prefix}")
 
 
 @app.get("/", tags=["root"], response_model=dict[str, str])

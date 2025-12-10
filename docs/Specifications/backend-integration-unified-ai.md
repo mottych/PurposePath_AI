@@ -383,10 +383,242 @@ async def review_niche(current_value: str) -> dict:
 
 ---
 
+---
+
+## Async Execution (Long-Running Operations)
+
+For AI operations that may exceed API Gateway's 30-second timeout (e.g., complex analysis, multi-step reasoning), use the async execution endpoint.
+
+### POST /ai/execute-async
+
+Execute an AI topic asynchronously. Returns immediately with a job ID; results delivered via WebSocket.
+
+**Full URL:** `{BASE_URL}/ai/execute-async`
+
+**Request:** Same as `/ai/execute`
+
+```json
+{
+  "topic_id": "niche_review",
+  "parameters": {
+    "current_value": "We help small business owners with marketing"
+  }
+}
+```
+
+**Response (Immediate):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "pending",
+    "topicId": "niche_review",
+    "estimatedDurationMs": 30000
+  }
+}
+```
+
+**Job Statuses:**
+
+- `pending` - Job accepted, queued for processing
+- `processing` - Job is actively being processed
+- `completed` - Job finished successfully (result in WebSocket event)
+- `failed` - Job failed (error in WebSocket event)
+
+---
+
+### GET /ai/jobs/{jobId}
+
+Check status of an async job. Use for polling fallback if WebSocket disconnects.
+
+**Full URL:** `{BASE_URL}/ai/jobs/{jobId}`
+
+**Response (Pending):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "processing",
+    "topicId": "niche_review",
+    "createdAt": "2025-12-10T20:00:00Z"
+  }
+}
+```
+
+**Response (Completed):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "completed",
+    "topicId": "niche_review",
+    "createdAt": "2025-12-10T20:00:00Z",
+    "completedAt": "2025-12-10T20:00:35Z",
+    "result": {
+      "qualityReview": "...",
+      "suggestions": [...]
+    },
+    "processingTimeMs": 35000
+  }
+}
+```
+
+**Response (Failed):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "failed",
+    "topicId": "niche_review",
+    "createdAt": "2025-12-10T20:00:00Z",
+    "completedAt": "2025-12-10T20:00:45Z",
+    "error": "LLM provider timeout",
+    "errorCode": "LLM_TIMEOUT"
+  }
+}
+```
+
+---
+
+### WebSocket Events
+
+Results are delivered via the existing WebSocket connection at `wss://{WEBSOCKET_URL}`.
+
+#### ai.job.started
+
+Sent when job processing begins.
+
+```json
+{
+  "type": "ai.job.started",
+  "timestamp": "2025-12-10T20:00:00Z",
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "topicId": "niche_review",
+    "estimatedDurationMs": 30000
+  }
+}
+```
+
+#### ai.job.completed
+
+Sent when job finishes successfully.
+
+```json
+{
+  "type": "ai.job.completed",
+  "timestamp": "2025-12-10T20:00:35Z",
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "topicId": "niche_review",
+    "result": {
+      "qualityReview": "Your niche is clear but could be more specific...",
+      "suggestions": [
+        {
+          "text": "We help B2B SaaS startups...",
+          "reasoning": "More specific target market..."
+        }
+      ]
+    },
+    "processingTimeMs": 35000
+  }
+}
+```
+
+#### ai.job.failed
+
+Sent when job fails.
+
+```json
+{
+  "type": "ai.job.failed",
+  "timestamp": "2025-12-10T20:00:45Z",
+  "data": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "topicId": "niche_review",
+    "error": "LLM provider timeout after 60 seconds",
+    "errorCode": "LLM_TIMEOUT"
+  }
+}
+```
+
+---
+
+### Frontend Integration Pattern
+
+```typescript
+// 1. Start async job
+const { jobId, status } = await coachingClient.post('/ai/execute-async', {
+  topic_id: 'niche_review',
+  parameters: { current_value: 'We help small businesses grow' }
+});
+
+// 2. Store pending job (for recovery)
+const pendingJobs = JSON.parse(localStorage.getItem('pendingAiJobs') || '[]');
+pendingJobs.push({ jobId, topicId: 'niche_review', startedAt: Date.now() });
+localStorage.setItem('pendingAiJobs', JSON.stringify(pendingJobs));
+
+// 3. Listen for WebSocket events
+websocket.on('message', (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'ai.job.completed' && data.data.jobId === jobId) {
+    handleResult(data.data.result);
+    removePendingJob(jobId);
+  }
+  if (data.type === 'ai.job.failed' && data.data.jobId === jobId) {
+    handleError(data.data.error);
+    removePendingJob(jobId);
+  }
+});
+
+// 4. Polling fallback (on reconnect or page load)
+async function checkPendingJobs() {
+  const pendingJobs = JSON.parse(localStorage.getItem('pendingAiJobs') || '[]');
+  for (const job of pendingJobs) {
+    if (Date.now() - job.startedAt > 300000) { // 5 min TTL
+      removePendingJob(job.jobId);
+      continue;
+    }
+    const status = await coachingClient.get(`/ai/jobs/${job.jobId}`);
+    if (status.data.status === 'completed') {
+      handleResult(status.data.result);
+      removePendingJob(job.jobId);
+    } else if (status.data.status === 'failed') {
+      handleError(status.data.error);
+      removePendingJob(job.jobId);
+    }
+  }
+}
+```
+
+---
+
+### When to Use Async vs Sync
+
+| Use Case | Endpoint | Reason |
+|----------|----------|--------|
+| Quick operations (<10s) | `POST /ai/execute` | Simpler, immediate response |
+| Complex analysis (>20s) | `POST /ai/execute-async` | Avoids API Gateway timeout |
+| Batch operations | `POST /ai/execute-async` | Process in background |
+| User waiting on screen | `POST /ai/execute-async` | Better UX with progress |
+
+**Recommended:** Use async for all onboarding review topics (`niche_review`, `ica_review`, `value_proposition_review`) as they may take 30-60 seconds depending on LLM load.
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2025-12-10 | Added async execution endpoints and WebSocket events |
 | 1.0 | 2025-12-09 | Initial version with onboarding review topics |
 
 ---
