@@ -132,7 +132,7 @@ class EventBridgePublisher:
                     f"Failed to publish event: {error_code} - {error_message}"
                 )
 
-            event_id = response.get("Entries", [{}])[0].get("EventId", "")
+            event_id: str = str(response.get("Entries", [{}])[0].get("EventId", ""))
             logger.info(
                 "eventbridge.published",
                 event_type=event.event_type,
