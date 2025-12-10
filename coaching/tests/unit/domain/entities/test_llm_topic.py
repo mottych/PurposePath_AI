@@ -298,6 +298,99 @@ class TestLLMTopic:
         assert topic.display_order == 50
         assert topic.created_by == "tester"
 
+    def test_from_dynamodb_item_converts_decimal_types(self) -> None:
+        """Test that Decimal values from DynamoDB are converted to proper Python types.
+
+        DynamoDB stores numbers as Decimal, but we need float/int for JSON serialization
+        when calling LLM APIs. This test ensures the conversion happens correctly.
+
+        Regression test for issue #139: OpenAI API fails with
+        'Object of type Decimal is not JSON serializable'
+        """
+        from decimal import Decimal
+
+        # Simulate DynamoDB response with Decimal values (new format)
+        item = {
+            "topic_id": "test_decimal",
+            "topic_name": "Test Decimal Conversion",
+            "topic_type": "single_shot",
+            "category": "analysis",
+            "is_active": True,
+            "model_code": "gpt-5-mini",
+            # DynamoDB returns these as Decimal
+            "temperature": Decimal("0.8"),
+            "max_tokens": Decimal("2000"),
+            "top_p": Decimal("0.95"),
+            "frequency_penalty": Decimal("0.1"),
+            "presence_penalty": Decimal("-0.1"),
+            "display_order": Decimal("10"),
+            "prompts": [],
+            "additional_config": {},
+            "created_at": "2025-01-15T10:00:00+00:00",
+            "updated_at": "2025-01-20T12:00:00+00:00",
+        }
+
+        topic = LLMTopic.from_dynamodb_item(item)
+
+        # Verify types are converted properly
+        assert isinstance(topic.temperature, float), "temperature should be float"
+        assert isinstance(topic.max_tokens, int), "max_tokens should be int"
+        assert isinstance(topic.top_p, float), "top_p should be float"
+        assert isinstance(topic.frequency_penalty, float), "frequency_penalty should be float"
+        assert isinstance(topic.presence_penalty, float), "presence_penalty should be float"
+
+        # Verify values are correct
+        assert topic.temperature == 0.8
+        assert topic.max_tokens == 2000
+        assert topic.top_p == 0.95
+        assert topic.frequency_penalty == 0.1
+        assert topic.presence_penalty == -0.1
+
+        # Ensure values are JSON serializable (the actual bug this prevents)
+        import json
+
+        json_safe = {
+            "temperature": topic.temperature,
+            "max_tokens": topic.max_tokens,
+            "top_p": topic.top_p,
+        }
+        # This would raise TypeError if Decimal wasn't converted
+        json.dumps(json_safe)
+
+    def test_from_dynamodb_item_old_config_format_converts_decimal(self) -> None:
+        """Test Decimal conversion in old config format for backward compatibility."""
+        from decimal import Decimal
+
+        item = {
+            "topic_id": "test_old_format",
+            "topic_name": "Test Old Format",
+            "topic_type": "single_shot",
+            "category": "analysis",
+            "is_active": True,
+            "prompts": [],
+            # Old format with config dict containing Decimals
+            "config": {
+                "model_code": "claude-3-5-sonnet-20241022",
+                "temperature": Decimal("0.7"),
+                "max_tokens": Decimal("4000"),
+                "top_p": Decimal("1.0"),
+                "frequency_penalty": Decimal("0"),
+                "presence_penalty": Decimal("0"),
+            },
+            "created_at": "2025-01-15T10:00:00+00:00",
+            "updated_at": "2025-01-20T12:00:00+00:00",
+        }
+
+        topic = LLMTopic.from_dynamodb_item(item)
+
+        # Verify types are converted properly
+        assert isinstance(topic.temperature, float), "temperature should be float"
+        assert isinstance(topic.max_tokens, int), "max_tokens should be int"
+        assert isinstance(topic.top_p, float), "top_p should be float"
+
+        # Verify values
+        assert topic.max_tokens == 4000
+
     def test_roundtrip_serialization(self, sample_topic: LLMTopic) -> None:
         """Test that to_dynamodb_item and from_dynamodb_item are inverse operations."""
         item = sample_topic.to_dynamodb_item()
