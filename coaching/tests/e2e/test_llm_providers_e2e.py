@@ -89,19 +89,19 @@ async def test_claude_sonnet_45_real_generation(check_aws_credentials: None) -> 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="GPT-5 Pro uses /v1/responses endpoint, not /v1/chat/completions")
+@pytest.mark.skip(reason="GPT-5 Pro requires /v1/responses API, not /v1/chat/completions")
 async def test_gpt5_pro_real_generation(check_openai_credentials: None) -> None:
-    """
-    Test GPT-5 Pro real generation via OpenAI.
+    """Test GPT-5 Pro real generation via OpenAI.
 
-    Note: GPT-5 Pro uses a different API endpoint (/v1/responses) which is not
-    compatible with the standard chat completions interface. This needs a
-    separate implementation path.
+    Note: GPT-5 Pro exclusively uses OpenAI's newer Responses API (/v1/responses)
+    which is not yet implemented in our OpenAILLMProvider. The provider currently
+    uses the Chat Completions API (/v1/chat/completions).
+
+    To support GPT-5 Pro, we would need to add Responses API support.
 
     Validates:
-    - OpenAI provider works
-    - GPT-5 Pro access
-    - Advanced reasoning capability
+    - OpenAI provider works with GPT-5 Pro
+    - Advanced reasoning capability (fixed high reasoning_effort)
     """
     api_key = os.getenv("OPENAI_API_KEY")
     provider = OpenAILLMProvider(api_key=api_key)
