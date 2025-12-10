@@ -310,7 +310,7 @@ class LLMTopic:
             config = item["config"]
             model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
             temperature = float(config.get("temperature", 0.7))
-            max_tokens = config.get("max_tokens", 2000)
+            max_tokens = int(config.get("max_tokens", 2000))
             top_p = float(config.get("top_p", 1.0))
             frequency_penalty = float(config.get("frequency_penalty", 0.0))
             presence_penalty = float(config.get("presence_penalty", 0.0))
@@ -329,9 +329,9 @@ class LLMTopic:
             }
         else:
             # New format: explicit fields
-            # Convert Decimal to float for DynamoDB compatibility
+            # Convert Decimal to int/float for DynamoDB compatibility
             temperature = float(item.get("temperature", 0.7))
-            max_tokens = item.get("max_tokens", 2000)
+            max_tokens = int(item.get("max_tokens", 2000))
             top_p = float(item.get("top_p", 1.0))
             frequency_penalty = float(item.get("frequency_penalty", 0.0))
             presence_penalty = float(item.get("presence_penalty", 0.0))
