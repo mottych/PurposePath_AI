@@ -495,29 +495,41 @@ async def upsert_topic(
                 new_topic = replace(
                     base_topic,
                     topic_name=request.topic_name or base_topic.topic_name,
-                    description=request.description
-                    if request.description is not None
-                    else base_topic.description,
+                    description=(
+                        request.description
+                        if request.description is not None
+                        else base_topic.description
+                    ),
                     model_code=request.model_code or base_topic.model_code,
-                    temperature=request.temperature
-                    if request.temperature is not None
-                    else base_topic.temperature,
-                    max_tokens=request.max_tokens
-                    if request.max_tokens is not None
-                    else base_topic.max_tokens,
+                    temperature=(
+                        request.temperature
+                        if request.temperature is not None
+                        else base_topic.temperature
+                    ),
+                    max_tokens=(
+                        request.max_tokens
+                        if request.max_tokens is not None
+                        else base_topic.max_tokens
+                    ),
                     top_p=request.top_p if request.top_p is not None else base_topic.top_p,
-                    frequency_penalty=request.frequency_penalty
-                    if request.frequency_penalty is not None
-                    else base_topic.frequency_penalty,
-                    presence_penalty=request.presence_penalty
-                    if request.presence_penalty is not None
-                    else base_topic.presence_penalty,
-                    is_active=request.is_active
-                    if request.is_active is not None
-                    else base_topic.is_active,
-                    display_order=request.display_order
-                    if request.display_order is not None
-                    else base_topic.display_order,
+                    frequency_penalty=(
+                        request.frequency_penalty
+                        if request.frequency_penalty is not None
+                        else base_topic.frequency_penalty
+                    ),
+                    presence_penalty=(
+                        request.presence_penalty
+                        if request.presence_penalty is not None
+                        else base_topic.presence_penalty
+                    ),
+                    is_active=(
+                        request.is_active if request.is_active is not None else base_topic.is_active
+                    ),
+                    display_order=(
+                        request.display_order
+                        if request.display_order is not None
+                        else base_topic.display_order
+                    ),
                     created_at=now,
                     updated_at=now,
                     created_by=user.user_id,
@@ -538,20 +550,20 @@ async def upsert_topic(
                     category="custom",
                     topic_type="single_shot",
                     description=request.description,
-                    display_order=request.display_order
-                    if request.display_order is not None
-                    else 100,
+                    display_order=(
+                        request.display_order if request.display_order is not None else 100
+                    ),
                     is_active=request.is_active if request.is_active is not None else False,
                     model_code=request.model_code or "claude-3-5-sonnet-20241022",
                     temperature=request.temperature if request.temperature is not None else 0.7,
                     max_tokens=request.max_tokens if request.max_tokens is not None else 2000,
                     top_p=request.top_p if request.top_p is not None else 1.0,
-                    frequency_penalty=request.frequency_penalty
-                    if request.frequency_penalty is not None
-                    else 0.0,
-                    presence_penalty=request.presence_penalty
-                    if request.presence_penalty is not None
-                    else 0.0,
+                    frequency_penalty=(
+                        request.frequency_penalty if request.frequency_penalty is not None else 0.0
+                    ),
+                    presence_penalty=(
+                        request.presence_penalty if request.presence_penalty is not None else 0.0
+                    ),
                     prompts=[],
                     created_at=now,
                     updated_at=now,

@@ -18,6 +18,7 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort
 from coaching.src.domain.value_objects.conversation_context import ConversationContext
+from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from pydantic import BaseModel
@@ -130,24 +131,28 @@ class UnifiedAIEngine:
         *,
         topic_repo: TopicRepository,
         s3_storage: S3PromptStorage,
-        llm_provider: LLMProviderPort,
+        provider_factory: LLMProviderFactory,
         response_serializer: ResponseSerializer,
         conversation_repo: ConversationRepositoryPort | None = None,
+        llm_provider: LLMProviderPort | None = None,  # Deprecated, use provider_factory
     ) -> None:
         """Initialize unified AI engine.
 
         Args:
             topic_repo: Repository for topic data
             s3_storage: Storage service for prompt content
-            llm_provider: LLM provider for AI generation
+            provider_factory: Factory for creating LLM providers based on model
             response_serializer: Serializer for response formatting
             conversation_repo: Optional repository for conversation persistence
+            llm_provider: DEPRECATED - use provider_factory. Kept for backward compat.
         """
         self.topic_repo = topic_repo
         self.s3_storage = s3_storage
-        self.llm_provider = llm_provider
+        self.provider_factory = provider_factory
         self.response_serializer = response_serializer
         self.conversation_repo = conversation_repo
+        # Support legacy llm_provider parameter for backward compatibility
+        self._legacy_provider = llm_provider
         self.logger = logger.bind(service="unified_ai_engine")
 
     async def execute_single_shot(
@@ -227,12 +232,15 @@ class UnifiedAIEngine:
         # Step 5.5: Inject response format instructions into system prompt
         rendered_system = self._inject_response_format(rendered_system, response_model)
 
-        # Step 6: Call LLM with topic configuration
+        # Step 6: Get provider and resolved model name from factory
+        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+
+        # Step 7: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
 
-        llm_response = await self.llm_provider.generate(
+        llm_response = await provider.generate(
             messages=messages,
-            model=topic.model_code,
+            model=model_name,  # Use resolved model name, not model code
             temperature=topic.temperature,
             max_tokens=topic.max_tokens,
             system_prompt=rendered_system,
@@ -786,10 +794,13 @@ class UnifiedAIEngine:
             conversation.context.model_dump(),
         )
 
-        # Call LLM
-        llm_response = await self.llm_provider.generate(
+        # Get provider and resolved model name from factory
+        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+
+        # Call LLM with resolved model name
+        llm_response = await provider.generate(
             messages=messages,
-            model=topic.model_code,
+            model=model_name,  # Use resolved model name, not model code
             temperature=topic.temperature,
             max_tokens=topic.max_tokens,
             system_prompt=rendered_system,

@@ -25,6 +25,7 @@ from coaching.src.api.legacy_dependencies import (
 from .ai_engine import (
     get_generic_handler,
     get_llm_provider,
+    get_provider_factory,
     get_response_serializer,
     get_s3_prompt_storage,
     get_topic_repository,
@@ -52,6 +53,7 @@ __all__ = [
     "get_llm_template_service",
     "get_model_config_service",
     "get_prompt_service",
+    "get_provider_factory",
     "get_response_serializer",
     "get_s3_prompt_storage",
     "get_strategy_service",

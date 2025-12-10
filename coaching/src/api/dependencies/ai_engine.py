@@ -13,10 +13,11 @@ import structlog
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
-from coaching.src.core.config_multitenant import settings
+from coaching.src.core.config_multitenant import get_settings, settings
 from coaching.src.domain.ports.llm_provider_port import LLMProviderPort
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
+from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
@@ -31,6 +32,7 @@ _topic_repo: TopicRepository | None = None
 _s3_storage: S3PromptStorage | None = None
 _response_serializer: ResponseSerializer | None = None
 _llm_provider: LLMProviderPort | None = None
+_provider_factory: LLMProviderFactory | None = None
 _unified_engine: UnifiedAIEngine | None = None
 _generic_handler: GenericAIHandler | None = None
 
@@ -88,6 +90,8 @@ async def get_response_serializer() -> ResponseSerializer:
 async def get_llm_provider() -> LLMProviderPort:
     """Get or create LLM Provider singleton.
 
+    DEPRECATED: Use get_provider_factory() instead for multi-provider support.
+
     Returns:
         LLM Provider instance (Bedrock)
     """
@@ -103,6 +107,23 @@ async def get_llm_provider() -> LLMProviderPort:
     return _llm_provider
 
 
+async def get_provider_factory() -> LLMProviderFactory:
+    """Get or create LLMProviderFactory singleton.
+
+    The factory enables dynamic provider selection based on model code.
+    It caches provider instances and resolves model codes to actual model names.
+
+    Returns:
+        LLMProviderFactory instance
+    """
+    global _provider_factory
+    if _provider_factory is None:
+        _provider_factory = LLMProviderFactory(settings=get_settings())
+        logger.info("LLMProviderFactory initialized")
+
+    return _provider_factory
+
+
 async def get_unified_ai_engine() -> UnifiedAIEngine:
     """Get or create UnifiedAIEngine singleton.
 
@@ -113,16 +134,16 @@ async def get_unified_ai_engine() -> UnifiedAIEngine:
     if _unified_engine is None:
         topic_repo = await get_topic_repository()
         s3_storage = await get_s3_prompt_storage()
-        llm_provider = await get_llm_provider()
+        provider_factory = await get_provider_factory()
         response_serializer = await get_response_serializer()
 
         _unified_engine = UnifiedAIEngine(
             topic_repo=topic_repo,
             s3_storage=s3_storage,
-            llm_provider=llm_provider,
+            provider_factory=provider_factory,
             response_serializer=response_serializer,
         )
-        logger.info("UnifiedAIEngine initialized")
+        logger.info("UnifiedAIEngine initialized with provider factory")
 
     return _unified_engine
 
@@ -221,12 +242,13 @@ def reset_singletons() -> None:
     This clears all cached instances, forcing recreation on next access.
     """
     global _topic_repo, _s3_storage, _response_serializer, _llm_provider
-    global _unified_engine, _generic_handler
+    global _provider_factory, _unified_engine, _generic_handler
 
     _topic_repo = None
     _s3_storage = None
     _response_serializer = None
     _llm_provider = None
+    _provider_factory = None
     _unified_engine = None
     _generic_handler = None
 
@@ -238,6 +260,7 @@ __all__ = [
     "get_generic_handler",
     "get_jwt_token",
     "get_llm_provider",
+    "get_provider_factory",
     "get_response_serializer",
     "get_s3_prompt_storage",
     "get_template_processor",
