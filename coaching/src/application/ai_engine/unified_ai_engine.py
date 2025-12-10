@@ -230,7 +230,10 @@ class UnifiedAIEngine:
         rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, enriched_params)
 
         # Step 5.5: Inject response format instructions into system prompt
-        rendered_system = self._inject_response_format(rendered_system, response_model)
+        # Also get the JSON schema for structured output providers (OpenAI)
+        rendered_system, response_schema = self._inject_response_format_with_schema(
+            rendered_system, response_model
+        )
 
         # Step 6: Get provider and resolved model name from factory
         provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
@@ -244,6 +247,7 @@ class UnifiedAIEngine:
             temperature=topic.temperature,
             max_tokens=topic.max_tokens,
             system_prompt=rendered_system,
+            response_schema=response_schema,  # Pass schema for structured output
         )
 
         self.logger.info(
@@ -535,12 +539,125 @@ class UnifiedAIEngine:
 
         return result
 
+    def _inject_response_format_with_schema(
+        self,
+        system_prompt: str,
+        response_model: type[BaseModel],
+    ) -> tuple[str, dict[str, Any] | None]:
+        """Inject JSON response format instructions and return schema for structured output.
+
+        Appends structured format instructions based on the response model's
+        JSON schema, ensuring the LLM knows exactly what structure to return.
+        Also returns the full schema for providers that support structured output.
+
+        Args:
+            system_prompt: Rendered system prompt
+            response_model: Target response model class
+
+        Returns:
+            Tuple of (updated system prompt, JSON schema for structured output)
+        """
+        try:
+            # Get full schema for structured output (OpenAI Responses API)
+            full_schema = response_model.model_json_schema()
+
+            # Prepare schema for OpenAI structured output (needs specific format)
+            structured_schema = self._prepare_schema_for_structured_output(
+                full_schema, response_model.__name__
+            )
+
+            # Create a simplified schema for the prompt (remove internal details)
+            simplified = self._simplify_schema_for_prompt(full_schema)
+
+            # Format as pretty JSON
+            schema_json = json.dumps(simplified, indent=2)
+
+            # Append format instructions to system prompt
+            format_instructions = RESPONSE_FORMAT_INSTRUCTIONS.format(schema=schema_json)
+
+            self.logger.debug(
+                "Injected response format instructions with schema",
+                response_model=response_model.__name__,
+                schema_size=len(schema_json),
+                has_structured_schema=structured_schema is not None,
+            )
+
+            return system_prompt + format_instructions, structured_schema
+
+        except Exception as e:
+            # If schema generation fails, log warning but don't fail the request
+            self.logger.warning(
+                "Failed to inject response format instructions",
+                response_model=response_model.__name__,
+                error=str(e),
+            )
+            return system_prompt, None
+
+    def _prepare_schema_for_structured_output(
+        self,
+        schema: dict[str, Any],
+        model_name: str,
+    ) -> dict[str, Any]:
+        """Prepare JSON schema for OpenAI structured output format.
+
+        OpenAI's structured output requires a specific schema format with
+        additionalProperties set to false for strict validation.
+
+        Args:
+            schema: Pydantic JSON schema
+            model_name: Name of the response model
+
+        Returns:
+            Schema prepared for OpenAI structured output
+        """
+        # Create a copy to avoid modifying the original
+        prepared = dict(schema)
+
+        # Ensure title is set
+        if "title" not in prepared:
+            prepared["title"] = model_name
+
+        # Add additionalProperties: false for strict mode
+        prepared["additionalProperties"] = False
+
+        # Recursively add additionalProperties to nested objects
+        self._add_additional_properties_false(prepared)
+
+        return prepared
+
+    def _add_additional_properties_false(self, schema: dict[str, Any]) -> None:
+        """Recursively add additionalProperties: false to all object schemas.
+
+        Args:
+            schema: JSON schema dict to modify in place
+        """
+        if schema.get("type") == "object":
+            schema["additionalProperties"] = False
+            for prop in schema.get("properties", {}).values():
+                self._add_additional_properties_false(prop)
+
+        # Handle $defs (nested model definitions)
+        for definition in schema.get("$defs", {}).values():
+            self._add_additional_properties_false(definition)
+
+        # Handle items in arrays
+        if "items" in schema:
+            self._add_additional_properties_false(schema["items"])
+
+        # Handle anyOf/oneOf/allOf
+        for key in ["anyOf", "oneOf", "allOf"]:
+            if key in schema:
+                for item in schema[key]:
+                    self._add_additional_properties_false(item)
+
     def _inject_response_format(
         self,
         system_prompt: str,
         response_model: type[BaseModel],
     ) -> str:
         """Inject JSON response format instructions into system prompt.
+
+        DEPRECATED: Use _inject_response_format_with_schema instead.
 
         Appends structured format instructions based on the response model's
         JSON schema, ensuring the LLM knows exactly what structure to return.
@@ -552,35 +669,8 @@ class UnifiedAIEngine:
         Returns:
             System prompt with appended format instructions
         """
-        try:
-            # Get schema with aliases resolved for proper field names
-            schema = response_model.model_json_schema()
-
-            # Create a simplified schema for the prompt (remove internal details)
-            simplified = self._simplify_schema_for_prompt(schema)
-
-            # Format as pretty JSON
-            schema_json = json.dumps(simplified, indent=2)
-
-            # Append format instructions to system prompt
-            format_instructions = RESPONSE_FORMAT_INSTRUCTIONS.format(schema=schema_json)
-
-            self.logger.debug(
-                "Injected response format instructions",
-                response_model=response_model.__name__,
-                schema_size=len(schema_json),
-            )
-
-            return system_prompt + format_instructions
-
-        except Exception as e:
-            # If schema generation fails, log warning but don't fail the request
-            self.logger.warning(
-                "Failed to inject response format instructions",
-                response_model=response_model.__name__,
-                error=str(e),
-            )
-            return system_prompt
+        result, _ = self._inject_response_format_with_schema(system_prompt, response_model)
+        return result
 
     def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
         """Simplify JSON schema for LLM prompt injection.

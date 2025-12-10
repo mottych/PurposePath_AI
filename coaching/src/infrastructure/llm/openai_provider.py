@@ -102,6 +102,7 @@ class OpenAILLMProvider:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         system_prompt: str | None = None,
+        response_schema: dict[str, object] | None = None,
     ) -> LLMResponse:
         """
         Generate a completion from OpenAI using the Responses API.
@@ -112,6 +113,7 @@ class OpenAILLMProvider:
             temperature: Sampling temperature (0.0-2.0 for OpenAI)
             max_tokens: Maximum tokens to generate
             system_prompt: Optional system prompt (passed as instructions)
+            response_schema: Optional JSON schema for structured output enforcement
 
         Returns:
             LLMResponse with generated content and metadata
@@ -146,6 +148,7 @@ class OpenAILLMProvider:
                 model=model,
                 num_messages=len(input_items),
                 temperature=temperature,
+                has_schema=response_schema is not None,
             )
 
             # Build API parameters
@@ -162,6 +165,22 @@ class OpenAILLMProvider:
             # Add max_output_tokens if specified
             if max_tokens:
                 params["max_output_tokens"] = max_tokens
+
+            # Add structured output format if schema is provided
+            # This ensures the model returns valid JSON matching the schema
+            if response_schema:
+                params["text"] = {
+                    "format": {
+                        "type": "json_schema",
+                        "name": response_schema.get("title", "Response"),
+                        "schema": response_schema,
+                        "strict": True,  # Enforce strict schema validation
+                    }
+                }
+                logger.debug(
+                    "Using structured JSON output",
+                    schema_name=response_schema.get("title", "Response"),
+                )
 
             # GPT-5 Pro only supports high reasoning effort - don't set temperature
             # For other models, set temperature

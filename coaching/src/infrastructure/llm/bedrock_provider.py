@@ -72,6 +72,7 @@ class BedrockLLMProvider:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         system_prompt: str | None = None,
+        response_schema: dict[str, object] | None = None,
     ) -> LLMResponse:
         """
         Generate a completion from Bedrock.
@@ -82,12 +83,16 @@ class BedrockLLMProvider:
             temperature: Sampling temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
             system_prompt: Optional system prompt
+            response_schema: Optional JSON schema (not used by Bedrock, for interface compat)
 
         Returns:
             LLMResponse with generated content and metadata
 
         Business Rule: Temperature must be between 0.0 and 1.0
         """
+        # Note: response_schema is not used by Bedrock provider
+        # It's accepted for interface compatibility with OpenAI provider
+        _ = response_schema
         if not 0.0 <= temperature <= 1.0:
             raise ValueError(f"Temperature must be between 0.0 and 1.0, got {temperature}")
 

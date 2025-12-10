@@ -136,6 +136,7 @@ class GoogleVertexLLMProvider:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         system_prompt: str | None = None,
+        response_schema: dict[str, object] | None = None,
     ) -> LLMResponse:
         """
         Generate a completion from Google Vertex AI.
@@ -146,12 +147,16 @@ class GoogleVertexLLMProvider:
             temperature: Sampling temperature (0.0-2.0 for Gemini)
             max_tokens: Maximum tokens to generate
             system_prompt: Optional system prompt
+            response_schema: Optional JSON schema (not used by Vertex, for interface compat)
 
         Returns:
             LLMResponse with generated content and metadata
 
         Business Rule: Temperature must be between 0.0 and 2.0 for Gemini
         """
+        # Note: response_schema is not used by Google Vertex provider
+        # It's accepted for interface compatibility with OpenAI provider
+        _ = response_schema
         if not 0.0 <= temperature <= 2.0:
             raise ValueError(
                 f"Temperature must be between 0.0 and 2.0 for Gemini, got {temperature}"
