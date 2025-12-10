@@ -18,7 +18,7 @@ from coaching.src.infrastructure.llm.openai_provider import OpenAILLMProvider
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Billing/Entitlements not configured")
+@pytest.mark.skip(reason="Anthropic use case form not submitted in AWS Bedrock")
 async def test_claude_35_sonnet_v2_real_generation(check_aws_credentials: None) -> None:
     """
     Test Claude 3.5 Sonnet v2 real generation via Bedrock.
@@ -54,7 +54,7 @@ async def test_claude_35_sonnet_v2_real_generation(check_aws_credentials: None) 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Billing/Entitlements not configured")
+@pytest.mark.skip(reason="Anthropic use case form not submitted in AWS Bedrock")
 async def test_claude_sonnet_45_real_generation(check_aws_credentials: None) -> None:
     """
     Test Claude Sonnet 4.5 real generation via Bedrock.
@@ -168,7 +168,7 @@ async def test_gpt5_mini_real_generation(check_openai_credentials: None) -> None
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Billing/Entitlements not configured")
+@pytest.mark.skip(reason="Google Cloud billing not enabled for purposepathai project")
 async def test_gemini_25_pro_real_generation(check_google_credentials: None) -> None:
     """
     Test Gemini 2.5 Pro real generation via Google Vertex AI.
@@ -201,7 +201,7 @@ async def test_gemini_25_pro_real_generation(check_google_credentials: None) -> 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Billing/Entitlements not configured")
+@pytest.mark.skip(reason="Anthropic use case form not submitted in AWS Bedrock")
 async def test_streaming_generation_real_llm(check_aws_credentials: None) -> None:
     """
     Test streaming generation with real Bedrock LLM.
@@ -312,7 +312,7 @@ async def test_error_handling_real_llm(check_aws_credentials: None) -> None:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Billing/Entitlements not configured")
+@pytest.mark.skip(reason="Google Cloud billing not enabled for purposepathai project")
 async def test_multimodal_capability_gemini(check_google_credentials: None) -> None:
     """
     Test Gemini 2.5 Pro multimodal capabilities.
