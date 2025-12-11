@@ -189,8 +189,24 @@ handler = Mangum(app, lifespan="off")
 
 # Wrapper to add debug logging for Lambda
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Lambda handler wrapper with debug logging."""
+    """Lambda handler wrapper with debug logging.
+
+    This handler routes events to the appropriate processor:
+    - EventBridge events → eventbridge_handler (for async job execution)
+    - API Gateway events → Mangum/FastAPI (for HTTP requests)
+    """
     import sys
+
+    from coaching.src.api.handlers import handle_eventbridge_event, is_eventbridge_event
+
+    # Check if this is an EventBridge event
+    if is_eventbridge_event(event):
+        print(
+            f"[LAMBDA_HANDLER] EventBridge event: {event.get('detail-type', 'unknown')}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return handle_eventbridge_event(event, context)
 
     # Direct print to stderr - Lambda MUST capture this
     print(
@@ -199,7 +215,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         flush=True,
     )
 
-    # Call Mangum handler
+    # Call Mangum handler for API Gateway events
     response = handler(event, context)
 
     print(

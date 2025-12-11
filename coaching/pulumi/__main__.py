@@ -330,6 +330,40 @@ aws.lambda_.Permission(
     source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
 )
 
+# EventBridge rule to trigger job execution on ai.job.created events
+# This enables reliable async execution by triggering a new Lambda invocation
+# instead of using in-process asyncio.create_task() which doesn't survive handler completion
+ai_job_executor_rule = aws.cloudwatch.EventRule(
+    "ai-job-executor-rule",
+    name=f"ai-job-executor-{stack}",
+    description="Triggers AI job execution when ai.job.created events are published",
+    event_bus_name="default",
+    event_pattern=json.dumps(
+        {
+            "source": ["purposepath.ai"],
+            "detail-type": ["ai.job.created"],
+        }
+    ),
+    tags={"Environment": stack, "Service": "coaching-ai"},
+)
+
+# Target: invoke the coaching Lambda when ai.job.created event is received
+aws.cloudwatch.EventTarget(
+    "ai-job-executor-target",
+    rule=ai_job_executor_rule.name,
+    arn=coaching_lambda.arn,
+    event_bus_name="default",
+)
+
+# Permission for EventBridge to invoke the Lambda
+aws.lambda_.Permission(
+    "eventbridge-invoke-permission",
+    action="lambda:InvokeFunction",
+    function=coaching_lambda.name,
+    principal="events.amazonaws.com",
+    source_arn=ai_job_executor_rule.arn,
+)
+
 # Use existing custom domain from infrastructure stack
 # Domain: api.{stack}.purposepath.app (created by mottych/purposepath-infrastructure/{stack})
 # Certificate: Already attached to domain

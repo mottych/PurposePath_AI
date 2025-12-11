@@ -217,6 +217,44 @@ class EventBridgePublisher:
         )
         return self.publish(event)
 
+    def publish_ai_job_created(
+        self,
+        job_id: str,
+        tenant_id: str,
+        user_id: str,
+        topic_id: str,
+        parameters: dict[str, Any],
+        estimated_duration_ms: int = 30000,
+    ) -> str:
+        """Publish ai.job.created event to trigger async execution.
+
+        This event is consumed by the job executor Lambda to run
+        the actual AI processing asynchronously.
+
+        Args:
+            job_id: Unique job identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            topic_id: AI topic to execute
+            parameters: Input parameters for the topic
+            estimated_duration_ms: Estimated processing time
+
+        Returns:
+            EventBridge event ID
+        """
+        event = DomainEvent(
+            event_type="ai.job.created",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            data={
+                "jobId": job_id,
+                "topicId": topic_id,
+                "parameters": parameters,
+                "estimatedDurationMs": estimated_duration_ms,
+            },
+        )
+        return self.publish(event)
+
     def publish_ai_job_failed(
         self,
         job_id: str,

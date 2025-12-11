@@ -6,7 +6,6 @@ coordinating between the API, domain models, repository, and event publishing.
 
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Any
 
@@ -94,8 +93,11 @@ class AsyncAIExecutionService:
         """Create and validate a new async AI job.
 
         This method validates the request, creates a job record,
-        and starts background execution. It returns immediately
-        with the job ID for tracking.
+        and publishes an event to trigger async execution.
+        It returns immediately with the job ID for tracking.
+
+        The actual execution happens in a separate Lambda invocation
+        triggered by the ai.job.created EventBridge event.
 
         Args:
             tenant_id: Tenant identifier
@@ -136,13 +138,14 @@ class AsyncAIExecutionService:
             raise JobValidationError(f"Response model not configured: {endpoint.response_model}")
 
         # Create job
+        estimated_duration = self._estimate_duration(topic_id)
         job = AIJob(
             tenant_id=tenant_id,
             user_id=user_id,
             topic_id=topic_id,
             parameters=parameters,
             status=AIJobStatus.PENDING,
-            estimated_duration_ms=self._estimate_duration(topic_id),
+            estimated_duration_ms=estimated_duration,
         )
         job.set_ttl(hours=24)  # Auto-cleanup after 24 hours
 
@@ -157,27 +160,84 @@ class AsyncAIExecutionService:
             topic_id=topic_id,
         )
 
-        # Start background execution
-        # Note: We don't await this task - it runs in the background
-        # The task is fire-and-forget; results are delivered via EventBridge
-        task = asyncio.create_task(self._execute_job(job))
-        # Add callback to log any unexpected errors
-        task.add_done_callback(self._task_done_callback)
+        # Publish event to trigger async execution in separate Lambda invocation
+        # This ensures execution survives the current Lambda handler returning
+        try:
+            self._publisher.publish_ai_job_created(
+                job_id=job.job_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                topic_id=topic_id,
+                parameters=parameters,
+                estimated_duration_ms=estimated_duration,
+            )
+            logger.info(
+                "async_job.execution_triggered",
+                job_id=job.job_id,
+                topic_id=topic_id,
+            )
+        except EventBridgePublishError as e:
+            # If we can't publish, mark job as failed immediately
+            logger.error(
+                "async_job.trigger_failed",
+                job_id=job.job_id,
+                error=str(e),
+            )
+            await self._repository.update_status(
+                job_id=job.job_id,
+                status=AIJobStatus.FAILED,
+                error=f"Failed to trigger execution: {e}",
+                error_code=AIJobErrorCode.INTERNAL_ERROR,
+            )
+            raise JobValidationError(f"Failed to trigger job execution: {e}") from e
 
         return job
 
-    def _task_done_callback(self, task: asyncio.Task[None]) -> None:
-        """Callback for background task completion.
+    async def execute_job_from_event(
+        self,
+        job_id: str,
+        tenant_id: str,
+    ) -> None:
+        """Execute a job triggered by an EventBridge event.
 
-        Logs any unexpected exceptions from background tasks.
+        This method is called by the internal job execution endpoint
+        when EventBridge delivers an ai.job.created event.
+
+        Args:
+            job_id: The job ID to execute
+            tenant_id: Tenant ID for job lookup
+
+        Raises:
+            JobNotFoundError: If job doesn't exist
         """
-        if task.cancelled():
-            logger.warning("async_job.task_cancelled")
-        elif task.exception():
-            logger.exception(
-                "async_job.task_exception",
-                error=str(task.exception()),
+        # Retrieve the job
+        job = await self._repository.get_by_id_for_tenant(job_id, tenant_id)
+        if job is None:
+            logger.error(
+                "async_job.execute_from_event.not_found",
+                job_id=job_id,
+                tenant_id=tenant_id,
             )
+            raise JobNotFoundError(job_id)
+
+        # Check if job is still pending (not already processed)
+        if job.status != AIJobStatus.PENDING:
+            logger.warning(
+                "async_job.execute_from_event.already_processed",
+                job_id=job_id,
+                current_status=job.status.value,
+            )
+            return
+
+        logger.info(
+            "async_job.execute_from_event.starting",
+            job_id=job_id,
+            tenant_id=tenant_id,
+            topic_id=job.topic_id,
+        )
+
+        # Execute the job
+        await self._execute_job(job)
 
     async def get_job(
         self,
