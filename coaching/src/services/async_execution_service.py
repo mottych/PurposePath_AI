@@ -485,7 +485,7 @@ class AsyncAIExecutionService:
         )
 
         # Create and return processor
-        return TemplateParameterProcessor(client=api_client)
+        return TemplateParameterProcessor(business_api_client=api_client)
 
     def _estimate_duration(self, topic_id: str) -> int:
         """Estimate processing duration for a topic.
