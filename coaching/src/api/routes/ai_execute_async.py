@@ -9,6 +9,7 @@ API Gateway's 30-second timeout limit.
 """
 
 import structlog
+from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies.async_execution import get_async_execution_service
 from coaching.src.api.models.async_ai import (
     AsyncAIRequest,
@@ -17,12 +18,13 @@ from coaching.src.api.models.async_ai import (
     JobStatusData,
     JobStatusResponse,
 )
+from coaching.src.api.models.auth import UserContext
 from coaching.src.services.async_execution_service import (
     AsyncAIExecutionService,
     JobNotFoundError,
     JobValidationError,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 logger = structlog.get_logger()
 
@@ -100,7 +102,7 @@ happens asynchronously, and results are delivered via WebSocket events.
 )
 async def execute_async(
     request_body: AsyncAIRequest,
-    request: Request,
+    user: UserContext = Depends(get_current_user),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
 ) -> AsyncJobCreatedResponse:
     """Start an async AI job.
@@ -110,7 +112,7 @@ async def execute_async(
 
     Args:
         request_body: AI execution request with topic_id and parameters
-        request: FastAPI request for user context
+        user: Authenticated user context from JWT
         service: Async execution service from DI
 
     Returns:
@@ -119,20 +121,9 @@ async def execute_async(
     Raises:
         HTTPException: Various status codes for validation errors
     """
-    # Extract tenant and user from request state (set by auth middleware)
-    tenant_id = getattr(request.state, "tenant_id", None)
-    user_id = getattr(request.state, "user_id", None)
-
-    if not tenant_id or not user_id:
-        logger.error(
-            "async_execute.missing_context",
-            has_tenant=bool(tenant_id),
-            has_user=bool(user_id),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication context",
-        )
+    # Extract tenant and user from authenticated context
+    tenant_id = user.tenant_id
+    user_id = user.user_id
 
     logger.info(
         "async_execute.started",
@@ -249,12 +240,12 @@ Use this endpoint as a polling fallback when:
     },
 )
 async def get_job_status(
-    request: Request,
     job_id: str = Path(
         ...,
         description="Unique job identifier",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     ),
+    user: UserContext = Depends(get_current_user),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
 ) -> JobStatusResponse:
     """Get job status by ID.
@@ -264,7 +255,7 @@ async def get_job_status(
 
     Args:
         job_id: Unique job identifier
-        request: FastAPI request for tenant context
+        user: Authenticated user context from JWT
         service: Async execution service from DI
 
     Returns:
@@ -273,15 +264,8 @@ async def get_job_status(
     Raises:
         HTTPException: 404 if job not found or tenant mismatch
     """
-    # Extract tenant from request state
-    tenant_id = getattr(request.state, "tenant_id", None) if request else None
-
-    if not tenant_id:
-        logger.error("get_job_status.missing_tenant")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication context",
-        )
+    # Extract tenant from authenticated context
+    tenant_id = user.tenant_id
 
     try:
         job = await service.get_job(job_id=job_id, tenant_id=tenant_id)
