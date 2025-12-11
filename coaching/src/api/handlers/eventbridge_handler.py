@@ -122,8 +122,17 @@ def handle_eventbridge_event(event: dict[str, Any], _context: Any) -> dict[str, 
 
     # Route based on event type
     if source == "purposepath.ai" and detail_type == "ai.job.created":
-        # Run async handler using asyncio.run() for proper event loop handling
-        return asyncio.run(handle_ai_job_created_event(event))
+        # Get or create event loop for async execution
+        # Use new_event_loop + set_event_loop to avoid closing the loop,
+        # which would break subsequent Mangum requests in the same Lambda container
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No event loop in current thread - create one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(handle_ai_job_created_event(event))
 
     logger.warning(
         "eventbridge.unknown_event_type",
