@@ -49,6 +49,9 @@ config = {
 # Get stack specific config or default to dev if not found (safety fallback)
 stack_config = config.get(stack, config["dev"])
 
+# AI Jobs table name (for async execution)
+ai_jobs_table = f"purposepath-ai-jobs-{stack}"
+
 # Reference infrastructure stacks
 infra = pulumi.StackReference(stack_config["infra_stack"])
 coaching_infra = pulumi.StackReference(stack_config["coaching_infra_stack"])
@@ -82,11 +85,37 @@ aws.iam.RolePolicyAttachment(
     policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 )
 
+# DynamoDB table for AI jobs (async execution)
+ai_jobs_dynamodb_table = aws.dynamodb.Table(
+    "ai-jobs-table",
+    name=ai_jobs_table,
+    billing_mode="PAY_PER_REQUEST",
+    hash_key="job_id",
+    attributes=[
+        aws.dynamodb.TableAttributeArgs(name="job_id", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="tenant_id", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="created_at", type="S"),
+    ],
+    global_secondary_indexes=[
+        aws.dynamodb.TableGlobalSecondaryIndexArgs(
+            name="tenant-user-index",
+            hash_key="tenant_id",
+            range_key="created_at",
+            projection_type="ALL",
+        ),
+    ],
+    ttl=aws.dynamodb.TableTtlArgs(
+        attribute_name="ttl",
+        enabled=True,
+    ),
+    tags={"Environment": stack, "Service": "coaching-ai"},
+)
+
 aws.iam.RolePolicy(
     "coaching-dynamo-policy",
     role=lambda_role.id,
     policy=pulumi.Output.all(
-        aws.get_caller_identity().account_id, stack_config["topics_table"]
+        aws.get_caller_identity().account_id, stack_config["topics_table"], ai_jobs_table
     ).apply(
         lambda args: json.dumps(
             {
@@ -111,6 +140,8 @@ aws.iam.RolePolicy(
                             f"arn:aws:dynamodb:us-east-1:{args[0]}:table/llm_prompts/index/*",
                             f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[1]}",
                             f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[1]}/index/*",
+                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[2]}",
+                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[2]}/index/*",
                         ],
                     }
                 ],
@@ -131,6 +162,24 @@ aws.iam.RolePolicy(
                     "Effect": "Allow",
                     "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
                     "Resource": "*",
+                }
+            ],
+        }
+    ),
+)
+
+# EventBridge access for publishing AI job events
+aws.iam.RolePolicy(
+    "coaching-eventbridge-policy",
+    role=lambda_role.id,
+    policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": ["events:PutEvents"],
+                    "Resource": ["arn:aws:events:us-east-1:*:event-bus/default"],
                 }
             ],
         }
@@ -232,6 +281,7 @@ coaching_lambda = aws.lambda_.Function(
             "COACHING_SESSIONS_TABLE": "coaching_sessions",
             "LLM_PROMPTS_TABLE": "llm_prompts",
             "TOPICS_TABLE": stack_config["topics_table"],
+            "AI_JOBS_TABLE": ai_jobs_table,
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": stack,
             "LOG_LEVEL": stack_config["log_level"],
@@ -301,3 +351,5 @@ pulumi.export(
     "customDomainUrl", pulumi.Output.concat("https://", stack_config["api_domain"], "/coaching")
 )
 pulumi.export("lambdaArn", coaching_lambda.arn)
+pulumi.export("aiJobsTable", ai_jobs_dynamodb_table.name)
+pulumi.export("aiJobsTableArn", ai_jobs_dynamodb_table.arn)
