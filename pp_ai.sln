@@ -1,0 +1,66 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".venv", ".venv", "{762FB55A-D534-FBA3-4F64-743CBAF8F9AD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Lib", "Lib", "{36C42C7B-40BA-AB82-E2DA-C99A74D3B3DE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "site-packages", "site-packages", "{555BA4F3-1904-870C-8707-8C9DB32DDB25}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samcli", "samcli", "{7A4C2870-99DC-5F6E-3176-29AD89C7BC0C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{C657E5F1-6F89-3507-AAB1-359DE9B43B4F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "init", "init", "{A63E83FB-5797-CC99-3C37-B15E9A419D3A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "templates", "templates", "{25F151AE-BF30-212A-6980-F2BF348565AF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cookiecutter-aws-sam-hello-dotnet", "cookiecutter-aws-sam-hello-dotnet", "{F186DAC5-6CE1-1EA5-E37B-310E3DAE6A25}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "{{cookiecutter.project_name}}", "{{cookiecutter.project_name}}", "{5094B8B2-1EA7-6A0C-B452-FFD7A232A088}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F0AD70EA-CCC9-7B1F-D47A-5483BF9CCE35}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", ".venv\Lib\site-packages\samcli\lib\init\templates\cookiecutter-aws-sam-hello-dotnet\{{cookiecutter.project_name}}\src\HelloWorld\HelloWorld.csproj", "{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2C72C1AA-47A1-7E36-6B38-CD14C87668BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld.Tests", ".venv\Lib\site-packages\samcli\lib\init\templates\cookiecutter-aws-sam-hello-dotnet\{{cookiecutter.project_name}}\test\HelloWorld.Test\HelloWorld.Tests.csproj", "{92058D39-E8F6-059A-C14A-4AE8E4FD310F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92058D39-E8F6-059A-C14A-4AE8E4FD310F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92058D39-E8F6-059A-C14A-4AE8E4FD310F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92058D39-E8F6-059A-C14A-4AE8E4FD310F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92058D39-E8F6-059A-C14A-4AE8E4FD310F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{36C42C7B-40BA-AB82-E2DA-C99A74D3B3DE} = {762FB55A-D534-FBA3-4F64-743CBAF8F9AD}
+		{555BA4F3-1904-870C-8707-8C9DB32DDB25} = {36C42C7B-40BA-AB82-E2DA-C99A74D3B3DE}
+		{7A4C2870-99DC-5F6E-3176-29AD89C7BC0C} = {555BA4F3-1904-870C-8707-8C9DB32DDB25}
+		{C657E5F1-6F89-3507-AAB1-359DE9B43B4F} = {7A4C2870-99DC-5F6E-3176-29AD89C7BC0C}
+		{A63E83FB-5797-CC99-3C37-B15E9A419D3A} = {C657E5F1-6F89-3507-AAB1-359DE9B43B4F}
+		{25F151AE-BF30-212A-6980-F2BF348565AF} = {A63E83FB-5797-CC99-3C37-B15E9A419D3A}
+		{F186DAC5-6CE1-1EA5-E37B-310E3DAE6A25} = {25F151AE-BF30-212A-6980-F2BF348565AF}
+		{5094B8B2-1EA7-6A0C-B452-FFD7A232A088} = {F186DAC5-6CE1-1EA5-E37B-310E3DAE6A25}
+		{F0AD70EA-CCC9-7B1F-D47A-5483BF9CCE35} = {5094B8B2-1EA7-6A0C-B452-FFD7A232A088}
+		{859CB43C-1CF4-A6C5-31E2-DB901A49D0FE} = {F0AD70EA-CCC9-7B1F-D47A-5483BF9CCE35}
+		{2C72C1AA-47A1-7E36-6B38-CD14C87668BB} = {5094B8B2-1EA7-6A0C-B452-FFD7A232A088}
+		{92058D39-E8F6-059A-C14A-4AE8E4FD310F} = {2C72C1AA-47A1-7E36-6B38-CD14C87668BB}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CAAA21CA-4B3F-4A06-96C6-D128992ED4B7}
+	EndGlobalSection
+EndGlobal

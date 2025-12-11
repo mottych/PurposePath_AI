@@ -480,7 +480,7 @@ class AsyncAIExecutionService:
 
         # Create API client with JWT token
         api_client = BusinessApiClient(
-            base_url=settings.business_api_url,
+            base_url=settings.business_api_base_url,
             jwt_token=jwt_token,
         )
 
