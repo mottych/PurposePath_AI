@@ -279,6 +279,11 @@ class DynamoDBJobRepository:
             "estimated_duration_ms": job.estimated_duration_ms,
         }
 
+        # Store JWT token for parameter enrichment during execution
+        # Note: DynamoDB has encryption at rest, but token should be short-lived
+        if job.jwt_token is not None:
+            item["jwt_token"] = job.jwt_token
+
         if job.result is not None:
             item["result"] = job.result
 
@@ -317,6 +322,7 @@ class DynamoDBJobRepository:
             user_id=item["user_id"],
             topic_id=item["topic_id"],
             parameters=item.get("parameters", {}),
+            jwt_token=item.get("jwt_token"),  # Retrieve token for enrichment
             status=AIJobStatus(item["status"]),
             result=item.get("result"),
             error=item.get("error"),

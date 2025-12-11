@@ -24,7 +24,7 @@ from coaching.src.services.async_execution_service import (
     JobNotFoundError,
     JobValidationError,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
 
 logger = structlog.get_logger()
 
@@ -104,6 +104,7 @@ async def execute_async(
     request_body: AsyncAIRequest,
     user: UserContext = Depends(get_current_user),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
+    authorization: str | None = Header(None),
 ) -> AsyncJobCreatedResponse:
     """Start an async AI job.
 
@@ -114,6 +115,7 @@ async def execute_async(
         request_body: AI execution request with topic_id and parameters
         user: Authenticated user context from JWT
         service: Async execution service from DI
+        authorization: Authorization header with Bearer token for enrichment
 
     Returns:
         AsyncJobCreatedResponse with job ID and status
@@ -124,6 +126,11 @@ async def execute_async(
     # Extract tenant and user from authenticated context
     tenant_id = user.tenant_id
     user_id = user.user_id
+
+    # Extract JWT token for parameter enrichment during async execution
+    jwt_token: str | None = None
+    if authorization and authorization.startswith("Bearer "):
+        jwt_token = authorization.split(" ")[1]
 
     logger.info(
         "async_execute.started",
@@ -138,6 +145,7 @@ async def execute_async(
             user_id=user_id,
             topic_id=request_body.topic_id,
             parameters=request_body.parameters,
+            jwt_token=jwt_token,
         )
 
         logger.info(

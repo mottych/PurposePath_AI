@@ -89,6 +89,11 @@ class AIJob(BaseModel):
         default_factory=dict,
         description="Input parameters for the AI topic",
     )
+    jwt_token: str | None = Field(
+        default=None,
+        description="JWT token for API calls during enrichment (stored encrypted at rest)",
+        exclude=True,  # Exclude from serialization by default for security
+    )
     status: AIJobStatus = Field(
         default=AIJobStatus.PENDING,
         description="Current job status",

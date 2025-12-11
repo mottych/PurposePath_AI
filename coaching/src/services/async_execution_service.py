@@ -16,6 +16,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     TopicNotFoundError,
     UnifiedAIEngine,
 )
+from coaching.src.core.config import settings
 from coaching.src.core.constants import TopicType
 from coaching.src.core.endpoint_registry import (
     get_endpoint_by_topic_id,
@@ -23,7 +24,9 @@ from coaching.src.core.endpoint_registry import (
 )
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
+from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository
+from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 from shared.services.eventbridge_client import EventBridgePublisher, EventBridgePublishError
 
 logger = structlog.get_logger()
@@ -89,6 +92,7 @@ class AsyncAIExecutionService:
         user_id: str,
         topic_id: str,
         parameters: dict[str, Any],
+        jwt_token: str | None = None,
     ) -> AIJob:
         """Create and validate a new async AI job.
 
@@ -144,6 +148,7 @@ class AsyncAIExecutionService:
             user_id=user_id,
             topic_id=topic_id,
             parameters=parameters,
+            jwt_token=jwt_token,  # Store for enrichment during execution
             status=AIJobStatus.PENDING,
             estimated_duration_ms=estimated_duration,
         )
@@ -308,11 +313,17 @@ class AsyncAIExecutionService:
                     f"Response model not configured: {endpoint.response_model}",
                 )
 
-            # Execute AI
+            # Create template processor for parameter enrichment
+            template_processor = self._create_template_processor(job.jwt_token)
+
+            # Execute AI with enrichment
             result = await self._engine.execute_single_shot(
                 topic_id=job.topic_id,
                 parameters=job.parameters,
                 response_model=response_model,
+                user_id=job.user_id,
+                tenant_id=job.tenant_id,
+                template_processor=template_processor,
             )
 
             processing_time_ms = int((time.time() - start_time) * 1000)
@@ -446,6 +457,35 @@ class AsyncAIExecutionService:
             error_code=error_code.value,
             processing_time_ms=processing_time_ms,
         )
+
+    def _create_template_processor(
+        self,
+        jwt_token: str | None,
+    ) -> TemplateParameterProcessor | None:
+        """Create template processor for parameter enrichment.
+
+        Args:
+            jwt_token: JWT token for API authentication, or None to skip enrichment
+
+        Returns:
+            Template processor for enrichment, or None if no token available
+        """
+        if not jwt_token:
+            logger.warning(
+                "async_job.no_jwt_token",
+                message="Cannot create template processor without JWT token, "
+                "parameter enrichment will be skipped",
+            )
+            return None
+
+        # Create API client with JWT token
+        api_client = BusinessApiClient(
+            base_url=settings.business_api_url,
+            jwt_token=jwt_token,
+        )
+
+        # Create and return processor
+        return TemplateParameterProcessor(client=api_client)
 
     def _estimate_duration(self, topic_id: str) -> int:
         """Estimate processing duration for a topic.
