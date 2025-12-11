@@ -47,8 +47,15 @@ class ParameterRef:
 
 # Shorthand helpers for creating ParameterRefs
 def _req(name: str, path: str = "") -> ParameterRef:
-    """Create a REQUEST source parameter reference."""
+    """Create a REQUEST source parameter reference (required by default)."""
     return ParameterRef(name=name, source=ParameterSource.REQUEST, source_path=path or name)
+
+
+def _opt_req(name: str, path: str = "") -> ParameterRef:
+    """Create an optional REQUEST source parameter reference."""
+    return ParameterRef(
+        name=name, source=ParameterSource.REQUEST, source_path=path or name, required=False
+    )
 
 
 def _onb(name: str, path: str = "") -> ParameterRef:
@@ -189,6 +196,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # Onboarding Review Topics (accessed via /ai/execute unified endpoint)
+    # current_value is optional - users can get suggestions without a draft
     "POST:/ai/execute:niche_review": EndpointDefinition(
         endpoint_path="/ai/execute:niche_review",
         http_method="POST",
@@ -199,13 +207,14 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         description="Review and suggest variations for business niche",
         is_active=True,
         parameter_refs=(
-            _req("current_value"),
+            _opt_req("current_value"),
             _onb("onboarding_ica"),
             _onb("onboarding_value_proposition"),
             _onb("onboarding_products"),
             _onb("onboarding_business_name"),
         ),
     ),
+    # current_value is optional - users can get suggestions without a draft
     "POST:/ai/execute:ica_review": EndpointDefinition(
         endpoint_path="/ai/execute:ica_review",
         http_method="POST",
@@ -216,13 +225,14 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         description="Review and suggest variations for Ideal Client Avatar (ICA)",
         is_active=True,
         parameter_refs=(
-            _req("current_value"),
+            _opt_req("current_value"),
             _onb("onboarding_niche"),
             _onb("onboarding_value_proposition"),
             _onb("onboarding_products"),
             _onb("onboarding_business_name"),
         ),
     ),
+    # current_value is optional - users can get suggestions without a draft
     "POST:/ai/execute:value_proposition_review": EndpointDefinition(
         endpoint_path="/ai/execute:value_proposition_review",
         http_method="POST",
@@ -233,7 +243,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         description="Review and suggest variations for value proposition",
         is_active=True,
         parameter_refs=(
-            _req("current_value"),
+            _opt_req("current_value"),
             _onb("onboarding_niche"),
             _onb("onboarding_ica"),
             _onb("onboarding_products"),
