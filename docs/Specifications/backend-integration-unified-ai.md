@@ -488,6 +488,169 @@ Check status of an async job. Use for polling fallback if WebSocket disconnects.
 
 ---
 
+### EventBridge Events
+
+The AI service publishes events to AWS EventBridge for async processing and real-time notifications. The .NET WebSocket broadcaster subscribes to these events and forwards them to connected clients.
+
+**Event Bus**: `default`  
+**Source**: `purposepath.ai`
+
+#### EventBridge Event Structure
+
+All events follow this envelope structure:
+
+```json
+{
+  "version": "0",
+  "id": "event-id-from-eventbridge",
+  "detail-type": "ai.job.completed",
+  "source": "purposepath.ai",
+  "account": "123456789012",
+  "time": "2025-12-10T20:00:35Z",
+  "region": "us-east-1",
+  "detail": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "tenant-123",
+    "userId": "user-456",
+    "topicId": "niche_review",
+    "eventType": "ai.job.completed",
+    "data": {
+      "jobId": "550e8400-e29b-41d4-a716-446655440000",
+      "topicId": "niche_review",
+      "result": { ... },
+      "processingTimeMs": 35000
+    }
+  }
+}
+```
+
+#### ai.job.created (EventBridge)
+
+Published when an async job is created. Triggers the job executor Lambda.
+
+```json
+{
+  "detail-type": "ai.job.created",
+  "source": "purposepath.ai",
+  "detail": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "tenant-123",
+    "userId": "user-456",
+    "topicId": "niche_review",
+    "eventType": "ai.job.created",
+    "data": {
+      "jobId": "550e8400-e29b-41d4-a716-446655440000",
+      "topicId": "niche_review",
+      "parameters": {
+        "current_value": "We help small businesses grow"
+      },
+      "estimatedDurationMs": 30000
+    }
+  }
+}
+```
+
+#### ai.job.started (EventBridge)
+
+Published when job processing begins.
+
+```json
+{
+  "detail-type": "ai.job.started",
+  "source": "purposepath.ai",
+  "detail": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "tenant-123",
+    "userId": "user-456",
+    "topicId": "niche_review",
+    "eventType": "ai.job.started",
+    "data": {
+      "jobId": "550e8400-e29b-41d4-a716-446655440000",
+      "topicId": "niche_review",
+      "estimatedDurationMs": 30000
+    }
+  }
+}
+```
+
+#### ai.job.completed (EventBridge)
+
+Published when job finishes successfully. **The `data` object contains the full result.**
+
+```json
+{
+  "detail-type": "ai.job.completed",
+  "source": "purposepath.ai",
+  "detail": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "tenant-123",
+    "userId": "user-456",
+    "topicId": "niche_review",
+    "eventType": "ai.job.completed",
+    "data": {
+      "jobId": "550e8400-e29b-41d4-a716-446655440000",
+      "topicId": "niche_review",
+      "result": {
+        "qualityReview": "Your niche is clear but could be more specific...",
+        "suggestions": [
+          {
+            "text": "We help B2B SaaS startups...",
+            "reasoning": "More specific target market..."
+          }
+        ]
+      },
+      "processingTimeMs": 35000
+    }
+  }
+}
+```
+
+#### ai.job.failed (EventBridge)
+
+Published when job fails.
+
+```json
+{
+  "detail-type": "ai.job.failed",
+  "source": "purposepath.ai",
+  "detail": {
+    "jobId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "tenant-123",
+    "userId": "user-456",
+    "topicId": "niche_review",
+    "eventType": "ai.job.failed",
+    "data": {
+      "jobId": "550e8400-e29b-41d4-a716-446655440000",
+      "topicId": "niche_review",
+      "error": "LLM provider timeout after 60 seconds",
+      "errorCode": "LLM_TIMEOUT"
+    }
+  }
+}
+```
+
+#### .NET Broadcaster Implementation Notes
+
+The WebSocket broadcaster should:
+
+1. **Subscribe** to EventBridge events with source `purposepath.ai`
+2. **Route** messages to the correct WebSocket connection using `detail.tenantId` and `detail.userId`
+3. **Forward the full `detail.data` object** as the WebSocket message `data` field
+4. **Use `detail.eventType`** as the WebSocket message `type` field
+
+**Example transformation:**
+
+```csharp
+// EventBridge detail -> WebSocket message
+var websocketMessage = new {
+    type = eventBridgeDetail.eventType,      // "ai.job.completed"
+    timestamp = DateTime.UtcNow.ToString("o"),
+    data = eventBridgeDetail.data            // Forward ENTIRE data object including result
+};
+```
+
+---
+
 ### WebSocket Events
 
 Results are delivered via the existing WebSocket connection at `wss://{WEBSOCKET_URL}`.
