@@ -55,12 +55,13 @@ class TestConversationStatus:
         assert ConversationStatus.ACTIVE.value == "active"
         assert ConversationStatus.PAUSED.value == "paused"
         assert ConversationStatus.COMPLETED.value == "completed"
+        assert ConversationStatus.CANCELLED.value == "cancelled"
         assert ConversationStatus.ABANDONED.value == "abandoned"
 
     def test_conversation_status_count(self) -> None:
         """Test that ConversationStatus enum has the expected number of values."""
         # Assert
-        assert len(ConversationStatus) == 4
+        assert len(ConversationStatus) == 5
 
     def test_conversation_status_values_are_strings(self) -> None:
         """Test that all ConversationStatus values are strings."""

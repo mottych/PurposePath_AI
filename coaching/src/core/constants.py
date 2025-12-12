@@ -109,6 +109,7 @@ class ConversationStatus(str, Enum):
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETED = "completed"
+    CANCELLED = "cancelled"
     ABANDONED = "abandoned"
 
 

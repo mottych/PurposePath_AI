@@ -19,6 +19,7 @@ from coaching.src.api.routes import (
     analysis,
     business_data,
     coaching_ai,
+    coaching_sessions,
     conversations,
     health,
     insights,
@@ -168,6 +169,7 @@ app.include_router(
 app.include_router(topics.router, prefix=f"{settings.api_prefix}")
 app.include_router(website.router, prefix=f"{settings.api_prefix}/website", tags=["website"])
 app.include_router(ai_execute.router, prefix=f"{settings.api_prefix}")
+app.include_router(coaching_sessions.router, prefix=f"{settings.api_prefix}")
 app.include_router(ai_execute_async.router, prefix=f"{settings.api_prefix}")
 
 
