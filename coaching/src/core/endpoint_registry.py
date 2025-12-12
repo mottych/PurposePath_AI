@@ -864,6 +864,84 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("analysis_type"),
         ),
     ),
+    # ========== Section 8: Coaching Conversations (3 endpoints) ==========
+    # Multi-turn coaching conversations with session management.
+    # These use the generic coaching engine with conversation_config settings.
+    "COACHING:core_values": EndpointDefinition(
+        endpoint_path="/ai/coaching",
+        http_method="POST",
+        topic_id="core_values",
+        response_model="CoreValuesResult",
+        topic_type=TopicType.CONVERSATION_COACHING,
+        category=TopicCategory.ONBOARDING,
+        description="Discover and articulate your organization's authentic core values through guided coaching.",
+        is_active=True,
+        allowed_prompt_types=(
+            PromptType.SYSTEM,
+            PromptType.INITIATION,
+            PromptType.RESUME,
+            PromptType.EXTRACTION,
+        ),
+        # Core values are personal beliefs - minimal context needed
+        # user_name for personalization, company_name optional
+        parameter_refs=(
+            _req("user_name"),
+            _onb("company_name", "company_name"),
+        ),
+    ),
+    "COACHING:purpose": EndpointDefinition(
+        endpoint_path="/ai/coaching",
+        http_method="POST",
+        topic_id="purpose",
+        response_model="PurposeResult",
+        topic_type=TopicType.CONVERSATION_COACHING,
+        category=TopicCategory.ONBOARDING,
+        description="Define your organization's deeper purpose and reason for existing through guided coaching.",
+        is_active=True,
+        allowed_prompt_types=(
+            PromptType.SYSTEM,
+            PromptType.INITIATION,
+            PromptType.RESUME,
+            PromptType.EXTRACTION,
+        ),
+        # Purpose needs business context and core values (if completed)
+        parameter_refs=(
+            _req("user_name"),
+            _onb("company_name", "company_name"),
+            _onb("core_values", "core_values"),
+            _onb("onboarding_niche", "onboarding_niche"),
+            _onb("onboarding_ica", "onboarding_ica"),
+            _onb("onboarding_value_proposition", "onboarding_value_proposition"),
+            _onb("onboarding_products", "onboarding_products"),
+        ),
+    ),
+    "COACHING:vision": EndpointDefinition(
+        endpoint_path="/ai/coaching",
+        http_method="POST",
+        topic_id="vision",
+        response_model="VisionResult",
+        topic_type=TopicType.CONVERSATION_COACHING,
+        category=TopicCategory.ONBOARDING,
+        description="Craft a compelling vision for your organization's future through guided coaching.",
+        is_active=True,
+        allowed_prompt_types=(
+            PromptType.SYSTEM,
+            PromptType.INITIATION,
+            PromptType.RESUME,
+            PromptType.EXTRACTION,
+        ),
+        # Vision builds on values and purpose, needs full foundation context
+        parameter_refs=(
+            _req("user_name"),
+            _onb("company_name", "company_name"),
+            _onb("core_values", "core_values"),
+            _onb("mission_statement", "mission_statement"),  # Purpose/mission
+            _onb("onboarding_niche", "onboarding_niche"),
+            _onb("onboarding_ica", "onboarding_ica"),
+            _onb("onboarding_value_proposition", "onboarding_value_proposition"),
+            _onb("onboarding_products", "onboarding_products"),
+        ),
+    ),
 }
 
 

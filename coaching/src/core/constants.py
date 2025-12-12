@@ -47,12 +47,19 @@ class PromptType(str, Enum):
     - user: User message templates
     - assistant: Pre-filled assistant response templates
     - function: Function/tool call definitions
+    - initiation: Instructions for starting a coaching conversation
+    - resume: Instructions for resuming a paused coaching conversation
+    - extraction: Instructions for extracting final results from coaching
     """
 
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
     FUNCTION = "function"
+    # Coaching-specific prompt types
+    INITIATION = "initiation"
+    RESUME = "resume"
+    EXTRACTION = "extraction"
 
 
 class ParameterType(str, Enum):

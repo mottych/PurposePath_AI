@@ -28,6 +28,7 @@ from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
 )
 from coaching.src.models.admin_topics import (
+    ConversationConfig,
     CreatePromptRequest,
     CreatePromptResponse,
     CreateTopicRequest,
@@ -140,6 +141,18 @@ def _map_topic_to_detail(
                 )
             )
 
+    # Build conversation_config only for conversation_coaching topics
+    conversation_config: ConversationConfig | None = None
+    if topic.topic_type == "conversation_coaching":
+        # Get from additional_config or use defaults
+        config_data = topic.additional_config or {}
+        conversation_config = ConversationConfig(
+            max_messages_to_llm=config_data.get("max_messages_to_llm", 30),
+            inactivity_timeout_minutes=config_data.get("inactivity_timeout_minutes", 30),
+            session_ttl_days=config_data.get("session_ttl_days", 14),
+            estimated_messages=config_data.get("estimated_messages", 20),
+        )
+
     return TopicDetail(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -175,6 +188,7 @@ def _map_topic_to_detail(
             )
             for p in get_parameters_for_topic(topic.topic_id)
         ],
+        conversation_config=conversation_config,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
@@ -465,6 +479,16 @@ async def upsert_topic(
             if request.display_order is not None:
                 updates["display_order"] = request.display_order
 
+            # Handle conversation_config for coaching topics
+            if (
+                request.conversation_config is not None
+                and existing_topic.topic_type == "conversation_coaching"
+            ):
+                # Merge with existing additional_config
+                additional_config = dict(existing_topic.additional_config or {})
+                additional_config.update(request.conversation_config.model_dump())
+                updates["additional_config"] = additional_config
+
             updates["updated_at"] = now
             updated_topic = replace(existing_topic, **updates)
             await repository.update(topic=updated_topic)
@@ -529,6 +553,12 @@ async def upsert_topic(
                         request.display_order
                         if request.display_order is not None
                         else base_topic.display_order
+                    ),
+                    additional_config=(
+                        request.conversation_config.model_dump()
+                        if request.conversation_config is not None
+                        and endpoint_def.topic_type.value == "conversation_coaching"
+                        else base_topic.additional_config
                     ),
                     created_at=now,
                     updated_at=now,

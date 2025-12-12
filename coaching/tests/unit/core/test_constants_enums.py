@@ -65,10 +65,15 @@ class TestPromptType:
         assert PromptType.USER.value == "user"
         assert PromptType.ASSISTANT.value == "assistant"
         assert PromptType.FUNCTION.value == "function"
+        # Coaching conversation prompt types
+        assert PromptType.INITIATION.value == "initiation"
+        assert PromptType.RESUME.value == "resume"
+        assert PromptType.EXTRACTION.value == "extraction"
 
     def test_prompt_type_count(self) -> None:
-        """Test that PromptType has exactly 4 values."""
-        assert len(PromptType) == 4
+        """Test that PromptType has the expected number of values."""
+        # 4 standard + 3 coaching conversation types
+        assert len(PromptType) == 7
 
 
 class TestParameterType:

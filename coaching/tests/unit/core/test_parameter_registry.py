@@ -171,16 +171,30 @@ class TestParameterRegistry:
         for param_name in goal_params:
             assert param_name in PARAMETER_REGISTRY, f"Missing parameter: {param_name}"
 
-    def test_registry_has_conversation_parameters(self) -> None:
-        """Test that registry contains conversation parameters."""
-        conv_params = [
-            "conversation_context",
-            "conversation_history",
-            "conversation_summary",
-            "previous_response",
+    def test_registry_has_user_input_parameters(self) -> None:
+        """Test that registry contains user input parameters."""
+        user_params = [
+            "user_message",
+            "user_input",
+            "topic",
         ]
-        for param_name in conv_params:
+        for param_name in user_params:
             assert param_name in PARAMETER_REGISTRY, f"Missing parameter: {param_name}"
+
+    def test_conversation_context_is_not_template_parameter(self) -> None:
+        """Test that conversation context params are NOT in template registry.
+
+        Conversation context (history, summary, previous_response) is handled via
+        message passing to the LLM, not as template parameters. The LLM can generate
+        summaries from the message history when needed (e.g., resume prompts).
+        """
+        # These should NOT be template parameters
+        removed_params = ["conversation_history", "conversation_summary", "previous_response"]
+        for param_name in removed_params:
+            assert param_name not in PARAMETER_REGISTRY, (
+                f"Parameter {param_name} should not be in registry - "
+                "conversation context is handled via message passing"
+            )
 
     def test_all_parameters_have_name(self) -> None:
         """Test that all parameters have matching names."""
@@ -223,7 +237,7 @@ class TestGetParameterDefinition:
 
     def test_get_list_parameter(self) -> None:
         """Test getting a list type parameter."""
-        param = get_parameter_definition("conversation_history")
+        param = get_parameter_definition("core_values")
         assert param is not None
         assert param.param_type == ParameterType.LIST
 
@@ -254,13 +268,19 @@ class TestGetParametersByRetrievalMethod:
         assert "goal" in param_names
         assert "goal_title" in param_names
 
-    def test_get_conversation_context_parameters(self) -> None:
-        """Test getting parameters using get_conversation_context method."""
+    def test_conversation_context_not_in_retrieval_methods(self) -> None:
+        """Test that conversation context is not retrieved via retrieval methods.
+
+        Conversation context is handled via message passing to the LLM,
+        not as template parameters retrieved from external APIs.
+        """
         params = get_parameters_by_retrieval_method("get_conversation_context")
-        assert len(params) > 0
-        param_names = [p.name for p in params]
-        assert "conversation_context" in param_names
-        assert "conversation_history" in param_names
+        assert len(params) == 0  # No retrieval method for conversation context
+
+        # Verify these params don't exist in registry (handled via message passing)
+        assert get_parameter_definition("conversation_history") is None
+        assert get_parameter_definition("conversation_summary") is None
+        assert get_parameter_definition("previous_response") is None
 
     def test_get_nonexistent_method_returns_empty(self) -> None:
         """Test that nonexistent retrieval method returns empty list."""
@@ -357,12 +377,17 @@ class TestRetrievalMethodExtraction:
         assert goal_title.retrieval_method == "get_goal_by_id"
         assert goal_title.extraction_path == "title"
 
-    def test_conversation_extraction_paths(self) -> None:
-        """Test that conversation params have correct extraction paths."""
-        history = get_parameter_definition("conversation_history")
-        assert history is not None
-        assert history.retrieval_method == "get_conversation_context"
-        assert history.extraction_path == "messages"
+    def test_conversation_params_not_in_registry(self) -> None:
+        """Test that conversation params are NOT template parameters.
+
+        Conversation context (history, summary, previous_response) is handled
+        via message passing to the LLM, not as template parameters. The LLM
+        generates summaries from the message history when needed.
+        """
+        # These params should NOT exist in the registry
+        assert get_parameter_definition("conversation_history") is None
+        assert get_parameter_definition("conversation_summary") is None
+        assert get_parameter_definition("previous_response") is None
 
     def test_full_object_extraction(self) -> None:
         """Test params that return full objects (empty extraction_path)."""
