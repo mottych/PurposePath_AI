@@ -55,7 +55,7 @@ class TestConversationStatusEnum:
     def test_status_count(self) -> None:
         """Test expected number of statuses."""
         # Assert
-        assert len(ConversationStatus) == 4
+        assert len(ConversationStatus) == 5
 
 
 @pytest.mark.unit

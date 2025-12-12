@@ -194,7 +194,9 @@ class TopicInfo(BaseModel):
 
     Attributes:
         topic_id: Unique topic identifier
+        name: Human-readable display name
         description: Human-readable description of what the topic does
+        topic_type: Type of topic (single_shot or coaching)
         response_model: Name of the response model (use /ai/schemas/{name} for details)
         parameters: List of parameters the topic accepts
         category: Topic category for organization
@@ -203,17 +205,27 @@ class TopicInfo(BaseModel):
     topic_id: str = Field(
         ...,
         description="Unique topic identifier",
-        examples=["website_scan", "alignment_check"],
+        examples=["website_scan", "alignment_check", "core_values"],
+    )
+    name: str = Field(
+        ...,
+        description="Human-readable display name",
+        examples=["Website Scan", "Core Values Discovery"],
     )
     description: str = Field(
         ...,
         description="Human-readable description of the topic's purpose",
         examples=["Scan a website and extract business information"],
     )
+    topic_type: str = Field(
+        ...,
+        description="Type of topic - 'single_shot' for /ai/execute, 'coaching' for /ai/coaching",
+        examples=["single_shot", "coaching"],
+    )
     response_model: str = Field(
         ...,
         description="Response model name - use GET /ai/schemas/{name} for schema",
-        examples=["WebsiteScanResponse"],
+        examples=["WebsiteScanResponse", "CoreValuesResult"],
     )
     parameters: list[TopicParameter] = Field(
         default_factory=list,
@@ -222,5 +234,5 @@ class TopicInfo(BaseModel):
     category: str = Field(
         ...,
         description="Topic category for organization",
-        examples=["onboarding", "strategic_planning", "operations_ai"],
+        examples=["onboarding", "strategic_planning", "coaching"],
     )

@@ -1,6 +1,6 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: December 7, 2025
+- Last Updated: December 14, 2025
 
 ## Overview
 
@@ -202,11 +202,28 @@ GET /api/v1/admin/topics/{topic_id}
       "description": "User's purpose statement (auto-enriched from profile)"
     }
   ],
+  "conversation_config": {
+    "max_messages_to_llm": 30,
+    "inactivity_timeout_minutes": 30,
+    "session_ttl_days": 14,
+    "estimated_messages": 20
+  },
   "created_at": "2024-11-01T10:00:00Z",
   "updated_at": "2024-11-13T15:30:00Z",
   "created_by": "admin_123"
 }
 ```
+
+**Conversation Config (conversation_coaching topics only):**
+
+For topics with `topic_type: "conversation_coaching"`, the response includes `conversation_config`:
+
+| Field | Type | Range | Default | Description |
+|-------|------|-------|---------|-------------|
+| `max_messages_to_llm` | integer | 5-100 | 30 | Maximum messages to include in LLM context (sliding window) |
+| `inactivity_timeout_minutes` | integer | 5-1440 | 30 | Minutes of inactivity before session auto-pauses |
+| `session_ttl_days` | integer | 1-90 | 14 | Days to keep paused/completed sessions before deletion |
+| `estimated_messages` | integer | 5-100 | 20 | Estimated messages for a typical session (for progress calculation) |
 
 **Template Status:**
 
@@ -337,6 +354,14 @@ POST /api/v1/admin/topics
 - `single_shot`: One-shot evaluations, assessments, and analysis
 - `kpi_system`: KPI calculation and tracking
 
+**Prompt Types by Topic Type:**
+
+| Topic Type | Required Prompts | Description |
+|------------|-----------------|-------------|
+| `conversation_coaching` | `system`, `initiation`, `resume`, `extraction` | System defines coach behavior; initiation starts new sessions; resume continues paused sessions; extraction captures results |
+| `single_shot` | `system`, `user` | System defines behavior; user template with parameters |
+| `kpi_system` | `system`, `user` | System defines calculation behavior; user template for input |
+
 **Response:**
 
 ```json
@@ -399,6 +424,12 @@ PUT /api/v1/admin/topics/{topic_id}
   "max_tokens": 1500,
   "is_active": true,
   "display_order": 5,
+  "conversation_config": {
+    "max_messages_to_llm": 30,
+    "inactivity_timeout_minutes": 45,
+    "session_ttl_days": 14,
+    "estimated_messages": 25
+  },
   "allowed_parameters": [
     {
       "name": "user_name",
@@ -417,6 +448,7 @@ PUT /api/v1/admin/topics/{topic_id}
 - Cannot update `category` or `topic_type` (create new topic instead)
 - Cannot update `created_at` or `created_by`
 - `allowed_parameters` replaces entire list when provided
+- `conversation_config` is only applicable for `conversation_coaching` topic types
 
 **Response:**
 

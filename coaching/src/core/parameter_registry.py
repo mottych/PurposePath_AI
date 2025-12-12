@@ -166,6 +166,17 @@ _register(
 
 _register(
     ParameterDefinition(
+        name="business_name",
+        param_type=ParameterType.STRING,
+        description="The business name (alias for company_name).",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="company_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
         name="industry",
         param_type=ParameterType.STRING,
         description="The industry of the business.",
@@ -543,48 +554,12 @@ _register(
     )
 )
 
-_register(
-    ParameterDefinition(
-        name="conversation_context",
-        param_type=ParameterType.DICT,
-        description="Complete conversation context data.",
-        retrieval_method="get_conversation_context",
-        extraction_path="",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="conversation_history",
-        param_type=ParameterType.LIST,
-        description="The conversation history (list of messages).",
-        default=[],
-        retrieval_method="get_conversation_context",
-        extraction_path="messages",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="conversation_summary",
-        param_type=ParameterType.STRING,
-        description="A summary of the conversation so far.",
-        default="",
-        retrieval_method="get_conversation_context",
-        extraction_path="summary",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="previous_response",
-        param_type=ParameterType.STRING,
-        description="The previous AI response in the conversation.",
-        default="",
-        retrieval_method="get_conversation_context",
-        extraction_path="last_assistant_message",
-    )
-)
+# NOTE: Conversation context parameters (conversation_history, conversation_summary,
+# previous_response) are NOT template parameters. They are handled differently:
+# - conversation_history: Passed as messages to the LLM (not in system prompt)
+# - conversation_summary: LLM generates this from history when needed (resume prompts)
+# - previous_response: Available in message history
+# These are passed via the LLM service's conversation_history parameter, not template rendering.
 
 # -----------------------------------------------------------------------------
 # User Input Parameters (typically provided directly in request)

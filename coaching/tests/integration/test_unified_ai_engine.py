@@ -30,10 +30,18 @@ class TestEndpointRegistry:
 
         Note: Inactive endpoints may reference topics that are planned
         but not yet implemented in TOPIC_SEED_DATA.
+
+        Conversation coaching endpoints use a different pattern (COACHING:topic_id)
+        and have their own topic registry, so they don't need TOPIC_SEED_DATA entries.
         """
+        from coaching.src.core.constants import TopicType
+
         for key, endpoint in ENDPOINT_REGISTRY.items():
             assert endpoint.topic_id, f"Endpoint {key} missing topic_id"
             if endpoint.is_active:
+                # Conversation coaching topics use their own registry
+                if endpoint.topic_type == TopicType.CONVERSATION_COACHING:
+                    continue  # These use COACHING_TOPIC_REGISTRY, not TOPIC_SEED_DATA
                 assert (
                     endpoint.topic_id in TOPIC_SEED_DATA
                 ), f"Active endpoint {key} references unknown topic: {endpoint.topic_id}"
@@ -179,13 +187,35 @@ class TestArchitectureCompliance:
     """Test cases for architecture compliance."""
 
     def test_no_duplicate_endpoints(self):
-        """Verify no duplicate endpoint definitions."""
+        """Verify no duplicate endpoint definitions.
+
+        Note: Conversation coaching endpoints may use different key patterns:
+        - New topic-based: COACHING:topic_id (e.g., COACHING:core_values)
+        - Legacy conversation: METHOD:path (e.g., POST:/conversations/initiate)
+        """
+        from coaching.src.core.constants import TopicType
+
         seen_paths = set()
+        seen_keys = set()
         for key, endpoint in ENDPOINT_REGISTRY.items():
-            full_path = f"{endpoint.http_method}:{endpoint.endpoint_path}"
-            assert full_path == key, f"Key mismatch: {key} vs {full_path}"
-            assert full_path not in seen_paths, f"Duplicate endpoint: {full_path}"
-            seen_paths.add(full_path)
+            # Verify key uniqueness
+            assert key not in seen_keys, f"Duplicate registry key: {key}"
+            seen_keys.add(key)
+
+            # Check for key pattern consistency
+            if key.startswith("COACHING:"):
+                # New coaching topic format - verify topic_type matches
+                assert (
+                    endpoint.topic_type == TopicType.CONVERSATION_COACHING
+                ), f"COACHING: key {key} should have CONVERSATION_COACHING type"
+                expected_key = f"COACHING:{endpoint.topic_id}"
+                assert key == expected_key, f"Coaching key mismatch: {key} vs {expected_key}"
+            else:
+                # Standard METHOD:path format
+                full_path = f"{endpoint.http_method}:{endpoint.endpoint_path}"
+                assert full_path == key, f"Key mismatch: {key} vs {full_path}"
+                assert full_path not in seen_paths, f"Duplicate endpoint: {full_path}"
+                seen_paths.add(full_path)
 
     def test_topic_id_naming_convention(self):
         """Verify topic IDs follow snake_case convention."""

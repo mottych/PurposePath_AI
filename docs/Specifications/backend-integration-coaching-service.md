@@ -1,7 +1,7 @@
 # Coaching Service Backend Integration Specifications
 
-**Version:** 3.1  
-**Last Updated:** October 27, 2025  
+**Version:** 3.2  
+**Last Updated:** December 14, 2025  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -979,6 +979,295 @@ Send message to coaching conversation.
 - Frontend normalizes response for consistent handling
 
 **Implementation:** `src/services/api.ts` → `ApiClient.sendConversationMessage()`
+
+---
+
+## Conversation Coaching Endpoints (Topic-Based)
+
+These endpoints provide a generic, topic-based coaching conversation engine for multi-turn AI coaching sessions. Topics include core values discovery, purpose exploration, vision setting, and goals coaching.
+
+### GET /ai/coaching/topics
+
+Get available coaching topics with user's status for each.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/topics`
+
+**Response:**
+
+```json
+{
+  "topics": [
+    {
+      "topic_id": "core_values_coaching",
+      "name": "Core Values Discovery",
+      "description": "Explore and discover your core values through guided conversation",
+      "status": "not_started",
+      "session_id": null,
+      "completed_at": null
+    },
+    {
+      "topic_id": "purpose_coaching",
+      "name": "Purpose Exploration",
+      "description": "Discover your life's purpose through meaningful dialogue",
+      "status": "in_progress",
+      "session_id": "sess_abc123",
+      "completed_at": null
+    },
+    {
+      "topic_id": "vision_coaching",
+      "name": "Vision Setting",
+      "description": "Define your future vision and aspirations",
+      "status": "completed",
+      "session_id": "sess_xyz789",
+      "completed_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+**Status Values:**
+
+- `not_started` - User has never started this topic
+- `in_progress` - User has an active or paused session
+- `completed` - User has completed this topic
+
+---
+
+### POST /ai/coaching/start
+
+Start a new coaching session or resume an existing one.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/start`
+
+**Request:**
+
+```json
+{
+  "topic_id": "core_values_coaching",
+  "context": {}
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `topic_id` | string | Yes | The coaching topic ID |
+| `context` | object | No | Additional context for the session |
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "tenant_id": "tenant_xyz",
+  "topic_id": "core_values_coaching",
+  "status": "active",
+  "coach_message": "Hello! I'm excited to help you explore and discover your core values today...",
+  "message_count": 1,
+  "estimated_completion": 0.05
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string | Unique session identifier |
+| `tenant_id` | string | Tenant ID |
+| `topic_id` | string | The coaching topic ID |
+| `status` | string | Session status: `active`, `paused`, `completed`, `cancelled` |
+| `coach_message` | string | The coach's response message |
+| `message_count` | integer | Total messages in the session |
+| `estimated_completion` | float | Progress estimate (0-1) |
+
+**Notes:**
+
+- If user has an existing session (active or paused) for this topic, it resumes that session
+- If no session exists, starts a new one with an initial coach message
+
+---
+
+### POST /ai/coaching/message
+
+Send a message to an active coaching session.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/message`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "message": "I think my most important value is honesty..."
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | string | Yes | The session ID |
+| `message` | string | Yes | User's message |
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "coach_message": "That's wonderful that you identify honesty as important. Can you share a specific time when acting with honesty made a significant impact?",
+  "message_count": 3,
+  "estimated_completion": 0.15,
+  "status": "active"
+}
+```
+
+---
+
+### POST /ai/coaching/pause
+
+Pause an active coaching session.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/pause`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "status": "paused",
+  "message": "Session paused successfully. You can resume anytime."
+}
+```
+
+**Notes:**
+
+- Paused sessions can be resumed later using the `start` endpoint
+- Sessions auto-pause after inactivity (configurable per topic)
+
+---
+
+### POST /ai/coaching/complete
+
+Complete a coaching session and extract results.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/complete`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "status": "completed",
+  "result": {
+    "core_values": ["Honesty", "Growth", "Compassion", "Integrity", "Family"],
+    "insights": "Based on our conversation, your core values center around authentic relationships and personal development...",
+    "recommendations": ["Consider journaling about how these values show up daily", "Reflect on decisions through the lens of these values"]
+  },
+  "message_count": 15
+}
+```
+
+**Notes:**
+
+- The `result` structure varies by topic type
+- For core_values, returns discovered values
+- For purpose, returns purpose statement
+- For vision, returns vision statement
+- Results are persisted and can be retrieved via the session details endpoint
+
+---
+
+### POST /ai/coaching/cancel
+
+Cancel an active or paused coaching session.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/cancel`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "status": "cancelled",
+  "message": "Session cancelled. You can start a new session anytime."
+}
+```
+
+**Notes:**
+
+- Cancelled sessions cannot be resumed
+- User can start a fresh session for the same topic
+
+---
+
+### GET /ai/coaching/session
+
+Get detailed information about a coaching session.
+
+**Note:** Full URL: `{BASE_URL}/ai/coaching/session?session_id={session_id}`
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | The session ID |
+
+**Response:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "tenant_id": "tenant_xyz",
+  "topic_id": "core_values_coaching",
+  "user_id": "user_123",
+  "status": "active",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Hello! I'm excited to help you explore...",
+      "timestamp": "2025-01-15T10:00:00Z"
+    },
+    {
+      "role": "user",
+      "content": "I think my most important value is honesty...",
+      "timestamp": "2025-01-15T10:02:00Z"
+    }
+  ],
+  "message_count": 2,
+  "estimated_completion": 0.10,
+  "created_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-15T10:02:00Z",
+  "completed_at": null,
+  "result": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `messages` | array | Full conversation history |
+| `messages[].role` | string | `user`, `assistant`, or `system` |
+| `messages[].content` | string | Message content |
+| `messages[].timestamp` | string | ISO 8601 timestamp |
+| `result` | object | Extracted results (only for completed sessions) |
 
 ---
 

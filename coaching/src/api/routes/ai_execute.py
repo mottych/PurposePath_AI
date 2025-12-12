@@ -333,29 +333,43 @@ async def list_schemas() -> list[str]:
 @router.get(
     "/topics",
     response_model=list[TopicInfo],
-    summary="List all available single-shot topics",
+    summary="List all available AI topics",
     description="""
-List all available single-shot topics with their parameters.
+List all available AI topics from both single-shot and coaching registries.
 
-Only includes active topics of type SINGLE_SHOT. Use this endpoint
-to discover what AI operations are available.
+This endpoint aggregates topics from:
+- **Single-shot topics** (ENDPOINT_REGISTRY): Use POST /ai/execute
+- **Coaching topics** (COACHING_TOPIC_REGISTRY): Use /ai/coaching/* endpoints
 
 Each topic includes:
-- topic_id: Use this in POST /ai/execute
+- topic_id: Topic identifier
+- name: Display name
 - description: What the topic does
+- topic_type: 'single_shot' or 'coaching'
 - response_model: Schema name for the response
 - parameters: What parameters the topic accepts
 - category: Organizational category
+
+Use the `topic_type` field to determine which endpoint to use:
+- `single_shot`: POST /ai/execute with topic_id and parameters
+- `coaching`: POST /ai/coaching/start with topic_id to begin interactive session
 """,
 )
 async def list_available_topics() -> list[TopicInfo]:
-    """List all available single-shot topics with their parameters.
+    """List all available AI topics from both registries.
+
+    Aggregates single-shot topics from ENDPOINT_REGISTRY and
+    coaching topics from COACHING_TOPIC_REGISTRY.
 
     Returns:
-        List of TopicInfo objects for all active single-shot topics
+        List of TopicInfo objects for all active topics
     """
+    from coaching.src.core.coaching_topic_registry import list_coaching_topics
+    from coaching.src.core.parameter_registry import get_parameter_definition
+
     topics: list[TopicInfo] = []
 
+    # Add single-shot topics from ENDPOINT_REGISTRY
     for endpoint in list_all_endpoints(active_only=True):
         # Only include single-shot topics
         if endpoint.topic_type != TopicType.SINGLE_SHOT:
@@ -380,10 +394,49 @@ async def list_available_topics() -> list[TopicInfo]:
         topics.append(
             TopicInfo(
                 topic_id=endpoint.topic_id,
+                name=endpoint.description.split(" - ")[0]
+                if " - " in endpoint.description
+                else endpoint.topic_id.replace("_", " ").title(),
                 description=endpoint.description,
+                topic_type="single_shot",
                 response_model=endpoint.response_model,
                 parameters=topic_params,
                 category=endpoint.category.value,
+            )
+        )
+
+    # Add coaching topics from COACHING_TOPIC_REGISTRY
+    for coaching_topic in list_coaching_topics():
+        # Build parameter info from parameter_refs
+        topic_params = []
+        for param_ref in coaching_topic.parameter_refs:
+            param_def = get_parameter_definition(param_ref.name)
+            if param_def:
+                # Use param_ref.required if set, otherwise infer from default
+                # A parameter is required if it has no default value
+                is_required = (
+                    param_ref.required
+                    if param_ref.required is not None
+                    else (param_def.default is None)
+                )
+                topic_params.append(
+                    TopicParameter(
+                        name=param_ref.name,
+                        type=param_def.param_type.value,
+                        required=is_required,
+                        description=param_def.description,
+                    )
+                )
+
+        topics.append(
+            TopicInfo(
+                topic_id=coaching_topic.topic_id,
+                name=coaching_topic.name,
+                description=coaching_topic.description,
+                topic_type="coaching",
+                response_model=coaching_topic.result_model,
+                parameters=topic_params,
+                category="coaching",
             )
         )
 

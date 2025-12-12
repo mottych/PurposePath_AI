@@ -4,6 +4,42 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+# Conversation Config (for coaching topics only)
+
+
+class ConversationConfig(BaseModel):
+    """Configuration settings for conversation coaching topics.
+
+    Only applicable when topic_type is 'conversation_coaching'.
+    These settings control the behavior of multi-turn coaching sessions.
+    """
+
+    max_messages_to_llm: int = Field(
+        default=30,
+        ge=5,
+        le=100,
+        description="Maximum messages to include in LLM context (sliding window)",
+    )
+    inactivity_timeout_minutes: int = Field(
+        default=30,
+        ge=5,
+        le=1440,
+        description="Minutes of inactivity before session auto-pauses",
+    )
+    session_ttl_days: int = Field(
+        default=14,
+        ge=1,
+        le=90,
+        description="Days to keep paused/completed sessions before deletion",
+    )
+    estimated_messages: int = Field(
+        default=20,
+        ge=5,
+        le=100,
+        description="Estimated messages for a typical session (for progress calculation)",
+    )
+
+
 # Request Models
 
 
@@ -55,6 +91,11 @@ class UpdateTopicRequest(BaseModel):
     presence_penalty: float | None = Field(None, ge=-2.0, le=2.0, description="Presence penalty")
     is_active: bool | None = Field(None, description="Whether topic is active")
     display_order: int | None = Field(None, description="Display order")
+    # Conversation config - only applicable for conversation_coaching topics
+    conversation_config: ConversationConfig | None = Field(
+        None,
+        description="Conversation settings (only for conversation_coaching topics)",
+    )
 
 
 class CreatePromptRequest(BaseModel):
@@ -183,6 +224,11 @@ class TopicDetail(BaseModel):
     )
     allowed_parameters: list[ParameterDefinition] = Field(
         ..., description="Allowed prompt parameters computed from endpoint registry"
+    )
+    # Conversation config - only present for conversation_coaching topics
+    conversation_config: ConversationConfig | None = Field(
+        None,
+        description="Conversation settings (only for conversation_coaching topics)",
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

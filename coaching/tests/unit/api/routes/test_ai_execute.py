@@ -145,7 +145,9 @@ class TestTopicInfoModel:
         """Test creating valid topic info."""
         topic = TopicInfo(
             topic_id="website_scan",
+            name="Website Scan",
             description="Scan a website",
+            topic_type="single_shot",
             response_model="WebsiteScanResponse",
             parameters=[
                 TopicParameter(name="url", type="string", required=True, description="URL to scan")
@@ -153,6 +155,8 @@ class TestTopicInfoModel:
             category="onboarding",
         )
         assert topic.topic_id == "website_scan"
+        assert topic.name == "Website Scan"
+        assert topic.topic_type == "single_shot"
         assert len(topic.parameters) == 1
         assert topic.parameters[0].name == "url"
 
@@ -160,7 +164,9 @@ class TestTopicInfoModel:
         """Test topic info with no parameters."""
         topic = TopicInfo(
             topic_id="test",
+            name="Test Topic",
             description="Test topic",
+            topic_type="single_shot",
             response_model="TestResponse",
             category="test",
         )
@@ -425,18 +431,30 @@ class TestTopicsEndpoint:
         topics = response.json()
         for topic in topics:
             assert "topic_id" in topic
+            assert "name" in topic
             assert "description" in topic
+            assert "topic_type" in topic
             assert "response_model" in topic
             assert "parameters" in topic
             assert "category" in topic
 
-    def test_topics_only_single_shot(self, client: TestClient) -> None:
-        """Test that only single-shot topics are returned."""
+    def test_topics_include_both_single_shot_and_coaching(self, client: TestClient) -> None:
+        """Test that topics include both single-shot and coaching topics."""
         response = client.get("/api/v1/ai/topics")
 
         assert response.status_code == status.HTTP_200_OK
         topics = response.json()
-        # Verify we got topics that we know are single-shot
+
+        # Should have single-shot topics (e.g., website_scan)
+        single_shot_topics = [t for t in topics if t["topic_type"] == "single_shot"]
+        assert len(single_shot_topics) > 0, "Should have at least one single-shot topic"
+
+        # Should have coaching topics (from COACHING_TOPIC_REGISTRY)
+        coaching_topics = [t for t in topics if t["topic_type"] == "coaching"]
+        assert len(coaching_topics) > 0, "Should have at least one coaching topic"
+
+        # Verify known topics exist
         topic_ids = [t["topic_id"] for t in topics]
-        # website_scan is a known single-shot topic
-        assert "website_scan" in topic_ids or len(topics) > 0
+        assert "website_scan" in topic_ids, "website_scan should be available"
+        # Coaching topics from COACHING_TOPIC_REGISTRY use simple IDs
+        assert "core_values" in topic_ids, "core_values coaching topic should be available"
