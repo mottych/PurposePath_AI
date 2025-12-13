@@ -220,9 +220,20 @@
 
 ---
 
-## Conversation API (Advanced Coaching)
+## Conversation API (DEPRECATED - REMOVED)
 
-### 5. Initiate Conversation
+> ⚠️ **DEPRECATED**: The `/conversations/*` endpoints documented in this section have been **removed** from the backend.
+> 
+> **Migration**: Use the new Generic Coaching Engine endpoints instead:
+> - `POST /ai/coaching/start` - Start a coaching session (replaces `/conversations/initiate`)
+> - `POST /ai/coaching/message` - Send message (replaces `/conversations/{id}/message`)
+> - `GET /ai/coaching/topics` - List available topics with status
+> - `POST /ai/coaching/complete` - Complete a session
+> - `POST /ai/coaching/pause` - Pause a session
+>
+> See "Conversation Coaching Endpoints (Topic-Based)" section in `backend-integration-coaching-service.md` for the current API.
+
+~~### 5. Initiate Conversation~~ (REMOVED)
 
 **Endpoint**: `POST /conversations/initiate`  
 **Method**: POST  

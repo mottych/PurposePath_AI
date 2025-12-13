@@ -33,17 +33,18 @@
 
 ---
 
-## Section 2: Conversation API (3 endpoints)
+## Section 2: Conversation API (DEPRECATED - REMOVED)
 
-### ✅ IMPLEMENTED
+> ⚠️ **DEPRECATED**: These endpoints were removed in favor of the Generic Coaching Engine (`/ai/coaching/*`).
+> See "Conversation Coaching Endpoints (Topic-Based)" section for the replacement API.
 
-| # | Endpoint | Method | Status | Backend Path |
-|---|----------|--------|--------|--------------|
-| 5 | `/conversations/initiate` | POST | ✅ Implemented | `/conversations/initiate` |
-| 6 | `/conversations/{conversationId}/message` | POST | ✅ Implemented | `/conversations/{conversation_id}/message` |
-| 7 | `/conversations/{conversationId}` | GET | ✅ Implemented | `/conversations/{conversation_id}` |
+| # | Endpoint | Method | Status | Migration Path |
+|---|----------|--------|--------|----------------|
+| 5 | `/conversations/initiate` | POST | ❌ Removed | Use `POST /ai/coaching/start` |
+| 6 | `/conversations/{conversationId}/message` | POST | ❌ Removed | Use `POST /ai/coaching/message` |
+| 7 | `/conversations/{conversationId}` | GET | ❌ Removed | Use `GET /ai/coaching/topics` |
 
-**Section Status**: ✅ **100% Complete** (3/3)
+**Section Status**: ❌ **DEPRECATED** (removed per issue #156)
 
 ---
 
@@ -267,12 +268,12 @@ POST   /coaching/leadership-coaching
 POST   /coaching/alignment-explanation
 POST   /coaching/alignment-suggestions
 POST   /coaching/strategy-suggestions
-POST   /conversations/initiate
-POST   /conversations/{conversation_id}/message
-GET    /conversations/{conversation_id}
-GET    /conversations/
-POST   /conversations/{conversation_id}/pause
-POST   /conversations/{conversation_id}/complete
+# Legacy /conversations/* endpoints REMOVED - use /ai/coaching/* instead
+POST   /ai/coaching/start
+POST   /ai/coaching/message
+POST   /ai/coaching/complete
+POST   /ai/coaching/pause
+GET    /ai/coaching/topics
 POST   /multitenant/conversations/initiate
 POST   /multitenant/conversations/{conversation_id}/message
 GET    /multitenant/conversations/business-data

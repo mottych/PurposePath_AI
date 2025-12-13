@@ -20,7 +20,6 @@ from coaching.src.api.routes import (
     business_data,
     coaching_ai,
     coaching_sessions,
-    conversations,
     health,
     insights,
     multitenant_conversations,
@@ -146,7 +145,6 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(conversations.router, prefix=f"{settings.api_prefix}")
 app.include_router(analysis.router, prefix=f"{settings.api_prefix}")
 app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=["health"])
 app.include_router(admin.router, prefix=f"{settings.api_prefix}")

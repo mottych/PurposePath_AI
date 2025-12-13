@@ -73,8 +73,8 @@ class TestEndpointRegistry:
         """Test that registry contains key endpoints."""
         expected_keys = [
             "POST:/coaching/alignment-check",
-            "POST:/conversations/initiate",
             "POST:/analysis/goal-alignment",
+            "POST:/insights/generate",
         ]
         for key in expected_keys:
             assert key in ENDPOINT_REGISTRY, f"Missing endpoint: {key}"

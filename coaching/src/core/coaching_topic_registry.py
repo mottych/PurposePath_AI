@@ -71,9 +71,6 @@ CORE_VALUES_SYSTEM_PROMPT = """You are an expert business coach specializing in 
 
 ## Context
 - Business Name: {business_name}
-- Industry: {industry}
-- Company Size: {company_size}
-- Business Description: {business_description}
 
 ## Your Role
 Guide the user through a thoughtful, conversational discovery process to identify 3-5 authentic core values that truly represent their organization. Core values should be:
@@ -113,9 +110,6 @@ PURPOSE_SYSTEM_PROMPT = """You are an expert business coach specializing in help
 
 ## Context
 - Business Name: {business_name}
-- Industry: {industry}
-- Company Size: {company_size}
-- Business Description: {business_description}
 
 ## Your Role
 Guide the user through discovering their organization's authentic purpose. A good purpose statement:
@@ -152,9 +146,6 @@ VISION_SYSTEM_PROMPT = """You are an expert business coach specializing in helpi
 
 ## Context
 - Business Name: {business_name}
-- Industry: {industry}
-- Company Size: {company_size}
-- Business Description: {business_description}
 
 ## Your Role
 Guide the user through crafting a compelling vision for their organization's future. A good vision:
@@ -200,12 +191,7 @@ COACHING_TOPIC_REGISTRY: dict[str, CoachingTopicDefinition] = {
         resume_instructions=CORE_VALUES_RESUME,
         extraction_instructions=CORE_VALUES_EXTRACTION,
         result_model="CoreValuesResult",
-        parameter_refs=(
-            _onb("business_name", "businessName"),
-            _onb("industry", "industry"),
-            _onb("company_size", "companySize"),
-            _onb("business_description", "businessDescription"),
-        ),
+        parameter_refs=(_onb("business_name", "businessName"),),
         max_messages_to_llm=30,
         inactivity_timeout_minutes=30,
         session_ttl_days=14,
@@ -222,12 +208,7 @@ COACHING_TOPIC_REGISTRY: dict[str, CoachingTopicDefinition] = {
         resume_instructions=PURPOSE_RESUME,
         extraction_instructions=PURPOSE_EXTRACTION,
         result_model="PurposeResult",
-        parameter_refs=(
-            _onb("business_name", "businessName"),
-            _onb("industry", "industry"),
-            _onb("company_size", "companySize"),
-            _onb("business_description", "businessDescription"),
-        ),
+        parameter_refs=(_onb("business_name", "businessName"),),
         max_messages_to_llm=30,
         inactivity_timeout_minutes=30,
         session_ttl_days=14,
@@ -244,12 +225,7 @@ COACHING_TOPIC_REGISTRY: dict[str, CoachingTopicDefinition] = {
         resume_instructions=VISION_RESUME,
         extraction_instructions=VISION_EXTRACTION,
         result_model="VisionResult",
-        parameter_refs=(
-            _onb("business_name", "businessName"),
-            _onb("industry", "industry"),
-            _onb("company_size", "companySize"),
-            _onb("business_description", "businessDescription"),
-        ),
+        parameter_refs=(_onb("business_name", "businessName"),),
         max_messages_to_llm=30,
         inactivity_timeout_minutes=30,
         session_ttl_days=14,
