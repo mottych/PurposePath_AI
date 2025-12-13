@@ -269,71 +269,7 @@ Provide:
 2. Exactly 3 alternative value proposition variations with reasoning for each""",
         display_order=16,
     ),
-    # ========== Section 2: Conversation API (3 topics) ==========
-    # Note: Conversation topics use the existing conversation coaching topics
-    "conversation_initiate": TopicSeedData(
-        topic_id="conversation_initiate",
-        topic_name="Initiate Conversation",
-        topic_type=TopicType.CONVERSATION_COACHING.value,
-        category=TopicCategory.CONVERSATION.value,
-        description="Initiate a new coaching conversation with context and greeting",
-        temperature=0.8,
-        max_tokens=2048,
-        default_system_prompt="""You are an expert business coach initiating a conversation about strategic planning.
-
-Your approach:
-- Warm and professional greeting
-- Set clear expectations
-- Understand user context
-- Guide toward productive dialogue""",
-        default_user_prompt="""Initiate a conversation about: {topic}
-
-Context: {context}
-
-Start with a personalized greeting and explain how this conversation will help.""",
-        display_order=20,
-    ),
-    "conversation_message": TopicSeedData(
-        topic_id="conversation_message",
-        topic_name="Conversation Message",
-        topic_type=TopicType.CONVERSATION_COACHING.value,
-        category=TopicCategory.CONVERSATION.value,
-        description="Process user message in active conversation with context awareness",
-        temperature=0.8,
-        max_tokens=3072,
-        default_system_prompt="""You are an AI business coach engaged in strategic conversation.
-
-Maintain:
-- Context awareness from conversation history
-- Goal-oriented dialogue
-- Probing questions when needed
-- Actionable insights""",
-        default_user_prompt="""Conversation history: {conversation_history}
-
-User says: {user_message}
-
-Context: {context}
-
-Respond thoughtfully, advancing the strategic conversation.""",
-        display_order=21,
-    ),
-    "conversation_retrieve": TopicSeedData(
-        topic_id="conversation_retrieve",
-        topic_name="Retrieve Conversation",
-        topic_type=TopicType.CONVERSATION_COACHING.value,
-        category=TopicCategory.CONVERSATION.value,
-        description="Retrieve and summarize conversation history",
-        temperature=0.5,
-        max_tokens=2048,
-        default_system_prompt="""You are a conversation historian providing clear summaries.""",
-        default_user_prompt="""Retrieve conversation: {conversation_id}
-
-Include summary: {include_summary}
-
-Provide conversation details and key insights.""",
-        display_order=22,
-    ),
-    # ========== Section 3: Insights Generation (1 topic) ==========
+    # ========== Section 2: Insights Generation (1 topic) ==========
     "insights_generation": TopicSeedData(
         topic_id="insights_generation",
         topic_name="Insights Generation",
@@ -365,7 +301,7 @@ Provide:
 5. Priority Insights""",
         display_order=30,
     ),
-    # ========== Section 4: Strategic Planning AI (5 topics) ==========
+    # ========== Section 3: Strategic Planning AI (5 topics) ==========
     "strategy_suggestions": TopicSeedData(
         topic_id="strategy_suggestions",
         topic_name="Strategy Suggestions",

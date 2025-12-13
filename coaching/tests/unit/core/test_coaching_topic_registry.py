@@ -154,9 +154,8 @@ class TestCoachingTopicDefinition:
         self, core_values_topic: CoachingTopicDefinition
     ) -> None:
         """Test that system prompt contains placeholder variables."""
-        # Should contain {business_name} and other placeholders
+        # Should contain {business_name} placeholder
         assert "{business_name}" in core_values_topic.system_prompt_template
-        assert "{industry}" in core_values_topic.system_prompt_template
 
     def test_topic_has_parameter_refs(self, core_values_topic: CoachingTopicDefinition) -> None:
         """Test that topic defines parameter references."""

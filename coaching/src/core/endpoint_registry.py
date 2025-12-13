@@ -250,51 +250,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("onboarding_business_name"),
         ),
     ),
-    # ========== Section 2: Conversation API (3 endpoints) ==========
-    "POST:/conversations/initiate": EndpointDefinition(
-        endpoint_path="/conversations/initiate",
-        http_method="POST",
-        topic_id="conversation_initiate",
-        response_model="ConversationResponse",
-        topic_type=TopicType.CONVERSATION_COACHING,
-        category=TopicCategory.CONVERSATION,
-        description="Initiate a new coaching conversation",
-        is_active=True,
-        parameter_refs=(
-            _req("topic"),
-            _onb("context", "business_context"),
-        ),
-    ),
-    "POST:/conversations/{conversation_id}/message": EndpointDefinition(
-        endpoint_path="/conversations/{conversation_id}/message",
-        http_method="POST",
-        topic_id="conversation_message",
-        response_model="MessageResponse",
-        topic_type=TopicType.CONVERSATION_COACHING,
-        category=TopicCategory.CONVERSATION,
-        description="Send a message in an active conversation",
-        is_active=True,
-        parameter_refs=(
-            _conv("conversation_history", "messages"),
-            _req("user_message"),
-            _conv("context"),
-        ),
-    ),
-    "GET:/conversations/{conversation_id}": EndpointDefinition(
-        endpoint_path="/conversations/{conversation_id}",
-        http_method="GET",
-        topic_id="conversation_retrieve",
-        response_model="ConversationResponse",
-        topic_type=TopicType.CONVERSATION_COACHING,
-        category=TopicCategory.CONVERSATION,
-        description="Retrieve conversation details and history",
-        is_active=True,
-        parameter_refs=(
-            _conv("conversation_id", "id"),
-            _req("include_summary"),
-        ),
-    ),
-    # ========== Section 3: Insights Generation (1 endpoint) ==========
+    # ========== Section 2: Insights Generation (1 endpoint) ==========
     "POST:/insights/generate": EndpointDefinition(
         endpoint_path="/insights/generate",
         http_method="POST",
