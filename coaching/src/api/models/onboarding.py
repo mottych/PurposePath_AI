@@ -123,7 +123,10 @@ class SuggestionVariation(BaseModel):
     )
     reasoning: str = Field(
         ...,
-        description="Explanation of why this variation is recommended",
+        description=(
+            "Explanation of why this variation is recommended. "
+            "Use newlines (\\n) to separate paragraphs for readability."
+        ),
     )
 
 
@@ -136,7 +139,11 @@ class OnboardingReviewResponse(BaseModel):
     quality_review: str = Field(
         ...,
         alias="qualityReview",
-        description="AI review of the current content quality with feedback",
+        description=(
+            "AI review of the current content quality with feedback. "
+            "Use newlines (\\n) to separate sections like Overall Assessment, "
+            "Strengths, Weaknesses, and Suggestions for readability."
+        ),
     )
     suggestions: list[SuggestionVariation] = Field(
         ...,
