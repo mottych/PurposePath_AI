@@ -207,6 +207,8 @@ class TestGetTopic:
         assert data["from_database"] is True  # From DB
         assert len(data["prompts"]) == 1
         # allowed_parameters now comes from registry, not from DB
+        # response_schema should be None by default
+        assert data.get("response_schema") is None
 
     async def test_get_topic_fallback_to_registry(
         self, client: TestClient, mock_repository: AsyncMock
@@ -221,6 +223,8 @@ class TestGetTopic:
         data = response.json()
         assert data["topic_id"] == "onboarding_suggestions"
         assert data["from_database"] is False  # From registry
+        # response_schema should be None by default
+        assert data.get("response_schema") is None
 
     async def test_get_nonexistent_topic(
         self, client: TestClient, mock_repository: AsyncMock
@@ -232,6 +236,84 @@ class TestGetTopic:
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
+
+    async def test_get_topic_with_include_schema_true(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test getting a topic with include_schema=true returns response schema.
+
+        When include_schema=true is passed, the response should include the
+        JSON schema of the expected response model for template design.
+        """
+        mock_repository.get.return_value = None  # Not in DB
+
+        # Use a topic_id that exists in ENDPOINT_REGISTRY with a registered response model
+        response = client.get("/admin/topics/niche_review?include_schema=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "niche_review"
+
+        # response_schema should be present and contain JSON schema structure
+        assert data.get("response_schema") is not None
+        schema = data["response_schema"]
+        assert "type" in schema  # JSON schema has type
+        assert "properties" in schema or "$defs" in schema  # Has properties or definitions
+
+    async def test_get_topic_with_include_schema_false(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test getting a topic with include_schema=false (explicit) returns no schema."""
+        mock_repository.get.return_value = None
+
+        response = client.get("/admin/topics/niche_review?include_schema=false")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "niche_review"
+        # response_schema should be None when include_schema=false
+        assert data.get("response_schema") is None
+
+    async def test_get_topic_include_schema_for_db_topic(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
+        """Test getting a DB topic with include_schema returns schema if in registry.
+
+        Even for topics stored in DB, the response schema comes from the
+        endpoint registry based on topic_id mapping.
+        """
+        # Create a topic that matches a registry topic_id
+        from dataclasses import replace as dc_replace
+
+        registry_topic = dc_replace(sample_topic, topic_id="niche_review")
+        mock_repository.get.return_value = registry_topic
+
+        response = client.get("/admin/topics/niche_review?include_schema=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "niche_review"
+        assert data["from_database"] is True
+        # response_schema should be present from registry
+        assert data.get("response_schema") is not None
+
+    async def test_get_topic_include_schema_custom_topic_no_registry(
+        self, client: TestClient, mock_repository: AsyncMock, sample_topic: LLMTopic
+    ) -> None:
+        """Test getting a custom topic (not in registry) with include_schema.
+
+        Custom topics not in the endpoint registry should return None for
+        response_schema since there's no registered response model.
+        """
+        mock_repository.get.return_value = sample_topic  # test_topic not in registry
+
+        response = client.get("/admin/topics/test_topic?include_schema=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "test_topic"
+        # response_schema should be None for custom topics not in registry
+        assert data.get("response_schema") is None
 
 
 class TestCreateTopic:

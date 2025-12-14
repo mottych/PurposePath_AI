@@ -130,6 +130,12 @@ GET /api/v1/admin/topics/{topic_id}
 |-----------|------|----------|-------------|--------|
 | `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
 
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `include_schema` | boolean | No | `false` | Include JSON schema of the response model for template design |
+
 **Response:**
 
 ```json
@@ -208,11 +214,62 @@ GET /api/v1/admin/topics/{topic_id}
     "session_ttl_days": 14,
     "estimated_messages": 20
   },
+  "response_schema": null,
   "created_at": "2024-11-01T10:00:00Z",
   "updated_at": "2024-11-13T15:30:00Z",
   "created_by": "admin_123"
 }
 ```
+
+**Response Schema (when `include_schema=true`):**
+
+When the `include_schema` query parameter is set to `true`, the response includes the JSON schema of the expected response model. This is useful for template authors to understand what output fields their prompts should generate.
+
+Example with `include_schema=true`:
+
+```json
+{
+  "topic_id": "niche_review",
+  "...": "...other fields...",
+  "response_schema": {
+    "title": "OnboardingReviewResponse",
+    "type": "object",
+    "properties": {
+      "strengths": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of strengths identified"
+      },
+      "weaknesses": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of weaknesses or areas for improvement"
+      },
+      "recommendations": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of actionable recommendations"
+      },
+      "alignment_score": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
+        "description": "Overall alignment score"
+      },
+      "summary": {
+        "type": "string",
+        "description": "Summary of the analysis"
+      }
+    },
+    "required": ["strengths", "weaknesses", "recommendations", "alignment_score", "summary"]
+  }
+}
+```
+
+**Note:** The `response_schema` is `null` when:
+- `include_schema=false` (default)
+- The topic is not in the endpoint registry (custom topics)
+- The response model is not registered in the response model registry
 
 **Conversation Config (conversation_coaching topics only):**
 

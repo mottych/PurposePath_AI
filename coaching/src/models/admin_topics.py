@@ -234,6 +234,11 @@ class TopicDetail(BaseModel):
         None,
         description="Conversation settings (only for conversation_coaching topics)",
     )
+    # Response schema - only present when include_schema=true query param is set
+    response_schema: dict[str, object] | None = Field(
+        None,
+        description="JSON schema of the expected response model (when include_schema=true)",
+    )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     created_by: str | None = Field(None, description="Creator user ID")

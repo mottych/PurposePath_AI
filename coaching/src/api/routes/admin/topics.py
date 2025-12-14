@@ -102,7 +102,10 @@ def _map_topic_to_summary(
 
 
 def _map_topic_to_detail(
-    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+    topic: LLMTopic,
+    from_database: bool = True,
+    allowed_prompt_types: list[str] | None = None,
+    response_schema: dict[str, Any] | None = None,
 ) -> TopicDetail:
     """Map domain LLMTopic to API TopicDetail.
 
@@ -110,6 +113,7 @@ def _map_topic_to_detail(
         topic: The LLMTopic entity
         from_database: Whether the topic came from DB (True) or registry default (False)
         allowed_prompt_types: List of allowed prompt types from endpoint registry
+        response_schema: JSON schema for the response model (when include_schema=true)
     """
     # Create a lookup of defined prompts by type
     defined_prompts = {p.prompt_type: p for p in topic.prompts}
@@ -189,6 +193,7 @@ def _map_topic_to_detail(
             for p in get_parameters_for_topic(topic.topic_id)
         ],
         conversation_config=conversation_config,
+        response_schema=response_schema,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
@@ -363,6 +368,10 @@ async def list_topics(
 @router.get("/{topic_id}", response_model=TopicDetail)
 async def get_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
+    include_schema: Annotated[
+        bool,
+        Query(description="Include JSON schema of the response model for template design"),
+    ] = False,
     repository: TopicRepository = Depends(get_topic_repository),
     _user: UserContext = Depends(get_current_context),
 ) -> TopicDetail:
@@ -371,8 +380,14 @@ async def get_topic(
     If the topic exists in the database, returns the database configuration.
     If not found in database, falls back to endpoint registry defaults.
 
+    When include_schema=true, includes the JSON schema of the expected response
+    model in the response. This is useful for template authors to understand
+    what output fields their prompts should generate.
+
     Requires admin:topics:read permission.
     """
+    from coaching.src.core.response_model_registry import get_response_schema
+
     try:
         # First, try to get from database
         topic = await repository.get(topic_id=topic_id)
@@ -380,10 +395,21 @@ async def get_topic(
         # Get allowed prompt types from registry (used for both DB and default)
         allowed_prompt_types = _get_allowed_prompt_types(topic_id)
 
+        # Get response schema if requested
+        response_schema: dict[str, Any] | None = None
+        if include_schema:
+            # Get response model name from endpoint registry
+            endpoint_def = get_endpoint_by_topic_id(topic_id)
+            if endpoint_def:
+                response_schema = get_response_schema(endpoint_def.response_model)
+
         if topic:
             # Topic found in database
             return _map_topic_to_detail(
-                topic, from_database=True, allowed_prompt_types=allowed_prompt_types
+                topic,
+                from_database=True,
+                allowed_prompt_types=allowed_prompt_types,
+                response_schema=response_schema,
             )
 
         # Topic not in database, try to get from registry
@@ -397,7 +423,10 @@ async def get_topic(
         # Create default topic from registry
         default_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
         return _map_topic_to_detail(
-            default_topic, from_database=False, allowed_prompt_types=allowed_prompt_types
+            default_topic,
+            from_database=False,
+            allowed_prompt_types=allowed_prompt_types,
+            response_schema=response_schema,
         )
 
     except HTTPException:
