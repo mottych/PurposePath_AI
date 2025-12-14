@@ -519,7 +519,7 @@ class CoachingSessionService:
             )
 
             # Complete the session with the extracted result
-            session.complete(result=parsed_response.result)
+            session.complete(result=parsed_response.result or {})
             await self.session_repo.save(session)
 
             logger.info(

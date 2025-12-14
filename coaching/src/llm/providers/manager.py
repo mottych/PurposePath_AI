@@ -199,7 +199,7 @@ class ProviderManager:
         return {
             "provider_id": provider_id or self._default_provider or "unknown",
             "provider_type": provider_type_value,
-            "model_name": provider.config.model_name,
+            "model_name": provider.config.model_name or "default",
             "temperature": str(provider.config.temperature),
             "max_tokens": str(provider.config.max_tokens) if provider.config.max_tokens else "none",
         }
