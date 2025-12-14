@@ -199,11 +199,22 @@ def _map_topic_to_detail(
 
 
 def _get_allowed_prompt_types(topic_id: str) -> list[str]:
-    """Get allowed prompt types for a topic from the endpoint registry."""
+    """Get allowed prompt types for a topic from the endpoint registry.
+
+    For topics defined in the registry, returns only the prompt types
+    explicitly allowed by the EndpointDefinition.
+
+    For custom topics not in the registry, returns all valid PromptType
+    values to allow full flexibility.
+    """
+    from coaching.src.core.constants import PromptType
+
     endpoint_def = get_endpoint_by_topic_id(topic_id)
     if endpoint_def:
+        # Topic is in registry - use its allowed prompt types
         return [pt.value for pt in endpoint_def.allowed_prompt_types]
-    return []
+    # Custom topic not in registry - allow all valid prompt types
+    return [pt.value for pt in PromptType]
 
 
 async def _get_or_create_topic_from_registry(
@@ -815,6 +826,25 @@ async def update_prompt_content(
     Requires admin:topics:write permission.
     """
     try:
+        # Validate prompt_type is a valid PromptType enum value
+        from coaching.src.core.constants import PromptType
+
+        valid_types = {pt.value for pt in PromptType}
+        if prompt_type not in valid_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid prompt type '{prompt_type}'. Valid types: {', '.join(sorted(valid_types))}",
+            )
+
+        # Validate prompt type is allowed for this topic
+        allowed_types = _get_allowed_prompt_types(topic_id)
+        if prompt_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Prompt type '{prompt_type}' is not allowed for topic '{topic_id}'. "
+                f"Allowed types: {', '.join(allowed_types)}",
+            )
+
         # Get topic from DB or auto-create from registry
         topic = await _get_or_create_topic_from_registry(
             topic_id=topic_id,
@@ -923,6 +953,15 @@ async def create_prompt(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Topic '{topic_id}' not found in database or registry",
+            )
+
+        # Validate prompt type is allowed for this topic
+        allowed_types = _get_allowed_prompt_types(topic_id)
+        if request.prompt_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Prompt type '{request.prompt_type}' is not allowed for topic '{topic_id}'. "
+                f"Allowed types: {', '.join(allowed_types)}",
             )
 
         # Check if prompt type already exists

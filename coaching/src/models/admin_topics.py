@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from coaching.src.core.constants import PromptType
 from pydantic import BaseModel, Field, field_validator
 
 # Conversation Config (for coaching topics only)
@@ -101,16 +102,19 @@ class UpdateTopicRequest(BaseModel):
 class CreatePromptRequest(BaseModel):
     """Request to create a new prompt."""
 
-    prompt_type: str = Field(..., description="Prompt type (system, user, assistant)")
+    prompt_type: str = Field(
+        ...,
+        description=f"Prompt type. Valid values: {', '.join(pt.value for pt in PromptType)}",
+    )
     content: str = Field(..., min_length=1, max_length=50000, description="Prompt markdown content")
 
     @field_validator("prompt_type")
     @classmethod
     def validate_prompt_type(cls, v: str) -> str:
-        """Validate prompt_type is one of allowed values."""
-        allowed = {"system", "user", "assistant"}
+        """Validate prompt_type is one of allowed PromptType enum values."""
+        allowed = {pt.value for pt in PromptType}
         if v not in allowed:
-            raise ValueError(f"prompt_type must be one of: {', '.join(allowed)}")
+            raise ValueError(f"prompt_type must be one of: {', '.join(sorted(allowed))}")
         return v
 
 
