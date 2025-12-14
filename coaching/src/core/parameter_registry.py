@@ -866,6 +866,42 @@ _register(
 )
 
 # -----------------------------------------------------------------------------
+# Website Content Parameters (from get_website_content)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="website_content",
+        param_type=ParameterType.STRING,
+        description="Extracted text content from a website.",
+        default="",
+        retrieval_method="get_website_content",
+        extraction_path="website_content",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="website_title",
+        param_type=ParameterType.STRING,
+        description="Page title from website.",
+        default="",
+        retrieval_method="get_website_content",
+        extraction_path="website_title",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="meta_description",
+        param_type=ParameterType.STRING,
+        description="Meta description from website.",
+        default="",
+        retrieval_method="get_website_content",
+        extraction_path="meta_description",
+    )
+)
+
+# -----------------------------------------------------------------------------
 # Formatting and Metadata Parameters
 # -----------------------------------------------------------------------------
 _register(

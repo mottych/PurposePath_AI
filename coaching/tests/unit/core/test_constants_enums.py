@@ -99,6 +99,7 @@ class TestParameterSource:
         """Test that ParameterSource has all expected values."""
         assert ParameterSource.REQUEST.value == "request"
         assert ParameterSource.ONBOARDING.value == "onboarding"
+        assert ParameterSource.WEBSITE.value == "website"
         assert ParameterSource.GOAL.value == "goal"
         assert ParameterSource.GOALS.value == "goals"
         assert ParameterSource.KPI.value == "kpi"
@@ -109,8 +110,8 @@ class TestParameterSource:
         assert ParameterSource.COMPUTED.value == "computed"
 
     def test_parameter_source_count(self) -> None:
-        """Test that ParameterSource has exactly 10 values."""
-        assert len(ParameterSource) == 10
+        """Test that ParameterSource has exactly 11 values."""
+        assert len(ParameterSource) == 11
 
 
 class TestExistingEnums:

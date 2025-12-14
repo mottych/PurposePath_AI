@@ -85,6 +85,9 @@ class ParameterSource(str, Enum):
     # Onboarding data from Account Service
     ONBOARDING = "onboarding"
 
+    # Website content from URL scraping
+    WEBSITE = "website"
+
     # Single goal from Traction Service
     GOAL = "goal"
 

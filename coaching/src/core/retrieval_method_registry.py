@@ -610,6 +610,152 @@ def _summarize_goals(goals: list[dict[str, Any]]) -> str:
     return f"{len(goals)} goals: " + ", ".join(parts)
 
 
+# =============================================================================
+# WEBSITE CONTENT RETRIEVAL
+# =============================================================================
+
+
+@register_retrieval_method(
+    name="get_website_content",
+    description="Fetches and extracts content from a website URL",
+    provides_params=(
+        "website_content",
+        "website_title",
+        "meta_description",
+    ),
+    requires_from_payload=("website_url",),
+)
+async def get_website_content(context: RetrievalContext) -> dict[str, Any]:
+    """Fetch and extract content from a website URL.
+
+    This retrieval method:
+    1. Gets the website_url from the request payload
+    2. Fetches and parses the HTML content
+    3. Extracts text, title, and meta description
+    4. Returns them for use in prompt templates
+
+    The actual scraping logic is delegated to WebsiteAnalysisService utilities.
+    """
+    import re
+    from urllib.parse import urlparse
+
+    import html2text
+    import requests
+    from bs4 import BeautifulSoup
+
+    url = context.payload.get("website_url")
+    if not url:
+        logger.warning("retrieval_method.get_website_content.missing_url")
+        return {
+            "website_content": "",
+            "website_title": "",
+            "meta_description": "",
+        }
+
+    try:
+        logger.debug("retrieval_method.get_website_content", url=url)
+
+        # Validate URL
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("URL must use http or https scheme")
+        if not parsed.netloc:
+            raise ValueError("URL must include a domain name")
+
+        # Security: Block localhost and internal IPs
+        blocked_hosts = ["localhost", "127.0.0.1", "0.0.0.0", "[::]", "169.254"]
+        if any(host in parsed.netloc.lower() for host in blocked_hosts):
+            raise ValueError("Cannot analyze local or internal URLs")
+
+        # Fetch website content
+        headers = {
+            "User-Agent": "PurposePathBot/1.0 (Business Analysis; +https://purposepath.app)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "DNT": "1",
+            "Connection": "close",
+        }
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=15,
+            allow_redirects=True,
+            verify=True,
+        )
+        response.raise_for_status()
+
+        # Parse HTML
+        soup = BeautifulSoup(response.text, "lxml")
+
+        # Extract title
+        title_tag = soup.find("title")
+        website_title = title_tag.get_text().strip() if title_tag else ""
+
+        # Extract meta description
+        meta_desc = soup.find("meta", {"name": "description"})
+        if not meta_desc:
+            meta_desc = soup.find("meta", {"property": "og:description"})
+        meta_description = meta_desc.get("content", "").strip() if meta_desc else ""
+
+        # Remove non-content elements
+        for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            element.decompose()
+
+        # Convert to text
+        html_converter = html2text.HTML2Text()
+        html_converter.ignore_links = False
+        html_converter.ignore_images = True
+        html_converter.ignore_emphasis = False
+        text = html_converter.handle(str(soup))
+
+        # Clean up whitespace
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        text = re.sub(r" +", " ", text)
+        text = text.strip()
+
+        # Truncate if too long (50k chars max)
+        max_content_length = 50000
+        if len(text) > max_content_length:
+            text = text[:max_content_length] + "\n\n[Content truncated...]"
+
+        logger.info(
+            "retrieval_method.get_website_content.success",
+            url=url,
+            title=website_title,
+            content_length=len(text),
+        )
+
+        return {
+            "website_content": text,
+            "website_title": website_title,
+            "meta_description": meta_description,
+        }
+
+    except requests.Timeout:
+        logger.error("retrieval_method.get_website_content.timeout", url=url)
+        return {
+            "website_content": "",
+            "website_title": "",
+            "meta_description": "",
+        }
+    except requests.RequestException as e:
+        logger.error("retrieval_method.get_website_content.request_failed", url=url, error=str(e))
+        return {
+            "website_content": "",
+            "website_title": "",
+            "meta_description": "",
+        }
+    except Exception as e:
+        logger.error("retrieval_method.get_website_content.failed", url=url, error=str(e))
+        return {
+            "website_content": "",
+            "website_title": "",
+            "meta_description": "",
+        }
+
+
 __all__ = [
     "RETRIEVAL_METHODS",
     "RetrievalContext",

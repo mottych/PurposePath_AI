@@ -63,6 +63,11 @@ def _onb(name: str, path: str = "") -> ParameterRef:
     return ParameterRef(name=name, source=ParameterSource.ONBOARDING, source_path=path or name)
 
 
+def _web(name: str, path: str = "") -> ParameterRef:
+    """Create a WEBSITE source parameter reference (from URL scraping)."""
+    return ParameterRef(name=name, source=ParameterSource.WEBSITE, source_path=path or name)
+
+
 def _goal(name: str, path: str = "") -> ParameterRef:
     """Create a GOAL source parameter reference."""
     return ParameterRef(name=name, source=ParameterSource.GOAL, source_path=path)
@@ -148,8 +153,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         description="Scan a website and extract business information",
         is_active=True,
         parameter_refs=(
-            _req("url"),
-            _req("scan_depth"),
+            _req("website_url"),  # Input from frontend (passed to retrieval method)
+            _web("website_content"),  # Resolved by get_website_content
+            _web("website_title"),  # Resolved by get_website_content
+            _web("meta_description"),  # Resolved by get_website_content
         ),
     ),
     "POST:/suggestions/onboarding": EndpointDefinition(
