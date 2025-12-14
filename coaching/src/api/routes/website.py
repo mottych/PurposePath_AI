@@ -5,7 +5,6 @@ from typing import Any
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.core.config_multitenant import settings
-from coaching.src.llm.providers.base import ProviderConfig, ProviderType
 from coaching.src.models.responses import BulkScanResult, ProductInfo, WebsiteAnalysisResponse
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 from fastapi import APIRouter, Depends
@@ -23,23 +22,17 @@ async def get_website_analysis_service() -> WebsiteAnalysisService:
     Returns:
         WebsiteAnalysisService instance
     """
-    # Create provider manager and pass directly to WebsiteAnalysisService
-    # WebsiteAnalysisService can work with provider_manager directly without full LLMService
+    from coaching.src.api.multitenant_dependencies import get_bedrock_client
     from coaching.src.llm.providers.manager import ProviderManager
 
+    # Create provider manager using same pattern as multitenant_dependencies
     provider_manager = ProviderManager()
+    bedrock_client = get_bedrock_client()
 
-    # Configure Bedrock provider
-    config = ProviderConfig(
-        provider_type=ProviderType.BEDROCK,
-        model_name=settings.bedrock_model_id,
-        region_name=settings.bedrock_region,
-        temperature=0.7,
-        max_tokens=4096,
+    # Add Bedrock provider with AWS client (consistent with other dependencies)
+    await provider_manager.add_provider(
+        "bedrock", "bedrock", {"client": bedrock_client, "region": settings.bedrock_region}
     )
-
-    # Register and initialize
-    await provider_manager.register_provider("default", config)
     await provider_manager.initialize()
 
     return WebsiteAnalysisService(provider_manager=provider_manager)
