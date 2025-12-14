@@ -7,9 +7,11 @@ The registry follows the same pattern as endpoint_registry.py but is specific
 to multi-turn coaching conversations.
 """
 
+import json
 from dataclasses import dataclass, field
 
 from coaching.src.core.endpoint_registry import ParameterRef, _onb
+from coaching.src.models.coaching_results import get_coaching_result_model
 
 
 @dataclass(frozen=True)
@@ -175,6 +177,141 @@ VISION_EXTRACTION = """Based on the conversation, extract the final vision. Prov
 - A clear, inspiring vision statement
 - The time horizon this vision covers
 - Key aspirations that make up this vision (3-5 specific goals or states)"""
+
+
+# =============================================================================
+# Structured Output Instructions for Auto-Completion
+# =============================================================================
+
+STRUCTURED_OUTPUT_INSTRUCTIONS = """
+## Response Format Requirements
+
+You MUST respond with valid JSON in this exact structure:
+
+For normal conversation responses:
+```json
+{{
+  "message": "Your conversational response to the user",
+  "is_final": false,
+  "result": null,
+  "confidence": 0.0
+}}
+```
+
+When you determine the coaching session has reached a natural conclusion (user has confirmed satisfaction with results, or conversation has achieved its goal):
+```json
+{{
+  "message": "Your closing message summarizing and thanking them",
+  "is_final": true,
+  "result": <result_schema>,
+  "confidence": 0.85
+}}
+```
+
+## Completion Guidelines
+
+You should set is_final=true when:
+- The user explicitly confirms they are satisfied with the identified {topic_name}
+- You have gathered sufficient information and the user agrees with your summary
+- The conversation has naturally concluded with clear outcomes
+- The user says something like "looks good", "I'm happy with this", "that's perfect", or similar confirmation
+
+Do NOT set is_final=true when:
+- The user is still exploring or unsure
+- You haven't summarized and received confirmation
+- The conversation feels incomplete
+- You've only discussed one or two items and need to explore more
+
+## Result Schema ({result_model_name})
+
+When is_final=true, your result must match this schema:
+{result_schema_json}
+
+IMPORTANT:
+- Only set is_final=true when the user confirms they are satisfied
+- Include confidence score (0.7+ recommended for completion)
+- Result must match the schema exactly when is_final=true
+- Keep your message field natural and conversational
+"""
+
+
+def get_structured_output_instructions_for_topic(
+    topic: "CoachingTopicDefinition",
+) -> str | None:
+    """Generate structured output instructions for a coaching topic.
+
+    Automatically creates instructions from the topic's result_model,
+    enabling auto-completion detection for any topic without explicit configuration.
+
+    Args:
+        topic: The coaching topic definition
+
+    Returns:
+        Formatted instructions string, or None if result model not found
+
+    Example:
+        >>> topic = get_coaching_topic("core_values")
+        >>> instructions = get_structured_output_instructions_for_topic(topic)
+        >>> # Returns instructions with CoreValuesResult schema embedded
+    """
+    # Get the result model class from the registry
+    result_model = get_coaching_result_model(topic.result_model)
+    if result_model is None:
+        return None
+
+    # Generate JSON schema from the model
+    schema = result_model.model_json_schema()
+
+    # Clean up internal schema details for cleaner prompt
+    schema_clean = {
+        k: v for k, v in schema.items() if k not in ("$defs", "definitions", "additionalProperties")
+    }
+
+    # Format the instructions with topic-specific values
+    return STRUCTURED_OUTPUT_INSTRUCTIONS.format(
+        topic_name=topic.name.lower(),
+        result_model_name=topic.result_model,
+        result_schema_json=json.dumps(schema_clean, indent=2),
+    )
+
+
+def get_system_prompt_with_structured_output(
+    topic: "CoachingTopicDefinition",
+    context: dict[str, object],
+) -> str:
+    """Get the complete system prompt with structured output instructions.
+
+    Renders the topic's system prompt template with context values, then
+    automatically appends structured output instructions based on the
+    topic's result_model.
+
+    Args:
+        topic: The coaching topic definition
+        context: Context values for template variable substitution
+
+    Returns:
+        Complete system prompt ready for LLM, including structured output instructions
+
+    Example:
+        >>> topic = get_coaching_topic("core_values")
+        >>> context = {"business_name": "Acme Corp"}
+        >>> prompt = get_system_prompt_with_structured_output(topic, context)
+        >>> # Returns full prompt with {business_name} replaced and
+        >>> # structured output instructions appended
+    """
+    # Render the base system prompt with context
+    system_prompt = topic.system_prompt_template
+    for key, value in context.items():
+        placeholder = "{" + key + "}"
+        if placeholder in system_prompt:
+            system_prompt = system_prompt.replace(placeholder, str(value))
+
+    # Append structured output instructions
+    structured_instructions = get_structured_output_instructions_for_topic(topic)
+    if structured_instructions:
+        system_prompt = f"{system_prompt}\n{structured_instructions}"
+
+    return system_prompt
 
 
 # =============================================================================
