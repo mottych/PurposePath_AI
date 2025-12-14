@@ -313,6 +313,7 @@ class LLMService:
         interaction_code: str | None = None,
         user_tier: str | None = None,
         template_parameters: dict[str, Any] | None = None,
+        system_prompt_override: str | None = None,
     ) -> LLMResponse:
         """Generate a coaching response with business context.
 
@@ -325,6 +326,8 @@ class LLMService:
             interaction_code: Interaction code for config-driven path (optional)
             user_tier: User tier for tier-specific configuration (optional)
             template_parameters: Parameters for template rendering (optional)
+            system_prompt_override: Optional override for system prompt (bypasses template lookup).
+                Use this when you need a custom prompt with structured output instructions.
 
         Returns:
             Response dictionary with AI response and metadata
@@ -350,8 +353,13 @@ class LLMService:
             CoachingTopic(topic), "anthropic.claude-3-sonnet-20240229-v1:0"
         )
 
-        # Enhance system prompt with business context
-        enhanced_system_prompt = template.system_prompt
+        # Use override if provided, otherwise use template
+        if system_prompt_override:
+            enhanced_system_prompt = system_prompt_override
+        else:
+            enhanced_system_prompt = template.system_prompt
+
+        # Enhance system prompt with business context (applies to both paths)
         if business_context:
             # Convert to structured business context for better handling
             business_ctx = BusinessContextForLLM.from_dict(business_context)

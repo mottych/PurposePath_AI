@@ -13,6 +13,7 @@ import structlog
 from coaching.src.core.coaching_topic_registry import (
     CoachingTopicDefinition,
     get_coaching_topic,
+    get_system_prompt_with_structured_output,
     is_valid_coaching_topic,
 )
 from coaching.src.core.constants import ConversationStatus, MessageRole
@@ -24,6 +25,10 @@ from coaching.src.infrastructure.repositories.dynamodb_coaching_session_reposito
     DynamoDBCoachingSessionRepository,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
+from coaching.src.models.llm_coaching_response import (
+    parse_llm_coaching_response,
+    should_auto_complete,
+)
 from coaching.src.services.llm_service import LLMService
 from pydantic import BaseModel
 
@@ -48,13 +53,25 @@ class SessionResponse(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    """Response from sending a message."""
+    """Response from sending a message.
+
+    Attributes:
+        session_id: Unique session identifier
+        coach_message: The coach's response message
+        message_count: Total messages in the session
+        estimated_completion: Progress estimate (0.0-1.0)
+        status: Current session status
+        result: Extracted result data (present if auto_completed)
+        auto_completed: True if LLM triggered completion
+    """
 
     session_id: str
     coach_message: str
     message_count: int
     estimated_completion: float
     status: ConversationStatus
+    result: dict[str, Any] | None = None
+    auto_completed: bool = False
 
 
 class SessionStateResponse(BaseModel):
@@ -432,6 +449,11 @@ class CoachingSessionService:
     ) -> MessageResponse:
         """Send a user message and get coach response.
 
+        This method now supports auto-completion via LLM structured output.
+        When the LLM determines the coaching session has reached a natural
+        conclusion, it can signal completion by setting `is_final=True` in
+        its response, automatically completing the session and extracting results.
+
         Args:
             session_id: Session identifier
             tenant_id: Tenant identifier for isolation
@@ -439,7 +461,8 @@ class CoachingSessionService:
             metadata: Optional metadata about the message
 
         Returns:
-            MessageResponse with coach's response
+            MessageResponse with coach's response. If auto_completed=True,
+            the session has been completed and result contains extracted data.
 
         Raises:
             ConversationNotFoundError: If session not found
@@ -468,19 +491,54 @@ class CoachingSessionService:
             metadata=metadata or {},
         )
 
-        # Generate coach response
-        coach_response = await self._generate_coach_response(
+        # Generate coach response with structured output
+        raw_response = await self._generate_coach_response(
             topic=topic,
             session=session,
         )
 
-        # Add coach response
+        # Parse structured response
+        parsed_response = parse_llm_coaching_response(raw_response)
+
+        # Add coach response (the message field)
         session.add_assistant_message(
-            content=coach_response,
-            metadata={"type": "response"},
+            content=parsed_response.message,
+            metadata={
+                "type": "response",
+                "is_final": parsed_response.is_final,
+                "confidence": parsed_response.confidence,
+            },
         )
 
-        # Save updated session
+        # Check for auto-completion
+        if should_auto_complete(parsed_response):
+            logger.info(
+                "coaching_session.auto_completing",
+                session_id=session_id,
+                confidence=parsed_response.confidence,
+            )
+
+            # Complete the session with the extracted result
+            session.complete(result=parsed_response.result)
+            await self.session_repo.save(session)
+
+            logger.info(
+                "coaching_session.auto_completed",
+                session_id=session_id,
+                message_count=session.get_message_count(),
+            )
+
+            return MessageResponse(
+                session_id=str(session.session_id),
+                coach_message=parsed_response.message,
+                message_count=session.get_message_count(),
+                estimated_completion=1.0,
+                status=session.status,
+                result=parsed_response.result,
+                auto_completed=True,
+            )
+
+        # Save updated session (normal flow)
         await self.session_repo.save(session)
 
         logger.info(
@@ -491,7 +549,7 @@ class CoachingSessionService:
 
         return MessageResponse(
             session_id=str(session.session_id),
-            coach_message=coach_response,
+            coach_message=parsed_response.message,
             message_count=session.get_message_count(),
             estimated_completion=session.calculate_estimated_completion(topic.estimated_messages),
             status=session.status,
@@ -816,14 +874,18 @@ class CoachingSessionService:
         topic: CoachingTopicDefinition,
         session: CoachingSession,
     ) -> str:
-        """Generate coach response to user message.
+        """Generate coach response to user message with structured output.
+
+        This method generates a system prompt with structured output instructions
+        automatically derived from the topic's result_model. The LLM is instructed
+        to return JSON that can signal session completion via `is_final` flag.
 
         Args:
-            topic: Topic definition
+            topic: Topic definition (includes result_model for auto-completion schema)
             session: Current session state
 
         Returns:
-            Coach's response message
+            Raw LLM response (JSON string with structured output format)
         """
         # Get conversation history (sliding window)
         # get_messages_for_llm already returns dicts with 'role' and 'content'
@@ -840,13 +902,21 @@ class CoachingSessionService:
             else:
                 history.append(m)
 
-        # Generate response
+        # Generate system prompt with structured output instructions
+        # This automatically adds auto-completion instructions based on topic.result_model
+        system_prompt = get_system_prompt_with_structured_output(
+            topic=topic,
+            context=session.context,
+        )
+
+        # Generate response with structured output system prompt
         response = await self.llm_service.generate_coaching_response(
             conversation_id=str(session.session_id),
             topic=session.topic_id,
             user_message=user_message,
             conversation_history=history,
             business_context=session.context,
+            system_prompt_override=system_prompt,
         )
 
         return str(response.response)
