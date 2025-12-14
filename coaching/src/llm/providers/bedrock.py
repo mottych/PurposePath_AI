@@ -43,18 +43,33 @@ class LLMProviderCompatError(Exception):
 class BedrockProvider(BaseProvider):
     """AWS Bedrock provider using LangChain integration."""
 
-    # Supported Bedrock models
+    # Default model - uses inference profile format required for on-demand access
+    DEFAULT_MODEL = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+    # Supported Bedrock models (inference profile format with regional prefix)
     SUPPORTED_MODELS: ClassVar[list[str]] = [
+        # Claude models (us region inference profiles)
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        "us.anthropic.claude-3-opus-20240229-v1:0",
+        "us.anthropic.claude-3-sonnet-20240229-v1:0",
+        "us.anthropic.claude-3-haiku-20240307-v1:0",
+        # Legacy model IDs (for backwards compatibility)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-3-5-haiku-20241022-v1:0",
         "anthropic.claude-3-opus-20240229-v1:0",
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
+        # Amazon Titan
         "amazon.titan-text-premier-v1:0",
         "amazon.titan-text-express-v1",
+        # Cohere
         "cohere.command-r-plus-v1:0",
         "cohere.command-r-v1:0",
+        # Meta Llama
         "meta.llama3-1-405b-instruct-v1:0",
         "meta.llama3-1-70b-instruct-v1:0",
         "meta.llama3-1-8b-instruct-v1:0",
@@ -87,8 +102,8 @@ class BedrockProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the Bedrock client."""
         try:
-            # Use configured model or default to Claude 3.5 Sonnet
-            model_name = self.config.model_name or "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            # Use configured model or default to Claude 3.5 Sonnet v2 (inference profile)
+            model_name = self.config.model_name or self.DEFAULT_MODEL
             logger.info("Initializing Bedrock provider", model=model_name)
 
             # Create LangChain Bedrock client
