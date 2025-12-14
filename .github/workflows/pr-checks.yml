@@ -1,20 +1,19 @@
 name: PR Checks
 
 on:
-  pull_request:
+  # Trigger on PR approval only
+  pull_request_review:
+    types: [submitted]
     branches: [dev, main, staging]
-    paths:
-      - 'coaching/**/*.py'
-      - 'shared/**/*.py'
-      - 'pyproject.toml'
-      - 'pytest.ini'
-      - '.github/workflows/pr-checks.yml'
+  # Allow manual trigger
   workflow_dispatch: {}
 
 jobs:
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
+    # Only run if the review was an approval OR triggered manually
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout code
