@@ -33,14 +33,18 @@ class OpenAILLMProvider:
 
     # Supported OpenAI model IDs
     SUPPORTED_MODELS: ClassVar[list[str]] = [
+        # GPT-4o Series
         "gpt-4o",
         "gpt-4o-mini",
         "gpt-4-turbo",
+        # GPT-5 Series
         "gpt-5-pro",
         "gpt-5",
         "gpt-5-mini",
         "gpt-5-nano",
         "gpt-5-chat",
+        # GPT 5.2 Series
+        "gpt-5.2-pro",
     ]
 
     def __init__(self, api_key: str | None = None, organization: str | None = None):

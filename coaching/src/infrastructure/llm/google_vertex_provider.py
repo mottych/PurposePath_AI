@@ -29,9 +29,14 @@ class GoogleVertexLLMProvider:
 
     # Supported Vertex AI model IDs
     SUPPORTED_MODELS: ClassVar[list[str]] = [
+        # Gemini 3.x Series (latest)
+        "gemini-3-pro",
+        # Gemini 2.5 Series
         "gemini-2.5-pro",
         "gemini-2.5-flash",
+        # Gemini 2.0 Series
         "gemini-2.0-flash",
+        # Gemini 1.5 Series (legacy)
         "gemini-1.5-pro",
         "gemini-1.5-flash",
     ]

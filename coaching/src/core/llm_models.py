@@ -61,7 +61,17 @@ class SupportedModel:
 
 # Registry of ALL supported models
 # New models require code deployment
+#
+# Note on Bedrock Inference Profiles:
+#   Newer Claude models (v2+) require inference profiles. The BedrockLLMProvider
+#   automatically converts base model IDs to region-prefixed inference profiles.
+#   You can specify either format in model_name:
+#   - Base model ID: "anthropic.claude-3-5-sonnet-20241022-v2:0" (auto-converted)
+#   - Explicit profile: "us.anthropic.claude-3-5-sonnet-20241022-v2:0" (used as-is)
 MODEL_REGISTRY: dict[str, SupportedModel] = {
+    # ==========================================================================
+    # AWS Bedrock Claude Models
+    # ==========================================================================
     "CLAUDE_3_SONNET": SupportedModel(
         code="CLAUDE_3_SONNET",
         provider=LLMProvider.BEDROCK,
@@ -95,6 +105,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.003,
         is_active=True,
     ),
+    # Claude 3.5 Sonnet v2 - Requires inference profile (auto-converted by provider)
     "CLAUDE_3_5_SONNET_V2": SupportedModel(
         code="CLAUDE_3_5_SONNET_V2",
         provider=LLMProvider.BEDROCK,
@@ -114,10 +125,11 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.003,
         is_active=True,
     ),
+    # Claude Sonnet 4.5 - Requires inference profile (auto-converted by provider)
     "CLAUDE_SONNET_4_5": SupportedModel(
         code="CLAUDE_SONNET_4_5",
         provider=LLMProvider.BEDROCK,
-        model_name="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model_name="anthropic.claude-sonnet-4-5-20250929-v1:0",
         version="20250929",
         provider_class="BedrockLLMProvider",
         capabilities=[
@@ -135,7 +147,56 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.004,
         is_active=True,
     ),
-    # OpenAI GPT-5 Series (requires OpenAI provider implementation)
+    # Claude Opus 4.5 - Requires inference profile (auto-converted by provider)
+    "CLAUDE_OPUS_4_5": SupportedModel(
+        code="CLAUDE_OPUS_4_5",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-opus-4-5-20250929-v1:0",
+        version="20250929",
+        provider_class="BedrockLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "pdf_support",
+            "extended_context",
+            "extended_thinking",
+            "priority_tier",
+            "advanced_reasoning",
+        ],
+        max_tokens=200000,
+        cost_per_1k_tokens=0.015,  # Opus tier pricing
+        is_active=True,
+    ),
+    # ==========================================================================
+    # OpenAI GPT Models
+    # ==========================================================================
+    # GPT-4o Series
+    "GPT_4O": SupportedModel(
+        code="GPT_4O",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-4o",
+        version="4o",
+        provider_class="OpenAILLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling", "vision"],
+        max_tokens=128000,
+        cost_per_1k_tokens=0.005,
+        is_active=True,
+    ),
+    "GPT_4O_MINI": SupportedModel(
+        code="GPT_4O_MINI",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-4o-mini",
+        version="4o-mini",
+        provider_class="OpenAILLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling"],
+        max_tokens=128000,
+        cost_per_1k_tokens=0.00015,
+        is_active=True,
+    ),
+    # GPT-5 Series
     "GPT_5_PRO": SupportedModel(
         code="GPT_5_PRO",
         provider=LLMProvider.OPENAI,
@@ -152,7 +213,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=128000,
         cost_per_1k_tokens=0.02,
-        is_active=False,  # Requires different API endpoint (/v1/responses)
+        is_active=True,
     ),
     "GPT_5": SupportedModel(
         code="GPT_5",
@@ -170,7 +231,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=128000,
         cost_per_1k_tokens=0.015,
-        is_active=False,  # Not yet tested with E2E
+        is_active=True,
     ),
     "GPT_5_MINI": SupportedModel(
         code="GPT_5_MINI",
@@ -183,7 +244,40 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.005,
         is_active=True,
     ),
-    # Google Gemini 2.5 Series (requires Google Vertex provider implementation)
+    "GPT_5_NANO": SupportedModel(
+        code="GPT_5_NANO",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5-nano",
+        version="5.0",
+        provider_class="OpenAILLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling"],
+        max_tokens=64000,
+        cost_per_1k_tokens=0.001,
+        is_active=True,
+    ),
+    # GPT 5.2 Pro - Latest high-capability model
+    "GPT_5_2_PRO": SupportedModel(
+        code="GPT_5_2_PRO",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5.2-pro",
+        version="5.2",
+        provider_class="OpenAILLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "advanced_reasoning",
+            "extended_context",
+        ],
+        max_tokens=256000,
+        cost_per_1k_tokens=0.025,
+        is_active=True,
+    ),
+    # ==========================================================================
+    # Google Vertex AI Gemini Models
+    # ==========================================================================
     "GEMINI_2_5_PRO": SupportedModel(
         code="GEMINI_2_5_PRO",
         provider=LLMProvider.GOOGLE_VERTEX,
@@ -201,6 +295,45 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=1048576,  # 1M+ input tokens
         cost_per_1k_tokens=0.003,
+        is_active=True,
+    ),
+    "GEMINI_2_5_FLASH": SupportedModel(
+        code="GEMINI_2_5_FLASH",
+        provider=LLMProvider.GOOGLE_VERTEX,
+        model_name="gemini-2.5-flash",
+        version="2.5",
+        provider_class="GoogleVertexLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "long_context",
+        ],
+        max_tokens=1048576,
+        cost_per_1k_tokens=0.00075,
+        is_active=True,
+    ),
+    # Gemini 3 Pro - Latest generation
+    "GEMINI_3_PRO": SupportedModel(
+        code="GEMINI_3_PRO",
+        provider=LLMProvider.GOOGLE_VERTEX,
+        model_name="gemini-3-pro",
+        version="3.0",
+        provider_class="GoogleVertexLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "long_context",
+            "multimodal",
+            "advanced_reasoning",
+        ],
+        max_tokens=2097152,  # 2M input tokens
+        cost_per_1k_tokens=0.004,
         is_active=True,
     ),
 }

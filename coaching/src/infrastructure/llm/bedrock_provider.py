@@ -2,6 +2,13 @@
 
 This module provides an AWS Bedrock-backed implementation of the LLM provider
 port interface, supporting Claude and other Bedrock models.
+
+Note on Inference Profiles:
+    Newer Claude models (Claude 3.5 Sonnet v2+, Claude Sonnet 4.5, Claude Opus 4.5)
+    require inference profiles instead of direct model IDs. These are region-prefixed
+    model identifiers (e.g., "us.anthropic.claude-3-5-sonnet-20241022-v2:0").
+
+    See: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles.html
 """
 
 import json
@@ -12,6 +19,14 @@ import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
+
+# Models that require inference profiles (region-prefixed identifiers)
+# These cannot be invoked with direct model IDs
+INFERENCE_PROFILE_MODELS: set[str] = {
+    "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
+    "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
+    "anthropic.claude-opus-4-5-20250929-v1:0",  # Claude Opus 4.5
+}
 
 
 class BedrockLLMProvider:
@@ -24,21 +39,36 @@ class BedrockLLMProvider:
     Design:
         - Supports multiple Bedrock models (Claude, Llama, etc.)
         - Handles both streaming and non-streaming
+        - Automatically converts models requiring inference profiles to proper format
         - Includes retry logic and error handling
         - Provides usage metrics
     """
 
-    # Supported Bedrock model IDs
+    # Supported Bedrock model IDs (including inference profile variants)
     SUPPORTED_MODELS: ClassVar[list[str]] = [
+        # Claude 3 models (direct invocation supported)
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
-        "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
-        "us.anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5 (US)
-        "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5 (EU)
-        "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5 (APAC)
+        # Claude 3.5 Sonnet v2 (requires inference profile)
+        "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        # Claude Sonnet 4.5 (requires inference profile)
+        "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        # Claude Opus 4.5 (requires inference profile)
+        "anthropic.claude-opus-4-5-20250929-v1:0",
+        "us.anthropic.claude-opus-4-5-20250929-v1:0",
+        "eu.anthropic.claude-opus-4-5-20250929-v1:0",
+        "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+        # Legacy Claude models
         "anthropic.claude-v2:1",
         "anthropic.claude-v2",
+        # Meta Llama models
         "meta.llama3-70b-instruct-v1:0",
         "meta.llama3-8b-instruct-v1:0",
     ]
@@ -53,7 +83,56 @@ class BedrockLLMProvider:
         """
         self.bedrock_client = bedrock_client
         self.region = region
+        self._region_prefix = self._get_region_prefix(region)
         logger.info("Bedrock LLM provider initialized", region=region)
+
+    def _get_region_prefix(self, region: str) -> str:
+        """Get the inference profile region prefix for a given AWS region.
+
+        Args:
+            region: AWS region name (e.g., "us-east-1", "eu-west-1")
+
+        Returns:
+            Region prefix for inference profiles ("us", "eu", or "apac")
+        """
+        if region.startswith("us-") or region.startswith("ca-"):
+            return "us"
+        elif region.startswith("eu-"):
+            return "eu"
+        elif region.startswith("ap-") or region.startswith("me-") or region.startswith("sa-"):
+            return "apac"
+        # Default to US for unknown regions
+        return "us"
+
+    def _resolve_model_id(self, model: str) -> str:
+        """Resolve a model ID to the correct format for invocation.
+
+        Models that require inference profiles (Claude 3.5 Sonnet v2+, Sonnet 4.5, Opus 4.5)
+        need to be invoked with region-prefixed identifiers.
+
+        Args:
+            model: Model identifier (can be base model ID or inference profile ID)
+
+        Returns:
+            Resolved model ID suitable for Bedrock invoke_model call
+        """
+        # If already has a region prefix, use as-is
+        if model.startswith(("us.", "eu.", "apac.")):
+            return model
+
+        # Check if this model requires an inference profile
+        if model in INFERENCE_PROFILE_MODELS:
+            resolved = f"{self._region_prefix}.{model}"
+            logger.debug(
+                "Converted model to inference profile",
+                original_model=model,
+                resolved_model=resolved,
+                region_prefix=self._region_prefix,
+            )
+            return resolved
+
+        # Return as-is for models that support direct invocation
+        return model
 
     @property
     def provider_name(self) -> str:
@@ -96,8 +175,16 @@ class BedrockLLMProvider:
         if not 0.0 <= temperature <= 1.0:
             raise ValueError(f"Temperature must be between 0.0 and 1.0, got {temperature}")
 
-        if model not in self.SUPPORTED_MODELS:
+        # Check base model is supported (before resolving to inference profile)
+        base_model = model.split(".", 1)[-1] if model.startswith(("us.", "eu.", "apac.")) else model
+        if model not in self.SUPPORTED_MODELS and base_model not in [
+            m.split(".", 1)[-1] if m.startswith(("us.", "eu.", "apac.")) else m
+            for m in self.SUPPORTED_MODELS
+        ]:
             raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
+
+        # Resolve model ID to inference profile format if needed
+        resolved_model = self._resolve_model_id(model)
 
         try:
             # Build request body for Anthropic Claude models
@@ -110,9 +197,14 @@ class BedrockLLMProvider:
                     messages, temperature, max_tokens, system_prompt
                 )
 
-            # Invoke Bedrock
+            # Invoke Bedrock with resolved model ID
+            logger.debug(
+                "Invoking Bedrock model",
+                original_model=model,
+                resolved_model=resolved_model,
+            )
             response = self.bedrock_client.invoke_model(
-                modelId=model, body=json.dumps(request_body)
+                modelId=resolved_model, body=json.dumps(request_body)
             )
 
             # Parse response
@@ -126,7 +218,7 @@ class BedrockLLMProvider:
 
             llm_response = LLMResponse(
                 content=content,
-                model=model,
+                model=model,  # Return original model code for consistency
                 usage=usage,
                 finish_reason=response_body.get("stop_reason", "stop"),
                 provider=self.provider_name,
@@ -135,6 +227,7 @@ class BedrockLLMProvider:
             logger.info(
                 "LLM generation completed",
                 model=model,
+                resolved_model=resolved_model,
                 tokens=usage.get("total_tokens", 0),
             )
 
