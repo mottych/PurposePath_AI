@@ -1,10 +1,18 @@
 name: CI/CD Pipeline
 
 on:
-  pull_request:
+  # Only trigger on push to dev/main (after PR merge)
+  push:
     branches:
       - dev
       - main
+    paths:
+      - 'coaching/**/*.py'
+      - 'shared/**/*.py'
+      - 'pyproject.toml'
+      - 'pytest.ini'
+  # Allow manual trigger
+  workflow_dispatch: {}
 
 jobs:
   lint-and-test:
