@@ -44,7 +44,9 @@ You MUST respond with valid JSON that matches this exact schema:
 - Use the exact field names shown above (including camelCase where specified by "alias")
 - Do not include any text before or after the JSON
 - Ensure all required fields are present
-- Follow any constraints (min/max length, enum values, etc.)"""
+- Follow any constraints (min/max length, enum values, etc.)
+- For text fields with multiple sections or paragraphs, use newlines (\\n) to separate them for readability
+- Preserve logical paragraph breaks in your responses using \\n characters"""
 
 
 class UnifiedAIEngineError(Exception):
