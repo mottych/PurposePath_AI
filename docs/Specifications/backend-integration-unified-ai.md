@@ -299,6 +299,87 @@ interface SuggestionVariation {
 
 ---
 
+### Website & Onboarding Topics
+
+#### Topic: `website_scan`
+
+Scan a website URL and extract business information for onboarding.
+
+**Request:**
+
+```json
+{
+  "topic_id": "website_scan",
+  "parameters": {
+    "website_url": "https://example.com"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `website_url` | string | Yes | URL of website to scan |
+
+**Response Model:** `WebsiteScanResponse`
+
+```json
+{
+  "topic_id": "website_scan",
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "id": "coaching-program",
+        "name": "Business Coaching Program",
+        "problem": "Helps entrepreneurs overcome growth plateaus"
+      },
+      {
+        "id": "strategy-workshop",
+        "name": "Strategy Workshop",
+        "problem": "Provides clarity on business direction and priorities"
+      }
+    ],
+    "niche": "Business coaching for growth-stage entrepreneurs seeking to scale their companies while maintaining work-life balance.",
+    "ica": "Mid-career entrepreneurs (35-50) running businesses with $500K-$5M revenue, feeling stuck at a growth plateau, seeking strategic guidance and accountability.",
+    "value_proposition": "Transform your business growth while reclaiming your personal time through our proven coaching methodology."
+  },
+  "schema_ref": "WebsiteScanResponse",
+  "metadata": {
+    "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "tokens_used": 1850,
+    "processing_time_ms": 8500,
+    "finish_reason": "stop"
+  }
+}
+```
+
+**Notes:**
+
+- This topic uses a **retrieval method** (`get_website_content`) to fetch and parse the website
+- The `website_url` parameter is passed from the frontend payload
+- The retrieval method scrapes the website and provides `website_content`, `website_title`, and `meta_description` to the prompt template
+- Results used to pre-fill onboarding form
+- May return partial results if website has anti-scraping measures
+
+**WebsiteScanResponse Schema:**
+
+```typescript
+interface WebsiteScanResponse {
+  products: ProductInfo[];
+  niche: string;
+  ica: string;
+  value_proposition: string;
+}
+
+interface ProductInfo {
+  id: string;      // Unique identifier (lowercase, hyphenated)
+  name: string;    // Product/service name
+  problem: string; // Problem it solves
+}
+```
+
+---
+
 ## Additional Topics (Coming Soon)
 
 The following topics are registered in the system and will be documented as they become active:
@@ -318,7 +399,7 @@ The following topics are registered in the system and will be documented as they
 - `optimize_action_plan` - Optimize action plans
 
 ### Website & Onboarding
-- `website_scan` - Scan website and extract business info
+- ~~`website_scan` - Scan website and extract business info~~ **→ ACTIVE** (see above)
 - `onboarding_suggestions` - Generate onboarding suggestions
 - `onboarding_coaching` - AI coaching for onboarding
 - `business_metrics` - Retrieve business metrics

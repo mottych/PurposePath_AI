@@ -820,6 +820,21 @@ Get AI suggestions for onboarding fields.
 
 ### POST /website/scan
 
+> **⚠️ MIGRATING TO UNIFIED AI ENGINE**
+>
+> This endpoint is being migrated to the unified AI engine. See [Unified AI Specs](./backend-integration-unified-ai.md#topic-website_scan) for the new `website_scan` topic.
+>
+> **Migration Status:** Issue #170
+>
+> After migration, use:
+> ```json
+> POST /ai/execute
+> {
+>   "topic_id": "website_scan",
+>   "parameters": { "website_url": "https://example.com" }
+> }
+> ```
+
 Scan website URL to extract business information.
 
 **Note:** Full URL: `{BASE_URL}/website/scan`
@@ -838,12 +853,12 @@ Scan website URL to extract business information.
 {
   "success": true,
   "data": {
-    "businessName": "Acme Corp",
-    "industry": "Software",
-    "description": "Enterprise productivity platform...",
-    "products": ["Project Management", "Time Tracking"],
-    "targetMarket": "Enterprise teams",
-    "suggestedNiche": "Enterprise project management for distributed teams"
+    "products": [
+      {"id": "product-1", "name": "Product Name", "problem": "Problem it solves"}
+    ],
+    "niche": "Target market description",
+    "ica": "Ideal customer avatar description",
+    "value_proposition": "Unique value proposition"
   }
 }
 ```
