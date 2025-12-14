@@ -1,17 +1,24 @@
-"""PurposePath Infrastructure - DynamoDB Tables.
+"""PurposePath Infrastructure - DynamoDB Tables, S3, and Secrets Manager.
 
-This Pulumi project manages the core DynamoDB tables for the PurposePath AI platform.
+This Pulumi project manages the core infrastructure for the PurposePath AI platform:
+- DynamoDB tables for coaching conversations and sessions
+- S3 bucket for LLM prompts
+- Secrets Manager for API keys (OpenAI, Google Vertex AI)
+
 Tables are configured with on-demand billing, appropriate indexes, and backup features.
 """
 
 import pulumi
 import pulumi_aws as aws
 
+# Get the current stack (dev, staging, prod)
+stack = pulumi.get_stack()
+
 # Common tags for all resources
 common_tags = {
     "Project": "PurposePath",
     "ManagedBy": "Pulumi",
-    "Environment": pulumi.get_stack(),
+    "Environment": stack,
 }
 
 # DynamoDB Tables for Coaching Service
@@ -127,7 +134,47 @@ aws.s3.BucketPublicAccessBlock(
     restrict_public_buckets=True,
 )
 
+# ==========================================================================
+# Secrets Manager - LLM Provider API Keys
+# ==========================================================================
+# These secrets store API keys for external LLM providers.
+# Secret names are environment-agnostic (accessed by name, not ARN).
+# Values should be updated manually or via Pulumi config for each environment.
+
+# OpenAI API Key Secret
+openai_api_key_secret = aws.secretsmanager.Secret(
+    "openai-api-key-secret",
+    name="purposepath/openai-api-key",
+    description="OpenAI API key for PurposePath coaching service",
+    tags={**common_tags, "Name": "openai-api-key", "Purpose": "LLM-API-Key"},
+)
+
+# Create initial secret version (placeholder - update with real key)
+openai_api_key_version = aws.secretsmanager.SecretVersion(
+    "openai-api-key-version",
+    secret_id=openai_api_key_secret.id,
+    secret_string=pulumi.Config().get_secret("openaiApiKey") or "PLACEHOLDER_UPDATE_ME",
+)
+
+# Google Vertex AI Credentials Secret (Service Account JSON)
+google_vertex_credentials_secret = aws.secretsmanager.Secret(
+    "google-vertex-credentials-secret",
+    name="purposepath/google-vertex-credentials",
+    description="Google Cloud service account credentials (JSON) for Vertex AI",
+    tags={**common_tags, "Name": "google-vertex-credentials", "Purpose": "LLM-API-Key"},
+)
+
+# Create initial secret version (placeholder - update with real credentials)
+google_vertex_credentials_version = aws.secretsmanager.SecretVersion(
+    "google-vertex-credentials-version",
+    secret_id=google_vertex_credentials_secret.id,
+    secret_string=pulumi.Config().get_secret("googleVertexCredentials")
+    or '{"placeholder": "UPDATE_WITH_SERVICE_ACCOUNT_JSON"}',
+)
+
+# ==========================================================================
 # Exports
+# ==========================================================================
 pulumi.export(
     "dynamoTables",
     {
@@ -139,12 +186,19 @@ pulumi.export(
 pulumi.export(
     "tableNames",
     {
-        "conversations": "purposepath-coaching-conversations-dev",
-        "sessions": "purposepath-coaching-sessions-dev",
-        "prompts": "purposepath-llm-prompts-dev",
+        "conversations": f"purposepath-coaching-conversations-{stack}",
+        "sessions": f"purposepath-coaching-sessions-{stack}",
+        "prompts": f"purposepath-llm-prompts-{stack}",
     },
 )
 pulumi.export("promptsBucket", prompts_bucket.bucket)
+pulumi.export(
+    "secrets",
+    {
+        "openaiApiKey": openai_api_key_secret.name,
+        "googleVertexCredentials": google_vertex_credentials_secret.name,
+    },
+)
 pulumi.export(
     "tableArns",
     {

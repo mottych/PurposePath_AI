@@ -241,7 +241,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         provider_class="OpenAILLMProvider",
         capabilities=["chat", "analysis", "streaming", "function_calling", "reasoning"],
         max_tokens=128000,
-        cost_per_1k_tokens=0.005,
+        cost_per_1k_tokens=0.00225,  # Avg of $0.25/1M input, $2.00/1M output
         is_active=True,
     ),
     "GPT_5_NANO": SupportedModel(
@@ -255,7 +255,26 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.001,
         is_active=True,
     ),
-    # GPT 5.2 Pro - Latest high-capability model
+    # GPT 5.2 Series - Latest flagship models (December 2025)
+    "GPT_5_2": SupportedModel(
+        code="GPT_5_2",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5.2",
+        version="5.2",
+        provider_class="OpenAILLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "advanced_reasoning",
+            "agentic",
+        ],
+        max_tokens=256000,
+        cost_per_1k_tokens=0.00788,  # Avg of $1.75/1M input, $14/1M output
+        is_active=True,
+    ),
     "GPT_5_2_PRO": SupportedModel(
         code="GPT_5_2_PRO",
         provider=LLMProvider.OPENAI,
@@ -270,13 +289,14 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
             "vision",
             "advanced_reasoning",
             "extended_context",
+            "agentic",
         ],
         max_tokens=256000,
-        cost_per_1k_tokens=0.025,
+        cost_per_1k_tokens=0.0945,  # Avg of $21/1M input, $168/1M output
         is_active=True,
     ),
     # ==========================================================================
-    # Google Vertex AI Gemini Models
+    # Google Vertex AI / Gemini Models
     # ==========================================================================
     "GEMINI_2_5_PRO": SupportedModel(
         code="GEMINI_2_5_PRO",
@@ -292,9 +312,10 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
             "vision",
             "long_context",
             "multimodal",
+            "thinking",
         ],
-        max_tokens=1048576,  # 1M+ input tokens
-        cost_per_1k_tokens=0.003,
+        max_tokens=1048576,  # 1M input tokens
+        cost_per_1k_tokens=0.00563,  # Avg of $1.25/1M input, $10/1M output (<=200k)
         is_active=True,
     ),
     "GEMINI_2_5_FLASH": SupportedModel(
@@ -310,16 +331,35 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
             "function_calling",
             "vision",
             "long_context",
+            "thinking",
         ],
-        max_tokens=1048576,
-        cost_per_1k_tokens=0.00075,
+        max_tokens=1048576,  # 1M input tokens
+        cost_per_1k_tokens=0.0014,  # Avg of $0.30/1M input, $2.50/1M output
         is_active=True,
     ),
-    # Gemini 3 Pro - Latest generation
+    "GEMINI_2_5_FLASH_LITE": SupportedModel(
+        code="GEMINI_2_5_FLASH_LITE",
+        provider=LLMProvider.GOOGLE_VERTEX,
+        model_name="gemini-2.5-flash-lite",
+        version="2.5",
+        provider_class="GoogleVertexLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "long_context",
+        ],
+        max_tokens=1048576,
+        cost_per_1k_tokens=0.00025,  # Avg of $0.10/1M input, $0.40/1M output
+        is_active=True,
+    ),
+    # Gemini 3 Pro - Latest generation (Preview - December 2025)
     "GEMINI_3_PRO": SupportedModel(
         code="GEMINI_3_PRO",
         provider=LLMProvider.GOOGLE_VERTEX,
-        model_name="gemini-3-pro",
+        model_name="gemini-3-pro-preview",
         version="3.0",
         provider_class="GoogleVertexLLMProvider",
         capabilities=[
@@ -331,9 +371,11 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
             "long_context",
             "multimodal",
             "advanced_reasoning",
+            "agentic",
+            "thought_signatures",
         ],
-        max_tokens=2097152,  # 2M input tokens
-        cost_per_1k_tokens=0.004,
+        max_tokens=1048576,  # 1M input, 64k output
+        cost_per_1k_tokens=0.007,  # Avg of $2/1M input, $12/1M output (<=200k)
         is_active=True,
     ),
 }

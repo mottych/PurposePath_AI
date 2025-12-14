@@ -43,7 +43,8 @@ class OpenAILLMProvider:
         "gpt-5-mini",
         "gpt-5-nano",
         "gpt-5-chat",
-        # GPT 5.2 Series
+        # GPT 5.2 Series (Latest - December 2025)
+        "gpt-5.2",
         "gpt-5.2-pro",
     ]
 
