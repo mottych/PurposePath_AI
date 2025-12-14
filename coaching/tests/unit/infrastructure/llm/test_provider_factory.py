@@ -105,15 +105,30 @@ class TestGetProviderForModel:
         assert exc_info.value.model_code == "UNKNOWN_MODEL"
         assert "CLAUDE_3_5_SONNET" in exc_info.value.available_models
 
+    @patch("coaching.src.infrastructure.llm.provider_factory.get_model")
     def test_get_provider_for_inactive_model_raises_error(
-        self, factory: LLMProviderFactory
+        self, mock_get_model: MagicMock, factory: LLMProviderFactory
     ) -> None:
         """Test that inactive models raise ModelNotAvailableError."""
-        # GPT_5_PRO is marked as inactive in MODEL_REGISTRY
-        with pytest.raises(ModelNotAvailableError) as exc_info:
-            factory.get_provider_for_model("GPT_5_PRO")
+        from coaching.src.core.llm_models import LLMProvider, SupportedModel
 
-        assert exc_info.value.model_code == "GPT_5_PRO"
+        # Create a mock inactive model
+        mock_get_model.return_value = SupportedModel(
+            code="TEST_INACTIVE_MODEL",
+            provider=LLMProvider.OPENAI,
+            model_name="test-inactive-model",
+            version="1.0",
+            provider_class="OpenAILLMProvider",
+            capabilities=["chat"],
+            max_tokens=1000,
+            cost_per_1k_tokens=0.001,
+            is_active=False,  # Explicitly inactive
+        )
+
+        with pytest.raises(ModelNotAvailableError) as exc_info:
+            factory.get_provider_for_model("TEST_INACTIVE_MODEL")
+
+        assert exc_info.value.model_code == "TEST_INACTIVE_MODEL"
         assert "inactive" in exc_info.value.reason.lower()
 
     @patch("coaching.src.infrastructure.llm.provider_factory.get_openai_api_key")

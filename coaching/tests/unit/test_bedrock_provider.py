@@ -338,3 +338,106 @@ class TestBedrockProviderConfiguration:
         assert provider1.provider_name == "bedrock"
         assert provider2.provider_name == "bedrock"
         assert provider1.provider_name == provider2.provider_name
+
+
+@pytest.mark.unit
+class TestInferenceProfileResolution:
+    """Test inference profile model ID resolution.
+
+    Newer Claude models (3.5 Sonnet v2+, Sonnet 4.5, Opus 4.5) require
+    inference profiles (region-prefixed model IDs) for invocation.
+    """
+
+    def test_region_prefix_for_us_regions(self):
+        """Test that US regions get 'us' prefix."""
+        # Test various US regions
+        us_regions = ["us-east-1", "us-west-2", "ca-central-1"]
+        for region in us_regions:
+            provider = BedrockLLMProvider(Mock(), region=region)
+            assert provider._region_prefix == "us", f"Expected 'us' for region {region}"
+
+    def test_region_prefix_for_eu_regions(self):
+        """Test that EU regions get 'eu' prefix."""
+        eu_regions = ["eu-west-1", "eu-central-1", "eu-north-1"]
+        for region in eu_regions:
+            provider = BedrockLLMProvider(Mock(), region=region)
+            assert provider._region_prefix == "eu", f"Expected 'eu' for region {region}"
+
+    def test_region_prefix_for_apac_regions(self):
+        """Test that APAC regions get 'apac' prefix."""
+        apac_regions = ["ap-southeast-1", "ap-northeast-1", "ap-south-1", "me-south-1", "sa-east-1"]
+        for region in apac_regions:
+            provider = BedrockLLMProvider(Mock(), region=region)
+            assert provider._region_prefix == "apac", f"Expected 'apac' for region {region}"
+
+    def test_resolve_inference_profile_model(self):
+        """Test that inference profile models get region prefix added."""
+        provider = BedrockLLMProvider(Mock(), region="us-east-1")
+
+        # Models requiring inference profiles
+        test_cases = [
+            (
+                "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+            ),
+            (
+                "anthropic.claude-sonnet-4-5-20250929-v1:0",
+                "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            ),
+            (
+                "anthropic.claude-opus-4-5-20250929-v1:0",
+                "us.anthropic.claude-opus-4-5-20250929-v1:0",
+            ),
+        ]
+
+        for input_model, expected_output in test_cases:
+            resolved = provider._resolve_model_id(input_model)
+            assert resolved == expected_output, f"Expected {expected_output}, got {resolved}"
+
+    def test_resolve_direct_invocation_model(self):
+        """Test that direct invocation models are not modified."""
+        provider = BedrockLLMProvider(Mock(), region="us-east-1")
+
+        # Models that support direct invocation (should NOT be modified)
+        direct_models = [
+            "anthropic.claude-3-sonnet-20240229-v1:0",
+            "anthropic.claude-3-haiku-20240307-v1:0",
+            "anthropic.claude-3-5-sonnet-20240620-v1:0",  # v1 supports direct
+            "meta.llama3-70b-instruct-v1:0",
+        ]
+
+        for model in direct_models:
+            resolved = provider._resolve_model_id(model)
+            assert resolved == model, f"Model {model} should not be modified"
+
+    def test_resolve_already_prefixed_model(self):
+        """Test that already-prefixed models are not double-prefixed."""
+        provider = BedrockLLMProvider(Mock(), region="us-east-1")
+
+        # Already prefixed models should remain unchanged
+        prefixed_models = [
+            "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+        ]
+
+        for model in prefixed_models:
+            resolved = provider._resolve_model_id(model)
+            assert resolved == model, f"Already-prefixed model {model} should not be modified"
+
+    def test_resolve_model_respects_provider_region(self):
+        """Test that model resolution uses the provider's region prefix."""
+        # US region provider
+        us_provider = BedrockLLMProvider(Mock(), region="us-east-1")
+        resolved = us_provider._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
+        assert resolved.startswith("us.")
+
+        # EU region provider
+        eu_provider = BedrockLLMProvider(Mock(), region="eu-west-1")
+        resolved = eu_provider._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
+        assert resolved.startswith("eu.")
+
+        # APAC region provider
+        apac_provider = BedrockLLMProvider(Mock(), region="ap-southeast-1")
+        resolved = apac_provider._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
+        assert resolved.startswith("apac.")
