@@ -87,12 +87,14 @@ class BedrockProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the Bedrock client."""
         try:
-            logger.info("Initializing Bedrock provider", model=self.config.model_name)
+            # Use configured model or default to Claude 3.5 Sonnet
+            model_name = self.config.model_name or "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            logger.info("Initializing Bedrock provider", model=model_name)
 
             # Create LangChain Bedrock client
             # Note: LangChain's ChatBedrock signature may vary by version
             self._client = ChatBedrock(
-                model=self.config.model_name,
+                model=model_name,
                 region=self.config.region_name or "us-east-1",
                 model_kwargs={
                     "temperature": self.config.temperature,

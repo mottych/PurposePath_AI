@@ -42,7 +42,9 @@ class AnthropicProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the Anthropic client."""
         try:
-            logger.info("Initializing Anthropic provider", model=self.config.model_name)
+            # Use configured model or default to Claude 3.5 Sonnet
+            model_name = self.config.model_name or "claude-3-5-sonnet-20241022"
+            logger.info("Initializing Anthropic provider", model=model_name)
 
             # Create ChatAnthropic client with explicit parameters using exact field names
             from typing import Any
@@ -51,7 +53,7 @@ class AnthropicProvider(BaseProvider):
 
             # Build kwargs only for non-None values
             kwargs: dict[str, Any] = {
-                "model_name": self.config.model_name or "claude-3-sonnet-20240229",
+                "model_name": model_name,
             }
 
             if self.config.api_key:

@@ -44,7 +44,9 @@ class OpenAIProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the OpenAI client."""
         try:
-            logger.info("Initializing OpenAI provider", model=self.config.model_name)
+            # Use configured model or default to GPT-4o-mini
+            model_name = self.config.model_name or "gpt-4o-mini"
+            logger.info("Initializing OpenAI provider", model=model_name)
 
             # Create ChatOpenAI client with explicit parameters using exact field names
             from typing import Any
@@ -53,7 +55,7 @@ class OpenAIProvider(BaseProvider):
 
             # Build kwargs only for non-None values
             kwargs: dict[str, Any] = {
-                "model": self.config.model_name or "gpt-3.5-turbo",  # Using alias
+                "model": model_name,  # Using alias
             }
 
             if self.config.api_key:
