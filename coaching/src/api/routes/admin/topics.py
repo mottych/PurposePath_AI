@@ -206,6 +206,56 @@ def _get_allowed_prompt_types(topic_id: str) -> list[str]:
     return []
 
 
+async def _get_or_create_topic_from_registry(
+    topic_id: str,
+    repository: TopicRepository,
+    user_id: str,
+) -> LLMTopic | None:
+    """Get topic from DB or auto-create from registry if not in DB.
+
+    This implements the auto-upsert pattern: if a topic exists in the endpoint
+    registry but not in the database, create it from registry defaults.
+
+    Args:
+        topic_id: Topic identifier
+        repository: Topic repository
+        user_id: User ID for audit trail
+
+    Returns:
+        LLMTopic if found or created, None if topic doesn't exist anywhere
+    """
+    # First try database
+    topic = await repository.get(topic_id=topic_id)
+    if topic:
+        return topic
+
+    # Not in DB - check if it's in the registry
+    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    if not endpoint_def:
+        # Topic doesn't exist anywhere
+        return None
+
+    # Create from registry defaults
+    now = datetime.now(UTC)
+    new_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+    # Set audit fields
+    new_topic = replace(
+        new_topic,
+        created_at=now,
+        updated_at=now,
+        created_by=user_id,
+    )
+
+    await repository.create(topic=new_topic)
+    logger.info(
+        "Topic auto-created from registry",
+        topic_id=topic_id,
+        created_by=user_id,
+    )
+
+    return new_topic
+
+
 @router.get("", response_model=TopicListResponse)
 async def list_topics(
     page: Annotated[int, Query(ge=1)] = 1,
@@ -696,12 +746,20 @@ async def get_prompt_content(
     Requires admin:topics:read permission.
     """
     try:
-        # Get topic
+        # Get topic - for GET, we don't auto-create, just check if exists in DB
         topic = await repository.get(topic_id=topic_id)
         if not topic:
+            # Check if it exists in registry (for better error message)
+            endpoint_def = get_endpoint_by_topic_id(topic_id)
+            if endpoint_def:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Topic '{topic_id}' exists in registry but has no prompts saved yet. "
+                    "Create a prompt first using POST.",
+                )
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
         # Find prompt
@@ -751,15 +809,22 @@ async def update_prompt_content(
 ) -> UpdatePromptResponse:
     """Update prompt content.
 
+    If the topic exists in the endpoint registry but not in the database,
+    it will be auto-created from registry defaults before updating the prompt.
+
     Requires admin:topics:write permission.
     """
     try:
-        # Get topic
-        topic = await repository.get(topic_id=topic_id)
+        # Get topic from DB or auto-create from registry
+        topic = await _get_or_create_topic_from_registry(
+            topic_id=topic_id,
+            repository=repository,
+            user_id=user.user_id,
+        )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
         # Find prompt
@@ -842,15 +907,22 @@ async def create_prompt(
 ) -> CreatePromptResponse:
     """Create a new prompt for a topic.
 
+    If the topic exists in the endpoint registry but not in the database,
+    it will be auto-created from registry defaults before adding the prompt.
+
     Requires admin:topics:write permission.
     """
     try:
-        # Get topic
-        topic = await repository.get(topic_id=topic_id)
+        # Get topic from DB or auto-create from registry
+        topic = await _get_or_create_topic_from_registry(
+            topic_id=topic_id,
+            repository=repository,
+            user_id=user.user_id,
+        )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
         # Check if prompt type already exists
@@ -929,12 +1001,12 @@ async def delete_prompt(
     Requires admin:topics:delete permission.
     """
     try:
-        # Get topic
+        # Get topic - for DELETE, topic must exist in DB (can't delete what doesn't exist)
         topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database",
             )
 
         # Find prompt

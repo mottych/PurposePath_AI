@@ -456,6 +456,39 @@ class TestPromptManagement:
         assert data["prompt_type"] == "system"
         assert "Test content" in data["content"]
 
+    async def test_get_prompt_content_topic_not_in_db_but_in_registry(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test getting prompt when topic is in registry but not in DB returns 422."""
+        mock_repository.get.return_value = None  # Not in DB
+
+        # Use a topic_id that exists in ENDPOINT_REGISTRY
+        response = client.get("/admin/topics/onboarding_suggestions/prompts/system")
+
+        # Should return 422 with helpful message
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert "exists in registry" in detail.lower()
+        assert "create a prompt first" in detail.lower()
+
+    async def test_get_prompt_content_topic_not_found_anywhere(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test getting prompt when topic doesn't exist anywhere returns 422."""
+        mock_repository.get.return_value = None
+
+        response = client.get("/admin/topics/completely_unknown_topic/prompts/system")
+
+        # Should return 422 (not 404)
+        assert response.status_code == 422
+        assert "not found" in response.json()["detail"].lower()
+
     async def test_update_prompt_content(
         self,
         client: TestClient,
@@ -481,6 +514,93 @@ class TestPromptManagement:
         assert data["prompt_type"] == "system"
         assert "updated successfully" in data["message"].lower()
 
+    async def test_update_prompt_auto_creates_topic_from_registry(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
+        """Test that updating prompt auto-creates topic from registry if not in DB."""
+        # First call returns None (not in DB), second call returns the created topic
+        created_topic = LLMTopic(
+            topic_id="onboarding_suggestions",
+            topic_name="Onboarding Suggestions",
+            topic_type="single_shot",
+            category="onboarding",
+            is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[
+                PromptInfo(
+                    prompt_type="system",
+                    s3_bucket="test-bucket",
+                    s3_key="prompts/onboarding_suggestions/system.md",
+                    updated_at=datetime.now(UTC),
+                    updated_by="admin",
+                )
+            ],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            description="Suggestions for onboarding",
+            display_order=1,
+            created_by="test_user_123",
+        )
+        mock_repository.get.return_value = None
+        mock_repository.create.return_value = created_topic
+        mock_s3_storage.save_prompt.return_value = "prompts/onboarding_suggestions/system.md"
+        mock_repository.update.return_value = None
+
+        # Configure get to return the created topic after create is called
+        async def get_side_effect(topic_id: str) -> LLMTopic | None:
+            if mock_repository.create.called:
+                return created_topic
+            return None
+
+        mock_repository.get.side_effect = get_side_effect
+
+        request_data = {
+            "content": "# System Prompt\n\nOnboarding content",
+            "commit_message": "Initial prompt",
+        }
+
+        response = client.put(
+            "/admin/topics/onboarding_suggestions/prompts/system", json=request_data
+        )
+
+        # Should fail because prompt doesn't exist yet (should use POST to create)
+        # The topic was auto-created but the prompt wasn't found
+        assert response.status_code == 404
+        assert "prompt type" in response.json()["detail"].lower()
+        # Verify topic was auto-created
+        mock_repository.create.assert_called_once()
+
+    async def test_update_prompt_topic_not_found_anywhere(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test updating prompt when topic doesn't exist anywhere returns 422."""
+        mock_repository.get.return_value = None
+
+        request_data = {
+            "content": "# System Prompt\n\nContent",
+            "commit_message": "Updated",
+        }
+
+        response = client.put(
+            "/admin/topics/completely_unknown_topic/prompts/system", json=request_data
+        )
+
+        # Should return 422 (not 404)
+        assert response.status_code == 422
+        assert "not found" in response.json()["detail"].lower()
+
     async def test_create_prompt(
         self,
         client: TestClient,
@@ -505,6 +625,83 @@ class TestPromptManagement:
         assert data["topic_id"] == "test_topic"
         assert data["prompt_type"] == "user"
 
+    async def test_create_prompt_auto_creates_topic_from_registry(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test that creating prompt auto-creates topic from registry if not in DB."""
+        # Create a topic that will be auto-created
+        created_topic = LLMTopic(
+            topic_id="onboarding_suggestions",
+            topic_name="Onboarding Suggestions",
+            topic_type="single_shot",
+            category="onboarding",
+            is_active=True,
+            model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[],  # No prompts yet
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            description="Suggestions for onboarding",
+            display_order=1,
+            created_by="test_user_123",
+        )
+
+        # First call returns None (not in DB), after create it returns the topic
+        call_count = 0
+
+        async def get_side_effect(topic_id: str) -> LLMTopic | None:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return None  # First call: not in DB
+            return created_topic  # After create: return topic
+
+        mock_repository.get.side_effect = get_side_effect
+        mock_repository.create.return_value = created_topic
+        mock_s3_storage.save_prompt.return_value = "prompts/onboarding_suggestions/system.md"
+        mock_repository.update.return_value = None
+
+        request_data = {
+            "prompt_type": "system",
+            "content": "# System Prompt\n\nOnboarding content",
+        }
+
+        response = client.post("/admin/topics/onboarding_suggestions/prompts", json=request_data)
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["topic_id"] == "onboarding_suggestions"
+        assert data["prompt_type"] == "system"
+        # Verify topic was auto-created
+        mock_repository.create.assert_called_once()
+
+    async def test_create_prompt_topic_not_found_anywhere(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test creating prompt when topic doesn't exist anywhere returns 422."""
+        mock_repository.get.return_value = None
+
+        request_data = {
+            "prompt_type": "system",
+            "content": "# System Prompt\n\nContent",
+        }
+
+        response = client.post("/admin/topics/completely_unknown_topic/prompts", json=request_data)
+
+        # Should return 422 (not 404)
+        assert response.status_code == 422
+        assert "not found" in response.json()["detail"].lower()
+
     async def test_delete_prompt(
         self,
         client: TestClient,
@@ -522,6 +719,21 @@ class TestPromptManagement:
         assert response.status_code == 200
         data = response.json()
         assert "deleted successfully" in data["message"].lower()
+
+    async def test_delete_prompt_topic_not_in_db(
+        self,
+        client: TestClient,
+        mock_repository: AsyncMock,
+        mock_s3_storage: AsyncMock,
+    ) -> None:
+        """Test deleting prompt when topic not in DB returns 422."""
+        mock_repository.get.return_value = None
+
+        response = client.delete("/admin/topics/some_topic/prompts/system")
+
+        # Should return 422 (not 404)
+        assert response.status_code == 422
+        assert "not found" in response.json()["detail"].lower()
 
 
 class TestValidation:

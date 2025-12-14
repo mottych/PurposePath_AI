@@ -29,12 +29,10 @@ dependencies = [
     "pydantic>=2.5.0,<3.0.0",
     "pydantic-settings>=2.1.0,<3.0.0",
     "python-dotenv>=1.0.0,<2.0.0",
-    
     # AWS SDK and extensions
     "boto3>=1.34.0,<2.0.0",
     "botocore>=1.34.0,<2.0.0",
     "boto3-stubs[dynamodb,s3,secretsmanager,bedrock,ses]>=1.34.0",
-    
     # LLM and AI - LangChain ecosystem with multi-provider support
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
@@ -45,20 +43,20 @@ dependencies = [
     "langgraph>=0.2.0",
     "langsmith>=0.1.0",
     "tiktoken>=0.8.0",
-    
     # Database and caching
     "redis>=5.0.0,<6.0.0",
     "redis[hiredis]>=5.0.0,<6.0.0",
-    
     # Utilities and security
     "python-jose[cryptography]>=3.3.0,<4.0.0",
     "python-multipart>=0.0.6,<1.0.0",
     "httpx>=0.25.0,<1.0.0",
     "structlog>=23.2.0,<25.0.0",
     "pyyaml>=6.0.1,<7.0.0",
-    
     # Data validation
     "email-validator>=2.0.0,<3.0.0",
+    "jinja2>=3.1.6",
+    "html2text>=2025.4.15",
+    "beautifulsoup4>=4.14.3",
 ]
 
 [project.optional-dependencies]
