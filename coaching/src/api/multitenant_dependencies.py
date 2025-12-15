@@ -29,6 +29,8 @@ from coaching.src.services.llm_template_service import LLMTemplateService
 from coaching.src.services.multitenant_conversation_service import MultitenantConversationService
 from coaching.src.services.onboarding_service import OnboardingService
 from coaching.src.services.prompt_service import PromptService
+from coaching.src.workflows.base import WorkflowType
+from coaching.src.workflows.conversation_workflow_template import ConversationWorkflowTemplate
 from coaching.src.workflows.orchestrator import WorkflowOrchestrator
 from shared.models.multitenant import RequestContext
 
@@ -215,10 +217,17 @@ async def get_workflow_orchestrator(
     provider_manager = await get_provider_manager(context)
     cache_service = await get_cache_service(context)
 
-    return WorkflowOrchestrator(
+    orchestrator = WorkflowOrchestrator(
         provider_manager=provider_manager,
         cache_service=cache_service,
     )
+
+    # Register workflow templates
+    orchestrator.register_workflow(
+        WorkflowType.CONVERSATIONAL_COACHING, ConversationWorkflowTemplate
+    )
+
+    return orchestrator
 
 
 async def get_prompt_service() -> PromptService:
