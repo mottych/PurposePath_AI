@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from coaching.src.llm.providers.manager import ProviderManager
 
 
 class WorkflowType(str, Enum):
@@ -98,9 +101,17 @@ class WorkflowConfig(BaseModel):
 class BaseWorkflow(ABC):
     """Abstract base class for all workflows."""
 
-    def __init__(self, config: WorkflowConfig):
-        """Initialize workflow with configuration."""
+    def __init__(
+        self, config: WorkflowConfig, provider_manager: ProviderManager | None = None
+    ) -> None:
+        """Initialize workflow with configuration.
+
+        Args:
+            config: Workflow configuration
+            provider_manager: Provider manager for AI integrations (optional)
+        """
         self.config = config
+        self.provider_manager = provider_manager
         # LangGraph prefers TypedDict but supports dict at runtime
         self._graph: StateGraph | None = None
         self._compiled_graph: Any = None

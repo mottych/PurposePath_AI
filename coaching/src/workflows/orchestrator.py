@@ -78,9 +78,9 @@ class WorkflowOrchestrator:
         # Generate unique workflow ID
         workflow_id = str(uuid.uuid4())
 
-        # Create workflow instance
+        # Create workflow instance with provider manager
         workflow_class = self._workflow_registry[workflow_type]
-        workflow = workflow_class(config)
+        workflow = workflow_class(config, provider_manager=self.provider_manager)
 
         # Store workflow
         self._active_workflows[workflow_id] = workflow
