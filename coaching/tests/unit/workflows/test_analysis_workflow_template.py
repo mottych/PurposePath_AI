@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from coaching.src.workflows.analysis_workflow_template import AnalysisWorkflowTemplate
@@ -9,21 +9,20 @@ class TestAnalysisWorkflowTemplate:
     @pytest.fixture
     def mock_provider(self):
         provider = Mock()
-        provider.analyze_text = AsyncMock(
-            return_value=Mock(model_dump=lambda: {"analysis": "result"})
-        )
+        # Mock invoke() which returns a string directly
+        provider.invoke = AsyncMock(return_value='{"analysis": "result"}')
         return provider
 
     @pytest.fixture
     def mock_provider_manager(self, mock_provider):
-        with patch("coaching.src.workflows.analysis_workflow_template.provider_manager") as mock:
-            mock.get_provider.return_value = mock_provider
-            yield mock
+        manager = Mock()
+        manager.get_provider.return_value = mock_provider
+        return manager
 
     @pytest.fixture
-    def analysis_workflow(self):
+    def analysis_workflow(self, mock_provider_manager):
         config = WorkflowConfig(workflow_type="single_shot_analysis", provider_id="openai")
-        return AnalysisWorkflowTemplate(config=config)
+        return AnalysisWorkflowTemplate(config=config, provider_manager=mock_provider_manager)
 
     @pytest.fixture
     def base_state(self):

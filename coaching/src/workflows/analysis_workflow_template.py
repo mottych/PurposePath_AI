@@ -10,11 +10,12 @@ Implements a LangGraph-based linear analysis flow with:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
 import structlog
-from coaching.src.llm.providers.manager import provider_manager
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
 from .base import BaseWorkflow, WorkflowState, WorkflowType
@@ -179,10 +180,13 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         if state.get("status") == "failed":
             return state
 
+        if self.provider_manager is None:
+            raise ValueError("No providers registered")
+
         provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
             "provider_id"
         )
-        provider = provider_manager.get_provider(provider_id)
+        provider = self.provider_manager.get_provider(provider_id)
 
         # Get analysis input - check both messages (orchestrator) and conversation_history (workflow template)
         messages = state.get("messages") or state.get("conversation_history", [])
@@ -196,22 +200,40 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         analysis_prompt = self._create_analysis_prompt(analysis_type, analysis_focus)
 
         try:
-            # Execute analysis
-            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
-                text=content_to_analyze,
-                analysis_prompt=analysis_prompt,
-                **state.get("model_config", {}),
-            )
+            # Build LangChain messages for invoke()
+            lc_messages = [
+                SystemMessage(
+                    content="You are an expert analyst. Provide structured analysis in JSON format."
+                ),
+                HumanMessage(
+                    content=f"{analysis_prompt}\n\nContent to analyze:\n{content_to_analyze}"
+                ),
+            ]
+
+            # Use invoke() which returns a string directly
+            analysis_response = await provider.invoke(lc_messages)
+
+            # Try to parse as JSON
+            try:
+                json_text = analysis_response
+                if "```json" in json_text:
+                    json_start = json_text.find("```json") + 7
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+                elif "```" in json_text:
+                    json_start = json_text.find("```") + 3
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+
+                analysis_result = json.loads(json_text)
+            except json.JSONDecodeError:
+                analysis_result = {"raw_analysis": analysis_response}
 
             # Store analysis results
             state["step_data"]["analysis"] = {
                 "input_content": content_to_analyze,
                 "analysis_type": analysis_type,
-                "analysis_result": (
-                    analysis_result.model_dump()
-                    if hasattr(analysis_result, "model_dump")
-                    else str(analysis_result)
-                ),
+                "analysis_result": analysis_result,
                 "analysis_focus": analysis_focus,
                 "timestamp": datetime.utcnow().isoformat(),
             }

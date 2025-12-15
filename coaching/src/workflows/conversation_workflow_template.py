@@ -10,10 +10,12 @@ Implements a LangGraph-based conversational flow with:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
 import structlog
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
 from .base import BaseWorkflow, WorkflowState, WorkflowType
@@ -177,21 +179,24 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            response = await provider.generate_response(  # type: ignore[attr-defined]
-                messages=state.get("messages", []),
-                system_prompt=system_prompt,
-                **state.get("model_config", {}),
-            )
+            # Build LangChain messages for invoke()
+            lc_messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=system_prompt)]
+            for msg in state.get("messages", []):
+                if msg.get("role") == "user":
+                    lc_messages.append(HumanMessage(content=msg.get("content", "")))
+
+            # Use invoke() which returns a string directly
+            response_content = await provider.invoke(lc_messages)  # type: ignore[arg-type]
 
             question_message = {
                 "role": "assistant",
-                "content": response.content,
+                "content": response_content,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
             state["messages"].append(question_message)
             state["current_step"] = "question_generation"
-            state["step_data"]["last_question"] = response.content
+            state["step_data"]["last_question"] = response_content
 
         except Exception as e:
             logger.error("Question generation failed", error=str(e))
@@ -239,11 +244,33 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
-                text=latest_response,
-                analysis_prompt=analysis_prompt,
-                **state.get("model_config", {}),
-            )
+            # Build LangChain messages for invoke()
+            lc_messages = [
+                SystemMessage(
+                    content="You are an expert analyst. Provide structured analysis in JSON format."
+                ),
+                HumanMessage(content=analysis_prompt),
+            ]
+
+            # Use invoke() which returns a string directly
+            analysis_response = await provider.invoke(lc_messages)
+
+            # Try to parse as JSON
+            try:
+                # Extract JSON from response if wrapped in markdown
+                json_text = analysis_response
+                if "```json" in json_text:
+                    json_start = json_text.find("```json") + 7
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+                elif "```" in json_text:
+                    json_start = json_text.find("```") + 3
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+
+                analysis_result = json.loads(json_text)
+            except json.JSONDecodeError:
+                analysis_result = {"raw_analysis": analysis_response}
 
             # Store analysis results
             if "step_data" not in state:
@@ -251,11 +278,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
             state["step_data"]["analysis"] = {
                 "user_response": latest_response,
-                "analysis_result": (
-                    analysis_result.model_dump()
-                    if hasattr(analysis_result, "model_dump")
-                    else str(analysis_result)
-                ),
+                "analysis_result": analysis_result,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 

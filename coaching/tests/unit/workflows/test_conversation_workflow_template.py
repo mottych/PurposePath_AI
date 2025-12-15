@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from coaching.src.workflows.base import WorkflowConfig, WorkflowStatus
@@ -9,32 +9,20 @@ class TestConversationWorkflowTemplate:
     @pytest.fixture
     def mock_provider(self):
         provider = Mock()
-        provider.generate_response = AsyncMock(return_value=Mock(content="Generated Question"))
-        provider.analyze_text = AsyncMock(
-            return_value=Mock(
-                model_dump=lambda: {
-                    "values": ["Value 1"],
-                    "emotions": ["Happy"],
-                    "goals": ["Goal 1"],
-                    "challenges": [],
-                    "themes": [],
-                }
-            )
-        )
+        # Mock invoke() which returns a string directly
+        provider.invoke = AsyncMock(return_value="Generated Question")
         return provider
 
     @pytest.fixture
     def mock_provider_manager(self, mock_provider):
-        with patch(
-            "coaching.src.workflows.conversation_workflow_template.provider_manager"
-        ) as mock:
-            mock.get_provider.return_value = mock_provider
-            yield mock
+        manager = Mock()
+        manager.get_provider.return_value = mock_provider
+        return manager
 
     @pytest.fixture
-    def conversation_workflow(self):
+    def conversation_workflow(self, mock_provider_manager):
         config = WorkflowConfig(workflow_type="conversational_coaching", provider_id="openai")
-        return ConversationWorkflowTemplate(config=config)
+        return ConversationWorkflowTemplate(config=config, provider_manager=mock_provider_manager)
 
     @pytest.fixture
     def base_state(self):
@@ -87,21 +75,21 @@ class TestConversationWorkflowTemplate:
     async def test_question_generation_node_failed(
         self, conversation_workflow, base_state, mock_provider
     ):
-        mock_provider.generate_response.side_effect = Exception("API Error")
-        with patch(
-            "coaching.src.workflows.conversation_workflow_template.provider_manager"
-        ) as mock_pm:
-            mock_pm.get_provider.return_value = mock_provider
+        mock_provider.invoke.side_effect = Exception("API Error")
 
-            result = await conversation_workflow.question_generation_node(base_state)
+        result = await conversation_workflow.question_generation_node(base_state)
 
-            assert result["current_step"] == "question_generation"
-            assert "Can you tell me more" in result["messages"][-1]["content"]
+        assert result["current_step"] == "question_generation"
+        assert "Can you tell me more" in result["messages"][-1]["content"]
 
     @pytest.mark.asyncio
     async def test_response_analysis_node_success(
-        self, conversation_workflow, base_state, mock_provider_manager
+        self, conversation_workflow, base_state, mock_provider, mock_provider_manager
     ):
+        # Mock invoke to return JSON analysis
+        mock_provider.invoke = AsyncMock(
+            return_value='{"values": ["Honesty"], "emotions": ["Calm"], "goals": [], "challenges": [], "themes": []}'
+        )
         base_state["messages"] = [{"role": "user", "content": "I value honesty"}]
 
         result = await conversation_workflow.response_analysis_node(base_state)
