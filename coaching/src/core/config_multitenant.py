@@ -41,28 +41,40 @@ class Settings(BaseSettings):
             return self.jwt_secret_name
         return f"purposepath-jwt-secret-{self.stage}"
 
-    # DynamoDB Tables (Multitenant)
-    conversations_table: str = Field(
-        default="purposepath-conversations-dev", validation_alias="CONVERSATIONS_TABLE"
-    )
-    coaching_sessions_table: str = Field(
-        default="purposepath-coaching-sessions-dev", validation_alias="COACHING_SESSIONS_TABLE"
-    )
-    business_data_table: str = Field(
-        default="purposepath-business-data-dev", validation_alias="BUSINESS_DATA_TABLE"
-    )
-    user_preferences_table: str = Field(
-        default="purposepath-user-preferences-dev", validation_alias="USER_PREFERENCES_TABLE"
-    )
+    # DynamoDB Table Names - computed from stage
+    # Pattern: purposepath-{table}-{stage}
+    @property
+    def conversations_table(self) -> str:
+        """Get conversations table name."""
+        return f"purposepath-coaching-conversations-{self.stage}"
+
+    @property
+    def coaching_sessions_table(self) -> str:
+        """Get coaching sessions table name."""
+        return f"purposepath-coaching-sessions-{self.stage}"
+
+    @property
+    def business_data_table(self) -> str:
+        """Get business data table name."""
+        return f"purposepath-business-data-{self.stage}"
+
+    @property
+    def user_preferences_table(self) -> str:
+        """Get user preferences table name."""
+        return f"purposepath-user-preferences-{self.stage}"
+
+    @property
+    def llm_prompts_table(self) -> str:
+        """Get LLM prompts table name."""
+        return f"purposepath-llm-prompts-{self.stage}"
+
+    @property
+    def topics_table(self) -> str:
+        """Get topics table name."""
+        return f"purposepath-topics-{self.stage}"
+
+    # Optional: Allow override via env var for local development
     dynamodb_endpoint: str | None = None
-
-    # DynamoDB Tables (Unified LLM Prompts)
-    llm_prompts_table: str = Field(
-        default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
-    )
-
-    # DynamoDB Tables (Topics)
-    topics_table: str = Field(default="purposepath-topics-dev", validation_alias="TOPICS_TABLE")
 
     # S3
     prompts_bucket: str = Field(
