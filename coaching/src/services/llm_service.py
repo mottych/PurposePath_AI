@@ -223,7 +223,9 @@ class LLMService:
 
         # Enhance with business context if no rendered template
         if not system_prompt and business_context:
-            business_ctx = BusinessContextForLLM.from_dict(business_context)
+            # Inject tenant_id into business context for model validation
+            ctx_with_tenant = {**business_context, "tenant_id": self.tenant_id}
+            business_ctx = BusinessContextForLLM.from_dict(ctx_with_tenant)
             context_enhancement = business_ctx.format_for_prompt()
             if context_enhancement:
                 system_prompt = context_enhancement
@@ -362,7 +364,9 @@ class LLMService:
         # Enhance system prompt with business context (applies to both paths)
         if business_context:
             # Convert to structured business context for better handling
-            business_ctx = BusinessContextForLLM.from_dict(business_context)
+            # Inject tenant_id into business context for model validation
+            ctx_with_tenant = {**business_context, "tenant_id": self.tenant_id}
+            business_ctx = BusinessContextForLLM.from_dict(ctx_with_tenant)
             context_enhancement = business_ctx.format_for_prompt()
             if context_enhancement:
                 enhanced_system_prompt += context_enhancement
@@ -644,7 +648,9 @@ class LLMService:
 
         # Add business context if provided
         if business_context:
-            business_ctx = BusinessContextForLLM.from_dict(business_context)
+            # Inject tenant_id into business context for model validation
+            ctx_with_tenant = {**business_context, "tenant_id": self.tenant_id}
+            business_ctx = BusinessContextForLLM.from_dict(ctx_with_tenant)
             context_enhancement = business_ctx.format_for_prompt()
             if context_enhancement:
                 enhanced_prompt += f"\n\nBusiness Context:\n{context_enhancement}"
