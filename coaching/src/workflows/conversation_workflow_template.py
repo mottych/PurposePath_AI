@@ -18,7 +18,7 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
-from .base import BaseWorkflow, WorkflowState, WorkflowType
+from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 
 logger = structlog.get_logger(__name__)
 
@@ -383,11 +383,18 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         state["messages"].append(completion_message)
         state["current_step"] = "completion"
-        state["status"] = "completed"
+        state["status"] = WorkflowStatus.COMPLETED
         state["completed_at"] = datetime.utcnow().isoformat()
         state["updated_at"] = datetime.utcnow().isoformat()
 
-        # Final results
+        # Get the last assistant message for the response
+        assistant_messages = [
+            msg for msg in state.get("messages", []) if msg.get("role") == "assistant"
+        ]
+        last_response = assistant_messages[-1]["content"] if assistant_messages else ""
+
+        # Final results - include response for adapter compatibility
+        state["results"]["response"] = last_response
         state["results"]["conversation_complete"] = True
         state["results"]["total_insights"] = len(insights)
         state["results"]["conversation_turns"] = len(
