@@ -111,12 +111,12 @@ ai_jobs_dynamodb_table = aws.dynamodb.Table(
     tags={"Environment": stack, "Service": "coaching-ai"},
 )
 
+# DynamoDB access for all purposepath tables
+# Table naming convention: purposepath-{table}-{stage}
 aws.iam.RolePolicy(
     "coaching-dynamo-policy",
     role=lambda_role.id,
-    policy=pulumi.Output.all(
-        aws.get_caller_identity().account_id, stack_config["topics_table"], ai_jobs_table
-    ).apply(
+    policy=pulumi.Output.all(aws.get_caller_identity().account_id).apply(
         lambda args: json.dumps(
             {
                 "Version": "2012-10-17",
@@ -132,16 +132,8 @@ aws.iam.RolePolicy(
                             "dynamodb:Scan",
                         ],
                         "Resource": [
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/coaching_conversations",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/coaching_conversations/index/*",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/coaching_sessions",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/coaching_sessions/index/*",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/llm_prompts",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/llm_prompts/index/*",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[1]}",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[1]}/index/*",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[2]}",
-                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/{args[2]}/index/*",
+                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/purposepath-*",
+                            f"arn:aws:dynamodb:us-east-1:{args[0]}:table/purposepath-*/index/*",
                         ],
                     }
                 ],
