@@ -320,7 +320,7 @@ Scan a website URL and extract business information for onboarding.
 |-----------|------|----------|-------------|
 | `website_url` | string | Yes | URL of website to scan |
 
-**Response Model:** `WebsiteScanResponse`
+**Response Model:** `WebsiteScanResponse` — [Get JSON Schema](/ai/schemas/WebsiteScanResponse)
 
 ```json
 {
@@ -361,22 +361,7 @@ Scan a website URL and extract business information for onboarding.
 - Results used to pre-fill onboarding form
 - May return partial results if website has anti-scraping measures
 
-**WebsiteScanResponse Schema:**
-
-```typescript
-interface WebsiteScanResponse {
-  products: ProductInfo[];
-  niche: string;
-  ica: string;
-  value_proposition: string;
-}
-
-interface ProductInfo {
-  id: string;      // Unique identifier (lowercase, hyphenated)
-  name: string;    // Product/service name
-  problem: string; // Problem it solves
-}
-```
+**Schema:** Use `GET /ai/schemas/WebsiteScanResponse` to get the full JSON schema with field descriptions. The schema is auto-generated from the Pydantic model.
 
 ---
 

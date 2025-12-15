@@ -6,6 +6,7 @@ from coaching.src.api.models.onboarding import (
     OnboardingCoachingResponse,
     OnboardingSuggestionRequest,
     OnboardingSuggestionResponse,
+    ProductInfo,
     WebsiteScanRequest,
     WebsiteScanResponse,
 )
@@ -194,6 +195,31 @@ class TestWebsiteScanRequest:
 
 
 @pytest.mark.unit
+class TestProductInfo:
+    """Test ProductInfo model."""
+
+    def test_valid_product_info(self):
+        """Test valid ProductInfo creation."""
+        # Arrange & Act
+        product = ProductInfo(
+            id="crm-software",
+            name="CRM Software",
+            problem="Helps manage customer relationships",
+        )
+
+        # Assert
+        assert product.id == "crm-software"
+        assert product.name == "CRM Software"
+        assert product.problem == "Helps manage customer relationships"
+
+    def test_missing_required_field(self):
+        """Test ProductInfo requires all fields."""
+        # Arrange & Act & Assert
+        with pytest.raises(ValidationError):
+            ProductInfo(id="test", name="Test")  # Missing problem
+
+
+@pytest.mark.unit
 class TestWebsiteScanResponse:
     """Test WebsiteScanResponse model."""
 
@@ -201,65 +227,50 @@ class TestWebsiteScanResponse:
         """Test valid response with all fields."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="TechCorp",
-            industry="Software",
-            description="A leading software company",
-            products=["CRM", "Analytics"],
-            targetMarket="Enterprise businesses",
-            suggestedNiche="B2B SaaS for mid-market",
+            products=[
+                ProductInfo(id="crm", name="CRM Software", problem="Customer management"),
+                ProductInfo(id="analytics", name="Analytics", problem="Data insights"),
+            ],
+            niche="B2B SaaS for mid-market enterprises",
+            ica="Mid-sized businesses seeking growth, 50-500 employees, tech-savvy leadership",
+            value_proposition="Streamline operations with AI-powered automation",
         )
 
         # Assert
-        assert response.business_name == "TechCorp"
-        assert response.industry == "Software"
         assert len(response.products) == 2
+        assert response.products[0].name == "CRM Software"
+        assert response.niche == "B2B SaaS for mid-market enterprises"
+        assert "mid-sized" in response.ica.lower()
+        assert response.value_proposition == "Streamline operations with AI-powered automation"
 
-    def test_camel_case_aliases(self):
-        """Test that camelCase aliases work."""
-        # Arrange - Using camelCase
+    def test_products_as_dicts(self):
+        """Test that products can be provided as dicts."""
+        # Arrange - Using dicts for products
         data = {
-            "businessName": "TestCorp",
-            "industry": "Tech",
-            "description": "Test description",
-            "products": [],
-            "targetMarket": "Test market",
-            "suggestedNiche": "Test niche",
+            "products": [
+                {"id": "product-1", "name": "Product One", "problem": "Solves problem A"},
+            ],
+            "niche": "Test niche",
+            "ica": "Test ICA",
+            "value_proposition": "Test value prop",
         }
 
         # Act
         response = WebsiteScanResponse(**data)
 
         # Assert
-        assert response.business_name == "TestCorp"
-        assert response.target_market == "Test market"
-        assert response.suggested_niche == "Test niche"
-
-    def test_snake_case_field_names(self):
-        """Test that snake_case field names work."""
-        # Arrange - Using snake_case
-        response = WebsiteScanResponse(
-            business_name="TestCorp",
-            industry="Tech",
-            description="Test",
-            products=[],
-            target_market="Market",
-            suggested_niche="Niche",
-        )
-
-        # Assert
-        assert response.business_name == "TestCorp"
-        assert response.target_market == "Market"
+        assert len(response.products) == 1
+        assert isinstance(response.products[0], ProductInfo)
+        assert response.products[0].id == "product-1"
 
     def test_empty_products_list(self):
         """Test response with empty products list."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="TestCorp",
-            industry="Services",
-            description="Service company",
             products=[],
-            targetMarket="B2B",
-            suggestedNiche="Consulting",
+            niche="Test niche",
+            ica="Test ICA",
+            value_proposition="Test value prop",
         )
 
         # Assert
@@ -268,16 +279,17 @@ class TestWebsiteScanResponse:
     def test_many_products(self):
         """Test response with many products."""
         # Arrange
-        products = [f"Product {i}" for i in range(20)]
+        products = [
+            ProductInfo(id=f"product-{i}", name=f"Product {i}", problem=f"Problem {i}")
+            for i in range(20)
+        ]
 
         # Act
         response = WebsiteScanResponse(
-            businessName="TestCorp",
-            industry="Manufacturing",
-            description="Makes many products",
             products=products,
-            targetMarket="Consumer",
-            suggestedNiche="Consumer goods",
+            niche="Manufacturing niche",
+            ica="Industrial buyers",
+            value_proposition="Quality manufacturing",
         )
 
         # Assert
@@ -448,17 +460,17 @@ class TestOnboardingModelsEdgeCases:
         """Test WebsiteScanResponse with special characters."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="Tech & Co.",
-            industry="IT & Services",
-            description="We provide IT services & consulting",
-            products=["Product A & B", "Service C & D"],
-            targetMarket="B2B & B2C",
-            suggestedNiche="Hybrid B2B/B2C",
+            products=[
+                ProductInfo(id="product-a-b", name="Product A & B", problem="Problem A & B"),
+            ],
+            niche="IT & Services consulting",
+            ica="B2B & B2C hybrid customers",
+            value_proposition="We provide IT services & consulting",
         )
 
         # Assert
-        assert "&" in response.business_name
-        assert "&" in response.industry
+        assert "&" in response.niche
+        assert "&" in response.ica
 
     def test_coaching_request_with_multiline_message(self):
         """Test CoachingRequest with multiline message."""

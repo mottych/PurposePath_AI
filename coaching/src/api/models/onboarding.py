@@ -46,38 +46,46 @@ class WebsiteScanRequest(BaseModel):
     )
 
 
+class ProductInfo(BaseModel):
+    """Product or service information extracted from website."""
+
+    id: str = Field(
+        ...,
+        description="Unique identifier (lowercase, hyphenated)",
+    )
+    name: str = Field(
+        ...,
+        description="Product or service name",
+    )
+    problem: str = Field(
+        ...,
+        description="Problem this product/service solves",
+    )
+
+
 class WebsiteScanResponse(BaseModel):
-    """Response from website scan."""
+    """Response from website scan with extracted business information.
 
-    business_name: str = Field(
-        ...,
-        alias="businessName",
-        description="Extracted business name",
-    )
-    industry: str = Field(
-        ...,
-        description="Detected industry",
-    )
-    description: str = Field(
-        ...,
-        description="Business description",
-    )
-    products: list[str] = Field(
-        default_factory=list,
-        description="Detected products/services",
-    )
-    target_market: str = Field(
-        ...,
-        alias="targetMarket",
-        description="Target market/audience",
-    )
-    suggested_niche: str = Field(
-        ...,
-        alias="suggestedNiche",
-        description="AI-suggested niche",
-    )
+    The LLM analyzes the website content and extracts structured business
+    information to pre-fill the onboarding form.
+    """
 
-    model_config = {"populate_by_name": True}
+    products: list[ProductInfo] = Field(
+        ...,
+        description="List of products/services offered by the business",
+    )
+    niche: str = Field(
+        ...,
+        description="Target market and business niche description (2-3 sentences)",
+    )
+    ica: str = Field(
+        ...,
+        description="Ideal Customer Avatar - demographics, pain points, and goals",
+    )
+    value_proposition: str = Field(
+        ...,
+        description="Main value proposition - what makes this business unique (1-2 sentences)",
+    )
 
 
 # Coaching endpoint models
