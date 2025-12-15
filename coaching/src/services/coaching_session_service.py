@@ -7,9 +7,13 @@ It follows the application service pattern from Clean Architecture,
 orchestrating workflows without containing domain logic itself.
 """
 
-from typing import Any
+import json
+from typing import TYPE_CHECKING, Any
 
 import structlog
+
+if TYPE_CHECKING:
+    from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 from coaching.src.core.coaching_topic_registry import (
     CoachingTopicDefinition,
     get_coaching_topic,
@@ -206,15 +210,20 @@ class CoachingSessionService:
         self,
         session_repository: DynamoDBCoachingSessionRepository,
         llm_service: LLMService,
+        template_processor: "TemplateParameterProcessor | None" = None,
     ) -> None:
         """Initialize the coaching session service.
 
         Args:
             session_repository: Repository for session persistence
             llm_service: Service for LLM interactions
+            template_processor: Optional processor for automatic parameter enrichment.
+                When provided, templates will have their parameters resolved via
+                the parameter registry (API calls, defaults, etc.).
         """
         self.session_repo = session_repository
         self.llm_service = llm_service
+        self.template_processor = template_processor
 
     # =========================================================================
     # Session Lifecycle
@@ -284,6 +293,8 @@ class CoachingSessionService:
         initial_message = await self._generate_initiation_message(
             topic=topic,
             context=context or {},
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
 
         # Add initial coach message to session
@@ -348,6 +359,7 @@ class CoachingSessionService:
         resume_message = await self._generate_resume_message(
             topic=topic,
             session=session,
+            tenant_id=tenant_id,
         )
 
         # Resume the session
@@ -678,6 +690,7 @@ class CoachingSessionService:
         extracted_result = await self._extract_session_result(
             topic=topic,
             session=session,
+            tenant_id=tenant_id,
         )
 
         # Complete the session with the result
@@ -816,26 +829,46 @@ class CoachingSessionService:
         self,
         topic: CoachingTopicDefinition,
         context: dict[str, Any],
+        tenant_id: str,
+        user_id: str,
     ) -> str:
         """Generate the initial coach message for a session.
+
+        Uses the template processor (if available) to resolve parameters
+        in the system prompt template before generating the response.
 
         Args:
             topic: Topic definition with prompts
             context: Context for template rendering
+            tenant_id: Tenant ID for parameter resolution
+            user_id: User ID for parameter resolution
 
         Returns:
             Initial coach message
         """
+        # Enrich context with template processor if available
+        enriched_context = await self._enrich_context(
+            template=topic.system_prompt_template,
+            context=context,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            topic=topic,
+        )
+
+        # Render the system prompt with enriched context
+        system_prompt = get_system_prompt_with_structured_output(topic, enriched_context)
+
         # Convert initiation_instructions to conversation format
         history: list[dict[str, str]] = []
 
-        # Use LLMService to generate response
+        # Use LLMService to generate response with enriched system prompt
         response = await self.llm_service.generate_coaching_response(
             conversation_id=f"init_{topic.topic_id}",
             topic=topic.topic_id,
             user_message=topic.initiation_instructions,
             conversation_history=history,
-            business_context=context,
+            business_context=enriched_context,
+            system_prompt_override=system_prompt,
         )
 
         return str(response.response)
@@ -844,16 +877,33 @@ class CoachingSessionService:
         self,
         topic: CoachingTopicDefinition,
         session: CoachingSession,
+        tenant_id: str,
     ) -> str:
         """Generate a resume message for a paused session.
+
+        Uses the template processor (if available) to resolve parameters
+        in the system prompt template before generating the response.
 
         Args:
             topic: Topic definition with prompts
             session: The session being resumed
+            tenant_id: Tenant ID for parameter resolution
 
         Returns:
             Resume message from coach
         """
+        # Enrich context with template processor if available
+        enriched_context = await self._enrich_context(
+            template=topic.system_prompt_template,
+            context=session.context,
+            tenant_id=tenant_id,
+            user_id=str(session.user_id),
+            topic=topic,
+        )
+
+        # Render the system prompt with enriched context
+        system_prompt = get_system_prompt_with_structured_output(topic, enriched_context)
+
         # Get conversation history for context (sliding window)
         # get_messages_for_llm already returns dicts with 'role' and 'content'
         history = session.get_messages_for_llm(max_messages=topic.max_messages_to_llm)
@@ -864,7 +914,8 @@ class CoachingSessionService:
             topic=session.topic_id,
             user_message=topic.resume_instructions,
             conversation_history=history,
-            business_context=session.context,
+            business_context=enriched_context,
+            system_prompt_override=system_prompt,
         )
 
         return str(response.response)
@@ -925,44 +976,252 @@ class CoachingSessionService:
         self,
         topic: CoachingTopicDefinition,
         session: CoachingSession,
+        tenant_id: str,
     ) -> dict[str, Any]:
         """Extract final result from coaching session.
+
+        Generates the extraction prompt automatically based on the topic's
+        result_model schema, similar to UnifiedAIEngine's approach.
 
         Args:
             topic: Topic definition with extraction instructions
             session: Completed session
+            tenant_id: Tenant ID for parameter resolution
 
         Returns:
             Extracted result as dictionary
         """
+        # Enrich context with template processor if available
+        enriched_context = await self._enrich_context(
+            template=topic.system_prompt_template,
+            context=session.context,
+            tenant_id=tenant_id,
+            user_id=str(session.user_id),
+            topic=topic,
+        )
+
         # Get full conversation for extraction
         # get_messages_for_llm already returns dicts with 'role' and 'content'
         history = session.get_messages_for_llm(max_messages=50)
 
-        # Get the result model for context
+        # Get the result model and generate schema-driven extraction prompt
         result_model = get_coaching_result_model(topic.result_model)
-        schema_hint = ""
-        if result_model:
-            schema_hint = f"\n\nExpected result schema:\n{result_model.model_json_schema()}"
+        extraction_system_prompt = self._build_extraction_system_prompt(
+            topic=topic,
+            result_model=result_model,
+            context=enriched_context,
+        )
 
-        # Generate extraction using the extraction instructions
-        extraction_prompt = f"""
-{topic.extraction_instructions}
+        # Build user prompt with topic's extraction instructions
+        extraction_user_prompt = f"""{topic.extraction_instructions}
 
-Based on the entire conversation above, extract the final result as a JSON object.
-{schema_hint}
+Based on the entire conversation above, extract the final result as a valid JSON object.
+Do not include any text before or after the JSON.
 """
 
         response = await self.llm_service.generate_coaching_response(
             conversation_id=f"extract_{session.session_id}",
             topic=session.topic_id,
-            user_message=extraction_prompt,
+            user_message=extraction_user_prompt,
             conversation_history=history,
-            business_context=session.context,
+            business_context=enriched_context,
+            system_prompt_override=extraction_system_prompt,
         )
 
         # Try to parse JSON from response
         return self._parse_json_from_response(response.response)
+
+    def _build_extraction_system_prompt(
+        self,
+        topic: CoachingTopicDefinition,
+        result_model: type[BaseModel] | None,
+        context: dict[str, Any],
+    ) -> str:
+        """Build a system prompt for extraction with schema instructions.
+
+        Generates a system prompt that instructs the LLM to extract data
+        according to the result model's JSON schema.
+
+        Args:
+            topic: Topic definition
+            result_model: Pydantic model class for the result
+            context: Enriched context for template rendering
+
+        Returns:
+            System prompt with extraction instructions and schema
+        """
+        # Start with topic description
+        base_prompt = f"""You are an expert at extracting structured information from conversations.
+
+## Task
+You are completing a {topic.name} coaching session. Your job is to analyze the conversation
+and extract the final result according to the specified schema.
+
+## Context
+"""
+        # Add context values
+        for key, value in context.items():
+            base_prompt += f"- {key}: {value}\n"
+
+        # Add schema instructions if result model is available
+        if result_model is not None:
+            schema = result_model.model_json_schema()
+            simplified_schema = self._simplify_schema_for_prompt(schema)
+            schema_json = json.dumps(simplified_schema, indent=2)
+
+            base_prompt += f"""
+## Response Format Instructions
+
+You MUST respond with valid JSON that matches this exact schema:
+
+```json
+{schema_json}
+```
+
+**Important:**
+- Use the exact field names shown above (including camelCase where specified by "alias")
+- Do not include any text before or after the JSON
+- Ensure all required fields are present
+- Follow any constraints (min/max length, enum values, etc.)
+"""
+        else:
+            base_prompt += """
+## Response Format
+Respond with a valid JSON object containing the extracted information.
+Do not include any text before or after the JSON.
+"""
+
+        return base_prompt
+
+    def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """Simplify JSON schema for LLM prompt.
+
+        Removes internal Pydantic details to make the schema cleaner.
+
+        Args:
+            schema: Full Pydantic JSON schema
+
+        Returns:
+            Simplified schema for prompt
+        """
+        simplified: dict[str, Any] = {}
+
+        # Copy basic structure
+        if "type" in schema:
+            simplified["type"] = schema["type"]
+
+        if "properties" in schema:
+            simplified["properties"] = {}
+            for name, prop in schema["properties"].items():
+                simplified_prop: dict[str, Any] = {}
+                if "type" in prop:
+                    simplified_prop["type"] = prop["type"]
+                if "description" in prop:
+                    simplified_prop["description"] = prop["description"]
+                if "items" in prop:
+                    simplified_prop["items"] = self._simplify_schema_for_prompt(prop["items"])
+                if "enum" in prop:
+                    simplified_prop["enum"] = prop["enum"]
+                simplified["properties"][name] = simplified_prop
+
+        if "required" in schema:
+            simplified["required"] = schema["required"]
+
+        # Handle $defs (nested models)
+        if "$defs" in schema:
+            simplified["definitions"] = {}
+            for name, definition in schema["$defs"].items():
+                simplified["definitions"][name] = self._simplify_schema_for_prompt(definition)
+
+        return simplified
+
+    async def _enrich_context(
+        self,
+        template: str,
+        context: dict[str, Any],
+        tenant_id: str,
+        user_id: str,
+        topic: CoachingTopicDefinition,
+    ) -> dict[str, Any]:
+        """Enrich context by resolving parameters via template processor.
+
+        If template_processor is not available, returns context unchanged.
+        Otherwise, analyzes the template to find needed parameters and
+        enriches any that are missing from the provided context.
+
+        Args:
+            template: Template string with {param} placeholders
+            context: Original context parameters
+            tenant_id: Tenant ID for API calls
+            user_id: User ID for API calls
+            topic: Topic definition (for required params info)
+
+        Returns:
+            Enriched context dictionary
+        """
+        if self.template_processor is None:
+            # No enrichment - return original context
+            return context
+
+        # Get required parameters from topic's parameter_refs
+        required_params = {ref.parameter for ref in topic.parameter_refs if ref.required}
+
+        logger.debug(
+            "coaching_session.enriching_context",
+            topic_id=topic.topic_id,
+            required_params=list(required_params),
+            provided_params=list(context.keys()),
+        )
+
+        try:
+            # Process template and enrich missing parameters
+            result = await self.template_processor.process_template_parameters(
+                template=template,
+                payload=context,
+                user_id=user_id,
+                tenant_id=tenant_id,
+                required_params=required_params,
+            )
+
+            # Log any warnings
+            if result.warnings:
+                for warning in result.warnings:
+                    logger.warning(
+                        "coaching_session.parameter_enrichment_warning",
+                        topic_id=topic.topic_id,
+                        warning=warning,
+                    )
+
+            # Check for missing required params (log but don't fail)
+            if result.missing_required:
+                logger.warning(
+                    "coaching_session.missing_required_params",
+                    topic_id=topic.topic_id,
+                    missing=result.missing_required,
+                )
+
+            # Merge enriched params with original (original takes precedence)
+            enriched = {**result.parameters, **context}
+
+            logger.info(
+                "coaching_session.context_enriched",
+                topic_id=topic.topic_id,
+                original_count=len(context),
+                enriched_count=len(enriched),
+                added_count=len(enriched) - len(context),
+            )
+
+            return enriched
+
+        except Exception as e:
+            # Log error but don't fail - return original context
+            logger.error(
+                "coaching_session.enrichment_failed",
+                topic_id=topic.topic_id,
+                error=str(e),
+                exc_info=True,
+            )
+            return context
 
     def _render_template(
         self,

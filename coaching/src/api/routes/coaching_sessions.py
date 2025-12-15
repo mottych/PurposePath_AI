@@ -19,6 +19,7 @@ from typing import Any
 
 import structlog
 from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies.ai_engine import create_template_processor
 from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
     get_llm_service,
@@ -43,7 +44,7 @@ from coaching.src.services.coaching_session_service import (
     MessageResponse as ServiceMessageResponse,
 )
 from coaching.src.services.llm_service import LLMService
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
@@ -116,12 +117,26 @@ async def get_coaching_session_service(
     session_repository: DynamoDBCoachingSessionRepository = Depends(
         get_coaching_session_repository
     ),
+    authorization: str | None = Header(None, description="Authorization header with Bearer token"),
 ) -> CoachingSessionService:
-    """Get coaching session service with dependencies injected."""
+    """Get coaching session service with dependencies injected.
+
+    Creates a TemplateParameterProcessor with the user's JWT token for
+    parameter enrichment via Business API calls.
+    """
     _ = context  # For tenant context in future enhancements
+
+    # Extract JWT token and create template processor
+    jwt_token = None
+    if authorization and authorization.startswith("Bearer "):
+        jwt_token = authorization.split(" ", 1)[1]
+
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
+
     return CoachingSessionService(
         session_repository=session_repository,
         llm_service=llm_service,
+        template_processor=template_processor,
     )
 
 
