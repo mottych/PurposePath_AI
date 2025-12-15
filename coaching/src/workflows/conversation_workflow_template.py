@@ -14,7 +14,6 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from coaching.src.llm.providers.manager import provider_manager
 from langgraph.graph import StateGraph
 
 from .base import BaseWorkflow, WorkflowState, WorkflowType
@@ -152,10 +151,13 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Generate thoughtful follow-up questions."""
         logger.info("Executing question generation", workflow_id=state.get("workflow_id"))
 
+        if self.provider_manager is None:
+            raise ValueError("No providers registered")
+
         provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
             "provider_id"
         )
-        provider = provider_manager.get_provider(provider_id)
+        provider = self.provider_manager.get_provider(provider_id)
 
         # Analyze conversation context to generate appropriate questions
         conversation_context = self._get_conversation_context(state)
@@ -209,10 +211,13 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Analyze user responses for insights and themes."""
         logger.info("Executing response analysis", workflow_id=state.get("workflow_id"))
 
+        if self.provider_manager is None:
+            raise ValueError("No providers registered")
+
         provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
             "provider_id"
         )
-        provider = provider_manager.get_provider(provider_id)
+        provider = self.provider_manager.get_provider(provider_id)
 
         # Get the latest user response
         user_messages = [msg for msg in state.get("messages", []) if msg.get("role") == "user"]
