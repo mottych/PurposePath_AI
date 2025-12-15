@@ -181,9 +181,22 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         try:
             # Build LangChain messages for invoke()
             lc_messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=system_prompt)]
+
+            # Add existing user messages from conversation history
+            user_messages_added = False
             for msg in state.get("messages", []):
                 if msg.get("role") == "user":
                     lc_messages.append(HumanMessage(content=msg.get("content", "")))
+                    user_messages_added = True
+
+            # At session start, no user messages exist yet - add a starter prompt
+            # Bedrock requires at least one HumanMessage in the conversation
+            if not user_messages_added:
+                lc_messages.append(
+                    HumanMessage(
+                        content="Please introduce yourself and start the coaching session."
+                    )
+                )
 
             # Use invoke() which returns a string directly
             response_content = await provider.invoke(lc_messages)  # type: ignore[arg-type]

@@ -107,7 +107,9 @@ class WorkflowOrchestrator:
             # Store state
             self._workflow_states[workflow_id] = state
 
-            logger.info("Workflow started", workflow_id=workflow_id, status=state.status.value)
+            # Handle status as string (use_enum_values=True) or enum
+            status_value = state.status if isinstance(state.status, str) else state.status.value
+            logger.info("Workflow started", workflow_id=workflow_id, status=status_value)
             return state
 
         except Exception as e:
@@ -162,10 +164,12 @@ class WorkflowOrchestrator:
             # Update stored state
             self._workflow_states[workflow_id] = state
 
+            # Handle status as string (use_enum_values=True) or enum
+            status_value = state.status if isinstance(state.status, str) else state.status.value
             logger.info(
                 "Workflow continued",
                 workflow_id=workflow_id,
-                status=state.status.value,
+                status=status_value,
                 step=state.current_step,
             )
             return state
@@ -282,12 +286,16 @@ class WorkflowOrchestrator:
         }
 
         for state in self._workflow_states.values():
-            # Count by status
-            status = state.status.value
+            # Count by status - handle both string (use_enum_values=True) and enum
+            status = state.status if isinstance(state.status, str) else state.status.value
             stats["status_counts"][status] = stats["status_counts"].get(status, 0) + 1  # type: ignore[index,attr-defined]
 
-            # Count by type
-            workflow_type = state.workflow_type.value
+            # Count by type - handle both string and enum
+            workflow_type = (
+                state.workflow_type
+                if isinstance(state.workflow_type, str)
+                else state.workflow_type.value
+            )
             stats["type_counts"][workflow_type] = stats["type_counts"].get(workflow_type, 0) + 1  # type: ignore[index,attr-defined]
 
         return stats
