@@ -107,9 +107,8 @@ class WorkflowOrchestrator:
             # Store state
             self._workflow_states[workflow_id] = state
 
-            # Handle status as string (use_enum_values=True) or enum
-            status_value = state.status if isinstance(state.status, str) else state.status.value
-            logger.info("Workflow started", workflow_id=workflow_id, status=status_value)
+            # With use_enum_values=True, status is already the string value
+            logger.info("Workflow started", workflow_id=workflow_id, status=state.status)
             return state
 
         except Exception as e:
@@ -142,7 +141,11 @@ class WorkflowOrchestrator:
         workflow = self._active_workflows[workflow_id]
         current_state = self._workflow_states[workflow_id]
 
-        if current_state.status not in [WorkflowStatus.WAITING_INPUT, WorkflowStatus.RUNNING]:
+        # With use_enum_values=True, status is a string - compare against .value
+        if current_state.status not in [
+            WorkflowStatus.WAITING_INPUT.value,
+            WorkflowStatus.RUNNING.value,
+        ]:
             raise ValueError(f"Workflow cannot be continued in status: {current_state.status}")
 
         try:
@@ -164,12 +167,11 @@ class WorkflowOrchestrator:
             # Update stored state
             self._workflow_states[workflow_id] = state
 
-            # Handle status as string (use_enum_values=True) or enum
-            status_value = state.status if isinstance(state.status, str) else state.status.value
+            # With use_enum_values=True, status is already the string value
             logger.info(
                 "Workflow continued",
                 workflow_id=workflow_id,
-                status=status_value,
+                status=state.status,
                 step=state.current_step,
             )
             return state
@@ -231,12 +233,13 @@ class WorkflowOrchestrator:
 
         workflows_to_remove = []
         for workflow_id, state in self._workflow_states.items():
+            # With use_enum_values=True, status is a string - compare against .value
             if (
                 state.status
                 in [
-                    WorkflowStatus.COMPLETED,
-                    WorkflowStatus.FAILED,
-                    WorkflowStatus.CANCELLED,
+                    WorkflowStatus.COMPLETED.value,
+                    WorkflowStatus.FAILED.value,
+                    WorkflowStatus.CANCELLED.value,
                 ]
                 and state.completed_at
             ):
@@ -286,17 +289,11 @@ class WorkflowOrchestrator:
         }
 
         for state in self._workflow_states.values():
-            # Count by status - handle both string (use_enum_values=True) and enum
-            status = state.status if isinstance(state.status, str) else state.status.value
-            stats["status_counts"][status] = stats["status_counts"].get(status, 0) + 1  # type: ignore[index,attr-defined]
-
-            # Count by type - handle both string and enum
-            workflow_type = (
-                state.workflow_type
-                if isinstance(state.workflow_type, str)
-                else state.workflow_type.value
-            )
-            stats["type_counts"][workflow_type] = stats["type_counts"].get(workflow_type, 0) + 1  # type: ignore[index,attr-defined]
+            # With use_enum_values=True, status/workflow_type are already string values
+            stats["status_counts"][state.status] = stats["status_counts"].get(state.status, 0) + 1  # type: ignore[index,attr-defined]
+            stats["type_counts"][state.workflow_type] = (
+                stats["type_counts"].get(state.workflow_type, 0) + 1
+            )  # type: ignore[index,attr-defined]
 
         return stats
 
