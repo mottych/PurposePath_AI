@@ -1,8 +1,10 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
-const infraStack = new pulumi.StackReference("mottych/purposepath-infrastructure/dev");
-const dynamoTables = infraStack.getOutput("dynamoTables");
+// Table naming convention: purposepath-{table}-{stage}
+const stage = "dev";
+const accountId = "380276784420";
+const region = "us-east-1";
 
 const lambdaRole = new aws.iam.Role("coaching-lambda-role", {
     assumeRolePolicy: JSON.stringify({
@@ -18,20 +20,17 @@ new aws.iam.RolePolicyAttachment("coaching-lambda-basic", {
 
 new aws.iam.RolePolicy("coaching-dynamo-policy", {
     role: lambdaRole.id,
-    policy: pulumi.all([dynamoTables]).apply(([tables]) => JSON.stringify({
+    policy: JSON.stringify({
         Version: "2012-10-17",
         Statement: [{
             Effect: "Allow",
             Action: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Query", "dynamodb:Scan"],
             Resource: [
-                `arn:aws:dynamodb:us-east-1:380276784420:table/${tables.coachingConversations}`,
-                `arn:aws:dynamodb:us-east-1:380276784420:table/${tables.coachingConversations}/index/*`,
-                `arn:aws:dynamodb:us-east-1:380276784420:table/${tables.coachingSessions}`,
-                `arn:aws:dynamodb:us-east-1:380276784420:table/${tables.coachingSessions}/index/*`,
-                `arn:aws:dynamodb:us-east-1:380276784420:table/${tables.llmPrompts}`,
+                `arn:aws:dynamodb:${region}:${accountId}:table/purposepath-*`,
+                `arn:aws:dynamodb:${region}:${accountId}:table/purposepath-*/index/*`,
             ],
         }],
-    })),
+    }),
 });
 
 // Bedrock access for LLM
@@ -56,12 +55,10 @@ const coachingLambda = new aws.lambda.Function("coaching-api", {
     timeout: 300,  // 5 minutes for LLM calls
     memorySize: 1024,
     environment: {
-        variables: dynamoTables.apply(tables => ({
-            COACHING_CONVERSATIONS_TABLE: tables.coachingConversations,
-            COACHING_SESSIONS_TABLE: tables.coachingSessions,
-            LLM_PROMPTS_TABLE: tables.llmPrompts,
-            ENVIRONMENT: "production",
-        })),
+        variables: {
+            // Table names are computed in code from STAGE: purposepath-{table}-{stage}
+            STAGE: "dev",
+        },
     },
 });
 

@@ -60,26 +60,21 @@ coaching_sessions_table = aws.dynamodb.Table(
         aws.dynamodb.TableAttributeArgs(name="session_id", type="S"),
         aws.dynamodb.TableAttributeArgs(name="user_id", type="S"),
         aws.dynamodb.TableAttributeArgs(name="tenant_id", type="S"),
-        aws.dynamodb.TableAttributeArgs(name="topic", type="S"),
-        aws.dynamodb.TableAttributeArgs(name="started_at", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="topic_id", type="S"),
     ],
     global_secondary_indexes=[
+        # GSI for tenant + topic queries (one active session per tenant per topic)
         aws.dynamodb.TableGlobalSecondaryIndexArgs(
-            name="tenant_id-user_id-index",
+            name="tenant-topic-index",
+            hash_key="tenant_id",
+            range_key="topic_id",
+            projection_type="ALL",
+        ),
+        # GSI for tenant + user queries (list sessions by user)
+        aws.dynamodb.TableGlobalSecondaryIndexArgs(
+            name="tenant-user-index",
             hash_key="tenant_id",
             range_key="user_id",
-            projection_type="ALL",
-        ),
-        aws.dynamodb.TableGlobalSecondaryIndexArgs(
-            name="user_id-topic-index",
-            hash_key="user_id",
-            range_key="topic",
-            projection_type="ALL",
-        ),
-        aws.dynamodb.TableGlobalSecondaryIndexArgs(
-            name="tenant_id-started_at-index",
-            hash_key="tenant_id",
-            range_key="started_at",
             projection_type="ALL",
         ),
     ],
@@ -142,34 +137,25 @@ aws.s3.BucketPublicAccessBlock(
 # Values should be updated manually or via Pulumi config for each environment.
 
 # OpenAI API Key Secret
+# NOTE: This secret was created externally and imported into Pulumi state.
+# Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 openai_api_key_secret = aws.secretsmanager.Secret(
     "openai-api-key-secret",
     name="purposepath/openai-api-key",
-    description="OpenAI API key for PurposePath coaching service",
+    description="OpenAI API key for PurposePath AI features",
     tags={**common_tags, "Name": "openai-api-key", "Purpose": "LLM-API-Key"},
-)
-
-# Create initial secret version (placeholder - update with real key)
-openai_api_key_version = aws.secretsmanager.SecretVersion(
-    "openai-api-key-version",
-    secret_id=openai_api_key_secret.id,
-    secret_string=pulumi.Config().get_secret("openaiApiKey") or "PLACEHOLDER_UPDATE_ME",
+    opts=pulumi.ResourceOptions(protect=True),
 )
 
 # Google Vertex AI Credentials Secret (Service Account JSON)
+# NOTE: This secret was created externally and imported into Pulumi state.
+# Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 google_vertex_credentials_secret = aws.secretsmanager.Secret(
     "google-vertex-credentials-secret",
     name="purposepath/google-vertex-credentials",
-    description="Google Cloud service account credentials (JSON) for Vertex AI",
+    description="Google Vertex AI service account credentials",
     tags={**common_tags, "Name": "google-vertex-credentials", "Purpose": "LLM-API-Key"},
-)
-
-# Create initial secret version (placeholder - update with real credentials)
-google_vertex_credentials_version = aws.secretsmanager.SecretVersion(
-    "google-vertex-credentials-version",
-    secret_id=google_vertex_credentials_secret.id,
-    secret_string=pulumi.Config().get_secret("googleVertexCredentials")
-    or '{"placeholder": "UPDATE_WITH_SERVICE_ACCOUNT_JSON"}',
+    opts=pulumi.ResourceOptions(protect=True),
 )
 
 # ==========================================================================
