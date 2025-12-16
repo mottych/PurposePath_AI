@@ -112,17 +112,13 @@ app = FastAPI(
 )
 
 # Add middleware in correct order - CORS must be last (runs first)
-# Note: Starlette's add_middleware type stubs don't properly type custom middleware
-# classes that extend BaseHTTPMiddleware. This is a known limitation.
-# See: https://github.com/encode/starlette/issues/1044
-app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[call-arg, arg-type]
-app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[call-arg, arg-type]
-app.add_middleware(LoggingMiddleware)  # type: ignore[call-arg, arg-type]
-app.add_middleware(CORSPreflightMiddleware)  # type: ignore[call-arg, arg-type]
+app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[arg-type,call-arg]
+app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
+app.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
+app.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
 
 # CORS middleware must be added LAST so it runs FIRST in the middleware chain
 # This ensures CORS headers are added before any authentication or error handling
-# CORSMiddleware kwargs must be passed to add_middleware - stubs don't cover this
 _cors_config: dict[str, Any] = {
     "allow_origin_regex": r"https://.*\.purposepath\.app|http://localhost:\d+",
     "allow_credentials": True,
