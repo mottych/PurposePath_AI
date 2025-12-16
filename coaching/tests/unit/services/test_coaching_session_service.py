@@ -1,781 +1,781 @@
 """Unit tests for CoachingSessionService.
 
-This module provides comprehensive tests for the coaching session service,
-covering session lifecycle, message processing, state management, and queries.
+Tests the application layer service that orchestrates coaching sessions.
+Per spec requirement: 75%+ coverage for application layer.
+
+Test Cases per spec (section 10.1):
+    - test_initiate_creates_new_session
+    - test_initiate_resumes_existing_session
+    - test_initiate_blocks_different_user (Issue #157 - deferred)
+    - test_add_message_validates_ownership
+    - test_add_message_checks_idle_timeout
+    - test_complete_triggers_extraction
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from coaching.src.core.constants import ConversationStatus, MessageRole
-from coaching.src.core.exceptions import ConversationNotFoundError
+from coaching.src.core.constants import ConversationStatus, TopicCategory
+from coaching.src.core.topic_registry import (
+    EndpointDefinition,
+    TemplateType,
+    TopicType,
+)
+from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingSession
-from coaching.src.models.llm_models import LLMResponse
+from coaching.src.domain.entities.llm_topic import LLMTopic
+from coaching.src.domain.exceptions import (
+    MaxTurnsReachedError,
+    SessionAccessDeniedError,
+    SessionIdleTimeoutError,
+    SessionNotActiveError,
+    SessionNotFoundError,
+)
 from coaching.src.services.coaching_session_service import (
-    ActiveSessionExistsError,
     CoachingSessionService,
     InvalidTopicError,
-    MessageDetail,
     MessageResponse,
+    ResponseMetadata,
     SessionCompletionResponse,
-    SessionDetails,
     SessionResponse,
-    SessionStateResponse,
-    SessionSummary,
-    SessionValidationError,
+    TopicNotActiveError,
 )
 
-# =============================================================================
-# Fixtures
-# =============================================================================
 
+class TestCoachingSessionService:
+    """Tests for CoachingSessionService public methods."""
 
-@pytest.fixture
-def mock_session_repository() -> AsyncMock:
-    """Create a mock session repository."""
-    repo = AsyncMock()
-    repo.save = AsyncMock()
-    repo.get_by_id_for_tenant = AsyncMock()
-    repo.get_active_by_tenant_topic = AsyncMock()
-    repo.list_by_tenant_user = AsyncMock()
-    return repo
+    @pytest.fixture
+    def mock_session_repository(self) -> AsyncMock:
+        """Create a mock session repository."""
+        repo = AsyncMock()
+        repo.get_active_for_user_topic = AsyncMock(return_value=None)
+        repo.create = AsyncMock()
+        repo.update = AsyncMock()
+        repo.get_by_id_for_tenant = AsyncMock(return_value=None)
+        repo.get_by_user = AsyncMock(return_value=[])
+        return repo
 
+    @pytest.fixture
+    def mock_topic_repository(self) -> AsyncMock:
+        """Create a mock topic repository."""
+        repo = AsyncMock()
+        return repo
 
-@pytest.fixture
-def mock_llm_service() -> MagicMock:
-    """Create a mock LLM service."""
-    service = MagicMock()
-    service.generate_coaching_response = AsyncMock(
-        return_value=LLMResponse(
-            response="Test coach response",
-            model_id="test-model",
-            token_usage={"input": 10, "output": 20, "total": 30},
-            cost=0.001,
-        )
-    )
-    return service
+    @pytest.fixture
+    def mock_s3_prompt_storage(self) -> AsyncMock:
+        """Create a mock S3 prompt storage."""
+        storage = AsyncMock()
+        storage.get_prompt = AsyncMock()
+        return storage
 
+    @pytest.fixture
+    def mock_template_processor(self) -> AsyncMock:
+        """Create a mock template processor."""
+        processor = AsyncMock()
+        result = Mock()
+        result.parameters = {}
+        processor.process_template_parameters = AsyncMock(return_value=result)
+        return processor
 
-@pytest.fixture
-def coaching_session_service(
-    mock_session_repository: AsyncMock,
-    mock_llm_service: MagicMock,
-) -> CoachingSessionService:
-    """Create a coaching session service with mocked dependencies."""
-    return CoachingSessionService(
-        session_repository=mock_session_repository,
-        llm_service=mock_llm_service,
-    )
+    @pytest.fixture
+    def mock_provider_factory(self) -> Mock:
+        """Create a mock LLM provider factory."""
+        factory = Mock()
+        # Mock provider returned by get_provider_for_model
+        mock_provider = AsyncMock()
+        mock_llm_response = Mock()
+        mock_llm_response.content = "Hello! I'm your coach."
+        mock_llm_response.model = "claude-3-haiku"
+        mock_llm_response.usage = {"total_tokens": 100}
+        mock_llm_response.finish_reason = "stop"
+        mock_provider.generate = AsyncMock(return_value=mock_llm_response)
 
+        factory.get_provider_for_model = Mock(return_value=(mock_provider, "claude-3-haiku"))
+        return factory
 
-@pytest.fixture
-def sample_session() -> CoachingSession:
-    """Create a sample coaching session."""
-    return CoachingSession.create(
-        tenant_id="tenant_123",
-        user_id="user_456",
-        topic_id="core_values",
-        context={"business_name": "Test Business"},
-    )
-
-
-@pytest.fixture
-def sample_session_with_messages(sample_session: CoachingSession) -> CoachingSession:
-    """Create a sample session with some messages."""
-    sample_session.add_assistant_message(
-        content="Hello! Let's explore your core values.",
-        metadata={"type": "initiation"},
-    )
-    sample_session.add_user_message(
-        content="I believe in honesty and integrity.",
-        metadata={},
-    )
-    sample_session.add_assistant_message(
-        content="Those are great values! Tell me more.",
-        metadata={"type": "response"},
-    )
-    return sample_session
-
-
-# =============================================================================
-# Response Model Tests
-# =============================================================================
-
-
-class TestSessionResponse:
-    """Test SessionResponse model."""
-
-    def test_valid_session_response(self) -> None:
-        """Test creating a valid session response."""
-        response = SessionResponse(
-            session_id="session_123",
-            tenant_id="tenant_456",
+    @pytest.fixture
+    def sample_endpoint_definition(self) -> EndpointDefinition:
+        """Create a sample endpoint definition."""
+        return EndpointDefinition(
             topic_id="core_values",
-            status=ConversationStatus.ACTIVE,
-            coach_message="Hello!",
-            message_count=1,
-            estimated_completion=0.1,
+            description="Discover your core values",
+            topic_type=TopicType.CONVERSATION_COACHING,
+            category=TopicCategory.STRATEGIC_PLANNING,
+            templates={
+                TemplateType.SYSTEM: "system.md",
+                TemplateType.INITIATION: "initiation.md",
+                TemplateType.RESUME: "resume.md",
+            },
+            result_model="CoreValuesResult",
+            is_active=True,
         )
-        assert response.session_id == "session_123"
-        assert response.status == ConversationStatus.ACTIVE
 
-    def test_session_response_optional_coach_message(self) -> None:
-        """Test session response with no coach message."""
-        response = SessionResponse(
-            session_id="session_123",
-            tenant_id="tenant_456",
+    @pytest.fixture
+    def sample_llm_topic(self) -> LLMTopic:
+        """Create a sample LLM topic configuration."""
+        return LLMTopic(
             topic_id="core_values",
-            status=ConversationStatus.ACTIVE,
-            message_count=0,
-            estimated_completion=0.0,
+            topic_name="Core Values Discovery",
+            topic_type="conversation_coaching",
+            category="strategic_planning",
+            model_code="claude-haiku",
+            is_active=True,
+            max_tokens=2000,
+            temperature=0.7,
+            additional_config={
+                "max_turns": 10,
+                "idle_timeout_minutes": 30,
+                "session_ttl_hours": 336,
+            },
         )
-        assert response.coach_message is None
 
-
-class TestMessageResponse:
-    """Test MessageResponse model."""
-
-    def test_valid_message_response(self) -> None:
-        """Test creating a valid message response."""
-        response = MessageResponse(
-            session_id="session_123",
-            coach_message="Great answer!",
-            message_count=5,
-            estimated_completion=0.5,
-            status=ConversationStatus.ACTIVE,
-        )
-        assert response.coach_message == "Great answer!"
-        assert response.message_count == 5
-
-
-class TestSessionStateResponse:
-    """Test SessionStateResponse model."""
-
-    def test_valid_state_response(self) -> None:
-        """Test creating a valid state response."""
-        response = SessionStateResponse(
-            session_id="session_123",
-            status=ConversationStatus.PAUSED,
-            message="Session paused",
-        )
-        assert response.status == ConversationStatus.PAUSED
-
-
-class TestSessionDetails:
-    """Test SessionDetails model."""
-
-    def test_valid_session_details(self) -> None:
-        """Test creating valid session details."""
-        details = SessionDetails(
-            session_id="session_123",
-            tenant_id="tenant_456",
+    @pytest.fixture
+    def sample_session(self) -> CoachingSession:
+        """Create a sample coaching session."""
+        session = CoachingSession(
+            session_id=SessionId("test-session-123"),
+            tenant_id=TenantId("tenant-123"),
             topic_id="core_values",
-            user_id="user_789",
+            user_id=UserId("user-123"),
             status=ConversationStatus.ACTIVE,
-            messages=[
-                MessageDetail(
-                    role=MessageRole.ASSISTANT,
-                    content="Hello!",
-                    timestamp="2024-01-01T00:00:00",
-                )
-            ],
-            message_count=1,
-            estimated_completion=0.1,
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-01T00:00:00",
+            max_turns=10,
+            idle_timeout_minutes=30,
+            expires_at=datetime.now(UTC) + timedelta(hours=336),
+            context={"company_name": "Acme Corp"},
         )
-        assert len(details.messages) == 1
-        assert details.result is None
+        session.add_assistant_message("Welcome! Let's discover your core values.")
+        return session
 
+    @pytest.fixture
+    def service(
+        self,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        mock_template_processor: AsyncMock,
+        mock_provider_factory: Mock,
+    ) -> CoachingSessionService:
+        """Create a coaching session service with mocked dependencies."""
+        # Mock the topic index building
+        with patch.object(CoachingSessionService, "_build_topic_index"):
+            svc = CoachingSessionService(
+                session_repository=mock_session_repository,
+                topic_repository=mock_topic_repository,
+                s3_prompt_storage=mock_s3_prompt_storage,
+                template_processor=mock_template_processor,
+                provider_factory=mock_provider_factory,
+            )
+            # Manually set up topic index
+            svc._topic_index = {}
+            return svc
 
-# =============================================================================
-# Exception Tests
-# =============================================================================
-
-
-class TestExceptions:
-    """Test custom exceptions."""
-
-    def test_invalid_topic_error(self) -> None:
-        """Test InvalidTopicError."""
-        error = InvalidTopicError("unknown_topic")
-        assert error.topic_id == "unknown_topic"
-        assert "unknown_topic" in str(error)
-
-    def test_session_validation_error(self) -> None:
-        """Test SessionValidationError."""
-        error = SessionValidationError("Cannot resume")
-        assert "Cannot resume" in str(error)
-
-    def test_active_session_exists_error(self) -> None:
-        """Test ActiveSessionExistsError."""
-        error = ActiveSessionExistsError("session_123", "core_values")
-        assert error.existing_session_id == "session_123"
-        assert error.topic_id == "core_values"
-        assert "core_values" in str(error)
-
-
-# =============================================================================
-# Session Initiation Tests
-# =============================================================================
-
-
-class TestInitiateSession:
-    """Tests for session initiation."""
+    # =========================================================================
+    # get_or_create_session Tests
+    # =========================================================================
 
     @pytest.mark.asyncio
-    async def test_initiate_session_success(
+    async def test_initiate_creates_new_session(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
-        mock_llm_service: MagicMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
     ) -> None:
-        """Test successful session initiation."""
+        """Test that initiating a session creates a new one when none exists."""
         # Arrange
-        mock_session_repository.get_active_by_tenant_topic.return_value = None
-        mock_session_repository.save.side_effect = lambda s: s
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are a coaching assistant.",  # system template
+            "Let's begin the coaching session.",  # initiation template
+        ]
+        mock_session_repository.get_active_for_user_topic.return_value = None
 
         # Act
-        response = await coaching_session_service.initiate_session(
-            tenant_id="tenant_123",
-            user_id="user_456",
+        response = await service.get_or_create_session(
             topic_id="core_values",
-            context={"business_name": "Test Business"},
+            tenant_id="tenant-123",
+            user_id="user-123",
+            context={},
         )
 
         # Assert
         assert isinstance(response, SessionResponse)
         assert response.topic_id == "core_values"
         assert response.status == ConversationStatus.ACTIVE
-        assert response.coach_message is not None
-        mock_session_repository.save.assert_called_once()
+        assert response.resumed is False
+        # Turn is 0 after first assistant message (turn counts user messages)
+        assert response.turn == 0
+        assert response.max_turns == 10
+        assert response.is_final is False
+        assert response.metadata is not None
+        assert response.metadata.model == "claude-3-haiku"
+
+        # Verify repository was called to create
+        mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initiate_session_invalid_topic(
+    async def test_initiate_resumes_existing_session(
         self,
-        coaching_session_service: CoachingSessionService,
-    ) -> None:
-        """Test initiation with invalid topic raises error."""
-        with pytest.raises(InvalidTopicError) as exc_info:
-            await coaching_session_service.initiate_session(
-                tenant_id="tenant_123",
-                user_id="user_456",
-                topic_id="invalid_topic",
-            )
-        assert exc_info.value.topic_id == "invalid_topic"
-
-    @pytest.mark.asyncio
-    async def test_initiate_session_existing_active_session(
-        self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
-        """Test initiation fails when active session exists."""
+        """Test that initiating when session exists resumes it instead."""
         # Arrange
-        mock_session_repository.get_active_by_tenant_topic.return_value = sample_session
-
-        # Act & Assert
-        with pytest.raises(ActiveSessionExistsError) as exc_info:
-            await coaching_session_service.initiate_session(
-                tenant_id="tenant_123",
-                user_id="user_456",
-                topic_id="core_values",
-            )
-        assert exc_info.value.topic_id == "core_values"
-
-
-# =============================================================================
-# Resume Session Tests
-# =============================================================================
-
-
-class TestResumeSession:
-    """Tests for session resumption."""
-
-    @pytest.mark.asyncio
-    async def test_resume_session_success(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test successful session resumption."""
-        # Arrange
-        sample_session_with_messages.pause()
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-        mock_session_repository.save.side_effect = lambda s: s
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_session_repository.get_active_for_user_topic.return_value = sample_session
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "Let's continue where we left off.",  # resume template
+            "You are a coaching assistant.",  # system template
+        ]
 
         # Act
-        response = await coaching_session_service.resume_session(
-            session_id=str(sample_session_with_messages.session_id),
-            tenant_id="tenant_123",
+        response = await service.get_or_create_session(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            user_id="user-123",
         )
 
         # Assert
         assert isinstance(response, SessionResponse)
-        assert response.status == ConversationStatus.ACTIVE
-        assert response.coach_message is not None
+        assert response.resumed is True
+        assert response.session_id == "test-session-123"
+
+        # Verify create was NOT called (session exists)
+        mock_session_repository.create.assert_not_called()
+        # Verify update was called for resume
+        mock_session_repository.update.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_resume_session_not_paused(
+    async def test_initiate_invalid_topic_raises_error(
         self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session: CoachingSession,
+        service: CoachingSessionService,
     ) -> None:
-        """Test resume fails for non-paused session."""
-        # Arrange - session is active, not paused
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
+        """Test that initiating with invalid topic raises InvalidTopicError."""
+        # Arrange - topic not in index
+        service._topic_index = {}
 
         # Act & Assert
-        with pytest.raises(SessionValidationError):
-            await coaching_session_service.resume_session(
-                session_id=str(sample_session.session_id),
-                tenant_id="tenant_123",
+        with pytest.raises(InvalidTopicError) as exc_info:
+            await service.get_or_create_session(
+                topic_id="nonexistent_topic",
+                tenant_id="tenant-123",
+                user_id="user-123",
             )
 
+        assert exc_info.value.topic_id == "nonexistent_topic"
+        assert "not found" in exc_info.value.reason.lower()
+
     @pytest.mark.asyncio
-    async def test_resume_session_not_found(
+    async def test_initiate_inactive_topic_raises_error(
         self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
+        service: CoachingSessionService,
+        mock_topic_repository: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
     ) -> None:
-        """Test resume fails for non-existent session."""
+        """Test that initiating with inactive topic raises TopicNotActiveError."""
         # Arrange
-        mock_session_repository.get_by_id_for_tenant.return_value = None
+        from dataclasses import replace
+
+        service._topic_index["core_values"] = sample_endpoint_definition
+        inactive_topic = replace(sample_llm_topic, is_active=False)
+        mock_topic_repository.get.return_value = inactive_topic
 
         # Act & Assert
-        with pytest.raises(ConversationNotFoundError):
-            await coaching_session_service.resume_session(
-                session_id="nonexistent_session",
-                tenant_id="tenant_123",
+        with pytest.raises(TopicNotActiveError) as exc_info:
+            await service.get_or_create_session(
+                topic_id="core_values",
+                tenant_id="tenant-123",
+                user_id="user-123",
             )
 
+        assert exc_info.value.topic_id == "core_values"
 
-# =============================================================================
-# Get Or Create Session Tests
-# =============================================================================
-
-
-class TestGetOrCreateSession:
-    """Tests for get_or_create_session."""
-
-    @pytest.mark.asyncio
-    async def test_get_or_create_returns_existing(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test returns existing active session."""
-        # Arrange
-        mock_session_repository.get_active_by_tenant_topic.return_value = (
-            sample_session_with_messages
-        )
-
-        # Act
-        response = await coaching_session_service.get_or_create_session(
-            tenant_id="tenant_123",
-            user_id="user_456",
-            topic_id="core_values",
-        )
-
-        # Assert
-        assert response.session_id == str(sample_session_with_messages.session_id)
-        assert response.coach_message is None  # No new message for existing
-
-    @pytest.mark.asyncio
-    async def test_get_or_create_resumes_paused(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test resumes paused session."""
-        # Arrange
-        sample_session_with_messages.pause()
-        mock_session_repository.get_active_by_tenant_topic.return_value = (
-            sample_session_with_messages
-        )
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-        mock_session_repository.save.side_effect = lambda s: s
-
-        # Act
-        response = await coaching_session_service.get_or_create_session(
-            tenant_id="tenant_123",
-            user_id="user_456",
-            topic_id="core_values",
-        )
-
-        # Assert
-        assert response.status == ConversationStatus.ACTIVE
-        assert response.coach_message is not None  # Resume message
-
-    @pytest.mark.asyncio
-    async def test_get_or_create_creates_new(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-    ) -> None:
-        """Test creates new session when none exists."""
-        # Arrange
-        mock_session_repository.get_active_by_tenant_topic.return_value = None
-        mock_session_repository.save.side_effect = lambda s: s
-
-        # Act
-        response = await coaching_session_service.get_or_create_session(
-            tenant_id="tenant_123",
-            user_id="user_456",
-            topic_id="core_values",
-        )
-
-        # Assert
-        assert response.status == ConversationStatus.ACTIVE
-        assert response.coach_message is not None
-
-
-# =============================================================================
-# Send Message Tests
-# =============================================================================
-
-
-class TestSendMessage:
-    """Tests for message sending."""
+    # =========================================================================
+    # send_message Tests
+    # =========================================================================
 
     @pytest.mark.asyncio
     async def test_send_message_success(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
+        sample_session: CoachingSession,
     ) -> None:
-        """Test successful message sending."""
+        """Test sending a message successfully returns response."""
         # Arrange
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-        mock_session_repository.save.side_effect = lambda s: s
-        initial_count = sample_session_with_messages.get_message_count()
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.return_value = "You are a coaching assistant."
 
         # Act
-        response = await coaching_session_service.send_message(
-            session_id=str(sample_session_with_messages.session_id),
-            tenant_id="tenant_123",
-            user_message="What about teamwork?",
+        response = await service.send_message(
+            session_id="test-session-123",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            user_message="I value honesty and integrity.",
         )
 
         # Assert
         assert isinstance(response, MessageResponse)
-        assert response.coach_message == "Test coach response"
-        assert response.message_count == initial_count + 2  # User + coach
+        assert response.session_id == "test-session-123"
         assert response.status == ConversationStatus.ACTIVE
+        assert response.message  # Has coach response
+        assert response.metadata is not None
+        mock_session_repository.update.assert_called()
 
     @pytest.mark.asyncio
-    async def test_send_message_to_paused_session(
+    async def test_send_message_validates_ownership(
         self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test sending message to paused session fails."""
-        # Arrange
-        sample_session_with_messages.pause()
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-
-        # Act & Assert
-        with pytest.raises(SessionValidationError):
-            await coaching_session_service.send_message(
-                session_id=str(sample_session_with_messages.session_id),
-                tenant_id="tenant_123",
-                user_message="Hello?",
-            )
-
-
-# =============================================================================
-# Session State Management Tests
-# =============================================================================
-
-
-class TestPauseSession:
-    """Tests for session pausing."""
-
-    @pytest.mark.asyncio
-    async def test_pause_session_success(
-        self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
         sample_session: CoachingSession,
     ) -> None:
-        """Test successful session pausing."""
+        """Test that sending message with wrong user raises SessionAccessDeniedError."""
         # Arrange
         mock_session_repository.get_by_id_for_tenant.return_value = sample_session
-        mock_session_repository.save.side_effect = lambda s: s
 
-        # Act
-        response = await coaching_session_service.pause_session(
-            session_id=str(sample_session.session_id),
-            tenant_id="tenant_123",
-        )
-
-        # Assert
-        assert isinstance(response, SessionStateResponse)
-        assert response.status == ConversationStatus.PAUSED
-        assert "paused" in response.message.lower()
-
-
-class TestCancelSession:
-    """Tests for session cancellation."""
-
-    @pytest.mark.asyncio
-    async def test_cancel_session_success(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session: CoachingSession,
-    ) -> None:
-        """Test successful session cancellation."""
-        # Arrange
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
-        mock_session_repository.save.side_effect = lambda s: s
-
-        # Act
-        response = await coaching_session_service.cancel_session(
-            session_id=str(sample_session.session_id),
-            tenant_id="tenant_123",
-        )
-
-        # Assert
-        assert isinstance(response, SessionStateResponse)
-        assert response.status == ConversationStatus.CANCELLED
-        assert "cancelled" in response.message.lower()
-
-
-class TestCompleteSession:
-    """Tests for session completion."""
-
-    @pytest.mark.asyncio
-    async def test_complete_session_success(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        mock_llm_service: MagicMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test successful session completion with result extraction."""
-        # Arrange
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-        mock_session_repository.save.side_effect = lambda s: s
-        mock_llm_service.generate_coaching_response.return_value = LLMResponse(
-            response='{"core_values": [{"name": "Honesty", "description": "Being truthful"}]}',
-            model_id="test-model",
-            token_usage={"input": 10, "output": 20, "total": 30},
-            cost=0.001,
-        )
-
-        # Act
-        response = await coaching_session_service.complete_session(
-            session_id=str(sample_session_with_messages.session_id),
-            tenant_id="tenant_123",
-        )
-
-        # Assert
-        assert isinstance(response, SessionCompletionResponse)
-        assert response.status == ConversationStatus.COMPLETED
-        assert isinstance(response.result, dict)
-
-    @pytest.mark.asyncio
-    async def test_complete_session_already_completed(
-        self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test completing an already completed session fails."""
-        # Arrange
-        sample_session_with_messages.complete(result={"test": "result"})
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-
-        # Act & Assert
-        with pytest.raises(SessionValidationError):
-            await coaching_session_service.complete_session(
-                session_id=str(sample_session_with_messages.session_id),
-                tenant_id="tenant_123",
+        # Act & Assert - different user trying to send message
+        with pytest.raises(SessionAccessDeniedError):
+            await service.send_message(
+                session_id="test-session-123",
+                tenant_id="tenant-123",
+                user_id="different-user-456",  # Not the session owner
+                user_message="Hello",
             )
 
-
-# =============================================================================
-# Query Method Tests
-# =============================================================================
-
-
-class TestGetSession:
-    """Tests for getting session details."""
-
     @pytest.mark.asyncio
-    async def test_get_session_success(
+    async def test_send_message_session_not_found(
         self,
-        coaching_session_service: CoachingSessionService,
-        mock_session_repository: AsyncMock,
-        sample_session_with_messages: CoachingSession,
-    ) -> None:
-        """Test successful session retrieval."""
-        # Arrange
-        mock_session_repository.get_by_id_for_tenant.return_value = sample_session_with_messages
-
-        # Act
-        details = await coaching_session_service.get_session(
-            session_id=str(sample_session_with_messages.session_id),
-            tenant_id="tenant_123",
-        )
-
-        # Assert
-        assert isinstance(details, SessionDetails)
-        assert details.topic_id == "core_values"
-        assert len(details.messages) == sample_session_with_messages.get_message_count()
-
-    @pytest.mark.asyncio
-    async def test_get_session_not_found(
-        self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
     ) -> None:
-        """Test getting non-existent session raises error."""
+        """Test that sending message to nonexistent session raises SessionNotFoundError."""
         # Arrange
         mock_session_repository.get_by_id_for_tenant.return_value = None
 
         # Act & Assert
-        with pytest.raises(ConversationNotFoundError):
-            await coaching_session_service.get_session(
-                session_id="nonexistent",
-                tenant_id="tenant_123",
+        with pytest.raises(SessionNotFoundError):
+            await service.send_message(
+                session_id="nonexistent-session",
+                tenant_id="tenant-123",
+                user_id="user-123",
+                user_message="Hello",
             )
 
+    @pytest.mark.asyncio
+    async def test_send_message_checks_idle_timeout(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+    ) -> None:
+        """Test that sending message to idle session raises SessionIdleTimeoutError."""
+        # Arrange - session with old last_activity_at
+        idle_session = CoachingSession(
+            session_id=SessionId("idle-session"),
+            tenant_id=TenantId("tenant-123"),
+            topic_id="core_values",
+            user_id=UserId("user-123"),
+            status=ConversationStatus.ACTIVE,
+            max_turns=10,
+            idle_timeout_minutes=30,
+            expires_at=datetime.now(UTC) + timedelta(hours=336),
+            last_activity_at=datetime.now(UTC) - timedelta(minutes=60),  # 60 min ago
+        )
+        mock_session_repository.get_by_id_for_tenant.return_value = idle_session
 
-class TestListUserSessions:
-    """Tests for listing user sessions."""
+        # Act & Assert
+        with pytest.raises(SessionIdleTimeoutError):
+            await service.send_message(
+                session_id="idle-session",
+                tenant_id="tenant-123",
+                user_id="user-123",
+                user_message="Hello",
+            )
 
     @pytest.mark.asyncio
-    async def test_list_user_sessions_success(
+    async def test_send_message_not_active_session(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+    ) -> None:
+        """Test that sending message to paused/completed session raises SessionNotActiveError."""
+        # Arrange - paused session
+        paused_session = CoachingSession(
+            session_id=SessionId("paused-session"),
+            tenant_id=TenantId("tenant-123"),
+            topic_id="core_values",
+            user_id=UserId("user-123"),
+            status=ConversationStatus.PAUSED,
+            max_turns=10,
+            idle_timeout_minutes=30,
+            expires_at=datetime.now(UTC) + timedelta(hours=336),
+        )
+        mock_session_repository.get_by_id_for_tenant.return_value = paused_session
+
+        # Act & Assert
+        with pytest.raises(SessionNotActiveError):
+            await service.send_message(
+                session_id="paused-session",
+                tenant_id="tenant-123",
+                user_id="user-123",
+                user_message="Hello",
+            )
+
+    @pytest.mark.asyncio
+    async def test_send_message_max_turns_reached(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
+    ) -> None:
+        """Test that sending message when max turns reached raises MaxTurnsReachedError."""
+        # Arrange - session at max turns
+        at_limit_session = CoachingSession(
+            session_id=SessionId("at-limit-session"),
+            tenant_id=TenantId("tenant-123"),
+            topic_id="core_values",
+            user_id=UserId("user-123"),
+            status=ConversationStatus.ACTIVE,
+            max_turns=2,  # Low max
+            idle_timeout_minutes=30,
+            expires_at=datetime.now(UTC) + timedelta(hours=336),
+        )
+        # Add messages to reach the limit (2 turns = 4 messages: user/assistant/user/assistant)
+        at_limit_session.add_user_message("Message 1")
+        at_limit_session.add_assistant_message("Response 1")
+        at_limit_session.add_user_message("Message 2")
+        at_limit_session.add_assistant_message("Response 2")
+
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_session_repository.get_by_id_for_tenant.return_value = at_limit_session
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.return_value = "You are a coach."
+
+        # Act & Assert
+        with pytest.raises(MaxTurnsReachedError):
+            await service.send_message(
+                session_id="at-limit-session",
+                tenant_id="tenant-123",
+                user_id="user-123",
+                user_message="One more message",
+            )
+
+    # =========================================================================
+    # complete_session Tests
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_complete_session_triggers_extraction(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        mock_provider_factory: Mock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
+        sample_session: CoachingSession,
+    ) -> None:
+        """Test that completing a session triggers result extraction."""
+        # Arrange
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.return_value = "You are a coach."
+
+        # Mock extraction response - valid JSON
+        extraction_response = Mock()
+        extraction_response.content = '{"core_values": ["honesty", "integrity"]}'
+        extraction_response.model = "claude-3-haiku"
+        extraction_response.usage = {"total_tokens": 50}
+        extraction_response.finish_reason = "stop"
+
+        mock_provider = AsyncMock()
+        mock_provider.generate = AsyncMock(return_value=extraction_response)
+        mock_provider_factory.get_provider_for_model.return_value = (
+            mock_provider,
+            "claude-3-haiku",
+        )
+
+        # Act
+        response = await service.complete_session(
+            session_id="test-session-123",
+            tenant_id="tenant-123",
+            user_id="user-123",
+        )
+
+        # Assert
+        assert isinstance(response, SessionCompletionResponse)
+        assert response.session_id == "test-session-123"
+        assert response.status == ConversationStatus.COMPLETED
+        # Result should contain something (either extracted data or raw_response)
+        assert response.result is not None
+        assert len(response.result) > 0
+        mock_session_repository.update.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_complete_session_validates_ownership(
+        self,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
         sample_session: CoachingSession,
     ) -> None:
-        """Test successful session listing."""
+        """Test that completing session with wrong user raises error."""
         # Arrange
-        mock_session_repository.list_by_tenant_user.return_value = [sample_session]
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
 
-        # Act
-        summaries = await coaching_session_service.list_user_sessions(
-            tenant_id="tenant_123",
-            user_id="user_456",
-        )
+        # Act & Assert
+        with pytest.raises(SessionAccessDeniedError):
+            await service.complete_session(
+                session_id="test-session-123",
+                tenant_id="tenant-123",
+                user_id="different-user",  # Not the owner
+            )
 
-        # Assert
-        assert len(summaries) == 1
-        assert isinstance(summaries[0], SessionSummary)
-        assert summaries[0].topic_id == "core_values"
+    # =========================================================================
+    # pause_session Tests
+    # =========================================================================
 
     @pytest.mark.asyncio
-    async def test_list_user_sessions_empty(
+    async def test_pause_session_success(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
         mock_session_repository: AsyncMock,
+        sample_session: CoachingSession,
     ) -> None:
-        """Test listing when no sessions exist."""
+        """Test pausing a session successfully."""
         # Arrange
-        mock_session_repository.list_by_tenant_user.return_value = []
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
 
         # Act
-        summaries = await coaching_session_service.list_user_sessions(
-            tenant_id="tenant_123",
-            user_id="user_456",
+        response = await service.pause_session(
+            session_id="test-session-123",
+            tenant_id="tenant-123",
+            user_id="user-123",
         )
 
         # Assert
-        assert summaries == []
+        assert response.status == ConversationStatus.PAUSED
+        mock_session_repository.update.assert_called()
 
-
-# =============================================================================
-# Private Helper Method Tests
-# =============================================================================
-
-
-class TestRenderTemplate:
-    """Tests for template rendering."""
-
-    def test_render_template_with_placeholders(
+    @pytest.mark.asyncio
+    async def test_pause_session_validates_ownership(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        sample_session: CoachingSession,
     ) -> None:
-        """Test rendering template with placeholders."""
-        template = "Hello {name}, welcome to {company}!"
-        context = {"name": "John", "company": "Acme"}
+        """Test that pausing with wrong user raises error."""
+        # Arrange
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
 
-        result = coaching_session_service._render_template(template, context)
+        # Act & Assert
+        with pytest.raises(SessionAccessDeniedError):
+            await service.pause_session(
+                session_id="test-session-123",
+                tenant_id="tenant-123",
+                user_id="different-user",
+            )
 
-        assert result == "Hello John, welcome to Acme!"
+    # =========================================================================
+    # cancel_session Tests
+    # =========================================================================
 
-    def test_render_template_missing_placeholder(
+    @pytest.mark.asyncio
+    async def test_cancel_session_success(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        sample_session: CoachingSession,
     ) -> None:
-        """Test rendering with missing placeholder leaves it."""
-        template = "Hello {name}, your role is {role}."
-        context = {"name": "John"}
+        """Test cancelling a session successfully."""
+        # Arrange
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
 
-        result = coaching_session_service._render_template(template, context)
-
-        assert result == "Hello John, your role is {role}."
-
-
-class TestParseJsonFromResponse:
-    """Tests for JSON parsing from LLM responses."""
-
-    def test_parse_direct_json(
-        self,
-        coaching_session_service: CoachingSessionService,
-    ) -> None:
-        """Test parsing direct JSON."""
-        response = '{"key": "value", "number": 42}'
-
-        result = coaching_session_service._parse_json_from_response(response)
-
-        assert result == {"key": "value", "number": 42}
-
-    def test_parse_json_from_markdown_block(
-        self,
-        coaching_session_service: CoachingSessionService,
-    ) -> None:
-        """Test parsing JSON from markdown code block."""
-        response = """Here is the result:
-```json
-{"core_values": ["honesty", "integrity"]}
-```
-"""
-        result = coaching_session_service._parse_json_from_response(response)
-
-        assert result == {"core_values": ["honesty", "integrity"]}
-
-    def test_parse_json_from_text_with_json(
-        self,
-        coaching_session_service: CoachingSessionService,
-    ) -> None:
-        """Test parsing JSON embedded in text."""
-        response = (
-            'Based on our conversation, here is the result: {"name": "Test"} and that is all.'
+        # Act
+        response = await service.cancel_session(
+            session_id="test-session-123",
+            tenant_id="tenant-123",
+            user_id="user-123",
         )
 
-        result = coaching_session_service._parse_json_from_response(response)
+        # Assert
+        assert response.status == ConversationStatus.CANCELLED
+        mock_session_repository.update.assert_called()
 
-        assert result == {"name": "Test"}
+    # =========================================================================
+    # get_session Tests
+    # =========================================================================
 
-    def test_parse_invalid_json_returns_empty(
+    @pytest.mark.asyncio
+    async def test_get_session_returns_details(
         self,
-        coaching_session_service: CoachingSessionService,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        sample_session: CoachingSession,
     ) -> None:
-        """Test invalid JSON returns empty dict."""
-        response = "This is not JSON at all"
+        """Test getting session details returns SessionDetails."""
+        # Arrange
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
 
-        result = coaching_session_service._parse_json_from_response(response)
+        # Act
+        response = await service.get_session(
+            session_id="test-session-123",
+            tenant_id="tenant-123",
+            user_id="user-123",
+        )
 
-        assert result == {}
+        # Assert
+        assert response.session_id == "test-session-123"
+        assert response.topic_id == "core_values"
+        assert len(response.messages) == 1  # One assistant message
+
+    @pytest.mark.asyncio
+    async def test_get_session_not_found_raises_error(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+    ) -> None:
+        """Test getting nonexistent session raises SessionNotFoundError."""
+        # Arrange
+        mock_session_repository.get_by_id_for_tenant.return_value = None
+
+        # Act & Assert
+        with pytest.raises(SessionNotFoundError):
+            await service.get_session(
+                session_id="nonexistent",
+                tenant_id="tenant-123",
+                user_id="user-123",
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_session_validates_ownership(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        sample_session: CoachingSession,
+    ) -> None:
+        """Test getting session with wrong user raises error."""
+        # Arrange
+        mock_session_repository.get_by_id_for_tenant.return_value = sample_session
+
+        # Act & Assert
+        with pytest.raises(SessionAccessDeniedError):
+            await service.get_session(
+                session_id="test-session-123",
+                tenant_id="tenant-123",
+                user_id="different-user",
+            )
+
+
+class TestResponseMetadata:
+    """Tests for ResponseMetadata model."""
+
+    def test_response_metadata_defaults(self) -> None:
+        """Test ResponseMetadata has correct defaults."""
+        metadata = ResponseMetadata(model="claude-3-haiku")
+        assert metadata.model == "claude-3-haiku"
+        assert metadata.processing_time_ms == 0
+        assert metadata.tokens_used == 0
+
+    def test_response_metadata_with_values(self) -> None:
+        """Test ResponseMetadata with explicit values."""
+        metadata = ResponseMetadata(
+            model="claude-3-sonnet",
+            processing_time_ms=500,
+            tokens_used=1500,
+        )
+        assert metadata.model == "claude-3-sonnet"
+        assert metadata.processing_time_ms == 500
+        assert metadata.tokens_used == 1500
+
+
+class TestSessionResponse:
+    """Tests for SessionResponse model."""
+
+    def test_session_response_new_session(self) -> None:
+        """Test SessionResponse for new session."""
+        response = SessionResponse(
+            session_id="sess-123",
+            tenant_id="tenant-123",
+            topic_id="core_values",
+            status=ConversationStatus.ACTIVE,
+            message="Hello!",
+            turn=1,
+            max_turns=10,
+            is_final=False,
+            resumed=False,
+        )
+        assert response.resumed is False
+        assert response.turn == 1
+        assert response.is_final is False
+
+    def test_session_response_resumed_session(self) -> None:
+        """Test SessionResponse for resumed session."""
+        response = SessionResponse(
+            session_id="sess-123",
+            tenant_id="tenant-123",
+            topic_id="core_values",
+            status=ConversationStatus.ACTIVE,
+            message="Welcome back!",
+            turn=5,
+            max_turns=10,
+            is_final=False,
+            resumed=True,
+        )
+        assert response.resumed is True
+        assert response.turn == 5
+
+
+class TestMessageResponse:
+    """Tests for MessageResponse model."""
+
+    def test_message_response_not_final(self) -> None:
+        """Test MessageResponse when not final."""
+        response = MessageResponse(
+            session_id="sess-123",
+            message="Great insight!",
+            status=ConversationStatus.ACTIVE,
+            turn=3,
+            max_turns=10,
+            is_final=False,
+            message_count=5,
+        )
+        assert response.is_final is False
+        assert response.result is None
+
+    def test_message_response_final_with_result(self) -> None:
+        """Test MessageResponse when final includes result."""
+        response = MessageResponse(
+            session_id="sess-123",
+            message="Session complete!",
+            status=ConversationStatus.ACTIVE,
+            turn=10,
+            max_turns=10,
+            is_final=True,
+            message_count=20,
+            result={"core_values": ["honesty", "integrity"]},
+        )
+        assert response.is_final is True
+        assert response.result is not None
+        assert "core_values" in response.result

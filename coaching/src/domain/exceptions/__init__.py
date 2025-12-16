@@ -25,6 +25,16 @@ if TYPE_CHECKING:
         InvalidMessageContent,
         InvalidPhaseTransition,
     )
+    from coaching.src.domain.exceptions.session_exceptions import (
+        ExtractionFailedError,
+        MaxTurnsReachedError,
+        SessionAccessDeniedError,
+        SessionConflictError,
+        SessionExpiredError,
+        SessionIdleTimeoutError,
+        SessionNotActiveError,
+        SessionNotFoundError,
+    )
     from coaching.src.domain.exceptions.topic_exceptions import (
         DuplicateTopicError,
         InvalidParameterDefinitionError,
@@ -119,30 +129,68 @@ else:
             "TopicNotFoundError",
         ),
         "TopicUpdateError": ("coaching.src.domain.exceptions.topic_exceptions", "TopicUpdateError"),
+        # Session Exceptions
+        "SessionNotFoundError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionNotFoundError",
+        ),
+        "SessionExpiredError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionExpiredError",
+        ),
+        "SessionNotActiveError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionNotActiveError",
+        ),
+        "SessionAccessDeniedError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionAccessDeniedError",
+        ),
+        "MaxTurnsReachedError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "MaxTurnsReachedError",
+        ),
+        "SessionConflictError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionConflictError",
+        ),
+        "SessionIdleTimeoutError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "SessionIdleTimeoutError",
+        ),
+        "ExtractionFailedError": (
+            "coaching.src.domain.exceptions.session_exceptions",
+            "ExtractionFailedError",
+        ),
     }
 
 __all__ = [
-    # Analysis Exceptions
     "AnalysisNotFound",
     "AnalysisTimeout",
-    # Conversation Exceptions
     "ConversationCompletionError",
     "ConversationNotActive",
     "ConversationNotFound",
     "ConversationTTLExpired",
-    # Base
+    "DomainError",
     "DomainException",
-    # Topic Exceptions
     "DuplicateTopicError",
     "EnrichmentFailed",
+    "ExtractionFailedError",
     "InsufficientDataForAnalysis",
     "InvalidAnalysisRequest",
     "InvalidMessageContent",
     "InvalidParameterDefinitionError",
     "InvalidPhaseTransition",
     "InvalidTopicTypeError",
+    "MaxTurnsReachedError",
     "PromptNotFoundError",
     "S3StorageError",
+    "SessionAccessDeniedError",
+    "SessionConflictError",
+    "SessionExpiredError",
+    "SessionIdleTimeoutError",
+    "SessionNotActiveError",
+    "SessionNotFoundError",
     "TopicNotFoundError",
     "TopicUpdateError",
     "UnsupportedAnalysisType",

@@ -246,7 +246,7 @@ class TestStartSession:
         mock_coaching_session_service.get_or_create_session.assert_called_once()
 
     def test_start_session_invalid_topic(self, client, mock_coaching_session_service):
-        """Test session start with invalid topic returns 400."""
+        """Test session start with invalid topic returns 422."""
         mock_coaching_session_service.get_or_create_session.side_effect = InvalidTopicError(
             "invalid_topic"
         )
@@ -257,9 +257,9 @@ class TestStartSession:
             headers={"Authorization": "Bearer test_token"},
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         data = response.json()
-        assert "invalid" in data["detail"].lower()
+        assert data["detail"]["code"] == "INVALID_TOPIC"
 
 
 class TestSendMessage:
@@ -283,9 +283,11 @@ class TestSendMessage:
         assert data["data"]["session_id"] == "session_123"
 
     def test_send_message_session_not_found(self, client, mock_coaching_session_service):
-        """Test message to non-existent session returns 404."""
-        mock_coaching_session_service.send_message.side_effect = ValueError(
-            "Session not found: invalid_id"
+        """Test message to non-existent session returns 422."""
+        from coaching.src.domain.exceptions.session_exceptions import SessionNotFoundError
+
+        mock_coaching_session_service.send_message.side_effect = SessionNotFoundError(
+            session_id="invalid_id"
         )
 
         response = client.post(
@@ -297,7 +299,9 @@ class TestSendMessage:
             headers={"Authorization": "Bearer test_token"},
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 422
+        data = response.json()
+        assert data["detail"]["code"] == "SESSION_NOT_FOUND"
 
     def test_send_message_empty_message_rejected(self, client):
         """Test that empty message is rejected by validation."""
@@ -330,9 +334,11 @@ class TestPauseSession:
         assert data["data"]["status"] == "paused"
 
     def test_pause_session_not_found(self, client, mock_coaching_session_service):
-        """Test pause of non-existent session returns 404."""
-        mock_coaching_session_service.pause_session.side_effect = ValueError(
-            "Session not found: invalid_id"
+        """Test pause of non-existent session returns 422."""
+        from coaching.src.domain.exceptions.session_exceptions import SessionNotFoundError
+
+        mock_coaching_session_service.pause_session.side_effect = SessionNotFoundError(
+            session_id="invalid_id"
         )
 
         response = client.post(
@@ -341,7 +347,9 @@ class TestPauseSession:
             headers={"Authorization": "Bearer test_token"},
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 422
+        data = response.json()
+        assert data["detail"]["code"] == "SESSION_NOT_FOUND"
 
 
 class TestCompleteSession:
@@ -364,8 +372,11 @@ class TestCompleteSession:
 
     def test_complete_session_not_active(self, client, mock_coaching_session_service):
         """Test completion of non-active session returns 400."""
-        mock_coaching_session_service.complete_session.side_effect = ValueError(
-            "Cannot complete session in state: paused"
+        from coaching.src.domain.exceptions.session_exceptions import SessionNotActiveError
+
+        mock_coaching_session_service.complete_session.side_effect = SessionNotActiveError(
+            session_id="session_123",
+            current_status="paused",
         )
 
         response = client.post(
@@ -375,6 +386,8 @@ class TestCompleteSession:
         )
 
         assert response.status_code == 400
+        data = response.json()
+        assert data["detail"]["code"] == "SESSION_NOT_ACTIVE"
 
 
 class TestCancelSession:
@@ -412,7 +425,7 @@ class TestGetSession:
         assert "messages" in data["data"]
 
     def test_get_session_not_found(self, client, mock_coaching_session_service):
-        """Test get non-existent session returns 404."""
+        """Test get non-existent session returns 422."""
         mock_coaching_session_service.get_session.return_value = None
 
         response = client.get(
@@ -421,7 +434,9 @@ class TestGetSession:
             headers={"Authorization": "Bearer test_token"},
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 422
+        data = response.json()
+        assert data["detail"]["code"] == "SESSION_NOT_FOUND"
 
 
 class TestListSessions:

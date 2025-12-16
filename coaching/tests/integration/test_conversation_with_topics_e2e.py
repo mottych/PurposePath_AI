@@ -383,7 +383,7 @@ class TestTopicAsSourceOfTruth:
     @pytest.mark.asyncio
     async def test_topic_parameters_from_registry(self, coaching_topic):
         """Verify topic parameters come from PARAMETER_REGISTRY."""
-        from coaching.src.core.endpoint_registry import get_parameters_for_topic
+        from coaching.src.core.topic_registry import get_parameters_for_topic
 
         # Parameters are now managed in the registry, not on the entity
         params = get_parameters_for_topic(coaching_topic.topic_id)

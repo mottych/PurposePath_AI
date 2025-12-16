@@ -10,7 +10,7 @@ This module tests the topic-driven endpoint architecture including:
 
 import pytest
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
-from coaching.src.core.endpoint_registry import (
+from coaching.src.core.topic_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_definition,
     get_registry_statistics,
@@ -142,7 +142,7 @@ class TestTopicSeedData:
 
     def test_topic_parameters_come_from_registry(self):
         """Verify topic parameters are defined in PARAMETER_REGISTRY, not seed data."""
-        from coaching.src.core.endpoint_registry import get_parameters_for_topic
+        from coaching.src.core.topic_registry import get_parameters_for_topic
 
         # Topics in seed data should have their parameters defined in the registry
         for topic_id in TOPIC_SEED_DATA.keys():

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.core.constants import CoachingTopic, MessageRole
-from coaching.src.core.endpoint_registry import get_required_parameter_names_for_topic
+from coaching.src.core.topic_registry import get_required_parameter_names_for_topic
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic

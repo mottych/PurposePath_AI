@@ -334,7 +334,7 @@ class TestTopicRepositoryEnumDefaults:
         mock_table: MagicMock,
     ) -> None:
         """Test that registry defaults are returned when DB is empty."""
-        from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
+        from coaching.src.core.topic_registry import ENDPOINT_REGISTRY
 
         # Mock empty database
         mock_table.scan.return_value = {"Items": []}
@@ -354,7 +354,7 @@ class TestTopicRepositoryEnumDefaults:
         mock_table: MagicMock,
     ) -> None:
         """Test merging when some topics exist in DB."""
-        from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
+        from coaching.src.core.topic_registry import ENDPOINT_REGISTRY
 
         # Mock DB with only website_scan configured (from registry)
         db_topic = LLMTopic(
@@ -433,7 +433,7 @@ class TestTopicRepositoryEnumDefaults:
         mock_table: MagicMock,
     ) -> None:
         """Test that no defaults are added when all registry topics exist in DB."""
-        from coaching.src.core.endpoint_registry import ENDPOINT_REGISTRY
+        from coaching.src.core.topic_registry import ENDPOINT_REGISTRY
 
         # Create DB topics for all registry endpoints
         db_topics = [

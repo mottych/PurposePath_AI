@@ -151,11 +151,26 @@ class DynamoDBCoachingSessionRepository:
             )
             raise
 
-    async def get_by_id(self, session_id: str) -> CoachingSession | None:
-        """Retrieve a coaching session by ID.
+    async def get_by_id(
+        self,
+        session_id: SessionId,
+        tenant_id: TenantId,
+    ) -> CoachingSession | None:
+        """Retrieve a coaching session by ID with tenant isolation.
 
-        Note: This does NOT enforce tenant isolation. Use get_by_id_for_tenant
-        for tenant-safe queries.
+        Args:
+            session_id: Unique session identifier (typed)
+            tenant_id: Tenant ID for multi-tenant isolation (typed)
+
+        Returns:
+            CoachingSession if found and belongs to tenant, None otherwise
+        """
+        return await self.get_by_id_for_tenant(str(session_id), str(tenant_id))
+
+    async def _get_by_id_internal(self, session_id: str) -> CoachingSession | None:
+        """Internal method to retrieve a coaching session by ID without tenant check.
+
+        This is used internally by get_by_id_for_tenant which enforces isolation.
 
         Args:
             session_id: Unique session identifier
@@ -200,7 +215,7 @@ class DynamoDBCoachingSessionRepository:
         Returns:
             CoachingSession if found and belongs to tenant, None otherwise
         """
-        session = await self.get_by_id(session_id)
+        session = await self._get_by_id_internal(session_id)
 
         if session is None:
             return None
@@ -217,30 +232,45 @@ class DynamoDBCoachingSessionRepository:
 
         return session
 
-    async def delete(self, session_id: str) -> bool:
-        """Delete a coaching session.
+    async def delete(self, session_id: SessionId, tenant_id: TenantId) -> bool:
+        """Delete a coaching session with tenant isolation.
 
         Args:
-            session_id: Session identifier
+            session_id: Session identifier (typed)
+            tenant_id: Tenant ID for isolation (typed)
 
         Returns:
-            True if deleted, False if not found
+            True if deleted, False if not found or not owned by tenant
         """
+        # First verify tenant ownership
+        session = await self.get_by_id(session_id, tenant_id)
+        if session is None:
+            logger.debug(
+                "coaching_session.delete_not_found_or_wrong_tenant",
+                session_id=str(session_id),
+                tenant_id=str(tenant_id),
+            )
+            return False
+
         try:
             self.table.delete_item(
-                Key={"session_id": session_id},
+                Key={"session_id": str(session_id)},
                 ConditionExpression="attribute_exists(session_id)",
             )
-            logger.info("coaching_session.deleted", session_id=session_id)
+            logger.info(
+                "coaching_session.deleted",
+                session_id=str(session_id),
+                tenant_id=str(tenant_id),
+            )
             return True
 
         except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
-            logger.debug("coaching_session.delete_not_found", session_id=session_id)
+            logger.debug("coaching_session.delete_not_found", session_id=str(session_id))
             return False
         except Exception as e:
             logger.error(
                 "coaching_session.delete_failed",
-                session_id=session_id,
+                session_id=str(session_id),
                 error=str(e),
             )
             raise
@@ -248,6 +278,25 @@ class DynamoDBCoachingSessionRepository:
     # =========================================================================
     # Query Operations
     # =========================================================================
+
+    async def get_active_for_topic(
+        self,
+        topic_id: str,
+        tenant_id: TenantId,
+    ) -> CoachingSession | None:
+        """Get any active session for a topic within a tenant (typed parameters).
+
+        Used for conflict detection when a different user tries to
+        initiate a session for a topic that already has an active session.
+
+        Args:
+            topic_id: Coaching topic identifier
+            tenant_id: Tenant ID for multi-tenant isolation (typed)
+
+        Returns:
+            Active CoachingSession for the topic if any exists, None otherwise
+        """
+        return await self.get_active_by_tenant_topic(str(tenant_id), topic_id)
 
     async def get_active_by_tenant_topic(
         self,
@@ -369,6 +418,31 @@ class DynamoDBCoachingSessionRepository:
             )
             raise
 
+    async def list_by_user(
+        self,
+        user_id: UserId,
+        tenant_id: TenantId,
+        include_completed: bool = False,
+        limit: int = 20,
+    ) -> list[CoachingSession]:
+        """List sessions for a specific user (typed parameters).
+
+        Args:
+            user_id: User identifier (typed)
+            tenant_id: Tenant ID for isolation (typed)
+            include_completed: Whether to include COMPLETED sessions
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List of sessions ordered by created_at descending
+        """
+        return await self.list_by_tenant_user(
+            tenant_id=str(tenant_id),
+            user_id=str(user_id),
+            include_completed=include_completed,
+            limit=limit,
+        )
+
     async def list_by_tenant_topic(
         self,
         tenant_id: str,
@@ -410,6 +484,218 @@ class DynamoDBCoachingSessionRepository:
                 "coaching_session.list_by_topic_failed",
                 tenant_id=tenant_id,
                 topic_id=topic_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_active_for_user_topic(
+        self,
+        user_id: str,
+        topic_id: str,
+        tenant_id: str,
+    ) -> CoachingSession | None:
+        """Get active session for user+topic combination (Issue #157).
+
+        This method enables:
+        - Resuming an existing session instead of creating a new one
+        - Detecting session conflicts when different users access same topic
+
+        Args:
+            user_id: User identifier
+            topic_id: Coaching topic identifier
+            tenant_id: Tenant ID for multi-tenant isolation
+
+        Returns:
+            Active CoachingSession if found, None otherwise
+        """
+        try:
+            # Use user_topic_key GSI for efficient lookup
+            user_topic_key = f"USER#{user_id}#TOPIC#{topic_id}"
+            response = self.table.query(
+                IndexName="user-topic-index",
+                KeyConditionExpression=Key("user_topic_key").eq(user_topic_key),
+                FilterExpression=Key("tenant_id").eq(tenant_id),
+            )
+
+            # Find active session among results
+            for item in response.get("Items", []):
+                session = self._from_dynamodb_item(item)
+                if session.status in (
+                    ConversationStatus.ACTIVE,
+                    ConversationStatus.PAUSED,
+                ):
+                    logger.debug(
+                        "coaching_session.user_topic_active_found",
+                        session_id=session.session_id,
+                        user_id=user_id,
+                        topic_id=topic_id,
+                        tenant_id=tenant_id,
+                        status=session.status.value,
+                    )
+                    return session
+
+            logger.debug(
+                "coaching_session.user_topic_no_active_found",
+                user_id=user_id,
+                topic_id=topic_id,
+                tenant_id=tenant_id,
+            )
+            return None
+
+        except Exception as e:
+            logger.error(
+                "coaching_session.get_active_for_user_topic_failed",
+                user_id=user_id,
+                topic_id=topic_id,
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def update(self, session: CoachingSession) -> CoachingSession:
+        """Update an existing coaching session.
+
+        Args:
+            session: CoachingSession entity with updated fields
+
+        Returns:
+            The updated session
+
+        Raises:
+            ValueError: If session doesn't exist
+        """
+        # Verify session exists
+        existing = await self._get_by_id_internal(str(session.session_id))
+        if existing is None:
+            raise ValueError(f"Session not found: {session.session_id}")
+
+        # Save the updated session
+        await self.save(session)
+        return session
+
+    async def mark_expired(
+        self,
+        session_id: SessionId,
+        tenant_id: TenantId,
+    ) -> bool:
+        """Mark a session as expired (typed parameters).
+
+        Args:
+            session_id: Session identifier to expire (typed)
+            tenant_id: Tenant ID for isolation (typed)
+
+        Returns:
+            True if session was marked expired, False if not found or already terminal
+        """
+        return await self._mark_expired_internal(str(session_id), str(tenant_id))
+
+    async def _mark_expired_internal(
+        self,
+        session_id: str,
+        tenant_id: str,
+    ) -> bool:
+        """Internal method to mark a session as expired.
+
+        Args:
+            session_id: Session identifier to expire
+            tenant_id: Tenant ID for isolation
+
+        Returns:
+            True if session was marked expired, False if not found or already terminal
+        """
+        session = await self.get_by_id_for_tenant(session_id, tenant_id)
+
+        if session is None:
+            return False
+
+        # Only expire active or paused sessions
+        if session.status not in (ConversationStatus.ACTIVE, ConversationStatus.PAUSED):
+            logger.debug(
+                "coaching_session.mark_expired_skipped",
+                session_id=session_id,
+                current_status=session.status.value,
+            )
+            return False
+
+        # Mark as abandoned
+        session.mark_expired()
+        await self.save(session)
+
+        logger.info(
+            "coaching_session.marked_expired",
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+        return True
+
+    async def get_expired_sessions(
+        self,
+        tenant_id: TenantId,
+        limit: int = 100,
+    ) -> list[CoachingSession]:
+        """Get sessions that have exceeded their expiration or idle timeout (typed).
+
+        Used by background cleanup processes.
+
+        Args:
+            tenant_id: Tenant ID for isolation (typed)
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List of expired sessions
+        """
+        return await self._get_expired_sessions_internal(str(tenant_id), limit)
+
+    async def _get_expired_sessions_internal(
+        self,
+        tenant_id: str,
+        limit: int = 100,
+    ) -> list[CoachingSession]:
+        """Internal method to get expired sessions.
+
+        Args:
+            tenant_id: Tenant ID for isolation
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List of expired sessions
+        """
+        expired_sessions: list[CoachingSession] = []
+
+        try:
+            # Scan for active/paused sessions in this tenant
+            # Note: In production, consider using DynamoDB Streams + Lambda
+            response = self.table.query(
+                IndexName="tenant-topic-index",
+                KeyConditionExpression=Key("tenant_id").eq(tenant_id),
+                FilterExpression="#status IN (:active, :paused)",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={
+                    ":active": ConversationStatus.ACTIVE.value,
+                    ":paused": ConversationStatus.PAUSED.value,
+                },
+            )
+
+            for item in response.get("Items", []):
+                session = self._from_dynamodb_item(item)
+
+                # Check expiration
+                if session.is_expired() or session.is_idle():
+                    expired_sessions.append(session)
+                    if len(expired_sessions) >= limit:
+                        break
+
+            logger.debug(
+                "coaching_session.expired_sessions_found",
+                tenant_id=tenant_id,
+                count=len(expired_sessions),
+            )
+            return expired_sessions
+
+        except Exception as e:
+            logger.error(
+                "coaching_session.get_expired_sessions_failed",
+                tenant_id=tenant_id,
                 error=str(e),
             )
             raise
@@ -487,13 +773,24 @@ class DynamoDBCoachingSessionRepository:
             "created_at": session.created_at.isoformat(),
             "updated_at": session.updated_at.isoformat(),
             "last_activity_at": session.last_activity_at.isoformat(),
+            # Session limits (Issue #174)
+            "max_turns": session.max_turns,
+            "idle_timeout_minutes": session.idle_timeout_minutes,
+            # GSI for user+topic lookup (Issue #157)
+            "user_topic_key": f"USER#{session.user_id}#TOPIC#{session.topic_id}",
         }
 
         if session.completed_at is not None:
             item["completed_at"] = session.completed_at.isoformat()
 
-        if session.result is not None:
-            item["result"] = session.result
+        if session.expires_at is not None:
+            item["expires_at"] = session.expires_at.isoformat()
+
+        if session.extracted_result is not None:
+            item["extracted_result"] = session.extracted_result
+
+        if session.extraction_model is not None:
+            item["extraction_model"] = session.extraction_model
 
         return item
 
@@ -520,7 +817,15 @@ class DynamoDBCoachingSessionRepository:
             completed_at=(
                 datetime.fromisoformat(item["completed_at"]) if item.get("completed_at") else None
             ),
-            result=item.get("result"),
+            # Session limits (Issue #174)
+            max_turns=item.get("max_turns", 0),  # 0 = unlimited
+            idle_timeout_minutes=item.get("idle_timeout_minutes", 30),
+            expires_at=(
+                datetime.fromisoformat(item["expires_at"]) if item.get("expires_at") else None
+            ),
+            # Results
+            extracted_result=item.get("extracted_result"),
+            extraction_model=item.get("extraction_model"),
         )
 
     def _message_to_dict(self, message: CoachingMessage) -> dict[str, Any]:

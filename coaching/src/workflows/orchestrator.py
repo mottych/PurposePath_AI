@@ -288,12 +288,13 @@ class WorkflowOrchestrator:
             "type_counts": {},
         }
 
+        status_counts: dict[str, int] = stats["status_counts"]  # type: ignore[assignment]
+        type_counts: dict[str, int] = stats["type_counts"]  # type: ignore[assignment]
+
         for state in self._workflow_states.values():
             # With use_enum_values=True, status/workflow_type are already string values
-            stats["status_counts"][state.status] = stats["status_counts"].get(state.status, 0) + 1  # type: ignore[index,attr-defined]
-            stats["type_counts"][state.workflow_type] = (
-                stats["type_counts"].get(state.workflow_type, 0) + 1
-            )  # type: ignore[index,attr-defined]
+            status_counts[state.status] = status_counts.get(state.status, 0) + 1
+            type_counts[state.workflow_type] = type_counts.get(state.workflow_type, 0) + 1
 
         return stats
 

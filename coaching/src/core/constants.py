@@ -154,14 +154,6 @@ class AnalysisType(str, Enum):
     GOAL_BREAKDOWN = "goal_breakdown"
 
 
-# Default LLM models for each topic
-DEFAULT_LLM_MODELS = {
-    CoachingTopic.CORE_VALUES: "anthropic.claude-3-sonnet-20240229-v1:0",
-    CoachingTopic.PURPOSE: "anthropic.claude-3-sonnet-20240229-v1:0",
-    CoachingTopic.VISION: "anthropic.claude-3-haiku-20240307-v1:0",
-    CoachingTopic.GOALS: "anthropic.claude-3-haiku-20240307-v1:0",
-}
-
 # Progress weights for each phase
 PHASE_PROGRESS_WEIGHTS = {
     ConversationPhase.INTRODUCTION: 0.1,

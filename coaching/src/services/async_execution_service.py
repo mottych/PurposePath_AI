@@ -18,11 +18,11 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
 )
 from coaching.src.core.config import settings
 from coaching.src.core.constants import TopicType
-from coaching.src.core.endpoint_registry import (
+from coaching.src.core.response_model_registry import get_response_model
+from coaching.src.core.topic_registry import (
     get_endpoint_by_topic_id,
     get_required_parameter_names_for_topic,
 )
-from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository

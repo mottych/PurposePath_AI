@@ -16,7 +16,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
     UnifiedAIEngineError,
 )
-from coaching.src.core.endpoint_registry import get_endpoint_definition
+from coaching.src.core.topic_registry import get_endpoint_definition
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 

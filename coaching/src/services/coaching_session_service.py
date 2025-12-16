@@ -1,47 +1,127 @@
-"""Coaching session service for orchestrating coaching interactions.
+"""Coaching session service for orchestrating coaching conversations.
 
-This service provides the business logic for managing coaching sessions,
-coordinating between the domain layer, infrastructure, and LLM services.
+This service provides the application logic for managing coaching sessions,
+coordinating between domain entities, infrastructure services, and LLM providers.
 
-It follows the application service pattern from Clean Architecture,
-orchestrating workflows without containing domain logic itself.
+Architecture:
+- Topic definition from ENDPOINT_REGISTRY (EndpointDefinition)
+- Runtime config from TopicRepository (LLMTopic from DynamoDB)
+- Templates from S3PromptStorage
+- Parameter resolution via TemplateParameterProcessor
+- LLM execution via ProviderManager
+- Extraction prompts generated dynamically from structured_output.py
 """
 
+from __future__ import annotations
+
 import json
+import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
-
-if TYPE_CHECKING:
-    from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
-from coaching.src.core.coaching_topic_registry import (
-    CoachingTopicDefinition,
-    get_coaching_topic,
-    get_system_prompt_with_structured_output,
-    is_valid_coaching_topic,
+from coaching.src.core.constants import ConversationStatus, MessageRole, TopicType
+from coaching.src.core.structured_output import (
+    EXTRACTION_PROMPT_TEMPLATE,
+    get_structured_output_instructions,
 )
-from coaching.src.core.constants import ConversationStatus, MessageRole
-from coaching.src.core.exceptions import (
-    ConversationNotFoundError,
+from coaching.src.core.topic_registry import (
+    EndpointDefinition,
+    TemplateType,
+    list_endpoints_by_topic_type,
 )
-from coaching.src.domain.entities.coaching_session import CoachingSession
-from coaching.src.infrastructure.repositories.dynamodb_coaching_session_repository import (
-    DynamoDBCoachingSessionRepository,
+from coaching.src.core.types import TenantId, UserId
+from coaching.src.domain.entities.coaching_session import CoachingMessage, CoachingSession
+from coaching.src.domain.exceptions import (
+    MaxTurnsReachedError,
+    SessionAccessDeniedError,
+    SessionIdleTimeoutError,
+    SessionNotActiveError,
+    SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from coaching.src.models.llm_coaching_response import (
-    parse_llm_coaching_response,
-    should_auto_complete,
-)
-from coaching.src.services.llm_service import LLMService
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from coaching.src.domain.entities.llm_topic import LLMTopic
+    from coaching.src.domain.ports import CoachingSessionRepositoryPort
+    from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
+    from coaching.src.repositories.topic_repository import TopicRepository
+    from coaching.src.services.s3_prompt_storage import S3PromptStorage
+    from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
 
 
 # =============================================================================
+# Exceptions
+# =============================================================================
+
+
+class InvalidTopicError(Exception):
+    """Raised when topic is not found or not valid for coaching."""
+
+    def __init__(self, topic_id: str, reason: str = "Topic not found") -> None:
+        self.topic_id = topic_id
+        self.reason = reason
+        super().__init__(f"Invalid topic '{topic_id}': {reason}")
+
+
+class TopicNotActiveError(Exception):
+    """Raised when topic exists but is not active."""
+
+    def __init__(self, topic_id: str) -> None:
+        self.topic_id = topic_id
+        super().__init__(f"Topic '{topic_id}' is not active")
+
+
+class TemplateNotFoundError(Exception):
+    """Raised when template cannot be loaded from S3."""
+
+    def __init__(self, topic_id: str, template_type: str) -> None:
+        self.topic_id = topic_id
+        self.template_type = template_type
+        super().__init__(f"Template '{template_type}' not found for topic '{topic_id}'")
+
+
+class SessionValidationError(Exception):
+    """Raised when session validation fails."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class ActiveSessionExistsError(Exception):
+    """Raised when an active session already exists for the user+topic."""
+
+    def __init__(self, session_id: str, topic_id: str, user_id: str) -> None:
+        self.session_id = session_id
+        self.topic_id = topic_id
+        self.user_id = user_id
+        self.code = "ACTIVE_SESSION_EXISTS"
+        super().__init__(
+            f"Active session '{session_id}' already exists for topic '{topic_id}' and user '{user_id}'"
+        )
+
+
+# =============================================================================
 # Response Models
 # =============================================================================
+
+
+class MessageDetail(BaseModel):
+    """Detail of a single message in the conversation."""
+
+    role: str
+    content: str
+    timestamp: str
+
+
+class ResponseMetadata(BaseModel):
+    """Metadata about the LLM response."""
+
+    model: str = Field(description="Model used for generation")
+    processing_time_ms: int = Field(default=0, description="Processing time in milliseconds")
+    tokens_used: int = Field(default=0, description="Total tokens used")
 
 
 class SessionResponse(BaseModel):
@@ -51,60 +131,50 @@ class SessionResponse(BaseModel):
     tenant_id: str
     topic_id: str
     status: ConversationStatus
-    coach_message: str | None = None
-    message_count: int
-    estimated_completion: float
+    message: str = Field(description="Coach's message")
+    turn: int = Field(default=1, description="Current turn number")
+    max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
+    is_final: bool = Field(default=False, description="Whether session is complete")
+    resumed: bool = Field(default=False, description="Whether this was a resumed session")
+    metadata: ResponseMetadata | None = Field(default=None, description="Response metadata")
 
 
 class MessageResponse(BaseModel):
-    """Response from sending a message.
-
-    Attributes:
-        session_id: Unique session identifier
-        coach_message: The coach's response message
-        message_count: Total messages in the session
-        estimated_completion: Progress estimate (0.0-1.0)
-        status: Current session status
-        result: Extracted result data (present if auto_completed)
-        auto_completed: True if LLM triggered completion
-    """
+    """Response from sending a message."""
 
     session_id: str
-    coach_message: str
-    message_count: int
-    estimated_completion: float
+    message: str = Field(description="Coach's response")
     status: ConversationStatus
-    result: dict[str, Any] | None = None
-    auto_completed: bool = False
-
-
-class SessionStateResponse(BaseModel):
-    """Response from session state change."""
-
-    session_id: str
-    status: ConversationStatus
-    message: str
+    turn: int = Field(default=0, description="Current turn number")
+    max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
+    is_final: bool = Field(default=False, description="Whether session should complete")
+    message_count: int = Field(default=0, description="Total messages in session")
+    result: dict[str, Any] | None = Field(default=None, description="Extracted result if is_final")
+    metadata: ResponseMetadata | None = Field(default=None, description="Response metadata")
 
 
 class SessionCompletionResponse(BaseModel):
-    """Response from session completion."""
+    """Response from completing a session."""
 
     session_id: str
     status: ConversationStatus
-    result: dict[str, Any]
-    message_count: int
+    result: dict[str, Any] = Field(default_factory=dict, description="Extracted result")
 
 
-class MessageDetail(BaseModel):
-    """Detail of a single message."""
+class SessionStateResponse(BaseModel):
+    """Response with session state information."""
 
-    role: MessageRole
-    content: str
-    timestamp: str
+    session_id: str
+    status: ConversationStatus
+    topic_id: str
+    turn_count: int
+    max_turns: int
+    created_at: str
+    updated_at: str
 
 
 class SessionDetails(BaseModel):
-    """Full session details."""
+    """Detailed session information including messages."""
 
     session_id: str
     tenant_id: str
@@ -112,12 +182,12 @@ class SessionDetails(BaseModel):
     user_id: str
     status: ConversationStatus
     messages: list[MessageDetail]
-    message_count: int
-    estimated_completion: float
+    context: dict[str, Any]
+    max_turns: int
     created_at: str
     updated_at: str
     completed_at: str | None = None
-    result: dict[str, Any] | None = None
+    extracted_result: dict[str, Any] | None = None
 
 
 class SessionSummary(BaseModel):
@@ -126,614 +196,965 @@ class SessionSummary(BaseModel):
     session_id: str
     topic_id: str
     status: ConversationStatus
-    message_count: int
+    turn_count: int
     created_at: str
     updated_at: str
 
 
-# =============================================================================
-# Exceptions
-# =============================================================================
+class TopicStatus(BaseModel):
+    """Status of a coaching topic for a user."""
+
+    topic_id: str
+    name: str
+    description: str
+    status: str = Field(description="Status: 'not_started', 'in_progress', 'paused', 'completed'")
+    session_id: str | None = Field(default=None, description="Session ID if in_progress or paused")
+    completed_at: str | None = Field(default=None, description="Completion timestamp if completed")
 
 
-class InvalidTopicError(Exception):
-    """Raised when an invalid topic is provided."""
+class TopicsWithStatusResponse(BaseModel):
+    """Response containing all topics with user's status."""
 
-    def __init__(self, topic_id: str) -> None:
-        """Initialize with topic ID."""
-        self.topic_id = topic_id
-        super().__init__(f"Invalid coaching topic: {topic_id}")
-
-
-class SessionValidationError(Exception):
-    """Raised when session validation fails."""
-
-    def __init__(self, message: str) -> None:
-        """Initialize with message."""
-        super().__init__(message)
-
-
-class ActiveSessionExistsError(Exception):
-    """Raised when trying to create a session but one already exists."""
-
-    def __init__(self, existing_session_id: str, topic_id: str) -> None:
-        """Initialize with existing session details."""
-        self.existing_session_id = existing_session_id
-        self.topic_id = topic_id
-        super().__init__(
-            f"Active session already exists for topic '{topic_id}': {existing_session_id}"
-        )
+    topics: list[TopicStatus]
 
 
 # =============================================================================
-# Service
+# Service Implementation
 # =============================================================================
 
 
 class CoachingSessionService:
     """Application service for coaching session orchestration.
 
-    This service coordinates the full coaching session lifecycle:
-    - Session initiation with topic configuration
-    - Message processing with LLM integration
-    - Session state transitions (pause, resume, cancel)
-    - Session completion with result extraction
+    This service coordinates:
+    - Topic configuration (ENDPOINT_REGISTRY + TopicRepository)
+    - Template loading (S3PromptStorage)
+    - Parameter resolution (TemplateParameterProcessor)
+    - LLM execution (LLMProviderFactory for dynamic model resolution)
+    - Session persistence (CoachingSessionRepository)
 
-    The service enforces business rules:
-    - One active session per tenant per topic
-    - Tenant isolation on all operations
-    - Session state machine validation
-
-    Example usage:
-        service = CoachingSessionService(
-            session_repository=repo,
-            llm_service=llm,
-        )
-
-        # Start a new session
-        response = await service.initiate_session(
-            tenant_id="tenant_123",
-            user_id="user_456",
-            topic_id="core_values",
-            context={"business_name": "Acme Corp"},
-        )
-
-        # Send a message
-        response = await service.send_message(
-            session_id=response.session_id,
-            tenant_id="tenant_123",
-            user_message="My business is about helping small businesses grow",
-        )
+    It does NOT contain any configuration itself - everything comes from
+    external sources following the single-shot engine pattern.
     """
 
     def __init__(
         self,
-        session_repository: DynamoDBCoachingSessionRepository,
-        llm_service: LLMService,
-        template_processor: "TemplateParameterProcessor | None" = None,
+        *,
+        session_repository: CoachingSessionRepositoryPort,
+        topic_repository: TopicRepository,
+        s3_prompt_storage: S3PromptStorage,
+        template_processor: TemplateParameterProcessor,
+        provider_factory: LLMProviderFactory,
     ) -> None:
         """Initialize the coaching session service.
 
         Args:
             session_repository: Repository for session persistence
-            llm_service: Service for LLM interactions
-            template_processor: Optional processor for automatic parameter enrichment.
-                When provided, templates will have their parameters resolved via
-                the parameter registry (API calls, defaults, etc.).
+            topic_repository: Repository for LLMTopic config from DynamoDB
+            s3_prompt_storage: Storage for loading templates from S3
+            template_processor: Processor for resolving parameters (required)
+            provider_factory: Factory for LLM provider/model resolution
         """
-        self.session_repo = session_repository
-        self.llm_service = llm_service
+        self.session_repository = session_repository
+        self.topic_repository = topic_repository
+        self.s3_prompt_storage = s3_prompt_storage
         self.template_processor = template_processor
+        self.provider_factory = provider_factory
 
-    # =========================================================================
-    # Session Lifecycle
-    # =========================================================================
+        # Build topic index for quick lookup
+        self._topic_index: dict[str, EndpointDefinition] = {}
+        self._build_topic_index()
 
-    async def initiate_session(
-        self,
-        tenant_id: str,
-        user_id: str,
-        topic_id: str,
-        context: dict[str, Any] | None = None,
-    ) -> SessionResponse:
-        """Initiate a new coaching session.
-
-        Creates a new coaching session for the specified topic. If an active
-        session already exists for this tenant+topic, raises an error.
-
-        Args:
-            tenant_id: Tenant identifier for multi-tenancy
-            user_id: User identifier (session owner)
-            topic_id: Coaching topic identifier from registry
-            context: Initial context parameters for the session
-
-        Returns:
-            SessionResponse with initial coach message
-
-        Raises:
-            InvalidTopicError: If topic_id is not in registry
-            ActiveSessionExistsError: If active session already exists
-        """
-        # Validate topic
-        if not is_valid_coaching_topic(topic_id):
-            raise InvalidTopicError(topic_id)
-
-        topic = get_coaching_topic(topic_id)
-        if topic is None:
-            raise InvalidTopicError(topic_id)
-
-        # Check for existing active session
-        existing = await self.session_repo.get_active_by_tenant_topic(
-            tenant_id=tenant_id,
-            topic_id=topic_id,
+    def _build_topic_index(self) -> None:
+        """Build index of coaching topics from ENDPOINT_REGISTRY."""
+        coaching_endpoints = list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING)
+        for endpoint in coaching_endpoints:
+            self._topic_index[endpoint.topic_id] = endpoint
+        logger.debug(
+            "coaching_service.topic_index_built",
+            topic_count=len(self._topic_index),
+            topics=list(self._topic_index.keys()),
         )
 
-        if existing is not None:
-            raise ActiveSessionExistsError(
-                existing_session_id=str(existing.session_id),
+    # =========================================================================
+    # Configuration Loading
+    # =========================================================================
+
+    def _get_endpoint_definition(self, topic_id: str) -> EndpointDefinition:
+        """Get EndpointDefinition from the topic index.
+
+        Args:
+            topic_id: Topic identifier (e.g., "core_values")
+
+        Returns:
+            EndpointDefinition for the topic
+
+        Raises:
+            InvalidTopicError: If topic not found in registry
+        """
+        endpoint = self._topic_index.get(topic_id)
+        if endpoint is None:
+            raise InvalidTopicError(
                 topic_id=topic_id,
+                reason="Topic not found in ENDPOINT_REGISTRY for CONVERSATION_COACHING",
             )
+        return endpoint
 
-        logger.info(
-            "coaching_session.initiating",
-            tenant_id=tenant_id,
-            user_id=user_id,
-            topic_id=topic_id,
-        )
-
-        # Create new session
-        session = CoachingSession.create(
-            tenant_id=tenant_id,
-            user_id=user_id,
-            topic_id=topic_id,
-            context=context or {},
-        )
-
-        # Generate initial coach message
-        initial_message = await self._generate_initiation_message(
-            topic=topic,
-            context=context or {},
-            tenant_id=tenant_id,
-            user_id=user_id,
-        )
-
-        # Add initial coach message to session
-        session.add_assistant_message(
-            content=initial_message,
-            metadata={"type": "initiation"},
-        )
-
-        # Save session
-        await self.session_repo.save(session)
-
-        logger.info(
-            "coaching_session.initiated",
-            session_id=str(session.session_id),
-            tenant_id=tenant_id,
-        )
-
-        return SessionResponse(
-            session_id=str(session.session_id),
-            tenant_id=str(session.tenant_id),
-            topic_id=session.topic_id,
-            status=session.status,
-            coach_message=initial_message,
-            message_count=session.get_message_count(),
-            estimated_completion=session.calculate_estimated_completion(topic.estimated_messages),
-        )
-
-    async def resume_session(
-        self,
-        session_id: str,
-        tenant_id: str,
-    ) -> SessionResponse:
-        """Resume a paused coaching session.
+    async def _get_llm_topic_config(self, topic_id: str) -> LLMTopic:
+        """Get LLMTopic configuration from DynamoDB.
 
         Args:
-            session_id: Session identifier to resume
-            tenant_id: Tenant identifier for isolation
+            topic_id: Topic identifier
 
         Returns:
-            SessionResponse with resume message from coach
+            LLMTopic with runtime configuration
 
         Raises:
-            ConversationNotFoundError: If session not found or wrong tenant
-            SessionValidationError: If session cannot be resumed
+            InvalidTopicError: If topic config not found in database
+            TopicNotActiveError: If topic is disabled
         """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-        topic = get_coaching_topic(session.topic_id)
+        llm_topic = await self.topic_repository.get(topic_id=topic_id)
+        if llm_topic is None:
+            raise InvalidTopicError(
+                topic_id=topic_id,
+                reason="LLMTopic configuration not found in database",
+            )
+        if not llm_topic.is_active:
+            raise TopicNotActiveError(topic_id=topic_id)
+        return llm_topic
 
-        if topic is None:
-            raise SessionValidationError(f"Topic configuration not found: {session.topic_id}")
+    async def _load_topic_config(self, topic_id: str) -> tuple[EndpointDefinition, LLMTopic]:
+        """Load complete topic configuration.
 
-        if not session.is_paused():
-            raise SessionValidationError(f"Cannot resume session in state: {session.status.value}")
+        Combines static definition from ENDPOINT_REGISTRY with
+        runtime config from TopicRepository (DynamoDB).
 
-        logger.info(
-            "coaching_session.resuming",
-            session_id=session_id,
-            tenant_id=tenant_id,
+        Args:
+            topic_id: Topic identifier
+
+        Returns:
+            Tuple of (EndpointDefinition, LLMTopic)
+
+        Raises:
+            InvalidTopicError: If topic not found
+            TopicNotActiveError: If topic is disabled
+        """
+        endpoint_def = self._get_endpoint_definition(topic_id)
+        llm_topic = await self._get_llm_topic_config(topic_id)
+
+        logger.debug(
+            "coaching_service.topic_config_loaded",
+            topic_id=topic_id,
+            model_code=llm_topic.model_code,
+            max_turns=llm_topic.additional_config.get("max_turns", 10),
         )
 
-        # Generate resume message
-        resume_message = await self._generate_resume_message(
-            topic=topic,
-            session=session,
-            tenant_id=tenant_id,
-        )
+        return endpoint_def, llm_topic
 
-        # Resume the session
-        session.resume()
+    # =========================================================================
+    # Template Loading
+    # =========================================================================
 
-        # Add the resume message
-        session.add_assistant_message(
-            content=resume_message,
-            metadata={"type": "resume"},
-        )
+    async def _load_template(self, topic_id: str, template_type: TemplateType) -> str:
+        """Load template content from S3.
 
-        # Save updated session
-        await self.session_repo.save(session)
+        Args:
+            topic_id: Topic identifier
+            template_type: Type of template (SYSTEM, INITIATION, RESUME)
 
-        logger.info(
-            "coaching_session.resumed",
-            session_id=session_id,
-        )
+        Returns:
+            Template content as string
 
-        return SessionResponse(
-            session_id=str(session.session_id),
-            tenant_id=str(session.tenant_id),
-            topic_id=session.topic_id,
-            status=session.status,
-            coach_message=resume_message,
-            message_count=session.get_message_count(),
-            estimated_completion=session.calculate_estimated_completion(topic.estimated_messages),
-        )
+        Raises:
+            TemplateNotFoundError: If template doesn't exist in S3
+        """
+        try:
+            content: str | None = await self.s3_prompt_storage.get_prompt(
+                topic_id=topic_id,
+                prompt_type=template_type.value,
+            )
+            if content is None:
+                raise TemplateNotFoundError(topic_id, template_type.value)
+
+            logger.debug(
+                "coaching_service.template_loaded",
+                topic_id=topic_id,
+                template_type=template_type.value,
+                content_length=len(content),
+            )
+            return content
+
+        except Exception as e:
+            if isinstance(e, TemplateNotFoundError):
+                raise
+            logger.error(
+                "coaching_service.template_load_failed",
+                topic_id=topic_id,
+                template_type=template_type.value,
+                error=str(e),
+            )
+            raise TemplateNotFoundError(topic_id, template_type.value) from e
+
+    def _render_template(self, template: str, context: dict[str, Any]) -> str:
+        """Render template with context values.
+
+        Supports both {{param}} (Jinja2-style) and {param} placeholders.
+
+        Args:
+            template: Template string with placeholders
+            context: Dictionary of values to substitute
+
+        Returns:
+            Rendered template string
+        """
+        result = template
+
+        # Replace double-brace placeholders {{param}}
+        for key, value in context.items():
+            result = result.replace(f"{{{{{key}}}}}", str(value))
+
+        # Replace single-brace placeholders {param}
+        for key, value in context.items():
+            # Use word boundary matching to avoid partial replacements
+            result = re.sub(rf"\{{{key}\}}", str(value), result)
+
+        return result
+
+    # =========================================================================
+    # Session Lifecycle - Initiate
+    # =========================================================================
 
     async def get_or_create_session(
         self,
+        *,
+        topic_id: str,
         tenant_id: str,
         user_id: str,
-        topic_id: str,
         context: dict[str, Any] | None = None,
     ) -> SessionResponse:
-        """Get existing active session or create a new one.
+        """Get existing session or create a new coaching session.
 
-        This is a convenience method that handles the common pattern of:
-        1. Check for existing active session for tenant+topic
-        2. If exists, return it (resume if paused)
-        3. If not, create a new session
+        If user already has an active session for this topic, resumes it.
+        Otherwise creates a new session.
 
         Args:
+            topic_id: Coaching topic identifier
             tenant_id: Tenant identifier
             user_id: User identifier
-            topic_id: Coaching topic identifier
-            context: Context for new session creation
+            context: Optional context parameters
 
         Returns:
-            SessionResponse for existing or new session
+            SessionResponse with session info and first message
+
+        Raises:
+            InvalidTopicError: If topic is invalid
+            TopicNotActiveError: If topic is disabled
+            TemplateNotFoundError: If templates missing
         """
-        # Check for existing active session
-        existing = await self.session_repo.get_active_by_tenant_topic(
-            tenant_id=tenant_id,
+        logger.info(
+            "coaching_service.get_or_create_session",
             topic_id=topic_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # Load configuration
+        endpoint_def, llm_topic = await self._load_topic_config(topic_id)
+
+        # Check for existing active session
+        existing = await self.session_repository.get_active_for_user_topic(
+            user_id=UserId(user_id),
+            topic_id=topic_id,
+            tenant_id=TenantId(tenant_id),
         )
 
         if existing is not None:
-            # If paused, resume it
-            if existing.is_paused():
-                return await self.resume_session(
-                    session_id=str(existing.session_id),
-                    tenant_id=tenant_id,
-                )
-
-            # Return existing active session
-            topic = get_coaching_topic(topic_id)
-            estimated_messages = topic.estimated_messages if topic else 20
-
-            return SessionResponse(
+            logger.info(
+                "coaching_service.resuming_existing_session",
                 session_id=str(existing.session_id),
-                tenant_id=str(existing.tenant_id),
-                topic_id=existing.topic_id,
-                status=existing.status,
-                coach_message=None,  # No new message for existing session
-                message_count=existing.get_message_count(),
-                estimated_completion=existing.calculate_estimated_completion(estimated_messages),
+            )
+            return await self._resume_session(
+                session=existing,
+                endpoint_def=endpoint_def,
+                llm_topic=llm_topic,
             )
 
         # Create new session
-        return await self.initiate_session(
+        return await self._create_new_session(
+            topic_id=topic_id,
             tenant_id=tenant_id,
             user_id=user_id,
+            parameters=context or {},
+            endpoint_def=endpoint_def,
+            llm_topic=llm_topic,
+        )
+
+    async def _create_new_session(
+        self,
+        *,
+        topic_id: str,
+        tenant_id: str,
+        user_id: str,
+        parameters: dict[str, Any],
+        endpoint_def: EndpointDefinition,
+        llm_topic: LLMTopic,
+    ) -> SessionResponse:
+        """Create a new coaching session.
+
+        Args:
+            topic_id: Topic identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            parameters: Request parameters
+            endpoint_def: Topic definition from registry
+            llm_topic: Runtime config from database
+
+        Returns:
+            SessionResponse with first coach message
+        """
+        # Load templates
+        system_template = await self._load_template(topic_id, TemplateType.SYSTEM)
+        initiation_template = await self._load_template(topic_id, TemplateType.INITIATION)
+
+        # Resolve parameters using template processor
+        required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
+
+        param_result = await self.template_processor.process_template_parameters(
+            template=system_template,
+            payload=parameters,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            required_params=required_params,
+        )
+        resolved_params = param_result.parameters
+
+        # Render system prompt
+        rendered_system = self._render_template(system_template, resolved_params)
+
+        # Create session entity
+        # Get conversation settings from additional_config (stored in DynamoDB)
+        max_turns = llm_topic.additional_config.get("max_turns", 10)
+        idle_timeout_minutes = llm_topic.additional_config.get("idle_timeout_minutes", 30)
+        # Session TTL in hours - default 336 hours (2 weeks) for paused sessions deletion
+        session_ttl_hours = llm_topic.additional_config.get("session_ttl_hours", 336)
+
+        # Calculate expires_at from session_ttl_hours
+        from datetime import UTC, datetime, timedelta
+
+        expires_at = datetime.now(UTC) + timedelta(hours=session_ttl_hours)
+
+        session = CoachingSession(
+            tenant_id=TenantId(tenant_id),
             topic_id=topic_id,
-            context=context,
+            user_id=UserId(user_id),
+            max_turns=max_turns,
+            idle_timeout_minutes=idle_timeout_minutes,
+            expires_at=expires_at,
+            context=resolved_params,
+        )
+
+        # Build messages for LLM
+        messages = [
+            {"role": "system", "content": rendered_system},
+            {"role": "user", "content": initiation_template},
+        ]
+
+        # Execute LLM call
+        llm_response, response_metadata = await self._execute_llm_call(
+            messages=messages,
+            llm_topic=llm_topic,
+        )
+
+        # Add messages to session (system message not stored in session, just used for LLM context)
+        session.add_assistant_message(llm_response)
+
+        # Persist session
+        await self.session_repository.create(session)
+
+        logger.info(
+            "coaching_service.session_created",
+            session_id=str(session.session_id),
+            topic_id=topic_id,
+        )
+
+        return SessionResponse(
+            session_id=str(session.session_id),
+            tenant_id=tenant_id,
+            topic_id=topic_id,
+            status=session.status,
+            message=llm_response,
+            turn=session.get_turn_count(),
+            max_turns=session.max_turns,
+            is_final=False,
+            resumed=False,
+            metadata=response_metadata,
+        )
+
+    async def _resume_session(
+        self,
+        *,
+        session: CoachingSession,
+        endpoint_def: EndpointDefinition,  # noqa: ARG002
+        llm_topic: LLMTopic,
+    ) -> SessionResponse:
+        """Resume an existing paused or active session.
+
+        Args:
+            session: Existing session to resume
+            endpoint_def: Topic definition
+            llm_topic: Runtime config
+
+        Returns:
+            SessionResponse with resume message
+        """
+        # Load resume template
+        resume_template = await self._load_template(session.topic_id, TemplateType.RESUME)
+
+        # Build context with conversation summary
+        context = {
+            **session.context,
+            "conversation_summary": self._summarize_conversation(session.messages),
+            "current_turn": session.get_turn_count(),
+            "max_turns": session.max_turns,
+        }
+
+        # Render resume template
+        rendered_resume = self._render_template(resume_template, context)
+
+        # Load and render system prompt
+        system_template = await self._load_template(session.topic_id, TemplateType.SYSTEM)
+        rendered_system = self._render_template(system_template, session.context)
+
+        # Build messages with history
+        history = session.get_messages_for_llm(max_messages=20)
+        messages = [
+            {"role": "system", "content": rendered_system},
+            *history,
+            {"role": "user", "content": rendered_resume},
+        ]
+
+        # Execute LLM
+        llm_response, response_metadata = await self._execute_llm_call(
+            messages=messages,
+            llm_topic=llm_topic,
+        )
+
+        # Add resume interaction to session
+        session.add_assistant_message(llm_response)
+
+        # Update session status if it was paused
+        if session.status == ConversationStatus.PAUSED:
+            session.resume()
+
+        # Persist
+        await self.session_repository.update(session)
+
+        logger.info(
+            "coaching_service.session_resumed",
+            session_id=str(session.session_id),
+        )
+
+        return SessionResponse(
+            session_id=str(session.session_id),
+            tenant_id=str(session.tenant_id),
+            topic_id=session.topic_id,
+            status=session.status,
+            message=llm_response,
+            turn=session.get_turn_count(),
+            max_turns=session.max_turns,
+            is_final=False,
+            resumed=True,
+            metadata=response_metadata,
+        )
+
+    def _summarize_conversation(self, messages: list[CoachingMessage]) -> str:
+        """Create a brief summary of the conversation for resume context.
+
+        Args:
+            messages: List of conversation messages
+
+        Returns:
+            Summary string
+        """
+        user_messages = [m for m in messages if m.role == MessageRole.USER]
+        assistant_messages = [m for m in messages if m.role == MessageRole.ASSISTANT]
+
+        return (
+            f"Conversation has {len(user_messages)} user messages and "
+            f"{len(assistant_messages)} assistant responses."
         )
 
     # =========================================================================
-    # Message Processing
+    # Session Lifecycle - Send Message
     # =========================================================================
 
     async def send_message(
         self,
+        *,
         session_id: str,
         tenant_id: str,
+        user_id: str,
         user_message: str,
-        metadata: dict[str, Any] | None = None,
     ) -> MessageResponse:
         """Send a user message and get coach response.
 
-        This method now supports auto-completion via LLM structured output.
-        When the LLM determines the coaching session has reached a natural
-        conclusion, it can signal completion by setting `is_final=True` in
-        its response, automatically completing the session and extracting results.
-
         Args:
             session_id: Session identifier
-            tenant_id: Tenant identifier for isolation
-            user_message: The user's message content
-            metadata: Optional metadata about the message
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            user_message: User's message content
 
         Returns:
-            MessageResponse with coach's response. If auto_completed=True,
-            the session has been completed and result contains extracted data.
+            MessageResponse with coach's response
 
         Raises:
-            ConversationNotFoundError: If session not found
-            SessionValidationError: If session cannot accept messages
+            SessionNotFoundError: If session not found
+            SessionAccessDeniedError: If user doesn't own session
+            SessionNotActiveError: If session is not active
+            SessionIdleTimeoutError: If session has timed out
+            MaxTurnsReachedError: If max turns exceeded
         """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-        topic = get_coaching_topic(session.topic_id)
-
-        if topic is None:
-            raise SessionValidationError(f"Topic configuration not found: {session.topic_id}")
-
-        if not session.can_accept_messages():
-            raise SessionValidationError(
-                f"Session cannot accept messages in state: {session.status.value}"
-            )
-
         logger.info(
-            "coaching_session.message_received",
+            "coaching_service.send_message",
             session_id=session_id,
-            message_length=len(user_message),
-        )
-
-        # Add user message
-        session.add_user_message(
-            content=user_message,
-            metadata=metadata or {},
-        )
-
-        # Generate coach response with structured output
-        raw_response = await self._generate_coach_response(
-            topic=topic,
-            session=session,
-        )
-
-        # Parse structured response
-        parsed_response = parse_llm_coaching_response(raw_response)
-
-        # Add coach response (the message field)
-        session.add_assistant_message(
-            content=parsed_response.message,
-            metadata={
-                "type": "response",
-                "is_final": parsed_response.is_final,
-                "confidence": parsed_response.confidence,
-            },
-        )
-
-        # Check for auto-completion
-        if should_auto_complete(parsed_response):
-            logger.info(
-                "coaching_session.auto_completing",
-                session_id=session_id,
-                confidence=parsed_response.confidence,
-            )
-
-            # Complete the session with the extracted result
-            session.complete(result=parsed_response.result or {})
-            await self.session_repo.save(session)
-
-            logger.info(
-                "coaching_session.auto_completed",
-                session_id=session_id,
-                message_count=session.get_message_count(),
-            )
-
-            return MessageResponse(
-                session_id=str(session.session_id),
-                coach_message=parsed_response.message,
-                message_count=session.get_message_count(),
-                estimated_completion=1.0,
-                status=session.status,
-                result=parsed_response.result,
-                auto_completed=True,
-            )
-
-        # Save updated session (normal flow)
-        await self.session_repo.save(session)
-
-        logger.info(
-            "coaching_session.message_processed",
-            session_id=session_id,
-            message_count=session.get_message_count(),
-        )
-
-        return MessageResponse(
-            session_id=str(session.session_id),
-            coach_message=parsed_response.message,
-            message_count=session.get_message_count(),
-            estimated_completion=session.calculate_estimated_completion(topic.estimated_messages),
-            status=session.status,
-        )
-
-    # =========================================================================
-    # Session State Management
-    # =========================================================================
-
-    async def pause_session(
-        self,
-        session_id: str,
-        tenant_id: str,
-    ) -> SessionStateResponse:
-        """Pause an active coaching session.
-
-        Args:
-            session_id: Session identifier
-            tenant_id: Tenant identifier for isolation
-
-        Returns:
-            SessionStateResponse confirming pause
-
-        Raises:
-            ConversationNotFoundError: If session not found
-            SessionValidationError: If session cannot be paused
-        """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-
-        logger.info(
-            "coaching_session.pausing",
-            session_id=session_id,
-        )
-
-        session.pause()
-        await self.session_repo.save(session)
-
-        logger.info(
-            "coaching_session.paused",
-            session_id=session_id,
-        )
-
-        return SessionStateResponse(
-            session_id=str(session.session_id),
-            status=session.status,
-            message="Session paused successfully",
-        )
-
-    async def cancel_session(
-        self,
-        session_id: str,
-        tenant_id: str,
-    ) -> SessionStateResponse:
-        """Cancel a coaching session.
-
-        Args:
-            session_id: Session identifier
-            tenant_id: Tenant identifier for isolation
-
-        Returns:
-            SessionStateResponse confirming cancellation
-
-        Raises:
-            ConversationNotFoundError: If session not found
-            SessionValidationError: If session cannot be cancelled
-        """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-
-        logger.info(
-            "coaching_session.cancelling",
-            session_id=session_id,
-        )
-
-        session.cancel()
-        await self.session_repo.save(session)
-
-        logger.info(
-            "coaching_session.cancelled",
-            session_id=session_id,
-        )
-
-        return SessionStateResponse(
-            session_id=str(session.session_id),
-            status=session.status,
-            message="Session cancelled",
-        )
-
-    async def complete_session(
-        self,
-        session_id: str,
-        tenant_id: str,
-    ) -> SessionCompletionResponse:
-        """Complete a coaching session and extract results.
-
-        This triggers the extraction of final coaching results
-        using the topic's extraction instructions.
-
-        Args:
-            session_id: Session identifier
-            tenant_id: Tenant identifier for isolation
-
-        Returns:
-            SessionCompletionResponse with extracted results
-
-        Raises:
-            ConversationNotFoundError: If session not found
-            SessionValidationError: If session cannot be completed
-        """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-        topic = get_coaching_topic(session.topic_id)
-
-        if topic is None:
-            raise SessionValidationError(f"Topic configuration not found: {session.topic_id}")
-
-        if not session.is_active():
-            raise SessionValidationError(
-                f"Cannot complete session in state: {session.status.value}"
-            )
-
-        logger.info(
-            "coaching_session.completing",
-            session_id=session_id,
-        )
-
-        # Extract final result using LLM
-        extracted_result = await self._extract_session_result(
-            topic=topic,
-            session=session,
             tenant_id=tenant_id,
         )
 
-        # Complete the session with the result
-        session.complete(result=extracted_result)
-        await self.session_repo.save(session)
+        # Load and validate session
+        session = await self._load_and_validate_session(
+            session_id=session_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # Load config
+        endpoint_def, llm_topic = await self._load_topic_config(session.topic_id)
+
+        # Check turn limit
+        if not session.can_add_turn():
+            raise MaxTurnsReachedError(
+                session_id=session_id,
+                max_turns=session.max_turns,
+                current_turn=session.get_turn_count(),
+            )
+
+        # Add user message
+        session.add_user_message(user_message)
+
+        # Build messages for LLM
+        system_template = await self._load_template(session.topic_id, TemplateType.SYSTEM)
+        rendered_system = self._render_template(system_template, session.context)
+
+        # Add structured output instructions for auto-completion
+        if endpoint_def.result_model:
+            structured_instructions = get_structured_output_instructions(
+                topic_name=endpoint_def.description,
+                result_model_name=endpoint_def.result_model,
+            )
+            if structured_instructions:
+                rendered_system = f"{rendered_system}\n\n{structured_instructions}"
+
+        # Get history and build messages
+        history = session.get_messages_for_llm(max_messages=30)
+        messages = [{"role": "system", "content": rendered_system}, *history]
+
+        # Execute LLM
+        llm_response, response_metadata = await self._execute_llm_call(
+            messages=messages,
+            llm_topic=llm_topic,
+        )
+
+        # Parse response for completion signal
+        coach_message, is_final = self._parse_llm_response(llm_response)
+
+        # Add assistant message
+        session.add_assistant_message(coach_message)
+
+        # Persist
+        await self.session_repository.update(session)
+
+        # If final, trigger completion and return result
+        if is_final:
+            logger.info(
+                "coaching_service.auto_completion_triggered",
+                session_id=session_id,
+            )
+            completion_response = await self._extract_and_complete(
+                session=session,
+                endpoint_def=endpoint_def,
+                llm_topic=llm_topic,
+            )
+            return MessageResponse(
+                session_id=session_id,
+                message=coach_message,
+                status=ConversationStatus.COMPLETED,
+                turn=session.get_turn_count(),
+                max_turns=session.max_turns,
+                is_final=True,
+                message_count=session.get_message_count(),
+                result=completion_response.result,
+                metadata=response_metadata,
+            )
+
+        return MessageResponse(
+            session_id=session_id,
+            message=coach_message,
+            status=session.status,
+            turn=session.get_turn_count(),
+            max_turns=session.max_turns,
+            is_final=False,
+            message_count=session.get_message_count(),
+            result=None,
+            metadata=response_metadata,
+        )
+
+    async def _load_and_validate_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> CoachingSession:
+        """Load session and validate access.
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            Validated CoachingSession
+
+        Raises:
+            SessionNotFoundError: If session not found
+            SessionAccessDeniedError: If user doesn't own session
+            SessionNotActiveError: If session is not active
+            SessionIdleTimeoutError: If session has timed out
+        """
+        session = await self.session_repository.get_by_id_for_tenant(
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+
+        if session is None:
+            raise SessionNotFoundError(session_id)
+
+        if str(session.user_id) != user_id:
+            raise SessionAccessDeniedError(session_id=session_id, user_id=user_id)
+
+        if not session.is_active():
+            raise SessionNotActiveError(
+                session_id=session_id,
+                current_status=session.status.value,
+            )
+
+        # Check idle timeout
+        if session.is_idle():
+            raise SessionIdleTimeoutError(
+                session_id=session_id,
+                last_activity_at=session.last_activity_at.isoformat()
+                if session.last_activity_at
+                else "unknown",
+                idle_timeout_minutes=session.idle_timeout_minutes,
+            )
+
+        return session
+
+    def _parse_llm_response(self, response: str) -> tuple[str, bool]:
+        """Parse LLM response for message and completion signal.
+
+        Attempts to parse JSON response with structured output format.
+        Falls back to treating entire response as message.
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Tuple of (message, is_final)
+        """
+        try:
+            # Try to parse as JSON
+            data = json.loads(response)
+            message = data.get("message", response)
+            is_final = data.get("is_final", False)
+            return message, is_final
+        except json.JSONDecodeError:
+            # Not JSON, return as-is
+            return response, False
+
+    # =========================================================================
+    # Session Lifecycle - Complete
+    # =========================================================================
+
+    async def complete_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> SessionCompletionResponse:
+        """Complete a session and extract results.
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            SessionCompletionResponse with extracted result
+        """
+        logger.info(
+            "coaching_service.complete_session",
+            session_id=session_id,
+        )
+
+        # Load and validate
+        session = await self._load_and_validate_session(
+            session_id=session_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # Load config
+        endpoint_def, llm_topic = await self._load_topic_config(session.topic_id)
+
+        return await self._extract_and_complete(
+            session=session,
+            endpoint_def=endpoint_def,
+            llm_topic=llm_topic,
+        )
+
+    async def _extract_and_complete(
+        self,
+        *,
+        session: CoachingSession,
+        endpoint_def: EndpointDefinition,
+        llm_topic: LLMTopic,
+    ) -> SessionCompletionResponse:
+        """Extract results and complete session.
+
+        Args:
+            session: Session to complete
+            endpoint_def: Topic definition
+            llm_topic: Runtime config
+
+        Returns:
+            SessionCompletionResponse with extracted result
+        """
+        # Get result model
+        if not endpoint_def.result_model:
+            # No result model defined - return empty result
+            session.complete(result={}, extraction_model=None)
+            await self.session_repository.update(session)
+            return SessionCompletionResponse(
+                session_id=str(session.session_id),
+                status=ConversationStatus.COMPLETED,
+                result={},
+            )
+
+        result_model = get_coaching_result_model(endpoint_def.result_model)
+
+        # Format conversation for extraction
+        conversation_text = self._format_conversation_for_extraction(session.messages)
+
+        # Generate extraction prompt dynamically
+        if result_model is not None:
+            schema = result_model.model_json_schema()
+            schema_json = json.dumps(schema, indent=2)
+        else:
+            schema_json = "{}"
+
+        extraction_prompt = EXTRACTION_PROMPT_TEMPLATE.format(
+            result_schema_json=schema_json,
+        )
+
+        # Add conversation history
+        full_prompt = f"{extraction_prompt}\n\n## Conversation\n{conversation_text}"
+
+        # Execute extraction LLM call (lower temperature)
+        messages = [
+            {
+                "role": "system",
+                "content": "You are extracting structured data from a coaching conversation. "
+                "Return ONLY valid JSON matching the schema.",
+            },
+            {"role": "user", "content": full_prompt},
+        ]
+
+        llm_response, _ = await self._execute_llm_call(
+            messages=messages,
+            llm_topic=llm_topic,
+            temperature_override=0.3,
+        )
+
+        # Parse extraction result
+        extracted = self._parse_extraction_result(llm_response, result_model)
+
+        # Complete session
+        session.complete(result=extracted, extraction_model=endpoint_def.result_model)
+        await self.session_repository.update(session)
 
         logger.info(
-            "coaching_session.completed",
-            session_id=session_id,
-            result_type=type(extracted_result).__name__,
+            "coaching_service.session_completed",
+            session_id=str(session.session_id),
         )
 
         return SessionCompletionResponse(
             session_id=str(session.session_id),
-            status=session.status,
-            result=extracted_result,
-            message_count=session.get_message_count(),
+            status=ConversationStatus.COMPLETED,
+            result=extracted,
         )
 
+    def _format_conversation_for_extraction(self, messages: list[CoachingMessage]) -> str:
+        """Format conversation messages for extraction prompt.
+
+        Args:
+            messages: List of conversation messages
+
+        Returns:
+            Formatted conversation string
+        """
+        lines = []
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                continue  # Skip system messages
+            role = "User" if msg.role == MessageRole.USER else "Coach"
+            lines.append(f"{role}: {msg.content}")
+        return "\n\n".join(lines)
+
+    def _parse_extraction_result(
+        self, response: str, result_model: type[BaseModel] | None
+    ) -> dict[str, Any]:
+        """Parse extraction LLM response into structured result.
+
+        Args:
+            response: LLM response (should be JSON)
+            result_model: Optional Pydantic model for validation
+
+        Returns:
+            Extracted result as dictionary
+        """
+        try:
+            # Try to parse JSON
+            extracted: dict[str, Any] = json.loads(response)
+
+            # Validate against model if provided
+            if result_model is not None:
+                validated = result_model.model_validate(extracted)
+                return dict(validated.model_dump())
+
+            return extracted
+
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "coaching_service.extraction_json_parse_failed",
+                error=str(e),
+            )
+            return {"raw_response": response, "parse_error": str(e)}
+
+        except Exception as e:
+            logger.warning(
+                "coaching_service.extraction_validation_failed",
+                error=str(e),
+            )
+            return {"raw_response": response, "validation_error": str(e)}
+
     # =========================================================================
-    # Query Methods
+    # Session Management
     # =========================================================================
 
-    async def get_session(
+    async def pause_session(
         self,
+        *,
         session_id: str,
         tenant_id: str,
-    ) -> SessionDetails:
-        """Get session details.
+        user_id: str,
+    ) -> SessionStateResponse:
+        """Pause an active session.
 
         Args:
             session_id: Session identifier
-            tenant_id: Tenant identifier for isolation
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            SessionStateResponse with updated state
+        """
+        session = await self._load_and_validate_session(
+            session_id=session_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        session.pause()
+        await self.session_repository.update(session)
+
+        logger.info("coaching_service.session_paused", session_id=session_id)
+
+        return self._build_state_response(session)
+
+    async def cancel_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> SessionStateResponse:
+        """Cancel an active session.
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            SessionStateResponse with updated state
+        """
+        session = await self.session_repository.get_by_id_for_tenant(
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+
+        if session is None:
+            raise SessionNotFoundError(session_id)
+
+        if str(session.user_id) != user_id:
+            raise SessionAccessDeniedError(session_id=session_id, user_id=user_id)
+
+        session.cancel()
+        await self.session_repository.update(session)
+
+        logger.info("coaching_service.session_cancelled", session_id=session_id)
+
+        return self._build_state_response(session)
+
+    async def get_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> SessionDetails:
+        """Get detailed session information.
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
 
         Returns:
             SessionDetails with full session information
-
-        Raises:
-            ConversationNotFoundError: If session not found
         """
-        session = await self._get_session_with_tenant_check(session_id, tenant_id)
-        topic = get_coaching_topic(session.topic_id)
-        estimated_messages = topic.estimated_messages if topic else 20
+        session = await self.session_repository.get_by_id_for_tenant(
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+
+        if session is None:
+            raise SessionNotFoundError(session_id)
+
+        if str(session.user_id) != user_id:
+            raise SessionAccessDeniedError(session_id=session_id, user_id=user_id)
 
         return SessionDetails(
             session_id=str(session.session_id),
@@ -743,22 +1164,23 @@ class CoachingSessionService:
             status=session.status,
             messages=[
                 MessageDetail(
-                    role=m.role,
+                    role=m.role.value,
                     content=m.content,
                     timestamp=m.timestamp.isoformat(),
                 )
                 for m in session.messages
             ],
-            message_count=session.get_message_count(),
-            estimated_completion=session.calculate_estimated_completion(estimated_messages),
+            context=session.context,
+            max_turns=session.max_turns,
             created_at=session.created_at.isoformat(),
             updated_at=session.updated_at.isoformat(),
-            completed_at=(session.completed_at.isoformat() if session.completed_at else None),
-            result=session.result,
+            completed_at=session.completed_at.isoformat() if session.completed_at else None,
+            extracted_result=session.extracted_result,
         )
 
     async def list_user_sessions(
         self,
+        *,
         tenant_id: str,
         user_id: str,
         include_completed: bool = False,
@@ -770,14 +1192,14 @@ class CoachingSessionService:
             tenant_id: Tenant identifier
             user_id: User identifier
             include_completed: Whether to include completed sessions
-            limit: Maximum sessions to return
+            limit: Maximum number of sessions to return
 
         Returns:
-            List of session summaries
+            List of SessionSummary objects
         """
-        sessions = await self.session_repo.list_by_tenant_user(
-            tenant_id=tenant_id,
+        sessions = await self.session_repository.list_by_tenant_user(
             user_id=user_id,
+            tenant_id=tenant_id,
             include_completed=include_completed,
             limit=limit,
         )
@@ -787,513 +1209,267 @@ class CoachingSessionService:
                 session_id=str(s.session_id),
                 topic_id=s.topic_id,
                 status=s.status,
-                message_count=s.get_message_count(),
+                turn_count=s.get_turn_count(),
                 created_at=s.created_at.isoformat(),
                 updated_at=s.updated_at.isoformat(),
             )
             for s in sessions
         ]
 
-    # =========================================================================
-    # Private Helper Methods
-    # =========================================================================
-
-    async def _get_session_with_tenant_check(
+    async def get_topics_with_status(
         self,
-        session_id: str,
-        tenant_id: str,
-    ) -> CoachingSession:
-        """Get session with tenant isolation check.
-
-        Args:
-            session_id: Session identifier
-            tenant_id: Tenant identifier
-
-        Returns:
-            CoachingSession entity
-
-        Raises:
-            ConversationNotFoundError: If not found or wrong tenant
-        """
-        session = await self.session_repo.get_by_id_for_tenant(
-            session_id=session_id,
-            tenant_id=tenant_id,
-        )
-
-        if session is None:
-            raise ConversationNotFoundError(f"Session not found: {session_id}")
-
-        return session
-
-    async def _generate_initiation_message(
-        self,
-        topic: CoachingTopicDefinition,
-        context: dict[str, Any],
+        *,
         tenant_id: str,
         user_id: str,
-    ) -> str:
-        """Generate the initial coach message for a session.
+    ) -> TopicsWithStatusResponse:
+        """Get all coaching topics with user's completion status.
 
-        Uses the template processor (if available) to resolve parameters
-        in the system prompt template before generating the response.
+        Returns the list of available coaching topics along with the user's
+        progress status for each:
+        - not_started: User has never started this topic
+        - in_progress: User has an active session
+        - paused: User has a paused session
+        - completed: User has completed this topic
 
         Args:
-            topic: Topic definition with prompts
-            context: Context for template rendering
-            tenant_id: Tenant ID for parameter resolution
-            user_id: User ID for parameter resolution
+            tenant_id: Tenant identifier
+            user_id: User identifier
 
         Returns:
-            Initial coach message
+            TopicsWithStatusResponse containing topic statuses
         """
-        # Enrich context with template processor if available
-        enriched_context = await self._enrich_context(
-            template=topic.system_prompt_template,
-            context=context,
+        logger.info(
+            "coaching_service.get_topics_with_status",
             tenant_id=tenant_id,
             user_id=user_id,
-            topic=topic,
         )
 
-        # Render the system prompt with enriched context
-        system_prompt = get_system_prompt_with_structured_output(topic, enriched_context)
+        # Get all available topics from registry
+        all_topics = list_coaching_topics()
 
-        # Convert initiation_instructions to conversation format
-        history: list[dict[str, str]] = []
-
-        # Use LLMService to generate response with enriched system prompt
-        response = await self.llm_service.generate_coaching_response(
-            conversation_id=f"init_{topic.topic_id}",
-            topic=topic.topic_id,
-            user_message=topic.initiation_instructions,
-            conversation_history=history,
-            business_context=enriched_context,
-            system_prompt_override=system_prompt,
-        )
-
-        return str(response.response)
-
-    async def _generate_resume_message(
-        self,
-        topic: CoachingTopicDefinition,
-        session: CoachingSession,
-        tenant_id: str,
-    ) -> str:
-        """Generate a resume message for a paused session.
-
-        Uses the template processor (if available) to resolve parameters
-        in the system prompt template before generating the response.
-
-        Args:
-            topic: Topic definition with prompts
-            session: The session being resumed
-            tenant_id: Tenant ID for parameter resolution
-
-        Returns:
-            Resume message from coach
-        """
-        # Enrich context with template processor if available
-        enriched_context = await self._enrich_context(
-            template=topic.system_prompt_template,
-            context=session.context,
+        # Get user's sessions to determine status
+        user_sessions = await self.session_repository.list_by_tenant_user(
             tenant_id=tenant_id,
-            user_id=str(session.user_id),
-            topic=topic,
+            user_id=user_id,
         )
 
-        # Render the system prompt with enriched context
-        system_prompt = get_system_prompt_with_structured_output(topic, enriched_context)
-
-        # Get conversation history for context (sliding window)
-        # get_messages_for_llm already returns dicts with 'role' and 'content'
-        history = session.get_messages_for_llm(max_messages=topic.max_messages_to_llm)
-
-        # Generate resume message using standard coaching response
-        response = await self.llm_service.generate_coaching_response(
-            conversation_id=str(session.session_id),
-            topic=session.topic_id,
-            user_message=topic.resume_instructions,
-            conversation_history=history,
-            business_context=enriched_context,
-            system_prompt_override=system_prompt,
-        )
-
-        return str(response.response)
-
-    async def _generate_coach_response(
-        self,
-        topic: CoachingTopicDefinition,
-        session: CoachingSession,
-    ) -> str:
-        """Generate coach response to user message with structured output.
-
-        This method generates a system prompt with structured output instructions
-        automatically derived from the topic's result_model. The LLM is instructed
-        to return JSON that can signal session completion via `is_final` flag.
-
-        Args:
-            topic: Topic definition (includes result_model for auto-completion schema)
-            session: Current session state
-
-        Returns:
-            Raw LLM response (JSON string with structured output format)
-        """
-        # Get conversation history (sliding window)
-        # get_messages_for_llm already returns dicts with 'role' and 'content'
-        messages = session.get_messages_for_llm(max_messages=topic.max_messages_to_llm)
-
-        # The last message should be the user message we're responding to
-        history: list[dict[str, str]] = []
-        user_message = ""
-
-        for i, m in enumerate(messages):
-            if i == len(messages) - 1 and m["role"] == "user":
-                # Last message is user message - use as prompt
-                user_message = m["content"]
+        # Build a map of topic_id -> latest session
+        topic_sessions: dict[str, CoachingSession] = {}
+        for session in user_sessions:
+            topic_id = session.topic_id
+            if topic_id not in topic_sessions:
+                topic_sessions[topic_id] = session
             else:
-                history.append(m)
+                # Keep the most recent session
+                existing = topic_sessions[topic_id]
+                if session.updated_at > existing.updated_at:
+                    topic_sessions[topic_id] = session
 
-        # Generate system prompt with structured output instructions
-        # This automatically adds auto-completion instructions based on topic.result_model
-        system_prompt = get_system_prompt_with_structured_output(
-            topic=topic,
-            context=session.context,
-        )
+        # Build response
+        topic_statuses: list[TopicStatus] = []
+        for topic in all_topics:
+            existing_session = topic_sessions.get(topic.topic_id)
 
-        # Generate response with structured output system prompt
-        response = await self.llm_service.generate_coaching_response(
-            conversation_id=str(session.session_id),
-            topic=session.topic_id,
-            user_message=user_message,
-            conversation_history=history,
-            business_context=session.context,
-            system_prompt_override=system_prompt,
-        )
+            if existing_session is None:
+                status = "not_started"
+                session_id = None
+                completed_at = None
+            elif existing_session.status == ConversationStatus.ACTIVE:
+                status = "in_progress"
+                session_id = existing_session.session_id
+                completed_at = None
+            elif existing_session.status == ConversationStatus.PAUSED:
+                status = "paused"
+                session_id = existing_session.session_id
+                completed_at = None
+            elif existing_session.status == ConversationStatus.COMPLETED:
+                status = "completed"
+                session_id = existing_session.session_id
+                completed_at = (
+                    existing_session.completed_at.isoformat()
+                    if existing_session.completed_at
+                    else None
+                )
+            else:
+                # Cancelled/Abandoned - treat as not started
+                status = "not_started"
+                session_id = None
+                completed_at = None
 
-        return str(response.response)
+            topic_statuses.append(
+                TopicStatus(
+                    topic_id=topic.topic_id,
+                    name=topic.topic_id.replace("_", " ").title(),
+                    description=topic.description,
+                    status=status,
+                    session_id=str(session_id) if session_id else None,
+                    completed_at=completed_at,
+                )
+            )
 
-    async def _extract_session_result(
-        self,
-        topic: CoachingTopicDefinition,
-        session: CoachingSession,
-        tenant_id: str,
-    ) -> dict[str, Any]:
-        """Extract final result from coaching session.
-
-        Generates the extraction prompt automatically based on the topic's
-        result_model schema, similar to UnifiedAIEngine's approach.
-
-        Args:
-            topic: Topic definition with extraction instructions
-            session: Completed session
-            tenant_id: Tenant ID for parameter resolution
-
-        Returns:
-            Extracted result as dictionary
-        """
-        # Enrich context with template processor if available
-        enriched_context = await self._enrich_context(
-            template=topic.system_prompt_template,
-            context=session.context,
+        logger.info(
+            "coaching_service.get_topics_with_status.complete",
             tenant_id=tenant_id,
-            user_id=str(session.user_id),
-            topic=topic,
+            topic_count=len(topic_statuses),
         )
 
-        # Get full conversation for extraction
-        # get_messages_for_llm already returns dicts with 'role' and 'content'
-        history = session.get_messages_for_llm(max_messages=50)
+        return TopicsWithStatusResponse(topics=topic_statuses)
 
-        # Get the result model and generate schema-driven extraction prompt
-        result_model = get_coaching_result_model(topic.result_model)
-        extraction_system_prompt = self._build_extraction_system_prompt(
-            topic=topic,
-            result_model=result_model,
-            context=enriched_context,
+    def _build_state_response(self, session: CoachingSession) -> SessionStateResponse:
+        """Build state response from session.
+
+        Args:
+            session: CoachingSession entity
+
+        Returns:
+            SessionStateResponse
+        """
+        return SessionStateResponse(
+            session_id=str(session.session_id),
+            status=session.status,
+            topic_id=session.topic_id,
+            turn_count=session.get_turn_count(),
+            max_turns=session.max_turns,
+            created_at=session.created_at.isoformat(),
+            updated_at=session.updated_at.isoformat(),
         )
 
-        # Build user prompt with topic's extraction instructions
-        extraction_user_prompt = f"""{topic.extraction_instructions}
+    # =========================================================================
+    # Topic Information
+    # =========================================================================
 
-Based on the entire conversation above, extract the final result as a valid JSON object.
-Do not include any text before or after the JSON.
-"""
+    def list_available_topics(self) -> list[dict[str, Any]]:
+        """List all available coaching topics.
 
-        response = await self.llm_service.generate_coaching_response(
-            conversation_id=f"extract_{session.session_id}",
-            topic=session.topic_id,
-            user_message=extraction_user_prompt,
-            conversation_history=history,
-            business_context=enriched_context,
-            system_prompt_override=extraction_system_prompt,
-        )
+        Returns:
+            List of topic info dictionaries
+        """
+        return [
+            {
+                "topic_id": endpoint.topic_id,
+                "description": endpoint.description,
+                "result_model": endpoint.result_model,
+                "category": endpoint.category.value,
+            }
+            for endpoint in self._topic_index.values()
+        ]
 
-        # Try to parse JSON from response
-        return self._parse_json_from_response(response.response)
+    def is_valid_topic(self, topic_id: str) -> bool:
+        """Check if topic is valid for coaching.
 
-    def _build_extraction_system_prompt(
+        Args:
+            topic_id: Topic identifier
+
+        Returns:
+            True if topic exists and is valid
+        """
+        return topic_id in self._topic_index
+
+    # =========================================================================
+    # LLM Execution
+    # =========================================================================
+
+    async def _execute_llm_call(
         self,
-        topic: CoachingTopicDefinition,
-        result_model: type[BaseModel] | None,
-        context: dict[str, Any],
-    ) -> str:
-        """Build a system prompt for extraction with schema instructions.
+        *,
+        messages: list[dict[str, str]],
+        llm_topic: LLMTopic,
+        temperature_override: float | None = None,
+    ) -> tuple[str, ResponseMetadata]:
+        """Execute LLM call through provider factory with dynamic model resolution.
 
-        Generates a system prompt that instructs the LLM to extract data
-        according to the result model's JSON schema.
-
-        Args:
-            topic: Topic definition
-            result_model: Pydantic model class for the result
-            context: Enriched context for template rendering
-
-        Returns:
-            System prompt with extraction instructions and schema
-        """
-        # Start with topic description
-        base_prompt = f"""You are an expert at extracting structured information from conversations.
-
-## Task
-You are completing a {topic.name} coaching session. Your job is to analyze the conversation
-and extract the final result according to the specified schema.
-
-## Context
-"""
-        # Add context values
-        for key, value in context.items():
-            base_prompt += f"- {key}: {value}\n"
-
-        # Add schema instructions if result model is available
-        if result_model is not None:
-            schema = result_model.model_json_schema()
-            simplified_schema = self._simplify_schema_for_prompt(schema)
-            schema_json = json.dumps(simplified_schema, indent=2)
-
-            base_prompt += f"""
-## Response Format Instructions
-
-You MUST respond with valid JSON that matches this exact schema:
-
-```json
-{schema_json}
-```
-
-**Important:**
-- Use the exact field names shown above (including camelCase where specified by "alias")
-- Do not include any text before or after the JSON
-- Ensure all required fields are present
-- Follow any constraints (min/max length, enum values, etc.)
-"""
-        else:
-            base_prompt += """
-## Response Format
-Respond with a valid JSON object containing the extracted information.
-Do not include any text before or after the JSON.
-"""
-
-        return base_prompt
-
-    def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
-        """Simplify JSON schema for LLM prompt.
-
-        Removes internal Pydantic details to make the schema cleaner.
+        Uses LLMProviderFactory to resolve model_code to the correct provider
+        and model name, following the same pattern as UnifiedAIEngine.
 
         Args:
-            schema: Full Pydantic JSON schema
+            messages: Messages to send to LLM
+            llm_topic: Topic config with model settings
+            temperature_override: Optional temperature override
 
         Returns:
-            Simplified schema for prompt
+            Tuple of (response_content, metadata)
         """
-        simplified: dict[str, Any] = {}
+        import time
 
-        # Copy basic structure
-        if "type" in schema:
-            simplified["type"] = schema["type"]
+        from coaching.src.domain.ports.llm_provider_port import LLMMessage
 
-        if "properties" in schema:
-            simplified["properties"] = {}
-            for name, prop in schema["properties"].items():
-                simplified_prop: dict[str, Any] = {}
-                if "type" in prop:
-                    simplified_prop["type"] = prop["type"]
-                if "description" in prop:
-                    simplified_prop["description"] = prop["description"]
-                if "items" in prop:
-                    simplified_prop["items"] = self._simplify_schema_for_prompt(prop["items"])
-                if "enum" in prop:
-                    simplified_prop["enum"] = prop["enum"]
-                simplified["properties"][name] = simplified_prop
-
-        if "required" in schema:
-            simplified["required"] = schema["required"]
-
-        # Handle $defs (nested models)
-        if "$defs" in schema:
-            simplified["definitions"] = {}
-            for name, definition in schema["$defs"].items():
-                simplified["definitions"][name] = self._simplify_schema_for_prompt(definition)
-
-        return simplified
-
-    async def _enrich_context(
-        self,
-        template: str,
-        context: dict[str, Any],
-        tenant_id: str,
-        user_id: str,
-        topic: CoachingTopicDefinition,
-    ) -> dict[str, Any]:
-        """Enrich context by resolving parameters via template processor.
-
-        If template_processor is not available, returns context unchanged.
-        Otherwise, analyzes the template to find needed parameters and
-        enriches any that are missing from the provided context.
-
-        Args:
-            template: Template string with {param} placeholders
-            context: Original context parameters
-            tenant_id: Tenant ID for API calls
-            user_id: User ID for API calls
-            topic: Topic definition (for required params info)
-
-        Returns:
-            Enriched context dictionary
-        """
-        if self.template_processor is None:
-            # No enrichment - return original context
-            return context
-
-        # Get required parameters from topic's parameter_refs
-        required_params = {ref.parameter for ref in topic.parameter_refs if ref.required}
+        temperature = temperature_override or llm_topic.temperature
+        start_time = time.perf_counter()
 
         logger.debug(
-            "coaching_session.enriching_context",
-            topic_id=topic.topic_id,
-            required_params=list(required_params),
-            provided_params=list(context.keys()),
+            "coaching_service.executing_llm_call",
+            model_code=llm_topic.model_code,
+            temperature=temperature,
+            message_count=len(messages),
         )
 
+        # Get provider and resolved model name from factory
+        # This properly resolves model_code (e.g., "CLAUDE_3_5_SONNET") to
+        # provider instance and actual model name (e.g., "us.anthropic.claude-3-5-sonnet-...")
         try:
-            # Process template and enrich missing parameters
-            result = await self.template_processor.process_template_parameters(
-                template=template,
-                payload=context,
-                user_id=user_id,
-                tenant_id=tenant_id,
-                required_params=required_params,
+            provider, model_name = self.provider_factory.get_provider_for_model(
+                llm_topic.model_code
             )
-
-            # Log any warnings
-            if result.warnings:
-                for warning in result.warnings:
-                    logger.warning(
-                        "coaching_session.parameter_enrichment_warning",
-                        topic_id=topic.topic_id,
-                        warning=warning,
-                    )
-
-            # Check for missing required params (log but don't fail)
-            if result.missing_required:
-                logger.warning(
-                    "coaching_session.missing_required_params",
-                    topic_id=topic.topic_id,
-                    missing=result.missing_required,
-                )
-
-            # Merge enriched params with original (original takes precedence)
-            enriched = {**result.parameters, **context}
-
-            logger.info(
-                "coaching_session.context_enriched",
-                topic_id=topic.topic_id,
-                original_count=len(context),
-                enriched_count=len(enriched),
-                added_count=len(enriched) - len(context),
-            )
-
-            return enriched
-
         except Exception as e:
-            # Log error but don't fail - return original context
             logger.error(
-                "coaching_session.enrichment_failed",
-                topic_id=topic.topic_id,
-                error=str(e),
-                exc_info=True,
-            )
-            return context
-
-    def _render_template(
-        self,
-        template: str,
-        context: dict[str, Any],
-    ) -> str:
-        """Render a template string with context values.
-
-        Args:
-            template: Template string with {key} placeholders
-            context: Context values for substitution
-
-        Returns:
-            Rendered template string
-        """
-        try:
-            # Use safe substitution that doesn't fail on missing keys
-            result = template
-            for key, value in context.items():
-                placeholder = "{" + key + "}"
-                if placeholder in result:
-                    result = result.replace(placeholder, str(value))
-            return result
-        except Exception as e:
-            logger.warning(
-                "coaching_session.template_render_failed",
+                "coaching_service.provider_resolution_failed",
+                model_code=llm_topic.model_code,
                 error=str(e),
             )
-            return template
+            raise RuntimeError(
+                f"Failed to resolve LLM provider for {llm_topic.model_code}: {e}"
+            ) from e
 
-    def _parse_json_from_response(self, response: str) -> dict[str, Any]:
-        """Parse JSON from LLM response.
+        # Convert messages to LLMMessage format
+        llm_messages: list[LLMMessage] = []
+        system_prompt: str | None = None
 
-        Handles cases where JSON is embedded in markdown code blocks.
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system":
+                # System prompt is passed separately
+                system_prompt = content
+            else:
+                llm_messages.append(LLMMessage(role=role, content=content))
 
-        Args:
-            response: LLM response text
-
-        Returns:
-            Parsed dictionary or empty dict if parsing fails
-        """
-        import json
-        import re
-
-        try:
-            # Try direct parse first
-            return dict(json.loads(response))
-        except json.JSONDecodeError:
-            pass
-
-        # Try to extract JSON from markdown code blocks
-        json_pattern = r"```(?:json)?\s*([\s\S]*?)```"
-        matches = re.findall(json_pattern, response)
-
-        for match in matches:
-            try:
-                return dict(json.loads(match.strip()))
-            except json.JSONDecodeError:
-                continue
-
-        # Try to find JSON object in response
-        brace_pattern = r"\{[\s\S]*\}"
-        brace_matches = re.findall(brace_pattern, response)
-
-        for match in brace_matches:
-            try:
-                return dict(json.loads(match))
-            except json.JSONDecodeError:
-                continue
-
-        logger.warning(
-            "coaching_session.json_parse_failed",
-            response_length=len(response),
+        # Execute using the provider's generate method
+        response = await provider.generate(
+            messages=llm_messages,
+            model=model_name,
+            temperature=temperature,
+            max_tokens=llm_topic.max_tokens,
+            system_prompt=system_prompt,
         )
-        return {}
+
+        processing_time_ms = int((time.perf_counter() - start_time) * 1000)
+
+        logger.info(
+            "coaching_service.llm_call_completed",
+            model_code=llm_topic.model_code,
+            model_name=model_name,
+            tokens_used=response.usage.get("total_tokens", 0),
+            processing_time_ms=processing_time_ms,
+        )
+
+        metadata = ResponseMetadata(
+            model=response.model,
+            processing_time_ms=processing_time_ms,
+            tokens_used=response.usage.get("total_tokens", 0),
+        )
+
+        return response.content, metadata
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def list_coaching_topics() -> list[EndpointDefinition]:
+    """List all coaching topic definitions.
+
+    Returns:
+        List of EndpointDefinition for coaching topics
+    """
+    return list(list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING))
