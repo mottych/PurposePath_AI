@@ -606,7 +606,25 @@ class CoachingSessionService:
 
         Returns:
             SessionResponse with resume message
+
+        Raises:
+            SessionIdleTimeoutError: If session has exceeded idle timeout
         """
+        # Check idle timeout BEFORE making expensive LLM call
+        # If session is idle, mark it completed and raise error
+        if session.is_idle():
+            session.complete(result={})
+            await self.session_repository.update(session)
+            from coaching.src.domain.exceptions.session_exceptions import (
+                SessionIdleTimeoutError,
+            )
+
+            raise SessionIdleTimeoutError(
+                session_id=session.session_id,
+                last_activity_at=session.updated_at.isoformat(),
+                idle_timeout_minutes=session.idle_timeout_minutes,
+            )
+
         # Load resume template
         resume_template = await self._load_template(session.topic_id, TemplateType.RESUME)
 
