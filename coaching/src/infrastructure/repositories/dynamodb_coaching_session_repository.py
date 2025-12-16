@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import (
@@ -376,10 +376,10 @@ class DynamoDBCoachingSessionRepository:
         """
         try:
             # Query GSI for tenant+user sessions
+            # tenant_id is hash key, user_id is range key
             response = self.table.query(
                 IndexName="tenant-user-index",
-                KeyConditionExpression=Key("tenant_id").eq(tenant_id),
-                FilterExpression=Key("user_id").eq(user_id),
+                KeyConditionExpression=Key("tenant_id").eq(tenant_id) & Key("user_id").eq(user_id),
                 ScanIndexForward=False,  # Most recent first
                 Limit=limit * 2,  # Fetch extra for filtering
             )
@@ -509,12 +509,12 @@ class DynamoDBCoachingSessionRepository:
             Active CoachingSession if found, None otherwise
         """
         try:
-            # Use user_topic_key GSI for efficient lookup
-            user_topic_key = f"USER#{user_id}#TOPIC#{topic_id}"
+            # Use tenant-user-index GSI for efficient lookup, filter by topic_id
+            # tenant_id is hash key, user_id is range key
             response = self.table.query(
-                IndexName="user-topic-index",
-                KeyConditionExpression=Key("user_topic_key").eq(user_topic_key),
-                FilterExpression=Key("tenant_id").eq(tenant_id),
+                IndexName="tenant-user-index",
+                KeyConditionExpression=Key("tenant_id").eq(tenant_id) & Key("user_id").eq(user_id),
+                FilterExpression=Attr("topic_id").eq(topic_id),
             )
 
             # Find active session among results
