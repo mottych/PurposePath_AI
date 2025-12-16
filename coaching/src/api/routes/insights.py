@@ -2,7 +2,8 @@
 
 Migration Status:
 - generate: Migrated to topic-driven (insights_generation topic)
-- categories, priorities, dismiss, acknowledge: Not migrated (CRUD operations, not AI)
+    USED BY: FE - Dashboard.tsx (generateCoachingInsights)
+- categories, priorities, dismiss, acknowledge, summary: DEPRECATED - Not called by FE
 """
 
 from typing import cast

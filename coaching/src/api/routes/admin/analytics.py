@@ -1,4 +1,11 @@
-"""Admin API routes for usage analytics and template testing."""
+"""Admin API routes for usage analytics and template testing.
+
+Endpoint Usage Status:
+- GET /usage: DEPRECATED - not called by Admin UI
+- GET /models/{model_id}/metrics: DEPRECATED - not called by Admin UI
+
+Note: LLM dashboard metrics come from /topics/stats endpoint in admin/topics.py
+"""
 
 from datetime import datetime
 

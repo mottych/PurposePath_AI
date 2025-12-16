@@ -1,5 +1,13 @@
 """Coaching AI API routes - migrated to topic-driven architecture (Issue #113).
 
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: These endpoints were designed for Phase 2 but never integrated with frontend.
+Usage: No frontend callers exist.
+Status: Safe to remove.
+================================================================================
+
 This module provides AI-powered strategic planning endpoints using the unified
 topic-driven architecture. All endpoints now route through GenericAIHandler
 which uses UnifiedAIEngine for consistent prompt management and AI processing.

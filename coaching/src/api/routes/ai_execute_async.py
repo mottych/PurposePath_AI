@@ -2,7 +2,9 @@
 
 This module provides endpoints for asynchronous AI execution:
 - POST /ai/execute-async - Start an async AI job
+    USED BY: FE - useAsyncAI hook (niche_review, ica_review, value_proposition_review)
 - GET /ai/jobs/{jobId} - Check job status (polling fallback)
+    USED BY: FE - ai-job-service.ts for job polling
 
 These endpoints enable long-running AI operations that exceed
 API Gateway's 30-second timeout limit.

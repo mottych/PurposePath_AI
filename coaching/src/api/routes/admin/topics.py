@@ -1,4 +1,20 @@
-"""Admin API routes for topic management (Enhanced for Issue #113)."""
+"""Admin API routes for topic management (Enhanced for Issue #113).
+
+Endpoint Usage Status:
+- GET /topics: USED BY Admin - TopicList, TopicFilters
+- GET /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
+- PUT /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
+- GET /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog
+- POST /topics/{topic_id}/prompts: USED BY Admin - PromptEditorDialog (create)
+- PUT /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog (update)
+- DELETE /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog (delete)
+
+DEPRECATED (defined but not called by Admin UI):
+- POST /topics: create new topic - UI doesn't call
+- DELETE /topics/{topic_id}: delete topic - UI doesn't call
+- POST /topics/validate: validate topic - UI doesn't call
+- POST /topics/{topic_id}/test: test topic - UI doesn't call
+"""
 
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -17,7 +33,7 @@ from coaching.src.api.dependencies.ai_engine import (
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
-from coaching.src.core.endpoint_registry import (
+from coaching.src.core.topic_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_by_topic_id,
     get_parameters_for_topic,

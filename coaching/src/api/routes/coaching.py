@@ -1,4 +1,13 @@
-"""AI coaching API routes for interactive coaching sessions."""
+"""AI coaching API routes for interactive coaching sessions.
+
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Superseded by /ai/coaching/* endpoints in coaching_sessions.py
+Usage: Frontend uses /ai/coaching/start, /ai/coaching/message, etc.
+Status: Safe to remove.
+================================================================================
+"""
 
 import structlog
 from coaching.src.api.auth import get_current_context
