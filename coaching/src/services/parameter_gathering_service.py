@@ -8,12 +8,12 @@ from typing import Any
 
 import structlog
 from coaching.src.core.constants import ParameterSource
-from coaching.src.core.endpoint_registry import (
+from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
+from coaching.src.core.topic_registry import (
     EndpointDefinition,
     ParameterRef,
     get_parameters_by_source_for_endpoint,
 )
-from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
 logger = structlog.get_logger()

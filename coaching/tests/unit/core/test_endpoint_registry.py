@@ -4,7 +4,7 @@ Tests for Issue #123 - Coaching Engine Improvement.
 """
 
 from coaching.src.core.constants import ParameterSource, TopicCategory, TopicType
-from coaching.src.core.endpoint_registry import (
+from coaching.src.core.topic_registry import (
     ENDPOINT_REGISTRY,
     EndpointDefinition,
     ParameterRef,

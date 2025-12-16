@@ -2,7 +2,6 @@
 
 import pytest
 from coaching.src.core.constants import (
-    DEFAULT_LLM_MODELS,
     AnalysisType,
     CoachingTopic,
     ConversationStatus,
@@ -98,42 +97,11 @@ class TestAnalysisTypeEnum:
 
 
 @pytest.mark.unit
-class TestDefaultLLMModels:
-    """Test DEFAULT_LLM_MODELS constant."""
-
-    def test_all_topics_have_default_models(self) -> None:
-        """Test that all coaching topics have default models."""
-        # Assert
-        assert CoachingTopic.CORE_VALUES in DEFAULT_LLM_MODELS
-        assert CoachingTopic.PURPOSE in DEFAULT_LLM_MODELS
-        assert CoachingTopic.VISION in DEFAULT_LLM_MODELS
-        assert CoachingTopic.GOALS in DEFAULT_LLM_MODELS
-
-    def test_models_are_strings(self) -> None:
-        """Test that all model IDs are strings."""
-        # Act & Assert
-        for topic, model_id in DEFAULT_LLM_MODELS.items():
-            assert isinstance(model_id, str)
-            assert len(model_id) > 0
-
-    def test_models_are_anthropic_claude(self) -> None:
-        """Test that all default models are Anthropic Claude."""
-        # Act & Assert
-        for model_id in DEFAULT_LLM_MODELS.values():
-            assert "anthropic.claude" in model_id
-
-    def test_model_count_matches_topics(self) -> None:
-        """Test that we have a model for each topic."""
-        # Assert
-        assert len(DEFAULT_LLM_MODELS) == len(CoachingTopic)
-
-
-@pytest.mark.unit
 class TestConstantsIntegrity:
     """Test integrity and relationships between constants."""
 
-    def test_default_models_keys_are_topics(self) -> None:
-        """Test that default models use valid topic enums."""
+    def test_conversation_status_values_are_lowercase(self) -> None:
+        """Test that conversation status values are lowercase strings."""
         # Act & Assert
-        for topic in DEFAULT_LLM_MODELS.keys():
-            assert topic in CoachingTopic
+        for status in ConversationStatus:
+            assert status.value == status.value.lower()

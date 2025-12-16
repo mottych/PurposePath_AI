@@ -449,7 +449,15 @@ def get_model_provider_class(code: str) -> str:
     return model.provider_class
 
 
+# Default model for generic coaching operations
+# This is used when no specific model is configured for a topic
+DEFAULT_MODEL_CODE = "CLAUDE_3_5_SONNET_V2"
+DEFAULT_MODEL_ID = MODEL_REGISTRY[DEFAULT_MODEL_CODE].model_name
+
+
 __all__ = [
+    "DEFAULT_MODEL_CODE",
+    "DEFAULT_MODEL_ID",
     "MODEL_REGISTRY",
     "LLMProvider",
     "SupportedModel",

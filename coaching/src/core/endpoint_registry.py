@@ -1,4 +1,4 @@
-"""Endpoint Registry - Central mapping of all API endpoints to topic configurations.
+"""Topic Registry - Central mapping of all API endpoints to topic configurations.
 
 This module provides the definitive mapping between HTTP endpoints and their
 corresponding LLM topic configurations, enabling a unified, topic-driven
@@ -7,12 +7,28 @@ rather than hardcoded service classes.
 
 Parameter source information is defined here per-endpoint since the same
 parameter may come from different sources depending on the endpoint context.
+
+For conversation coaching topics, use TemplateType to define the required templates.
 """
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TypedDict
 
 from coaching.src.core.constants import ParameterSource, PromptType, TopicCategory, TopicType
+
+
+class TemplateType(str, Enum):
+    """Template types for coaching conversations.
+
+    Templates are stored in S3 and loaded by the CoachingSessionService.
+    Each conversation topic can define multiple templates for different phases.
+    """
+
+    SYSTEM = "system"  # System prompt (AI persona, rules, context)
+    INITIATION = "initiation"  # First turn prompt for new sessions
+    RESUME = "resume"  # Resume conversation prompt for existing sessions
+    EXTRACTION = "extraction"  # Auto-generated from result_model for extraction
 
 
 class ParameterInfo(TypedDict):
@@ -113,30 +129,34 @@ class EndpointDefinition:
     """Definition of an API endpoint and its topic configuration.
 
     Attributes:
-        endpoint_path: API path (e.g., "/coaching/alignment-check")
-        http_method: HTTP method ("GET", "POST", "PUT", "DELETE")
         topic_id: Topic identifier in DynamoDB (e.g., "alignment_check")
-        response_model: Response model class name (e.g., "AlignmentAnalysisResponse")
         topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
         category: Grouping category for organization (enum)
         description: Human-readable description of endpoint purpose
+        response_model: Response model class name (e.g., "AlignmentAnalysisResponse")
+        endpoint_path: API path (optional for conversation topics)
+        http_method: HTTP method (optional for conversation topics)
         is_active: Whether endpoint is currently active and routable
         allowed_prompt_types: List of prompt types this endpoint can use
         parameter_refs: Parameter references with source info for this endpoint
+        templates: Template S3 keys by type (for conversation topics)
+        result_model: Pydantic model class name for extraction output (for conversation topics)
     """
 
-    endpoint_path: str
-    http_method: str
     topic_id: str
-    response_model: str
     topic_type: TopicType
     category: TopicCategory
     description: str
+    response_model: str = ""
+    endpoint_path: str | None = None  # Optional for conversation topics
+    http_method: str | None = None  # Optional for conversation topics
     is_active: bool = True
     allowed_prompt_types: tuple[PromptType, ...] = field(
         default_factory=lambda: (PromptType.SYSTEM, PromptType.USER)
     )
     parameter_refs: tuple[ParameterRef, ...] = field(default_factory=tuple)
+    templates: dict[TemplateType, str] = field(default_factory=dict)  # S3 keys by template type
+    result_model: str | None = None  # Pydantic model for extraction
 
 
 # Central registry of all endpoints mapped to topics
@@ -1157,8 +1177,8 @@ def validate_registry() -> dict[str, list[str]]:
             else:
                 topic_usage[endpoint.topic_id] = [key]
 
-        # Check for invalid HTTP methods
-        if endpoint.http_method.upper() not in valid_methods:
+        # Check for invalid HTTP methods (only if http_method is set)
+        if endpoint.http_method and endpoint.http_method.upper() not in valid_methods:
             validation_results["invalid_methods"].append(f"{key}: {endpoint.http_method}")
 
         # Check for missing descriptions

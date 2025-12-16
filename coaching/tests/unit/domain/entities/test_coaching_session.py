@@ -13,6 +13,9 @@ from coaching.src.domain.entities.coaching_session import (
     CoachingMessage,
     CoachingSession,
 )
+from coaching.src.domain.exceptions import (
+    SessionNotActiveError,
+)
 
 
 class TestCoachingMessage:
@@ -69,7 +72,7 @@ class TestCoachingSessionCreation:
         assert session.status == ConversationStatus.ACTIVE
         assert session.messages == []
         assert session.context == {}
-        assert session.result is None
+        assert session.extracted_result is None
         assert session.completed_at is None
 
     def test_create_session_with_context(self) -> None:
@@ -199,14 +202,14 @@ class TestCoachingSessionMessageHandling:
         """Test that paused sessions reject new messages."""
         session.pause()
 
-        with pytest.raises(ValueError, match="Cannot add message"):
+        with pytest.raises(SessionNotActiveError):
             session.add_user_message("Should fail")
 
     def test_add_message_to_completed_session_raises_error(self, session: CoachingSession) -> None:
         """Test that completed sessions reject new messages."""
         session.complete({"core_values": []})
 
-        with pytest.raises(ValueError, match="Cannot add message"):
+        with pytest.raises(SessionNotActiveError):
             session.add_user_message("Should fail")
 
 
@@ -257,7 +260,7 @@ class TestCoachingSessionStateTransitions:
         session.complete(result)
 
         assert session.is_completed() is True
-        assert session.result == result
+        assert session.extracted_result == result
         assert session.completed_at is not None
         assert session.can_accept_messages() is False
 
@@ -398,6 +401,7 @@ class TestCoachingSessionCompletionEstimate:
             tenant_id="tenant_123",
             topic_id="core_values",
             user_id="user_456",
+            max_turns=50,  # Allow more turns for this test
         )
 
         # Add more messages than estimated total

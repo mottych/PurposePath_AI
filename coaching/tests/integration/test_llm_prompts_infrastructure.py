@@ -101,7 +101,7 @@ class TestLLMPromptsTableStructure:
 
     def test_parameters_come_from_registry(self) -> None:
         """Test that parameters are retrieved from PARAMETER_REGISTRY, not stored in DB."""
-        from coaching.src.core.endpoint_registry import get_parameters_for_topic
+        from coaching.src.core.topic_registry import get_parameters_for_topic
 
         # Parameters for topics are now managed in code via PARAMETER_REGISTRY
         # and retrieved using get_parameters_for_topic(topic_id)

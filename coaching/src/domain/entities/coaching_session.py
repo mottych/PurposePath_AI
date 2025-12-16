@@ -7,7 +7,7 @@ The CoachingSession is the core entity for the generic coaching engine,
 tracking conversation state, messages, and enforcing session lifecycle rules.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from coaching.src.core.constants import ConversationStatus, MessageRole
@@ -16,6 +16,12 @@ from coaching.src.core.types import (
     TenantId,
     UserId,
     create_session_id,
+)
+from coaching.src.domain.exceptions import (
+    MaxTurnsReachedError,
+    SessionExpiredError,
+    SessionIdleTimeoutError,
+    SessionNotActiveError,
 )
 from pydantic import BaseModel, Field, field_validator
 
@@ -52,11 +58,12 @@ class CoachingSession(BaseModel):
     owning the session.
 
     Key Business Rules:
-        - One active session per tenant per topic
+        - One active session per tenant per topic per user (Issue #157)
         - Only the owning user can interact with the session
         - Sessions can be paused, resumed, completed, or cancelled
         - Completed/cancelled sessions are eventually deleted (TTL)
         - Messages cannot be added to non-active sessions
+        - Sessions have a max turn limit and can expire
 
     Attributes:
         session_id: Unique identifier for this session
@@ -70,7 +77,11 @@ class CoachingSession(BaseModel):
         updated_at: When session was last updated
         last_activity_at: When user last interacted (for inactivity timeout)
         completed_at: When session was completed (if applicable)
-        result: Final extracted result (only when completed)
+        max_turns: Maximum number of conversation turns
+        idle_timeout_minutes: Idle timeout in minutes
+        expires_at: Absolute expiration time
+        extracted_result: Final extracted result (only when completed)
+        extraction_model: Model used for result extraction
     """
 
     session_id: SessionId = Field(
@@ -108,9 +119,33 @@ class CoachingSession(BaseModel):
         default=None,
         description="Completion timestamp",
     )
-    result: dict[str, Any] | None = Field(
+
+    # Session limits (Issue #174)
+    max_turns: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Maximum number of conversation turns (0 = unlimited)",
+    )
+    idle_timeout_minutes: int = Field(
+        default=30,
+        ge=1,
+        le=1440,  # Max 24 hours
+        description="Idle timeout in minutes before session can be expired",
+    )
+    expires_at: datetime | None = Field(
+        default=None,
+        description="Absolute expiration timestamp",
+    )
+
+    # Results (populated on completion)
+    extracted_result: dict[str, Any] | None = Field(
         default=None,
         description="Final extracted result (only when completed)",
+    )
+    extraction_model: str | None = Field(
+        default=None,
+        description="Model used for result extraction",
     )
 
     model_config = {"extra": "forbid"}
@@ -126,6 +161,9 @@ class CoachingSession(BaseModel):
         topic_id: str,
         user_id: str,
         context: dict[str, Any] | None = None,
+        max_turns: int = 0,
+        idle_timeout_minutes: int = 30,
+        expires_at: datetime | None = None,
     ) -> "CoachingSession":
         """Create a new coaching session.
 
@@ -134,6 +172,9 @@ class CoachingSession(BaseModel):
             topic_id: The coaching topic identifier
             user_id: The user who will own this session
             context: Optional initial context (e.g., enriched parameters)
+            max_turns: Maximum number of conversation turns (0 = unlimited)
+            idle_timeout_minutes: Idle timeout in minutes (default: 30)
+            expires_at: Optional absolute expiration time
 
         Returns:
             A new CoachingSession instance
@@ -143,6 +184,9 @@ class CoachingSession(BaseModel):
             topic_id=topic_id,
             user_id=UserId(user_id),
             context=context or {},
+            max_turns=max_turns,
+            idle_timeout_minutes=idle_timeout_minutes,
+            expires_at=expires_at,
         )
 
     # =========================================================================
@@ -213,6 +257,76 @@ class CoachingSession(BaseModel):
         """
         return sum(1 for m in self.messages if m.role == MessageRole.ASSISTANT)
 
+    def get_turn_count(self) -> int:
+        """Get the number of conversation turns.
+
+        A turn is counted as one user message.
+
+        Returns:
+            Number of turns (user messages)
+        """
+        return self.get_user_message_count()
+
+    def is_expired(self) -> bool:
+        """Check if the session has expired.
+
+        Returns:
+            True if expires_at is set and has passed
+        """
+        if self.expires_at is None:
+            return False
+        return datetime.now(UTC) >= self.expires_at
+
+    def is_idle(self) -> bool:
+        """Check if the session is idle (exceeded idle timeout).
+
+        Returns:
+            True if last_activity_at + idle_timeout has passed
+        """
+        if self.last_activity_at is None:
+            return False
+        idle_threshold = self.last_activity_at + timedelta(minutes=self.idle_timeout_minutes)
+        return datetime.now(UTC) >= idle_threshold
+
+    def can_add_turn(self) -> bool:
+        """Check if another turn can be added to the session.
+
+        Returns:
+            True if max_turns is 0 (unlimited) or current turn count is less than max_turns
+        """
+        if self.max_turns == 0:
+            return True  # Unlimited
+        return self.get_turn_count() < self.max_turns
+
+    def get_remaining_turns(self) -> int | None:
+        """Get the number of remaining turns.
+
+        Returns:
+            Number of turns remaining before max_turns is reached, or None if unlimited
+        """
+        if self.max_turns == 0:
+            return None  # Unlimited
+        return max(0, self.max_turns - self.get_turn_count())
+
+    def can_continue(self) -> bool:
+        """Check if the session can continue accepting messages.
+
+        A session can continue if:
+        - It is active
+        - It has not expired
+        - It has not exceeded idle timeout
+        - It has not reached max turns
+
+        Returns:
+            True if the session can accept more messages
+        """
+        return (
+            self.is_active()
+            and not self.is_expired()
+            and not self.is_idle()
+            and self.can_add_turn()
+        )
+
     # =========================================================================
     # State Mutations
     # =========================================================================
@@ -234,10 +348,34 @@ class CoachingSession(BaseModel):
             The created message
 
         Raises:
-            ValueError: If session cannot accept messages
+            SessionNotActiveError: If session is not active
+            SessionExpiredError: If session has expired
+            SessionIdleTimeoutError: If session has exceeded idle timeout
+            MaxTurnsReachedError: If adding a user message would exceed max turns
         """
-        if not self.can_accept_messages():
-            raise ValueError(f"Cannot add message to session with status: {self.status.value}")
+        # Check session is active
+        if not self.is_active():
+            raise SessionNotActiveError(self.session_id, self.status.value)
+
+        # Check expiration
+        if self.is_expired():
+            raise SessionExpiredError(self.session_id)
+
+        # Check idle timeout
+        if self.is_idle():
+            raise SessionIdleTimeoutError(
+                session_id=self.session_id,
+                last_activity_at=self.updated_at.isoformat(),
+                idle_timeout_minutes=self.idle_timeout_minutes,
+            )
+
+        # Check turn limit for user messages
+        if role == MessageRole.USER and not self.can_add_turn():
+            raise MaxTurnsReachedError(
+                self.session_id,
+                current_turn=self.get_turn_count(),
+                max_turns=self.max_turns,
+            )
 
         message = CoachingMessage(
             role=role,
@@ -319,13 +457,14 @@ class CoachingSession(BaseModel):
         self.last_activity_at = datetime.now(UTC)
         self._touch()
 
-    def complete(self, result: dict[str, Any]) -> None:
+    def complete(self, result: dict[str, Any], extraction_model: str | None = None) -> None:
         """Complete the session with a final result.
 
         Only active sessions can be completed.
 
         Args:
             result: The final extracted result
+            extraction_model: The model used for extraction (optional)
 
         Raises:
             ValueError: If session is not active
@@ -335,7 +474,8 @@ class CoachingSession(BaseModel):
 
         self.status = ConversationStatus.COMPLETED
         self.completed_at = datetime.now(UTC)
-        self.result = result
+        self.extracted_result = result
+        self.extraction_model = extraction_model
         self._touch()
 
     def cancel(self) -> None:
@@ -364,6 +504,20 @@ class CoachingSession(BaseModel):
             raise ValueError(f"Cannot abandon session with status: {self.status.value}")
 
         self.status = ConversationStatus.ABANDONED
+        self._touch()
+
+    def mark_expired(self) -> None:
+        """Mark the session as expired (due to expiration or idle timeout).
+
+        Active sessions can be marked expired.
+
+        Raises:
+            ValueError: If session is not active
+        """
+        if not self.is_active():
+            raise ValueError(f"Cannot expire session with status: {self.status.value}")
+
+        self.status = ConversationStatus.ABANDONED  # Use ABANDONED for expired sessions
         self._touch()
 
     # =========================================================================

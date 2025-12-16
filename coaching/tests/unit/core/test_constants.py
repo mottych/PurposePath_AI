@@ -5,7 +5,6 @@ and correctness.
 """
 
 from coaching.src.core.constants import (
-    DEFAULT_LLM_MODELS,
     AnalysisType,
     CoachingTopic,
     ConversationStatus,
@@ -119,40 +118,6 @@ class TestAnalysisType:
         for analysis_type in AnalysisType:
             # Assert
             assert isinstance(analysis_type.value, str)
-
-
-class TestDefaultLLMModels:
-    """Test suite for DEFAULT_LLM_MODELS constant."""
-
-    def test_default_llm_models_has_all_topics(self) -> None:
-        """Test that DEFAULT_LLM_MODELS includes all coaching topics."""
-        # Assert
-        assert CoachingTopic.CORE_VALUES in DEFAULT_LLM_MODELS
-        assert CoachingTopic.PURPOSE in DEFAULT_LLM_MODELS
-        assert CoachingTopic.VISION in DEFAULT_LLM_MODELS
-        assert CoachingTopic.GOALS in DEFAULT_LLM_MODELS
-
-    def test_default_llm_models_count(self) -> None:
-        """Test that DEFAULT_LLM_MODELS has models for all topics."""
-        # Assert
-        assert len(DEFAULT_LLM_MODELS) == 4
-
-    def test_default_llm_models_are_strings(self) -> None:
-        """Test that all LLM model identifiers are strings."""
-        # Arrange & Act
-        for model in DEFAULT_LLM_MODELS.values():
-            # Assert
-            assert isinstance(model, str)
-            assert len(model) > 0
-
-    def test_default_llm_models_are_valid_bedrock_ids(self) -> None:
-        """Test that all LLM model identifiers follow Bedrock format."""
-        # Arrange & Act
-        for topic, model in DEFAULT_LLM_MODELS.items():
-            # Assert - Bedrock model IDs typically start with provider name
-            assert (
-                "anthropic" in model.lower() or "claude" in model.lower()
-            ), f"Model for {topic} doesn't appear to be a valid Bedrock model ID: {model}"
 
 
 class TestBusinessRulesConsistency:

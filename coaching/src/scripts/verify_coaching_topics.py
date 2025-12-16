@@ -60,7 +60,7 @@ async def verify_topics() -> dict[str, Any]:
 
             if topic:
                 # Get parameters from registry, not from entity
-                from coaching.src.core.endpoint_registry import get_parameters_for_topic
+                from coaching.src.core.topic_registry import get_parameters_for_topic
 
                 params = get_parameters_for_topic(topic_id)
                 logger.info(

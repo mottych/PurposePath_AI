@@ -9,7 +9,7 @@ multi-provider support and advanced workflow capabilities.
 from typing import Any, cast
 
 import structlog
-from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
+from coaching.src.core.llm_models import DEFAULT_MODEL_ID
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.workflows.base import WorkflowState, WorkflowType
 from coaching.src.workflows.orchestrator import WorkflowOrchestrator
@@ -166,12 +166,12 @@ class LLMServiceAdapter:
             return {"error": str(e), "insights": [], "confidence": 0.0}
 
     async def _resolve_provider_and_model(
-        self, topic: str, model_id: str | None = None, **kwargs: Any
+        self, _topic: str, model_id: str | None = None, **kwargs: Any
     ) -> tuple[str, str]:
         """Resolve the provider and model to use.
 
         Args:
-            topic: Coaching topic
+            _topic: Coaching topic (reserved for future use with topic-specific configs)
             model_id: Optional explicit model ID
             **kwargs: Additional parameters (may include provider override)
 
@@ -187,12 +187,9 @@ class LLMServiceAdapter:
         else:
             provider_name = self.default_provider
 
-        # Resolve model ID
+        # Resolve model ID - use DEFAULT_MODEL_ID as fallback
         if model_id is None:
-            # Get default model for topic
-            model_id = DEFAULT_LLM_MODELS.get(
-                CoachingTopic(topic), "anthropic.claude-3-sonnet-20240229-v1:0"
-            )
+            model_id = DEFAULT_MODEL_ID
 
         # Validate provider can handle this model
         if not await self._can_provider_handle_model(provider_name, model_id):

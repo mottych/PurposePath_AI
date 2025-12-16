@@ -4,8 +4,7 @@ import json
 from typing import Any
 
 import structlog
-from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
-from coaching.src.core.llm_models import get_model
+from coaching.src.core.llm_models import DEFAULT_MODEL_ID, get_model
 from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.services.llm_configuration_service import (
@@ -350,16 +349,11 @@ class LLMService:
         # Load prompt template
         template = await self.prompt_service.get_template(topic)
 
-        # Get model for topic
-        model_id = DEFAULT_LLM_MODELS.get(
-            CoachingTopic(topic), "anthropic.claude-3-sonnet-20240229-v1:0"
-        )
+        # Get model for topic - use DEFAULT_MODEL_ID as fallback
+        model_id = DEFAULT_MODEL_ID
 
         # Use override if provided, otherwise use template
-        if system_prompt_override:
-            enhanced_system_prompt = system_prompt_override
-        else:
-            enhanced_system_prompt = template.system_prompt
+        enhanced_system_prompt = system_prompt_override or template.system_prompt
 
         # Enhance system prompt with business context (applies to both paths)
         if business_context:
@@ -535,10 +529,8 @@ class LLMService:
             # Load prompt template
             template = await self.prompt_service.get_template(topic)
 
-            # Get model for topic
-            model_id = DEFAULT_LLM_MODELS.get(
-                CoachingTopic(topic), "anthropic.claude-3-sonnet-20240229-v1:0"
-            )
+            # Get model for topic - use DEFAULT_MODEL_ID as fallback
+            model_id = DEFAULT_MODEL_ID
 
             # Create analysis-specific system prompt
             analysis_prompt = self._create_analysis_system_prompt(
@@ -685,6 +677,22 @@ class LLMService:
                 break
 
         return token_count * cost_per_token
+
+    def get_model_id_for_topic(self, _topic_id: str) -> str:
+        """Get the model ID that would be used for a topic.
+
+        This returns the default model ID. In a future iteration, this could
+        resolve the model from LLMTopic configuration in the database.
+
+        Args:
+            _topic_id: The topic identifier (unused for now)
+
+        Returns:
+            Model ID string (e.g., "anthropic.claude-3-5-sonnet-20241022-v2:0")
+        """
+        # TODO: In future, resolve from LLMTopic configuration in DB
+        # For now, return the default model ID
+        return DEFAULT_MODEL_ID
 
     async def get_service_health(self) -> dict[str, Any]:
         """Get health status of the LLM service and providers.

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 import structlog
-from coaching.src.core.endpoint_registry import list_all_endpoints
+from coaching.src.core.topic_registry import list_all_endpoints
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository

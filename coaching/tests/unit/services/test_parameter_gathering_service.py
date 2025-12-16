@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from coaching.src.core.constants import ParameterSource, TopicCategory, TopicType
-from coaching.src.core.endpoint_registry import EndpointDefinition, ParameterRef
+from coaching.src.core.topic_registry import EndpointDefinition, ParameterRef
 from coaching.src.services.parameter_gathering_service import ParameterGatheringService
 
 

@@ -16,7 +16,7 @@ from coaching.src.api.models.ai_execute import (
     TopicParameter,
 )
 from coaching.src.core.constants import TopicCategory, TopicType
-from coaching.src.core.endpoint_registry import EndpointDefinition
+from coaching.src.core.topic_registry import EndpointDefinition
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -229,28 +229,28 @@ class TestEndpointRegistryHelpers:
 
     def test_get_response_model_name_for_topic_exists(self) -> None:
         """Test getting response model name for existing topic."""
-        from coaching.src.core.endpoint_registry import get_response_model_name_for_topic
+        from coaching.src.core.topic_registry import get_response_model_name_for_topic
 
         model_name = get_response_model_name_for_topic("website_scan")
         assert model_name == "WebsiteScanResponse"
 
     def test_get_response_model_name_for_topic_not_exists(self) -> None:
         """Test getting response model name for non-existent topic."""
-        from coaching.src.core.endpoint_registry import get_response_model_name_for_topic
+        from coaching.src.core.topic_registry import get_response_model_name_for_topic
 
         model_name = get_response_model_name_for_topic("nonexistent_topic")
         assert model_name is None
 
     def test_list_all_endpoints_active_only(self) -> None:
         """Test listing only active endpoints."""
-        from coaching.src.core.endpoint_registry import list_all_endpoints
+        from coaching.src.core.topic_registry import list_all_endpoints
 
         endpoints = list_all_endpoints(active_only=True)
         assert all(e.is_active for e in endpoints)
 
     def test_list_all_endpoints_include_inactive(self) -> None:
         """Test listing all endpoints including inactive."""
-        from coaching.src.core.endpoint_registry import list_all_endpoints
+        from coaching.src.core.topic_registry import list_all_endpoints
 
         all_endpoints = list_all_endpoints(active_only=False)
         active_endpoints = list_all_endpoints(active_only=True)

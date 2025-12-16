@@ -130,7 +130,7 @@ class TestAsyncAIExecutionService:
             "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
         ) as mock_get_endpoint:
             from coaching.src.core.constants import TopicType
-            from coaching.src.core.endpoint_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import EndpointDefinition
 
             mock_endpoint = MagicMock(spec=EndpointDefinition)
             mock_endpoint.is_active = True
@@ -188,7 +188,7 @@ class TestAsyncAIExecutionService:
             "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
         ) as mock_get_endpoint:
             from coaching.src.core.constants import TopicType
-            from coaching.src.core.endpoint_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import EndpointDefinition
 
             mock_endpoint = MagicMock(spec=EndpointDefinition)
             mock_endpoint.is_active = True
@@ -242,7 +242,7 @@ class TestAsyncAIExecutionService:
         with patch(
             "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
         ) as mock_get_endpoint:
-            from coaching.src.core.endpoint_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import EndpointDefinition
 
             mock_endpoint = MagicMock(spec=EndpointDefinition)
             mock_endpoint.response_model = "NicheReviewResponse"
