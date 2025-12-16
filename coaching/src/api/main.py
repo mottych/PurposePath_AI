@@ -112,19 +112,22 @@ app = FastAPI(
 )
 
 # Add middleware in correct order - CORS must be last (runs first)
-app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)
-app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(CORSPreflightMiddleware)
+# Note: Starlette's add_middleware type stubs don't properly type custom middleware
+# classes that extend BaseHTTPMiddleware. This is a known limitation.
+# See: https://github.com/encode/starlette/issues/1044
+app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[call-arg, arg-type]
+app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[call-arg, arg-type]
+app.add_middleware(LoggingMiddleware)  # type: ignore[call-arg, arg-type]
+app.add_middleware(CORSPreflightMiddleware)  # type: ignore[call-arg, arg-type]
 
 # CORS middleware must be added LAST so it runs FIRST in the middleware chain
 # This ensures CORS headers are added before any authentication or error handling
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"https://.*\.purposepath\.app|http://localhost:\d+",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=[
+# CORSMiddleware kwargs must be passed to add_middleware - stubs don't cover this
+_cors_config: dict[str, Any] = {
+    "allow_origin_regex": r"https://.*\.purposepath\.app|http://localhost:\d+",
+    "allow_credentials": True,
+    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allow_headers": [
         "Content-Type",
         "Authorization",
         "X-Requested-With",
@@ -135,14 +138,15 @@ app.add_middleware(
         "X-User-Id",
         "X-CSRF-Token",
     ],
-    expose_headers=[
+    "expose_headers": [
         "X-Request-Id",
         "X-RateLimit-Limit",
         "X-RateLimit-Remaining",
         "X-RateLimit-Reset",
     ],
-    max_age=3600,
-)
+    "max_age": 3600,
+}
+app.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
 
 # Include routers
 app.include_router(analysis.router, prefix=f"{settings.api_prefix}")

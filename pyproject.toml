@@ -44,6 +44,7 @@ module = [
     "langchain.*",
     "tiktoken.*",
     "requests.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 
