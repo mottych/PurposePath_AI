@@ -327,6 +327,14 @@ class LLMProviderFactory:
             )
 
         if credentials:
+            # Extract project_id from credentials if not set in settings
+            # This happens when credentials come from AWS Secrets Manager
+            if not project_id and "project_id" in credentials:
+                project_id = credentials["project_id"]
+                logger.info(
+                    "Using project_id from credentials",
+                    project_id=project_id,
+                )
             return GoogleVertexLLMProvider(
                 project_id=project_id,
                 location=self._settings.google_vertex_location,

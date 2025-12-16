@@ -267,7 +267,10 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     # Retrieve from Secrets Manager if configured
     if settings.google_vertex_credentials_secret:
         try:
+            import structlog
             from shared.services.aws_helpers import get_secretsmanager_client
+
+            log = structlog.get_logger()
 
             client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
@@ -276,11 +279,23 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
             if secret_value:
                 # Parse JSON credentials
                 credentials_dict: dict[str, Any] = json.loads(secret_value)
+                log.info(
+                    "google_vertex_credentials.loaded",
+                    project_id=credentials_dict.get("project_id"),
+                    client_email=credentials_dict.get("client_email"),
+                )
                 return credentials_dict
 
+            log.warning(
+                "google_vertex_credentials.empty_secret",
+                secret_id=settings.google_vertex_credentials_secret,
+            )
             return None
-        except Exception:
-            # Log error but don't fail - allow None to be returned
+        except Exception as e:
+            import structlog
+
+            log = structlog.get_logger()
+            log.error("google_vertex_credentials.error", error=str(e), error_type=type(e).__name__)
             return None
 
     return None
