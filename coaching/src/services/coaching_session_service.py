@@ -473,11 +473,24 @@ class CoachingSessionService:
                 "coaching_service.resuming_existing_session",
                 session_id=str(existing.session_id),
             )
-            return await self._resume_session(
-                session=existing,
-                endpoint_def=endpoint_def,
-                llm_topic=llm_topic,
-            )
+            # Check if session is idle - if so, close it and create a new one
+            if existing.is_idle():
+                logger.info(
+                    "coaching_service.session_idle_creating_new",
+                    old_session_id=str(existing.session_id),
+                    last_activity_at=existing.last_activity_at.isoformat()
+                    if existing.last_activity_at
+                    else None,
+                )
+                existing.complete(result={})
+                await self.session_repository.update(existing)
+                # Fall through to create a new session
+            else:
+                return await self._resume_session(
+                    session=existing,
+                    endpoint_def=endpoint_def,
+                    llm_topic=llm_topic,
+                )
 
         # Create new session
         return await self._create_new_session(
@@ -607,24 +620,9 @@ class CoachingSessionService:
         Returns:
             SessionResponse with resume message
 
-        Raises:
-            SessionIdleTimeoutError: If session has exceeded idle timeout
+        Note:
+            Caller should check is_idle() before calling this method.
         """
-        # Check idle timeout BEFORE making expensive LLM call
-        # If session is idle, mark it completed and raise error
-        if session.is_idle():
-            session.complete(result={})
-            await self.session_repository.update(session)
-            from coaching.src.domain.exceptions.session_exceptions import (
-                SessionIdleTimeoutError,
-            )
-
-            raise SessionIdleTimeoutError(
-                session_id=session.session_id,
-                last_activity_at=session.updated_at.isoformat(),
-                idle_timeout_minutes=session.idle_timeout_minutes,
-            )
-
         # Load resume template
         resume_template = await self._load_template(session.topic_id, TemplateType.RESUME)
 
