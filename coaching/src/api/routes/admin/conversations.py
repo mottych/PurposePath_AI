@@ -1,4 +1,13 @@
-"""Admin API routes for conversation monitoring."""
+"""Admin API routes for conversation monitoring.
+
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Admin conversation monitoring was designed but never integrated.
+Usage: No admin portal callers exist.
+Status: Safe to remove.
+================================================================================
+"""
 
 import structlog
 from coaching.src.api.auth import get_current_context

@@ -1,4 +1,9 @@
-"""Admin API routes for AI model and topic management."""
+"""Admin API routes for AI model and topic management.
+
+Endpoint Usage Status:
+- GET /models: USED BY Admin - AIManagementPage (useAIModels), TopicMetadataEditor (useModels)
+- PUT /models/{model_id}: DEPRECATED - UI doesn't call
+"""
 
 from typing import Any
 

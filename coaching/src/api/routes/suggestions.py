@@ -1,3 +1,14 @@
+"""Onboarding suggestions API routes.
+
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Suggestions migrated to POST /ai/execute with topic_id="niche_review" etc.
+Usage: Frontend uses POST /ai/execute, POST /ai/execute-async
+Status: No frontend callers. Safe to remove.
+================================================================================
+"""
+
 from __future__ import annotations
 
 from typing import cast

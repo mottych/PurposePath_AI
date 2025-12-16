@@ -1,4 +1,13 @@
-"""Website analysis API routes for extracting business insights from websites."""
+"""Website analysis API routes for extracting business insights from websites.
+
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Website scanning has been migrated to POST /ai/execute with topic_id="website_scan"
+Usage: Frontend uses POST /ai/execute (WebsiteScanPanel.tsx)
+Status: No frontend callers. Safe to remove.
+================================================================================
+"""
 
 from typing import Any
 

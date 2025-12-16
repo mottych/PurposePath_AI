@@ -1,3 +1,16 @@
+"""Topics API routes.
+
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Topic listing superseded by:
+- GET /ai/topics (ai_execute.py) for single-shot topics
+- GET /ai/coaching/topics (coaching_sessions.py) for coaching topics
+Usage: No frontend callers exist.
+Status: Safe to remove.
+================================================================================
+"""
+
 import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import get_topic_repository

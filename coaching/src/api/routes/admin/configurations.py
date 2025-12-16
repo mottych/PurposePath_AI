@@ -1,7 +1,16 @@
 """Admin API routes for LLM configuration management (CRUD).
 
-DEPRECATED: These routes are deprecated and will be removed in version 2.0.0.
-Use the new topic-based admin endpoints instead:
+DEPRECATION STATUS:
+- GET /configurations: USED BY Admin - ConfigurationsPage (useLLMConfigurations)
+- All other endpoints DEPRECATED - not called by Admin UI:
+    - POST /configurations
+    - GET /configurations/{id}
+    - PATCH /configurations/{id}
+    - DELETE /configurations/{id}
+    - POST /configurations/{id}/activate
+    - POST /configurations/{id}/deactivate
+
+Migration: Use topic-based admin endpoints instead:
 - GET /api/v1/admin/topics
 - POST /api/v1/admin/topics
 - PUT /api/v1/admin/topics/{topic_id}

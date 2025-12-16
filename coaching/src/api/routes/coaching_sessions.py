@@ -5,14 +5,32 @@ engine supporting topic-based coaching with configurable prompts.
 
 Endpoints:
     GET  /ai/coaching/topics    - Get available topics with user status
+        USED BY: FE - BusinessOnboarding.tsx
     POST /ai/coaching/start     - Start or resume a coaching session
+        USED BY: FE - OnboardingCoachPanel.tsx
     POST /ai/coaching/message   - Send a message in active session
+        USED BY: FE - OnboardingCoachPanel.tsx
     POST /ai/coaching/pause     - Pause an active session
+        USED BY: FE - OnboardingCoachPanel.tsx
     POST /ai/coaching/complete  - Complete a session with result extraction
+        USED BY: FE - OnboardingCoachPanel.tsx
     POST /ai/coaching/cancel    - Cancel an active session
+        USED BY: FE - OnboardingCoachPanel.tsx
     GET  /ai/coaching/session   - Get session details
+        USED BY: FE - api.ts (getCoachingSession)
+    GET  /ai/coaching/sessions  - List user sessions (UNUSED - verify if needed)
 
 All endpoints require authentication and enforce tenant isolation.
+
+Error Responses:
+    400 - SESSION_NOT_ACTIVE: Session is not in active state
+    403 - SESSION_ACCESS_DENIED: User does not own this session
+    409 - SESSION_CONFLICT: Another user has an active session for this topic
+    410 - SESSION_EXPIRED: Session has expired or timed out
+    422 - SESSION_NOT_FOUND: Session not found
+    422 - MAX_TURNS_REACHED: Maximum conversation turns reached
+    422 - INVALID_TOPIC: Topic not found or invalid
+    500 - EXTRACTION_FAILED: Failed to extract results from session
 """
 
 from typing import Any
@@ -22,11 +40,18 @@ from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import create_template_processor
 from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
-    get_llm_service,
 )
-from coaching.src.core.coaching_topic_registry import list_coaching_topics
 from coaching.src.core.config_multitenant import settings
-from coaching.src.core.constants import ConversationStatus
+from coaching.src.domain.exceptions.session_exceptions import (
+    ExtractionFailedError,
+    MaxTurnsReachedError,
+    SessionAccessDeniedError,
+    SessionConflictError,
+    SessionExpiredError,
+    SessionIdleTimeoutError,
+    SessionNotActiveError,
+    SessionNotFoundError,
+)
 from coaching.src.infrastructure.repositories.dynamodb_coaching_session_repository import (
     DynamoDBCoachingSessionRepository,
 )
@@ -39,11 +64,11 @@ from coaching.src.services.coaching_session_service import (
     SessionStateResponse,
     SessionSummary,
     SessionValidationError,
+    TopicsWithStatusResponse,
 )
 from coaching.src.services.coaching_session_service import (
     MessageResponse as ServiceMessageResponse,
 )
-from coaching.src.services.llm_service import LLMService
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from shared.models.multitenant import RequestContext
@@ -57,22 +82,11 @@ router = APIRouter(prefix="/ai/coaching", tags=["coaching-sessions"])
 # Request/Response Models
 # =============================================================================
 
+# TopicStatus is imported from coaching_session_service
+# TopicsWithStatusResponse is imported from coaching_session_service
 
-class TopicStatus(BaseModel):
-    """Status of a coaching topic for a user."""
-
-    topic_id: str
-    name: str
-    description: str
-    status: str = Field(description="Status: 'not_started', 'in_progress', 'paused', 'completed'")
-    session_id: str | None = Field(default=None, description="Session ID if in_progress or paused")
-    completed_at: str | None = Field(default=None, description="Completion timestamp if completed")
-
-
-class TopicsResponse(BaseModel):
-    """Response containing all topics with status."""
-
-    topics: list[TopicStatus]
+# Alias for API response compatibility
+TopicsResponse = TopicsWithStatusResponse
 
 
 class StartSessionRequest(BaseModel):
@@ -113,7 +127,6 @@ async def get_coaching_session_repository() -> DynamoDBCoachingSessionRepository
 
 async def get_coaching_session_service(
     context: RequestContext = Depends(get_current_context),
-    llm_service: LLMService = Depends(get_llm_service),
     session_repository: DynamoDBCoachingSessionRepository = Depends(
         get_coaching_session_repository
     ),
@@ -124,19 +137,33 @@ async def get_coaching_session_service(
     Creates a TemplateParameterProcessor with the user's JWT token for
     parameter enrichment via Business API calls.
     """
+    from coaching.src.api.dependencies.ai_engine import (
+        get_provider_factory,
+        get_s3_prompt_storage,
+        get_topic_repository,
+    )
+
     _ = context  # For tenant context in future enhancements
 
-    # Extract JWT token and create template processor
+    # Extract JWT token for template processor
     jwt_token = None
     if authorization and authorization.startswith("Bearer "):
         jwt_token = authorization.split(" ", 1)[1]
 
-    template_processor = create_template_processor(jwt_token) if jwt_token else None
+    # Template processor is always created - it handles missing JWT gracefully
+    template_processor = create_template_processor(jwt_token)
+
+    # Get dependencies for coaching session service
+    topic_repository = await get_topic_repository()
+    s3_prompt_storage = await get_s3_prompt_storage()
+    provider_factory = await get_provider_factory()
 
     return CoachingSessionService(
         session_repository=session_repository,
-        llm_service=llm_service,
+        topic_repository=topic_repository,
+        s3_prompt_storage=s3_prompt_storage,
         template_processor=template_processor,
+        provider_factory=provider_factory,
     )
 
 
@@ -148,9 +175,7 @@ async def get_coaching_session_service(
 @router.get("/topics", response_model=ApiResponse[TopicsResponse])
 async def get_topics_status(
     context: RequestContext = Depends(get_current_context),
-    session_repository: DynamoDBCoachingSessionRepository = Depends(
-        get_coaching_session_repository
-    ),
+    service: CoachingSessionService = Depends(get_coaching_session_service),
 ) -> ApiResponse[TopicsResponse]:
     """Get all coaching topics with user's completion status.
 
@@ -171,72 +196,14 @@ async def get_topics_status(
     )
 
     try:
-        # Get all available topics from registry
-        all_topics = list_coaching_topics()
-
-        # Get user's sessions to determine status
-        user_sessions = await session_repository.list_by_tenant_user(
+        response = await service.get_topics_with_status(
             tenant_id=context.tenant_id,
             user_id=context.user_id,
         )
 
-        # Build a map of topic_id -> latest session
-        topic_sessions: dict[str, Any] = {}
-        for session in user_sessions:
-            topic_id = session.topic_id
-            if topic_id not in topic_sessions:
-                topic_sessions[topic_id] = session
-            else:
-                # Keep the most recent session
-                existing = topic_sessions[topic_id]
-                if session.updated_at > existing.updated_at:
-                    topic_sessions[topic_id] = session
-
-        # Build response
-        topic_statuses: list[TopicStatus] = []
-        for topic in all_topics:
-            existing_session = topic_sessions.get(topic.topic_id)
-
-            if existing_session is None:
-                status = "not_started"
-                session_id = None
-                completed_at = None
-            elif existing_session.status == ConversationStatus.ACTIVE:
-                status = "in_progress"
-                session_id = existing_session.session_id
-                completed_at = None
-            elif existing_session.status == ConversationStatus.PAUSED:
-                status = "paused"
-                session_id = existing_session.session_id
-                completed_at = None
-            elif existing_session.status == ConversationStatus.COMPLETED:
-                status = "completed"
-                session_id = existing_session.session_id
-                completed_at = (
-                    existing_session.completed_at.isoformat()
-                    if existing_session.completed_at
-                    else None
-                )
-            else:
-                # Cancelled - treat as not started
-                status = "not_started"
-                session_id = None
-                completed_at = None
-
-            topic_statuses.append(
-                TopicStatus(
-                    topic_id=topic.topic_id,
-                    name=topic.name,
-                    description=topic.description,
-                    status=status,
-                    session_id=session_id,
-                    completed_at=completed_at,
-                )
-            )
-
         return ApiResponse(
             success=True,
-            data=TopicsResponse(topics=topic_statuses),
+            data=response,
             message="Topics retrieved successfully",
         )
 
@@ -272,7 +239,8 @@ async def start_session(
         ApiResponse with SessionResponse containing session details
 
     Raises:
-        HTTPException 400: Invalid topic ID
+        HTTPException 409: Another user has an active session for this topic
+        HTTPException 422: Invalid topic ID
         HTTPException 500: Failed to start session
     """
     logger.info(
@@ -303,13 +271,29 @@ async def start_session(
             message="Session started successfully",
         )
 
+    except SessionConflictError as e:
+        logger.warning(
+            "coaching_sessions.start_session.conflict",
+            topic_id=request.topic_id,
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
     except InvalidTopicError as e:
         logger.warning(
             "coaching_sessions.start_session.invalid_topic",
             topic_id=request.topic_id,
             tenant_id=context.tenant_id,
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_TOPIC", "message": str(e)},
+        ) from e
 
     except SessionValidationError as e:
         logger.warning(
@@ -317,7 +301,10 @@ async def start_session(
             error=str(e),
             tenant_id=context.tenant_id,
         )
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "VALIDATION_ERROR", "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -352,8 +339,10 @@ async def send_message(
         ApiResponse with MessageResponse containing coach's reply
 
     Raises:
-        HTTPException 404: Session not found
         HTTPException 400: Session not active (paused/completed/cancelled)
+        HTTPException 403: User does not own this session
+        HTTPException 410: Session expired or idle timeout
+        HTTPException 422: Session not found or max turns reached
         HTTPException 500: Failed to process message
     """
     logger.info(
@@ -367,6 +356,7 @@ async def send_message(
         response = await service.send_message(
             session_id=request.session_id,
             tenant_id=context.tenant_id,
+            user_id=context.user_id,
             user_message=request.message,
         )
 
@@ -383,11 +373,66 @@ async def send_message(
             message="Message processed successfully",
         )
 
-    except ValueError as e:
-        error_msg = str(e)
-        if "not found" in error_msg.lower():
-            raise HTTPException(status_code=404, detail=error_msg) from e
-        raise HTTPException(status_code=400, detail=error_msg) from e
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.send_message.not_found",
+            session_id=request.session_id,
+            tenant_id=context.tenant_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.send_message.access_denied",
+            session_id=request.session_id,
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionNotActiveError as e:
+        logger.warning(
+            "coaching_sessions.send_message.not_active",
+            session_id=request.session_id,
+            current_status=e.current_status,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except (SessionExpiredError, SessionIdleTimeoutError) as e:
+        logger.warning(
+            "coaching_sessions.send_message.expired",
+            session_id=request.session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=410,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except MaxTurnsReachedError as e:
+        logger.warning(
+            "coaching_sessions.send_message.max_turns",
+            session_id=request.session_id,
+            current_turn=e.current_turn,
+            max_turns=e.max_turns,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -420,8 +465,9 @@ async def pause_session(
         ApiResponse with SessionStateResponse confirming pause
 
     Raises:
-        HTTPException 404: Session not found
         HTTPException 400: Session cannot be paused (not active)
+        HTTPException 403: User does not own this session
+        HTTPException 422: Session not found
         HTTPException 500: Failed to pause session
     """
     logger.info(
@@ -434,6 +480,7 @@ async def pause_session(
         response = await service.pause_session(
             session_id=request.session_id,
             tenant_id=context.tenant_id,
+            user_id=context.user_id,
         )
 
         logger.info(
@@ -448,11 +495,40 @@ async def pause_session(
             message="Session paused successfully",
         )
 
-    except ValueError as e:
-        error_msg = str(e)
-        if "not found" in error_msg.lower():
-            raise HTTPException(status_code=404, detail=error_msg) from e
-        raise HTTPException(status_code=400, detail=error_msg) from e
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.pause_session.not_found",
+            session_id=request.session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.pause_session.access_denied",
+            session_id=request.session_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionNotActiveError as e:
+        logger.warning(
+            "coaching_sessions.pause_session.not_active",
+            session_id=request.session_id,
+            current_status=e.current_status,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -485,9 +561,10 @@ async def complete_session(
         ApiResponse with SessionCompletionResponse containing extracted results
 
     Raises:
-        HTTPException 404: Session not found
         HTTPException 400: Session cannot be completed (not active/paused)
-        HTTPException 500: Failed to complete session
+        HTTPException 403: User does not own this session
+        HTTPException 422: Session not found
+        HTTPException 500: Extraction failed or internal error
     """
     logger.info(
         "coaching_sessions.complete_session",
@@ -499,6 +576,7 @@ async def complete_session(
         response = await service.complete_session(
             session_id=request.session_id,
             tenant_id=context.tenant_id,
+            user_id=context.user_id,
         )
 
         logger.info(
@@ -514,11 +592,52 @@ async def complete_session(
             message="Session completed successfully",
         )
 
-    except ValueError as e:
-        error_msg = str(e)
-        if "not found" in error_msg.lower():
-            raise HTTPException(status_code=404, detail=error_msg) from e
-        raise HTTPException(status_code=400, detail=error_msg) from e
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.complete_session.not_found",
+            session_id=request.session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.complete_session.access_denied",
+            session_id=request.session_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionNotActiveError as e:
+        logger.warning(
+            "coaching_sessions.complete_session.not_active",
+            session_id=request.session_id,
+            current_status=e.current_status,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except ExtractionFailedError as e:
+        logger.error(
+            "coaching_sessions.complete_session.extraction_failed",
+            session_id=request.session_id,
+            reason=e.reason,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -551,8 +670,9 @@ async def cancel_session(
         ApiResponse with SessionStateResponse confirming cancellation
 
     Raises:
-        HTTPException 404: Session not found
         HTTPException 400: Session cannot be cancelled (already completed)
+        HTTPException 403: User does not own this session
+        HTTPException 422: Session not found
         HTTPException 500: Failed to cancel session
     """
     logger.info(
@@ -565,6 +685,7 @@ async def cancel_session(
         response = await service.cancel_session(
             session_id=request.session_id,
             tenant_id=context.tenant_id,
+            user_id=context.user_id,
         )
 
         logger.info(
@@ -579,11 +700,40 @@ async def cancel_session(
             message="Session cancelled successfully",
         )
 
-    except ValueError as e:
-        error_msg = str(e)
-        if "not found" in error_msg.lower():
-            raise HTTPException(status_code=404, detail=error_msg) from e
-        raise HTTPException(status_code=400, detail=error_msg) from e
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.cancel_session.not_found",
+            session_id=request.session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.cancel_session.access_denied",
+            session_id=request.session_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionNotActiveError as e:
+        logger.warning(
+            "coaching_sessions.cancel_session.not_active",
+            session_id=request.session_id,
+            current_status=e.current_status,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -616,7 +766,8 @@ async def get_session(
         ApiResponse with SessionDetails
 
     Raises:
-        HTTPException 404: Session not found
+        HTTPException 403: User does not own this session
+        HTTPException 422: Session not found
         HTTPException 500: Failed to retrieve session
     """
     logger.info(
@@ -629,13 +780,11 @@ async def get_session(
         response = await service.get_session(
             session_id=session_id,
             tenant_id=context.tenant_id,
+            user_id=context.user_id,
         )
 
         if response is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Session not found: {session_id}",
-            )
+            raise SessionNotFoundError(session_id=session_id, tenant_id=context.tenant_id)
 
         logger.info(
             "coaching_sessions.get_session.success",
@@ -649,8 +798,28 @@ async def get_session(
             message="Session retrieved successfully",
         )
 
-    except HTTPException:
-        raise
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.get_session.not_found",
+            session_id=session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.get_session.access_denied",
+            session_id=session_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
 
     except Exception as e:
         logger.error(

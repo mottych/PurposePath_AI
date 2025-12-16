@@ -1,4 +1,10 @@
-"""Health check routes with ApiResponse envelope."""
+"""Health check routes with ApiResponse envelope.
+
+Endpoints:
+- GET /health/: Basic health check
+    USED BY: Admin - LLMDashboardPage (useLLMSystemHealth)
+- GET /health/ready: Readiness check with service dependencies
+"""
 
 from datetime import UTC, datetime
 from typing import Any

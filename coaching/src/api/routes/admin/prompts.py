@@ -1,4 +1,15 @@
-"""Admin API endpoints for topic and prompt management."""
+"""Admin API endpoints for topic and prompt management.
+
+================================================================================
+DEPRECATED - This entire file is dead code (legacy prompt template system).
+================================================================================
+Migration: Superseded by admin/topics.py which provides:
+- GET/PUT /topics/{topic_id} for topic management
+- GET/POST/PUT/DELETE /topics/{topic_id}/prompts/{prompt_type} for prompt management
+Usage: Admin portal uses endpoints in admin/topics.py
+Status: No admin portal callers. Safe to remove.
+================================================================================
+"""
 
 import re
 from datetime import UTC, datetime
@@ -7,7 +18,7 @@ from typing import Annotated
 import structlog
 from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.endpoint_registry import get_parameters_for_topic
+from coaching.src.core.topic_registry import get_parameters_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,

@@ -1,4 +1,16 @@
-"""Multitenant conversation API routes with business data integration."""
+"""Multitenant conversation API routes with business data integration.
+
+DEPRECATION NOTICE:
+Most endpoints in this file are DEPRECATED and superseded by /ai/coaching/* endpoints.
+See coaching_sessions.py for the new coaching conversation API.
+
+Endpoint Status:
+- /business-data: USED BY FE - getBusinessMetrics()
+- /initiate, /{id}/message, /{id}/complete, /{id}/pause, /{id} DELETE: DEPRECATED
+- /, /tenant/all: DEPRECATED
+
+Migration target: /ai/coaching/* (coaching_sessions.py)
+"""
 
 from typing import Any
 

@@ -6,6 +6,7 @@ the endpoint registry, and returning dynamically-typed responses.
 
 Endpoints:
     POST /ai/execute - Execute AI for any registered single-shot topic
+        USED BY: FE - WebsiteScanPanel (website_scan), OnboardingReviews (niche_review, ica_review, value_proposition_review)
     GET /ai/schemas/{schema_name} - Get JSON schema for a response model
     GET /ai/topics - List all available single-shot topics
 """
@@ -29,17 +30,17 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
 )
 from coaching.src.core.constants import TopicType
-from coaching.src.core.endpoint_registry import (
-    get_endpoint_by_topic_id,
-    get_parameters_for_topic,
-    get_required_parameter_names_for_topic,
-    list_all_endpoints,
-)
 from coaching.src.core.response_model_registry import (
     get_response_model,
     get_response_schema,
     is_model_registered,
     list_available_schemas,
+)
+from coaching.src.core.topic_registry import (
+    get_endpoint_by_topic_id,
+    get_parameters_for_topic,
+    get_required_parameter_names_for_topic,
+    list_all_endpoints,
 )
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
@@ -337,9 +338,9 @@ async def list_schemas() -> list[str]:
     description="""
 List all available AI topics from both single-shot and coaching registries.
 
-This endpoint aggregates topics from:
-- **Single-shot topics** (ENDPOINT_REGISTRY): Use POST /ai/execute
-- **Coaching topics** (COACHING_TOPIC_REGISTRY): Use /ai/coaching/* endpoints
+This endpoint aggregates topics from ENDPOINT_REGISTRY:
+- **Single-shot topics**: Use POST /ai/execute
+- **Coaching topics**: Use /ai/coaching/* endpoints
 
 Each topic includes:
 - topic_id: Topic identifier
@@ -359,13 +360,13 @@ async def list_available_topics() -> list[TopicInfo]:
     """List all available AI topics from both registries.
 
     Aggregates single-shot topics from ENDPOINT_REGISTRY and
-    coaching topics from COACHING_TOPIC_REGISTRY.
+    coaching topics from ENDPOINT_REGISTRY (CONVERSATION_COACHING type).
 
     Returns:
         List of TopicInfo objects for all active topics
     """
-    from coaching.src.core.coaching_topic_registry import list_coaching_topics
     from coaching.src.core.parameter_registry import get_parameter_definition
+    from coaching.src.services.coaching_session_service import list_coaching_topics
 
     topics: list[TopicInfo] = []
 
@@ -405,7 +406,7 @@ async def list_available_topics() -> list[TopicInfo]:
             )
         )
 
-    # Add coaching topics from COACHING_TOPIC_REGISTRY
+    # Add coaching topics from ENDPOINT_REGISTRY (CONVERSATION_COACHING type)
     for coaching_topic in list_coaching_topics():
         # Build parameter info from parameter_refs
         topic_params = []
@@ -431,12 +432,12 @@ async def list_available_topics() -> list[TopicInfo]:
         topics.append(
             TopicInfo(
                 topic_id=coaching_topic.topic_id,
-                name=coaching_topic.name,
+                name=coaching_topic.topic_id.replace("_", " ").title(),  # Derive name from topic_id
                 description=coaching_topic.description,
                 topic_type="coaching",
-                response_model=coaching_topic.result_model,
+                response_model=coaching_topic.result_model or "",
                 parameters=topic_params,
-                category="coaching",
+                category=coaching_topic.category.value,
             )
         )
 

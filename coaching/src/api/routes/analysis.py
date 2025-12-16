@@ -1,5 +1,13 @@
 """Analysis API routes for business coaching (Phase 7).
 
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Analysis endpoints were designed but never integrated with frontend.
+Usage: No frontend callers exist.
+Status: Safe to remove.
+================================================================================
+
 This module provides REST API endpoints for various analysis types:
 - Alignment analysis (goals vs purpose/values)
 - Strategy analysis (effectiveness and recommendations)
