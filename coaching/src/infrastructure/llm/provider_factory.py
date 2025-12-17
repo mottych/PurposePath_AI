@@ -327,10 +327,25 @@ class LLMProviderFactory:
             )
 
         if credentials:
+            # Convert credentials dict to service_account.Credentials object
+            # This is required because aiplatform.init() expects a credentials object,
+            # not a raw dict
+            from google.oauth2 import service_account
+
+            # Extract project_id from credentials if not set in settings
+            # This happens when credentials come from AWS Secrets Manager
+            if not project_id and "project_id" in credentials:
+                project_id = credentials["project_id"]
+                logger.info(
+                    "Using project_id from credentials",
+                    project_id=project_id,
+                )
+
+            credentials_obj = service_account.Credentials.from_service_account_info(credentials)  # type: ignore[no-untyped-call]
             return GoogleVertexLLMProvider(
                 project_id=project_id,
                 location=self._settings.google_vertex_location,
-                credentials=credentials,
+                credentials=credentials_obj,
             )
 
         # If no credentials but project_id is set, try default credentials

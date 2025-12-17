@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          # Note: We don't use pip cache since uv manages dependencies
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5

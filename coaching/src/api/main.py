@@ -112,19 +112,18 @@ app = FastAPI(
 )
 
 # Add middleware in correct order - CORS must be last (runs first)
-app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)
-app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(CORSPreflightMiddleware)
+app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[arg-type,call-arg]
+app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
+app.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
+app.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
 
 # CORS middleware must be added LAST so it runs FIRST in the middleware chain
 # This ensures CORS headers are added before any authentication or error handling
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"https://.*\.purposepath\.app|http://localhost:\d+",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=[
+_cors_config: dict[str, Any] = {
+    "allow_origin_regex": r"https://.*\.purposepath\.app|http://localhost:\d+",
+    "allow_credentials": True,
+    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allow_headers": [
         "Content-Type",
         "Authorization",
         "X-Requested-With",
@@ -135,14 +134,15 @@ app.add_middleware(
         "X-User-Id",
         "X-CSRF-Token",
     ],
-    expose_headers=[
+    "expose_headers": [
         "X-Request-Id",
         "X-RateLimit-Limit",
         "X-RateLimit-Remaining",
         "X-RateLimit-Reset",
     ],
-    max_age=3600,
-)
+    "max_age": 3600,
+}
+app.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
 
 # Include routers
 app.include_router(analysis.router, prefix=f"{settings.api_prefix}")
