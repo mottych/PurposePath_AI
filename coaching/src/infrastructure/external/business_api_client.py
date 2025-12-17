@@ -117,12 +117,13 @@ class BusinessApiClient:
             user_data = data.get("data", {})
 
             # Build context with MVP fallbacks
-            first_name = user_data.get("first_name", "")
-            last_name = user_data.get("last_name", "")
+            # Note: Account Service returns camelCase (firstName, lastName)
+            first_name = user_data.get("firstName", "") or user_data.get("first_name", "")
+            last_name = user_data.get("lastName", "") or user_data.get("last_name", "")
             full_name = f"{first_name} {last_name}".strip() or user_data.get("email", "")
 
             user_context = {
-                "user_id": user_data.get("user_id"),
+                "user_id": user_data.get("userId") or user_data.get("user_id"),
                 "email": user_data.get("email"),
                 "first_name": first_name,
                 "last_name": last_name,

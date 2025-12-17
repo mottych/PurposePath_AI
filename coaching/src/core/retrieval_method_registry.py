@@ -204,8 +204,9 @@ async def get_user_context(context: RetrievalContext) -> dict[str, Any]:
         )
         data = await context.client.get_user_context(context.user_id, context.tenant_id)
         # Remap to expected parameter names
+        # Use first_name for user_name (more natural for LLM greeting)
         return {
-            "user_name": data.get("name", ""),
+            "user_name": data.get("first_name", "") or data.get("name", ""),
             "user_email": data.get("email", ""),
             "user_role": data.get("role", ""),
             "user_department": data.get("department", ""),

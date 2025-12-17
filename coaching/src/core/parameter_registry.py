@@ -96,6 +96,8 @@ _register(
         param_type=ParameterType.STRING,
         description="The display name of the user.",
         default="User",
+        retrieval_method="get_user_context",
+        extraction_path="user_name",
     )
 )
 
