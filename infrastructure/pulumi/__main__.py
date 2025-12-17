@@ -24,7 +24,7 @@ common_tags = {
 # DynamoDB Tables for Coaching Service
 conversations_table = aws.dynamodb.Table(
     "coaching-conversations",
-    name="purposepath-coaching-conversations-dev",
+    name=f"purposepath-coaching-conversations-{stack}",
     billing_mode="PAY_PER_REQUEST",
     hash_key="conversation_id",
     attributes=[
@@ -53,7 +53,7 @@ conversations_table = aws.dynamodb.Table(
 
 coaching_sessions_table = aws.dynamodb.Table(
     "coaching-sessions",
-    name="purposepath-coaching-sessions-dev",
+    name=f"purposepath-coaching-sessions-{stack}",
     billing_mode="PAY_PER_REQUEST",
     hash_key="session_id",
     attributes=[
@@ -84,7 +84,7 @@ coaching_sessions_table = aws.dynamodb.Table(
 
 llm_prompts_table = aws.dynamodb.Table(
     "llm-prompts",
-    name="purposepath-llm-prompts-dev",
+    name=f"purposepath-llm-prompts-{stack}",
     billing_mode="PAY_PER_REQUEST",
     hash_key="topic_id",
     attributes=[
@@ -107,7 +107,7 @@ llm_prompts_table = aws.dynamodb.Table(
 # S3 Bucket for LLM Prompts
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
-    bucket="purposepath-coaching-prompts-380276784420-dev",
+    bucket=f"purposepath-coaching-prompts-380276784420-{stack}",
     versioning=aws.s3.BucketVersioningArgs(enabled=True),
     server_side_encryption_configuration=aws.s3.BucketServerSideEncryptionConfigurationArgs(
         rule=aws.s3.BucketServerSideEncryptionConfigurationRuleArgs(
@@ -141,7 +141,7 @@ aws.s3.BucketPublicAccessBlock(
 # Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 openai_api_key_secret = aws.secretsmanager.Secret(
     "openai-api-key-secret",
-    name="purposepath/openai-api-key",
+    name=f"purposepath/{stack}/openai-api-key",
     description="OpenAI API key for PurposePath AI features",
     tags={**common_tags, "Name": "openai-api-key", "Purpose": "LLM-API-Key"},
     opts=pulumi.ResourceOptions(protect=True),
@@ -152,7 +152,7 @@ openai_api_key_secret = aws.secretsmanager.Secret(
 # Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 google_vertex_credentials_secret = aws.secretsmanager.Secret(
     "google-vertex-credentials-secret",
-    name="purposepath/google-vertex-credentials",
+    name=f"purposepath/{stack}/google-vertex-credentials",
     description="Google Vertex AI service account credentials",
     tags={**common_tags, "Name": "google-vertex-credentials", "Purpose": "LLM-API-Key"},
     opts=pulumi.ResourceOptions(protect=True),
