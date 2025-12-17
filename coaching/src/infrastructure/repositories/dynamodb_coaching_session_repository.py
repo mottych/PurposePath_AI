@@ -16,6 +16,7 @@ from coaching.src.domain.entities.coaching_session import (
     CoachingMessage,
     CoachingSession,
 )
+from coaching.src.domain.exceptions.session_exceptions import SessionConflictError
 
 logger = structlog.get_logger()
 
@@ -78,7 +79,7 @@ class DynamoDBCoachingSessionRepository:
             The created session
 
         Raises:
-            ValueError: If an active session already exists for tenant+topic
+            SessionConflictError: If an active session already exists for tenant+topic
         """
         # First, check for existing active session for this tenant+topic
         existing = await self.get_active_by_tenant_topic(
@@ -87,9 +88,13 @@ class DynamoDBCoachingSessionRepository:
         )
 
         if existing is not None:
-            raise ValueError(
-                f"Active session already exists for tenant {session.tenant_id} "
-                f"and topic {session.topic_id}. Session ID: {existing.session_id}"
+            # Raise SessionConflictError with existing session for idempotent handling
+            raise SessionConflictError(
+                topic_id=session.topic_id,
+                tenant_id=str(session.tenant_id),
+                requesting_user_id=str(session.user_id),
+                owning_user_id=str(existing.user_id),
+                existing_session=existing,
             )
 
         try:

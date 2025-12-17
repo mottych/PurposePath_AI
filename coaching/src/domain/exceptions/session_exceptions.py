@@ -190,6 +190,9 @@ class SessionConflictError(DomainError):
     This implements Issue #157 - blocking different users from accessing
     an active session for the same topic.
 
+    For idempotent handling (Issue #179), includes optional existing_session
+    to allow the service layer to resume instead of failing.
+
     HTTP Status: 409
     Error Code: SESSION_CONFLICT
     """
@@ -200,6 +203,7 @@ class SessionConflictError(DomainError):
         tenant_id: TenantId | str,
         requesting_user_id: UserId | str,
         owning_user_id: UserId | str | None = None,
+        existing_session: Any | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
         """Initialize SessionConflictError.
@@ -209,6 +213,7 @@ class SessionConflictError(DomainError):
             tenant_id: The tenant ID
             requesting_user_id: The user attempting to start a session
             owning_user_id: The user who owns the existing session
+            existing_session: The existing session entity (for idempotent handling)
             context: Additional context data
         """
         ctx = context or {}
@@ -231,6 +236,7 @@ class SessionConflictError(DomainError):
         self.tenant_id = tenant_id
         self.requesting_user_id = requesting_user_id
         self.owning_user_id = owning_user_id
+        self.existing_session = existing_session
 
 
 class SessionIdleTimeoutError(DomainError):

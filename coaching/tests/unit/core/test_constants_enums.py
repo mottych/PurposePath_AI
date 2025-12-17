@@ -106,12 +106,13 @@ class TestParameterSource:
         assert ParameterSource.KPIS.value == "kpis"
         assert ParameterSource.ACTION.value == "action"
         assert ParameterSource.ISSUE.value == "issue"
+        assert ParameterSource.USER.value == "user"
         assert ParameterSource.CONVERSATION.value == "conversation"
         assert ParameterSource.COMPUTED.value == "computed"
 
     def test_parameter_source_count(self) -> None:
-        """Test that ParameterSource has exactly 11 values."""
-        assert len(ParameterSource) == 11
+        """Test that ParameterSource has exactly 12 values."""
+        assert len(ParameterSource) == 12
 
 
 class TestExistingEnums:

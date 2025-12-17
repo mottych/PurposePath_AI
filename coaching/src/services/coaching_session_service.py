@@ -34,6 +34,7 @@ from coaching.src.domain.entities.coaching_session import CoachingMessage, Coach
 from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
+    SessionConflictError,
     SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
@@ -581,8 +582,41 @@ class CoachingSessionService:
         # Add messages to session (system message not stored in session, just used for LLM context)
         session.add_assistant_message(llm_response)
 
-        # Persist session
-        await self.session_repository.create(session)
+        # Persist session - handle race condition for idempotent behavior (Issue #179)
+        try:
+            await self.session_repository.create(session)
+        except SessionConflictError as e:
+            # Race condition: another request created the session while we were processing
+            # If same user, return existing session (idempotent behavior for retries)
+            if e.existing_session and str(e.existing_session.user_id) == user_id:
+                logger.info(
+                    "coaching_service.session_conflict_returning_existing",
+                    existing_session_id=str(e.existing_session.session_id),
+                    topic_id=topic_id,
+                    user_id=user_id,
+                )
+                existing = e.existing_session
+                # Get the last assistant message from existing session
+                last_message = ""
+                for msg in reversed(existing.messages):
+                    if msg.role == MessageRole.ASSISTANT:
+                        last_message = msg.content
+                        break
+
+                return SessionResponse(
+                    session_id=str(existing.session_id),
+                    tenant_id=str(existing.tenant_id),
+                    topic_id=existing.topic_id,
+                    status=existing.status,
+                    message=last_message,
+                    turn=existing.get_turn_count(),
+                    max_turns=existing.max_turns,
+                    is_final=False,
+                    resumed=True,  # Indicate this is returning an existing session
+                    metadata=response_metadata,
+                )
+            # Different user owns the session - re-raise for proper 409 handling
+            raise
 
         logger.info(
             "coaching_service.session_created",
