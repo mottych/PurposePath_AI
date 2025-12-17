@@ -38,11 +38,13 @@ agent: agent
    - Use Pydantic models (NO `dict[str, Any]`)
    - Strong typing with `NewType` for domain IDs
    - Repository pattern (Port/Adapter)
+   - Controller only handles request/response mapping. Use Mediator pattern for use case orchestration
 2. **Follow API specifications**:
    - #file:../../docs/Specifications/backend-integration-index.md
    - #file:../../docs/API_DOCUMENTATION.md
 3. **Implement tests alongside code** (TDD when possible)
 4. **Use structured logging** (structlog) with context
+5. Apply the **right** solution, and NOT the simplest quick fix 
 
 ### STEP 3: Code Quality Validation (MANDATORY - ALL MUST PASS)
 

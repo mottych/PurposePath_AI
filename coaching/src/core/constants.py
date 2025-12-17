@@ -106,6 +106,9 @@ class ParameterSource(str, Enum):
     # Issue from Traction Service
     ISSUE = "issue"
 
+    # User profile data from Account Service
+    USER = "user"
+
     # Conversation context (computed from current conversation)
     CONVERSATION = "conversation"
 

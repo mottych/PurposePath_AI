@@ -223,7 +223,26 @@ class GoogleVertexLLMProvider:
 
             # Extract response
             content = response.text if response.text else ""
-            finish_reason = "stop"  # Gemini uses different finish reasons
+
+            # Extract finish reason from Gemini response
+            # Gemini finish reasons: STOP, MAX_TOKENS, SAFETY, RECITATION, OTHER
+            finish_reason = "stop"  # default
+            if hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, "finish_reason"):
+                    gemini_reason = str(candidate.finish_reason)
+                    # Map Gemini finish reasons to standard format
+                    reason_map = {
+                        "STOP": "stop",
+                        "FinishReason.STOP": "stop",
+                        "MAX_TOKENS": "length",
+                        "FinishReason.MAX_TOKENS": "length",
+                        "SAFETY": "content_filter",
+                        "FinishReason.SAFETY": "content_filter",
+                        "RECITATION": "content_filter",
+                        "FinishReason.RECITATION": "content_filter",
+                    }
+                    finish_reason = reason_map.get(gemini_reason, gemini_reason.lower())
 
             # Extract usage metrics (Gemini provides token counts)
             usage = {

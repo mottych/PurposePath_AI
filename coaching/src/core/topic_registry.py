@@ -114,6 +114,11 @@ def _issue(name: str, path: str = "") -> ParameterRef:
     return ParameterRef(name=name, source=ParameterSource.ISSUE, source_path=path)
 
 
+def _user(name: str, path: str = "") -> ParameterRef:
+    """Create a USER source parameter reference (from user profile)."""
+    return ParameterRef(name=name, source=ParameterSource.USER, source_path=path or name)
+
+
 def _conv(name: str, path: str = "") -> ParameterRef:
     """Create a CONVERSATION source parameter reference."""
     return ParameterRef(name=name, source=ParameterSource.CONVERSATION, source_path=path)
@@ -866,9 +871,9 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             PromptType.EXTRACTION,
         ),
         # Core values are personal beliefs - minimal context needed
-        # user_name for personalization, company_name optional
+        # user_name from user profile, company_name optional from onboarding
         parameter_refs=(
-            _req("user_name"),
+            _user("user_name"),
             _onb("company_name", "company_name"),
         ),
     ),
@@ -889,7 +894,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
         # Purpose needs business context and core values (if completed)
         parameter_refs=(
-            _req("user_name"),
+            _user("user_name"),
             _onb("company_name", "company_name"),
             _onb("core_values", "core_values"),
             _onb("onboarding_niche", "onboarding_niche"),

@@ -475,12 +475,9 @@ class GenericAIHandler:
         params = request_body.model_dump()
 
         # Add user context (available to all prompts)
+        # Note: user_name is resolved via get_user_context retrieval method if not in payload
         params["user_id"] = user_context.user_id
         params["tenant_id"] = user_context.tenant_id
-
-        # Add user name if available
-        if hasattr(user_context, "name") and user_context.name:
-            params["user_name"] = user_context.name
 
         return params
 

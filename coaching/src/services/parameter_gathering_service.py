@@ -241,6 +241,9 @@ class ParameterGatheringService:
         elif source == ParameterSource.CONVERSATION:
             data = conversation_context or {}
 
+        elif source == ParameterSource.USER:
+            data = await self._fetch_user_context(user_id, tenant_id)
+
         elif source == ParameterSource.COMPUTED:
             # Computed values derive from already-gathered params
             data = gathered_params
@@ -271,6 +274,28 @@ class ParameterGatheringService:
         except Exception as e:
             logger.error(
                 "fetch_onboarding.failed",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            return {}
+
+    async def _fetch_user_context(self, user_id: str, tenant_id: str) -> dict[str, Any]:
+        """Fetch user profile/context data.
+
+        Args:
+            user_id: User identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            User context data including user_name
+        """
+        try:
+            result = await self.business_api_client.get_user_context(user_id, tenant_id)
+            return dict(result)
+        except Exception as e:
+            logger.error(
+                "fetch_user_context.failed",
+                user_id=user_id,
                 tenant_id=tenant_id,
                 error=str(e),
             )
