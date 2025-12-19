@@ -24,7 +24,7 @@ common_tags = {
 # DynamoDB Tables for Coaching Service
 conversations_table = aws.dynamodb.Table(
     "coaching-conversations",
-    name="purposepath-coaching-conversations-dev",
+    name=f"purposepath-coaching-conversations-{stack}",
     billing_mode="PAY_PER_REQUEST",
     hash_key="conversation_id",
     attributes=[
@@ -53,7 +53,7 @@ conversations_table = aws.dynamodb.Table(
 
 coaching_sessions_table = aws.dynamodb.Table(
     "coaching-sessions",
-    name="purposepath-coaching-sessions-dev",
+    name=f"purposepath-coaching-sessions-{stack}",
     billing_mode="PAY_PER_REQUEST",
     hash_key="session_id",
     attributes=[
@@ -82,32 +82,10 @@ coaching_sessions_table = aws.dynamodb.Table(
     tags={**common_tags, "Name": "coaching_sessions", "Purpose": "Session-Tracking"},
 )
 
-llm_prompts_table = aws.dynamodb.Table(
-    "llm-prompts",
-    name="purposepath-llm-prompts-dev",
-    billing_mode="PAY_PER_REQUEST",
-    hash_key="topic_id",
-    attributes=[
-        aws.dynamodb.TableAttributeArgs(name="topic_id", type="S"),
-        aws.dynamodb.TableAttributeArgs(name="topic_type", type="S"),
-    ],
-    global_secondary_indexes=[
-        aws.dynamodb.TableGlobalSecondaryIndexArgs(
-            name="topic_type-index",
-            hash_key="topic_type",
-            projection_type="ALL",
-        ),
-    ],
-    stream_enabled=True,
-    stream_view_type="NEW_AND_OLD_IMAGES",
-    point_in_time_recovery=aws.dynamodb.TablePointInTimeRecoveryArgs(enabled=True),
-    tags={**common_tags, "Name": "llm_prompts", "Purpose": "LLM-Prompt-Management"},
-)
-
 # S3 Bucket for LLM Prompts
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
-    bucket="purposepath-coaching-prompts-380276784420-dev",
+    bucket=f"purposepath-coaching-prompts-380276784420-{stack}",
     versioning=aws.s3.BucketVersioningArgs(enabled=True),
     server_side_encryption_configuration=aws.s3.BucketServerSideEncryptionConfigurationArgs(
         rule=aws.s3.BucketServerSideEncryptionConfigurationRuleArgs(
@@ -166,7 +144,6 @@ pulumi.export(
     {
         "coachingConversations": conversations_table.name,
         "coachingSessions": coaching_sessions_table.name,
-        "llmPrompts": llm_prompts_table.name,
     },
 )
 pulumi.export(
@@ -174,7 +151,6 @@ pulumi.export(
     {
         "conversations": f"purposepath-coaching-conversations-{stack}",
         "sessions": f"purposepath-coaching-sessions-{stack}",
-        "prompts": f"purposepath-llm-prompts-{stack}",
     },
 )
 pulumi.export("promptsBucket", prompts_bucket.bucket)
@@ -190,6 +166,5 @@ pulumi.export(
     {
         "conversations": conversations_table.arn,
         "sessions": coaching_sessions_table.arn,
-        "prompts": llm_prompts_table.arn,
     },
 )

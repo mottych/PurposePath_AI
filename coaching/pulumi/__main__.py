@@ -271,7 +271,6 @@ coaching_lambda = aws.lambda_.Function(
         variables={
             "CONVERSATIONS_TABLE": "coaching_conversations",
             "COACHING_SESSIONS_TABLE": "coaching_sessions",
-            "LLM_PROMPTS_TABLE": "llm_prompts",
             "TOPICS_TABLE": stack_config["topics_table"],
             "AI_JOBS_TABLE": ai_jobs_table,
             "PROMPTS_BUCKET": prompts_bucket,
