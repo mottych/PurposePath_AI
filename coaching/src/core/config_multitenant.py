@@ -68,6 +68,11 @@ class Settings(BaseSettings):
         """Get topics table name."""
         return f"purposepath-topics-{self.stage}"
 
+    @property
+    def ai_jobs_table(self) -> str:
+        """Get AI jobs table name."""
+        return f"purposepath-ai-jobs-{self.stage}"
+
     # Optional: Allow override via env var for local development
     dynamodb_endpoint: str | None = None
 
