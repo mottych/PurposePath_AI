@@ -187,15 +187,17 @@ class OpenAILLMProvider:
                     schema_name=response_schema.get("title", "Response"),
                 )
 
-            # GPT-5 Pro only supports high reasoning effort - don't set temperature
-            # For other models, set temperature
-            if model == "gpt-5-pro":
-                # GPT-5 Pro has fixed reasoning settings, don't override
-                pass
-            elif model == "gpt-5-mini":
-                # GPT-5 Mini only supports default temperature (1.0)
-                pass
-            else:
+            # GPT-5 reasoning models don't support temperature parameter
+            # Only set temperature for models that support it
+            models_without_temperature = {
+                "gpt-5-pro",
+                "gpt-5",
+                "gpt-5-mini",
+                "gpt-5-nano",
+                "gpt-5.2",
+                "gpt-5.2-pro",
+            }
+            if model not in models_without_temperature:
                 params["temperature"] = temperature
 
             response = await client.responses.create(**params)
@@ -325,8 +327,16 @@ class OpenAILLMProvider:
             if max_tokens:
                 params["max_output_tokens"] = max_tokens
 
-            # Set temperature for models that support it
-            if model not in ("gpt-5-pro", "gpt-5-mini"):
+            # GPT-5 reasoning models don't support temperature parameter
+            models_without_temperature = {
+                "gpt-5-pro",
+                "gpt-5",
+                "gpt-5-mini",
+                "gpt-5-nano",
+                "gpt-5.2",
+                "gpt-5.2-pro",
+            }
+            if model not in models_without_temperature:
                 params["temperature"] = temperature
 
             # Use the streaming interface
