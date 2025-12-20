@@ -19,7 +19,6 @@ config = {
         "jwt_secret": "purposepath-jwt-secret-dev",
         "jwt_issuer": "https://api.dev.purposepath.app",
         "jwt_audience": "https://dev.purposepath.app",
-        "topics_table": "purposepath-topics-dev",
         "log_level": "INFO",
     },
     "staging": {
@@ -30,7 +29,6 @@ config = {
         "jwt_secret": "purposepath-jwt-secret-staging",
         "jwt_issuer": "https://api.staging.purposepath.app",
         "jwt_audience": "https://staging.purposepath.app",
-        "topics_table": "purposepath-topics-staging",
         "log_level": "INFO",
     },
     "prod": {
@@ -41,7 +39,6 @@ config = {
         "jwt_secret": "purposepath-jwt-secret-prod",
         "jwt_issuer": "https://api.purposepath.app",
         "jwt_audience": "https://purposepath.app",
-        "topics_table": "purposepath-topics-prod",
         "log_level": "WARNING",
     },
 }
@@ -269,11 +266,6 @@ coaching_lambda = aws.lambda_.Function(
     memory_size=1024,
     environment=aws.lambda_.FunctionEnvironmentArgs(
         variables={
-            "CONVERSATIONS_TABLE": "coaching_conversations",
-            "COACHING_SESSIONS_TABLE": "coaching_sessions",
-            "LLM_PROMPTS_TABLE": "llm_prompts",
-            "TOPICS_TABLE": stack_config["topics_table"],
-            "AI_JOBS_TABLE": ai_jobs_table,
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": stack,
             "LOG_LEVEL": stack_config["log_level"],

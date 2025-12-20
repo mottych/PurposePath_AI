@@ -46,23 +46,19 @@ class TestSettings:
 
         assert settings1 is settings2
 
-    def test_llm_prompts_table_default(self) -> None:
-        """Test LLM prompts table default configuration."""
+    def test_prompts_bucket_default(self) -> None:
+        """Test prompts bucket default configuration."""
         settings = Settings()
 
-        assert settings.llm_prompts_table == "purposepath-llm-prompts-dev"
         assert settings.prompts_bucket == "purposepath-coaching-prompts-dev"
 
-    def test_llm_prompts_table_environment_override(self) -> None:
-        """Test LLM prompts table environment variable override."""
-        os.environ["LLM_PROMPTS_TABLE"] = "purposepath-llm-prompts-test"
+    def test_prompts_bucket_environment_override(self) -> None:
+        """Test prompts bucket environment variable override."""
         os.environ["PROMPTS_BUCKET"] = "purposepath-coaching-prompts-test"
 
         try:
             settings = Settings()
 
-            assert settings.llm_prompts_table == "purposepath-llm-prompts-test"
             assert settings.prompts_bucket == "purposepath-coaching-prompts-test"
         finally:
-            os.environ.pop("LLM_PROMPTS_TABLE", None)
             os.environ.pop("PROMPTS_BUCKET", None)

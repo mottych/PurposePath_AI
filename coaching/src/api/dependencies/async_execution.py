@@ -4,8 +4,6 @@ This module provides FastAPI dependency factories for the async
 execution service and its components.
 """
 
-import os
-
 import boto3
 import structlog
 from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
@@ -21,9 +19,6 @@ _job_repository: DynamoDBJobRepository | None = None
 _event_publisher: EventBridgePublisher | None = None
 _async_execution_service: AsyncAIExecutionService | None = None
 
-# Table name from environment (will be set in Pulumi)
-AI_JOBS_TABLE = os.environ.get("AI_JOBS_TABLE", "purposepath-ai-jobs-dev")
-
 
 async def get_job_repository() -> DynamoDBJobRepository:
     """Get or create DynamoDBJobRepository singleton.
@@ -36,9 +31,9 @@ async def get_job_repository() -> DynamoDBJobRepository:
         dynamodb_resource = boto3.resource("dynamodb", region_name=settings.aws_region)
         _job_repository = DynamoDBJobRepository(
             dynamodb_resource=dynamodb_resource,
-            table_name=AI_JOBS_TABLE,
+            table_name=settings.ai_jobs_table,
         )
-        logger.info("DynamoDBJobRepository initialized", table=AI_JOBS_TABLE)
+        logger.info("DynamoDBJobRepository initialized", table=settings.ai_jobs_table)
 
     return _job_repository
 

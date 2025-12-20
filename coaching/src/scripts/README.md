@@ -1,103 +1,43 @@
 # Coaching Topics Seed Scripts
 
-Scripts for migrating coaching topics from the old hardcoded enum to the new unified DynamoDB table structure.
+Scripts for seeding coaching topics to the DynamoDB topics table.
 
 ## Overview
 
-These scripts are part of the unified prompt management system migration. They seed the 4 coaching topics (Core Values, Purpose, Vision, Goals) into the `purposepath-llm-prompts-{env}` DynamoDB table and migrate existing prompts from the old YAML format to the new markdown format.
+These scripts seed coaching topics into the `purposepath-topics-{env}` DynamoDB table.
 
 ## Scripts
 
-### 1. `seed_coaching_topics.py`
+### `seed_topics.py`
 Main seeding script that:
-- Creates all 4 coaching topics in DynamoDB
-- Migrates existing prompts from `prompts/{topic}/latest.yaml` to `prompts/{topic_id}/{type}.md`
+- Creates all coaching topics in DynamoDB from the endpoint registry
+- Supports 44 topics total
 - Is idempotent (safe to run multiple times)
-- Skips topics that already exist
-
-### 2. `verify_coaching_topics.py`
-Verification script that:
-- Checks all 4 topics exist in DynamoDB
-- Validates topic configuration
-- Reports missing or misconfigured topics
+- Can update existing topics or skip them
 
 ## Usage
-
-### Option 1: Shell Scripts (Recommended)
-
-```bash
-# Seed topics to dev environment
-./scripts/seed_topics_manual.sh dev
-
-# Verify seeding
-./scripts/verify_topics.sh dev
-
-# For other environments
-./scripts/seed_topics_manual.sh staging
-./scripts/verify_topics.sh staging
-```
-
-### Option 2: Direct Python Execution
 
 ```bash
 # Set environment variables
 export AWS_PROFILE=purposepath-dev
-export LLM_PROMPTS_TABLE=purposepath-llm-prompts-dev
-export PROMPTS_BUCKET=purposepath-coaching-prompts-dev
 export AWS_REGION=us-east-1
 export STAGE=dev
 
 # Run seed script
 cd coaching
-python -m src.scripts.seed_coaching_topics
+python -m src.scripts.seed_topics
 
-# Run verification
-python -m src.scripts.verify_coaching_topics
+# Run with options
+python -m src.scripts.seed_topics --force-update  # Update existing
+python -m src.scripts.seed_topics --dry-run       # Preview changes
+python -m src.scripts.seed_topics --validate-only # Validate only
 ```
 
 ## Prerequisites
 
-1. **Infrastructure Deployed**: DynamoDB table and S3 bucket must exist
+1. **Infrastructure Deployed**: DynamoDB topics table must exist
 2. **AWS Credentials**: Configure AWS profile or credentials
-3. **Dependencies**: Install Python dependencies (`pip install -r requirements.txt`)
-
-## Topics Seeded
-
-| Topic ID | Topic Name | Type | Category | Prompts |
-|----------|------------|------|----------|---------|
-| core_values | Core Values Discovery | conversation_coaching | coaching | system, user |
-| purpose | Life Purpose Exploration | conversation_coaching | coaching | system, user |
-| vision | Vision Statement Creation | conversation_coaching | coaching | system, user |
-| goals | Goal Setting & Planning | conversation_coaching | coaching | system, user |
-
-## Configuration
-
-Each topic includes:
-- **Metadata**: Name, description, display order
-- **Type**: `conversation_coaching`
-- **Category**: `coaching`
-- **Parameters**: user_name, user_id, conversation_history
-- **LLM Config**: Model, temperature, streaming settings
-- **Prompts**: System and user prompts (migrated from YAML if available)
-
-## Prompt Migration
-
-### Old Format (YAML)
-```
-prompts/core_values/latest.yaml
-```
-Contains both system_prompt and user_prompt_template in single file.
-
-### New Format (Markdown)
-```
-prompts/core_values/system.md
-prompts/core_values/user.md
-```
-Separate files for each prompt type, stored as markdown.
-
-**Migration Behavior:**
-- If old YAML exists: Automatically migrates to new format
-- If old YAML missing: Topic created without prompts (admin must add via API)
+3. **Dependencies**: Install Python dependencies
 - Old YAML files remain untouched (cleaned up later)
 
 ## Idempotency

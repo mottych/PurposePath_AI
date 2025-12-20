@@ -64,14 +64,14 @@ class Settings(BaseSettings):
         return f"purposepath-user-preferences-{self.stage}"
 
     @property
-    def llm_prompts_table(self) -> str:
-        """Get LLM prompts table name."""
-        return f"purposepath-llm-prompts-{self.stage}"
-
-    @property
     def topics_table(self) -> str:
         """Get topics table name."""
         return f"purposepath-topics-{self.stage}"
+
+    @property
+    def ai_jobs_table(self) -> str:
+        """Get AI jobs table name."""
+        return f"purposepath-ai-jobs-{self.stage}"
 
     # Optional: Allow override via env var for local development
     dynamodb_endpoint: str | None = None

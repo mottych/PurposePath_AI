@@ -19,9 +19,6 @@ class Settings(BaseSettings):
     # DynamoDB
     dynamodb_table: str = "truenorth-coaching-conversations-dev"
     dynamodb_endpoint: str | None = None
-    llm_prompts_table: str = Field(
-        default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
-    )
 
     # S3
     prompts_bucket: str = Field(
