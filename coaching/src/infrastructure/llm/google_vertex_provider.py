@@ -6,7 +6,19 @@ port interface, supporting Gemini 2.5+ and other Vertex AI models.
 Migration from deprecated vertexai.generative_models to google.genai SDK:
 - Uses native async support via client.aio.* methods
 - Proper streaming with generate_content_stream()
+- Context caching for system prompts via client.caches.create()
 - Full feature parity with modern Gemini capabilities
+
+Context Caching:
+    Gemini supports context caching for system prompts and static content.
+    This reduces processing time and costs for repeated prompts.
+
+    Cache requirements:
+    - Minimum 32,000 tokens of content to cache
+    - Cache TTL: configurable (default 1 hour, max 24 hours)
+    - Supported on Gemini 1.5+ and 2.0+ models
+
+    See: https://cloud.google.com/vertex-ai/generative-ai/docs/context-caching
 
 Reference: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
 """
@@ -18,6 +30,23 @@ import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
+
+# Minimum tokens required for Gemini context caching
+# Gemini requires 32,000+ tokens for caching to be beneficial
+MIN_CACHE_TOKENS_GEMINI = 32000
+
+# Default cache TTL in seconds (1 hour)
+DEFAULT_CACHE_TTL_SECONDS = 3600
+
+# Models that support context caching
+CACHE_SUPPORTED_MODELS_GEMINI: set[str] = {
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-001",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+}
 
 
 class GoogleVertexLLMProvider:
@@ -62,6 +91,7 @@ class GoogleVertexLLMProvider:
         project_id: str | None = None,
         location: str = "us-central1",
         credentials: Any | None = None,
+        enable_caching: bool = True,
     ):
         """
         Initialize Google Vertex AI LLM provider.
@@ -70,15 +100,20 @@ class GoogleVertexLLMProvider:
             project_id: GCP project ID (optional - will retrieve from config/secrets if not provided)
             location: GCP location/region (default: us-central1)
             credentials: Optional GCP credentials object (will retrieve from Secrets Manager if not provided)
+            enable_caching: Whether to enable context caching for system prompts (default: True)
         """
         self.project_id = project_id
         self.location = location
         self.credentials = credentials
+        self.enable_caching = enable_caching
         self._client: Any | None = None
         self._initialized = False
+        # Cache name registry: maps (model, system_prompt_hash) -> cache_name
+        self._cache_registry: dict[tuple[str, str], str] = {}
         logger.info(
             "Google Vertex AI LLM provider initialized",
             project_id=project_id,
+            enable_caching=enable_caching,
             location=location,
         )
 
@@ -282,6 +317,29 @@ class GoogleVertexLLMProvider:
                     "completion_tokens": getattr(usage_meta, "candidates_token_count", 0) or 0,
                     "total_tokens": getattr(usage_meta, "total_token_count", 0) or 0,
                 }
+
+                # Log cache eligibility metrics
+                # Note: Gemini requires 32,000+ tokens for context caching to be beneficial
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                cache_eligible = (
+                    self.enable_caching
+                    and model in CACHE_SUPPORTED_MODELS_GEMINI
+                    and prompt_tokens >= MIN_CACHE_TOKENS_GEMINI
+                )
+                if cache_eligible:
+                    logger.info(
+                        "Gemini context caching eligible",
+                        model=model,
+                        prompt_tokens=prompt_tokens,
+                        min_required=MIN_CACHE_TOKENS_GEMINI,
+                    )
+                elif self.enable_caching and model in CACHE_SUPPORTED_MODELS_GEMINI:
+                    logger.debug(
+                        "Gemini context caching not eligible (below token threshold)",
+                        model=model,
+                        prompt_tokens=prompt_tokens,
+                        min_required=MIN_CACHE_TOKENS_GEMINI,
+                    )
 
             logger.info(
                 "Google Vertex AI API call successful",

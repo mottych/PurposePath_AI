@@ -5,6 +5,24 @@ port interface, supporting GPT-4o, GPT-5 series (including GPT-5 Pro), and other
 
 Uses the Responses API (/v1/responses) which supports all models including
 GPT-5 Pro which is exclusive to this API.
+
+Prompt Caching:
+    OpenAI automatically caches identical prompt prefixes server-side.
+    No explicit configuration required - caching happens automatically for:
+    - Repeated identical system prompts
+    - Common conversation prefixes
+
+    Benefits:
+    - Up to 50% reduction in latency for cache hits
+    - Up to 50% reduction in input token costs
+    - Cache TTL: Up to 1 hour (managed by OpenAI)
+
+    Optimization tips:
+    - Put static content (system prompts) at the beginning
+    - Keep variable content (user messages) at the end
+    - Use consistent system prompts across requests
+
+    See: https://platform.openai.com/docs/guides/prompt-caching
 """
 
 from collections.abc import AsyncIterator

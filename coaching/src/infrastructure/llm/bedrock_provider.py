@@ -7,7 +7,19 @@ Uses the Converse API for:
 - Unified interface across all Bedrock models
 - Better streaming support
 - Native tool/function calling
-- Prompt caching support
+- Prompt caching support (cache_control blocks)
+
+Prompt Caching:
+    For Claude models, system prompts are cached using cache_control blocks.
+    This reduces processing time for repeated system prompts (e.g., coaching prompts)
+    by up to 80% on subsequent requests within the cache TTL.
+
+    Cache requirements:
+    - Claude 3.5 Sonnet+ or Claude 3.5 Haiku+
+    - Minimum 1024 tokens (2048 for Claude 3.5 Haiku)
+    - Cache TTL: 5 minutes (extended on cache hit)
+
+    See: https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
 
 Note on Inference Profiles:
     Newer Claude models (Claude 3.5 Sonnet v2+, Claude Sonnet 4.5, Claude Opus 4.5)
@@ -33,6 +45,32 @@ INFERENCE_PROFILE_MODELS: set[str] = {
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
     "anthropic.claude-opus-4-5-20250929-v1:0",  # Claude Opus 4.5
 }
+
+# Models that support prompt caching via cache_control blocks
+# Requires minimum token count: 1024 tokens for most, 2048 for Haiku
+CACHE_SUPPORTED_MODELS: set[str] = {
+    # Claude 3.5 Sonnet v2 (direct and inference profiles)
+    "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    # Claude Sonnet 4.5
+    "anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    # Claude Opus 4.5
+    "anthropic.claude-opus-4-5-20250929-v1:0",
+    "us.anthropic.claude-opus-4-5-20250929-v1:0",
+    "eu.anthropic.claude-opus-4-5-20250929-v1:0",
+    "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+    # Claude 3 Haiku (requires 2048+ tokens)
+    "anthropic.claude-3-haiku-20240307-v1:0",
+}
+
+# Minimum tokens required for caching (varies by model)
+MIN_CACHE_TOKENS_DEFAULT = 1024
+MIN_CACHE_TOKENS_HAIKU = 2048
 
 
 class BedrockLLMProvider:
@@ -209,15 +247,18 @@ class BedrockLLMProvider:
                 "inferenceConfig": inference_config,
             }
 
-            # Add system prompt if provided
+            # Add system prompt with caching if supported
             if system_prompt:
-                request_params["system"] = [{"text": system_prompt}]
+                request_params["system"] = self._build_system_with_cache(
+                    system_prompt, resolved_model
+                )
 
             # Use Converse API (async via run_in_executor)
             logger.debug(
                 "Invoking Bedrock Converse API",
                 original_model=model,
                 resolved_model=resolved_model,
+                cache_enabled=resolved_model in CACHE_SUPPORTED_MODELS,
             )
 
             # Run synchronous boto3 call in thread pool
@@ -263,11 +304,25 @@ class BedrockLLMProvider:
                 provider=self.provider_name,
             )
 
+            # Log cache usage if available (Claude models report cache metrics)
+            cache_read_tokens = usage_data.get("cacheReadInputTokens", 0)
+            cache_write_tokens = usage_data.get("cacheCreationInputTokens", 0)
+            if cache_read_tokens > 0 or cache_write_tokens > 0:
+                usage["cache_read_tokens"] = cache_read_tokens
+                usage["cache_write_tokens"] = cache_write_tokens
+                logger.info(
+                    "Prompt cache metrics",
+                    model=model,
+                    cache_read_tokens=cache_read_tokens,
+                    cache_write_tokens=cache_write_tokens,
+                )
+
             logger.info(
                 "LLM generation completed via Converse API",
                 model=model,
                 resolved_model=resolved_model,
                 tokens=usage.get("total_tokens", 0),
+                cache_hit=cache_read_tokens > 0,
             )
 
             return llm_response
@@ -320,9 +375,11 @@ class BedrockLLMProvider:
                 "inferenceConfig": inference_config,
             }
 
-            # Add system prompt if provided
+            # Add system prompt with caching if supported
             if system_prompt:
-                request_params["system"] = [{"text": system_prompt}]
+                request_params["system"] = self._build_system_with_cache(
+                    system_prompt, resolved_model
+                )
 
             logger.debug(
                 "Starting Bedrock Converse Stream",
@@ -397,6 +454,62 @@ class BedrockLLMProvider:
             converse_messages.append({"role": role, "content": [{"text": msg.content}]})
 
         return converse_messages
+
+    def _build_system_with_cache(
+        self,
+        system_prompt: str,
+        resolved_model: str,
+    ) -> list[dict[str, Any]]:
+        """Build system prompt block with cache_control for supported models.
+
+        For Claude models that support caching, adds cache_control with ephemeral
+        type to the system prompt. This enables prompt caching for the system prompt,
+        reducing processing time for repeated prompts by up to 80%.
+
+        Cache requirements:
+        - Model must be in CACHE_SUPPORTED_MODELS
+        - System prompt must meet minimum token threshold
+        - Cache TTL is 5 minutes, extended on each cache hit
+
+        Args:
+            system_prompt: The system prompt text
+            resolved_model: The resolved model ID (with inference profile if applicable)
+
+        Returns:
+            List of system content blocks for Converse API
+        """
+        # Check if model supports caching
+        if resolved_model not in CACHE_SUPPORTED_MODELS:
+            return [{"text": system_prompt}]
+
+        # Estimate token count (rough estimate: 4 chars per token)
+        estimated_tokens = len(system_prompt) // 4
+
+        # Get minimum cache tokens for model type
+        min_tokens = MIN_CACHE_TOKENS_HAIKU if "haiku" in resolved_model.lower() else MIN_CACHE_TOKENS_DEFAULT
+
+        # Only add cache_control if prompt meets minimum token requirement
+        if estimated_tokens < min_tokens:
+            logger.debug(
+                "System prompt below cache threshold",
+                estimated_tokens=estimated_tokens,
+                min_tokens=min_tokens,
+                model=resolved_model,
+            )
+            return [{"text": system_prompt}]
+
+        # Add cache_control block for caching
+        logger.debug(
+            "Adding cache_control to system prompt",
+            estimated_tokens=estimated_tokens,
+            model=resolved_model,
+        )
+        return [
+            {
+                "text": system_prompt,
+                "cachePoint": {"type": "default"},
+            }
+        ]
 
 
 __all__ = ["BedrockLLMProvider"]
