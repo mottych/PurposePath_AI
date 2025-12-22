@@ -135,12 +135,14 @@ class TestBedrockProviderValidation:
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
 
-        # Mock bedrock client response
-        provider.bedrock_client.invoke_model = Mock(
+        # Mock bedrock client converse response (new Converse API format)
+        provider.bedrock_client.converse = Mock(
             return_value={
-                "body": Mock(
-                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
-                )
+                "output": {
+                    "message": {"content": [{"text": "Response"}]}
+                },
+                "usage": {"inputTokens": 10, "outputTokens": 20},
+                "stopReason": "end_turn",
             }
         )
 
@@ -199,12 +201,12 @@ class TestBedrockProviderEdgeCases:
         # The actual behavior depends on implementation
         # For now, just ensure it doesn't crash unexpectedly
         try:
-            # Mock the client to avoid actual API call
-            provider.bedrock_client.invoke_model = Mock(
+            # Mock the client to avoid actual API call (Converse API format)
+            provider.bedrock_client.converse = Mock(
                 return_value={
-                    "body": Mock(
-                        read=lambda: b'{"content": [{"text": ""}], "usage": {"input_tokens": 0, "output_tokens": 0}}'
-                    )
+                    "output": {"message": {"content": [{"text": ""}]}},
+                    "usage": {"inputTokens": 0, "outputTokens": 0},
+                    "stopReason": "end_turn",
                 }
             )
             result = await provider.generate(messages=messages, model=model)
@@ -219,11 +221,11 @@ class TestBedrockProviderEdgeCases:
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
 
-        provider.bedrock_client.invoke_model = Mock(
+        provider.bedrock_client.converse = Mock(
             return_value={
-                "body": Mock(
-                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
-                )
+                "output": {"message": {"content": [{"text": "Response"}]}},
+                "usage": {"inputTokens": 10, "outputTokens": 20},
+                "stopReason": "end_turn",
             }
         )
 
@@ -244,11 +246,11 @@ class TestBedrockProviderEdgeCases:
         messages = [LLMMessage(role="user", content="Test")]
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
 
-        provider.bedrock_client.invoke_model = Mock(
+        provider.bedrock_client.converse = Mock(
             return_value={
-                "body": Mock(
-                    read=lambda: b'{"content": [{"text": "Response"}], "usage": {"input_tokens": 10, "output_tokens": 20}}'
-                )
+                "output": {"message": {"content": [{"text": "Response"}]}},
+                "usage": {"inputTokens": 10, "outputTokens": 20},
+                "stopReason": "end_turn",
             }
         )
 
@@ -272,11 +274,11 @@ class TestBedrockProviderMultipleModels:
     def provider(self):
         """Create BedrockLLMProvider with mocked client."""
         mock_client = Mock()
-        mock_client.invoke_model = Mock(
+        mock_client.converse = Mock(
             return_value={
-                "body": Mock(
-                    read=lambda: b'{"content": [{"text": "Test response"}], "usage": {"input_tokens": 5, "output_tokens": 10}}'
-                )
+                "output": {"message": {"content": [{"text": "Test response"}]}},
+                "usage": {"inputTokens": 5, "outputTokens": 10},
+                "stopReason": "end_turn",
             }
         )
         return BedrockLLMProvider(bedrock_client=mock_client)

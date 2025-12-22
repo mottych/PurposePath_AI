@@ -72,7 +72,10 @@ class OpenAILLMProvider:
         return self.SUPPORTED_MODELS.copy()
 
     async def _get_client(self) -> Any:
-        """Get or create OpenAI async client (lazy initialization)."""
+        """Get or create OpenAI async client (lazy initialization).
+
+        Uses aiohttp for faster async HTTP performance when available.
+        """
         if self._client is None:
             try:
                 from openai import AsyncOpenAI
@@ -93,9 +96,20 @@ class OpenAILLMProvider:
                         "Set OPENAI_API_KEY environment variable or configure AWS secret"
                     )
 
+            # Try to use aiohttp for faster async HTTP (if installed)
+            http_client = None
+            try:
+                from openai import DefaultAioHttpClient
+
+                http_client = DefaultAioHttpClient()
+                logger.debug("Using aiohttp for OpenAI client (faster async)")
+            except ImportError:
+                logger.debug("aiohttp not available, using default httpx client")
+
             self._client = AsyncOpenAI(
                 api_key=api_key,
                 organization=self.organization,
+                http_client=http_client,
             )
             logger.info("OpenAI client initialized")
         return self._client

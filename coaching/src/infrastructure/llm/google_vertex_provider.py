@@ -133,7 +133,7 @@ class GoogleVertexLLMProvider:
                         from google.oauth2 import service_account
 
                         creds_map: dict[str, Any] = creds_dict
-                        credentials = service_account.Credentials.from_service_account_info(
+                        credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
                             creds_map
                         )
                         # Update project_id from credentials if still not set

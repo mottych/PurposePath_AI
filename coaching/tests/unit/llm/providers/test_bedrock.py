@@ -23,7 +23,8 @@ def mock_boto3():
 
 @pytest.fixture
 def mock_chat_bedrock():
-    with patch("coaching.src.llm.providers.bedrock.ChatBedrock") as mock:
+    """Mock ChatBedrockConverse for testing."""
+    with patch("coaching.src.llm.providers.bedrock.ChatBedrockConverse") as mock:
         yield mock
 
 

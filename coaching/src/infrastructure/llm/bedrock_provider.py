@@ -1,7 +1,13 @@
-"""AWS Bedrock LLM provider implementation.
+"""AWS Bedrock LLM provider implementation using Converse API.
 
 This module provides an AWS Bedrock-backed implementation of the LLM provider
 port interface, supporting Claude and other Bedrock models.
+
+Uses the Converse API for:
+- Unified interface across all Bedrock models
+- Better streaming support
+- Native tool/function calling
+- Prompt caching support
 
 Note on Inference Profiles:
     Newer Claude models (Claude 3.5 Sonnet v2+, Claude Sonnet 4.5, Claude Opus 4.5)
@@ -11,9 +17,9 @@ Note on Inference Profiles:
     See: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles.html
 """
 
-import json
+import asyncio
 from collections.abc import AsyncIterator
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
@@ -187,45 +193,78 @@ class BedrockLLMProvider:
         resolved_model = self._resolve_model_id(model)
 
         try:
-            # Build request body for Anthropic Claude models
-            if "claude" in model.lower():
-                request_body = self._build_claude_request(
-                    messages, temperature, max_tokens, system_prompt
-                )
-            else:
-                request_body = self._build_generic_request(
-                    messages, temperature, max_tokens, system_prompt
-                )
+            # Build messages for Converse API
+            converse_messages = self._build_converse_messages(messages)
 
-            # Invoke Bedrock with resolved model ID
+            # Build inference config
+            inference_config: dict[str, Any] = {
+                "temperature": temperature,
+                "maxTokens": max_tokens or 2048,
+            }
+
+            # Build request parameters
+            request_params: dict[str, Any] = {
+                "modelId": resolved_model,
+                "messages": converse_messages,
+                "inferenceConfig": inference_config,
+            }
+
+            # Add system prompt if provided
+            if system_prompt:
+                request_params["system"] = [{"text": system_prompt}]
+
+            # Use Converse API (async via run_in_executor)
             logger.debug(
-                "Invoking Bedrock model",
+                "Invoking Bedrock Converse API",
                 original_model=model,
                 resolved_model=resolved_model,
             )
-            response = self.bedrock_client.invoke_model(
-                modelId=resolved_model, body=json.dumps(request_body)
+
+            # Run synchronous boto3 call in thread pool
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, lambda: self.bedrock_client.converse(**request_params)
             )
 
-            # Parse response
-            response_body = json.loads(response["body"].read())
+            # Extract content from Converse API response
+            output = response.get("output", {})
+            message = output.get("message", {})
+            content_blocks = message.get("content", [])
 
-            # Extract content (format varies by model)
-            content = self._extract_content(response_body, model)
+            content = ""
+            for block in content_blocks:
+                if "text" in block:
+                    content += block["text"]
 
-            # Extract usage metrics
-            usage = self._extract_usage(response_body, model)
+            # Extract usage metrics from Converse API response
+            usage_data = response.get("usage", {})
+            usage = {
+                "prompt_tokens": usage_data.get("inputTokens", 0),
+                "completion_tokens": usage_data.get("outputTokens", 0),
+                "total_tokens": usage_data.get("inputTokens", 0)
+                + usage_data.get("outputTokens", 0),
+            }
+
+            # Extract stop reason
+            stop_reason = response.get("stopReason", "end_turn")
+            finish_reason_map = {
+                "end_turn": "stop",
+                "max_tokens": "length",
+                "stop_sequence": "stop",
+                "content_filtered": "content_filter",
+            }
+            finish_reason = finish_reason_map.get(stop_reason, stop_reason)
 
             llm_response = LLMResponse(
                 content=content,
                 model=model,  # Return original model code for consistency
                 usage=usage,
-                finish_reason=response_body.get("stop_reason", "stop"),
+                finish_reason=finish_reason,
                 provider=self.provider_name,
             )
 
             logger.info(
-                "LLM generation completed",
+                "LLM generation completed via Converse API",
                 model=model,
                 resolved_model=resolved_model,
                 tokens=usage.get("total_tokens", 0),
@@ -246,7 +285,7 @@ class BedrockLLMProvider:
         system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
-        Generate a completion with token streaming.
+        Generate a completion with token streaming using Converse Stream API.
 
         Args:
             messages: Conversation history
@@ -258,11 +297,58 @@ class BedrockLLMProvider:
         Yields:
             Token strings as they are generated
         """
-        # TODO: Implement streaming support with Bedrock's streaming API
-        logger.warning("Streaming not yet implemented, falling back to non-streaming")
+        if not 0.0 <= temperature <= 1.0:
+            raise ValueError(f"Temperature must be between 0.0 and 1.0, got {temperature}")
 
-        response = await self.generate(messages, model, temperature, max_tokens, system_prompt)
-        yield response.content
+        # Resolve model ID to inference profile format if needed
+        resolved_model = self._resolve_model_id(model)
+
+        try:
+            # Build messages for Converse API
+            converse_messages = self._build_converse_messages(messages)
+
+            # Build inference config
+            inference_config: dict[str, Any] = {
+                "temperature": temperature,
+                "maxTokens": max_tokens or 2048,
+            }
+
+            # Build request parameters
+            request_params: dict[str, Any] = {
+                "modelId": resolved_model,
+                "messages": converse_messages,
+                "inferenceConfig": inference_config,
+            }
+
+            # Add system prompt if provided
+            if system_prompt:
+                request_params["system"] = [{"text": system_prompt}]
+
+            logger.debug(
+                "Starting Bedrock Converse Stream",
+                original_model=model,
+                resolved_model=resolved_model,
+            )
+
+            # Use Converse Stream API
+            # Run in thread pool since boto3 is synchronous
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, lambda: self.bedrock_client.converse_stream(**request_params)
+            )
+
+            # Process streaming response
+            stream = response.get("stream")
+            if stream:
+                for event in stream:
+                    if "contentBlockDelta" in event:
+                        delta = event["contentBlockDelta"].get("delta", {})
+                        if "text" in delta:
+                            yield delta["text"]
+
+        except Exception as e:
+            logger.error("Bedrock streaming failed", model=model, error=str(e))
+            raise RuntimeError(f"Bedrock streaming failed: {e}") from e
 
     async def count_tokens(self, text: str, _model: str) -> int:
         """
@@ -293,78 +379,24 @@ class BedrockLLMProvider:
         """
         return model in self.SUPPORTED_MODELS
 
-    def _build_claude_request(
+    def _build_converse_messages(
         self,
         messages: list[LLMMessage],
-        temperature: float,
-        max_tokens: int | None,
-        system_prompt: str | None,
-    ) -> dict[str, Any]:
-        """Build request body for Claude models."""
-        # Convert messages to Claude format
-        claude_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
+    ) -> list[dict[str, Any]]:
+        """Build messages in Converse API format.
 
-        request: dict[str, Any] = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "messages": claude_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens or 2048,
-        }
+        The Converse API uses a unified message format:
+        [{"role": "user|assistant", "content": [{"text": "..."}]}]
+        """
+        converse_messages: list[dict[str, Any]] = []
 
-        if system_prompt:
-            request["system"] = system_prompt
+        for msg in messages:
+            # Map role (system messages should be passed via system parameter)
+            role = msg.role if msg.role in ("user", "assistant") else "user"
 
-        return request
+            converse_messages.append({"role": role, "content": [{"text": msg.content}]})
 
-    def _build_generic_request(
-        self,
-        messages: list[LLMMessage],
-        temperature: float,
-        max_tokens: int | None,
-        system_prompt: str | None,
-    ) -> dict[str, Any]:
-        """Build generic request body for non-Claude models."""
-        # Generic format (adjust per model as needed)
-        prompt = "\n".join([f"{msg.role}: {msg.content}" for msg in messages])
-
-        if system_prompt:
-            prompt = f"{system_prompt}\n\n{prompt}"
-
-        return {
-            "prompt": prompt,
-            "temperature": temperature,
-            "max_gen_len": max_tokens or 2048,
-        }
-
-    def _extract_content(self, response_body: dict[str, Any], model: str) -> str:
-        """Extract content from response body."""
-        if "claude" in model.lower():
-            # Claude format
-            content_blocks = response_body.get("content", [])
-            if content_blocks and isinstance(content_blocks, list):
-                return cast(str, content_blocks[0].get("text", ""))
-            return ""
-        else:
-            # Generic format
-            generation: str = cast(str, response_body.get("generation", ""))
-            return generation
-
-    def _extract_usage(self, response_body: dict[str, Any], model: str) -> dict[str, int]:
-        """Extract usage metrics from response body."""
-        if "claude" in model.lower():
-            usage = response_body.get("usage", {})
-            return {
-                "prompt_tokens": usage.get("input_tokens", 0),
-                "completion_tokens": usage.get("output_tokens", 0),
-                "total_tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
-            }
-        else:
-            # Generic format (estimate)
-            return {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0,
-            }
+        return converse_messages
 
 
 __all__ = ["BedrockLLMProvider"]
