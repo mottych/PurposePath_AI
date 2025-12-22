@@ -51,14 +51,14 @@ class TestTopicSeedData:
         """Test that all topics use valid TopicType enum values."""
         valid_types = {t.value for t in TopicType}
         for topic_id, seed in TOPIC_SEED_DATA.items():
-            assert seed.topic_type in valid_types, (
-                f"Topic '{topic_id}' has invalid type: {seed.topic_type}"
-            )
+            assert (
+                seed.topic_type in valid_types
+            ), f"Topic '{topic_id}' has invalid type: {seed.topic_type}"
 
     def test_all_topics_use_valid_categories(self) -> None:
         """Test that all topics use valid TopicCategory enum values."""
         valid_categories = {c.value for c in TopicCategory}
         for topic_id, seed in TOPIC_SEED_DATA.items():
-            assert seed.category in valid_categories, (
-                f"Topic '{topic_id}' has invalid category: {seed.category}"
-            )
+            assert (
+                seed.category in valid_categories
+            ), f"Topic '{topic_id}' has invalid category: {seed.category}"
