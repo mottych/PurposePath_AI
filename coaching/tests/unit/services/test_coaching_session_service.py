@@ -302,6 +302,120 @@ class TestCoachingSessionService:
 
         assert exc_info.value.topic_id == "core_values"
 
+    @pytest.mark.asyncio
+    async def test_initiate_race_condition_same_user_returns_existing_session(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
+        sample_session: CoachingSession,
+    ) -> None:
+        """Test idempotent behavior: race condition with same user returns existing session.
+
+        Issue #179: When a user retries after timeout, and a race condition causes
+        SessionConflictError (because first request completed after second request
+        started), the service should return the existing session with resumed=True
+        instead of failing with a 500 error.
+
+        Scenario:
+        1. First request starts creating session
+        2. Second request (retry) also starts, sees no existing session
+        3. First request completes, saves session
+        4. Second request tries to save -> SessionConflictError with same user_id
+        5. Expected: Return existing session, NOT raise error
+        """
+        from coaching.src.domain.exceptions import SessionConflictError
+
+        # Arrange
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are a coaching assistant.",  # system template
+            "Let's begin the coaching session.",  # initiation template
+        ]
+        # First check returns None (race condition - session being created)
+        mock_session_repository.get_active_for_user_topic.return_value = None
+
+        # When create() is called, raise SessionConflictError with existing session
+        # This simulates the race condition where another request created the session
+        mock_session_repository.create.side_effect = SessionConflictError(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            requesting_user_id="user-123",
+            owning_user_id="user-123",  # Same user - this is a retry!
+            existing_session=sample_session,
+        )
+
+        # Act
+        response = await service.get_or_create_session(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            context={},
+        )
+
+        # Assert - should return existing session, not raise error
+        assert isinstance(response, SessionResponse)
+        assert response.resumed is True  # Key assertion for idempotent behavior
+        assert response.session_id == str(sample_session.session_id)
+        assert response.topic_id == "core_values"
+        assert response.status == sample_session.status
+        # Should NOT have called update (just returning existing session)
+
+    @pytest.mark.asyncio
+    async def test_initiate_race_condition_different_user_raises_conflict(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: EndpointDefinition,
+        sample_llm_topic: LLMTopic,
+        sample_session: CoachingSession,
+    ) -> None:
+        """Test that SessionConflictError is raised when different user owns session.
+
+        Issue #157: When a different user has an active session for the same topic,
+        the service should raise SessionConflictError for proper 409 handling.
+
+        This is NOT idempotent - this is a legitimate conflict that should error.
+        """
+        from coaching.src.domain.exceptions import SessionConflictError
+
+        # Arrange
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are a coaching assistant.",  # system template
+            "Let's begin the coaching session.",  # initiation template
+        ]
+        mock_session_repository.get_active_for_user_topic.return_value = None
+
+        # When create() is called, raise SessionConflictError with DIFFERENT user
+        mock_session_repository.create.side_effect = SessionConflictError(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            requesting_user_id="user-456",  # Different user attempting!
+            owning_user_id="user-123",  # Original owner
+            existing_session=sample_session,
+        )
+
+        # Act & Assert - should raise SessionConflictError for API layer
+        with pytest.raises(SessionConflictError) as exc_info:
+            await service.get_or_create_session(
+                topic_id="core_values",
+                tenant_id="tenant-123",
+                user_id="user-456",  # Different user
+                context={},
+            )
+
+        assert exc_info.value.topic_id == "core_values"
+        assert exc_info.value.owning_user_id == "user-123"
+        assert exc_info.value.requesting_user_id == "user-456"
+
     # =========================================================================
     # send_message Tests
     # =========================================================================
