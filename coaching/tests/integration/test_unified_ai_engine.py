@@ -42,9 +42,9 @@ class TestEndpointRegistry:
                 # Conversation coaching topics use their own registry
                 if endpoint.topic_type == TopicType.CONVERSATION_COACHING:
                     continue  # These use COACHING_TOPIC_REGISTRY, not TOPIC_SEED_DATA
-                assert endpoint.topic_id in TOPIC_SEED_DATA, (
-                    f"Active endpoint {key} references unknown topic: {endpoint.topic_id}"
-                )
+                assert (
+                    endpoint.topic_id in TOPIC_SEED_DATA
+                ), f"Active endpoint {key} references unknown topic: {endpoint.topic_id}"
 
     def test_get_endpoint_definition(self):
         """Test endpoint definition lookup."""
@@ -94,12 +94,12 @@ class TestEndpointRegistry:
 
         for method, path in migrated_endpoints:
             definition = get_endpoint_definition(method, path)
-            assert definition is not None, (
-                f"Migrated endpoint {method} {path} not found in registry"
-            )
-            assert definition.is_active is True, (
-                f"Migrated endpoint {method} {path} should be active"
-            )
+            assert (
+                definition is not None
+            ), f"Migrated endpoint {method} {path} not found in registry"
+            assert (
+                definition.is_active is True
+            ), f"Migrated endpoint {method} {path} should be active"
 
 
 class TestTopicSeedData:
@@ -205,9 +205,9 @@ class TestArchitectureCompliance:
             # Check for key pattern consistency
             if key.startswith("COACHING:"):
                 # New coaching topic format - verify topic_type matches
-                assert endpoint.topic_type == TopicType.CONVERSATION_COACHING, (
-                    f"COACHING: key {key} should have CONVERSATION_COACHING type"
-                )
+                assert (
+                    endpoint.topic_type == TopicType.CONVERSATION_COACHING
+                ), f"COACHING: key {key} should have CONVERSATION_COACHING type"
                 expected_key = f"COACHING:{endpoint.topic_id}"
                 assert key == expected_key, f"Coaching key mismatch: {key} vs {expected_key}"
             else:
@@ -221,16 +221,16 @@ class TestArchitectureCompliance:
         """Verify topic IDs follow snake_case convention."""
         for topic_id in TOPIC_SEED_DATA.keys():
             assert topic_id.islower(), f"Topic ID {topic_id} should be lowercase"
-            assert all(c.isalnum() or c == "_" for c in topic_id), (
-                f"Topic ID {topic_id} should be snake_case"
-            )
+            assert all(
+                c.isalnum() or c == "_" for c in topic_id
+            ), f"Topic ID {topic_id} should be snake_case"
 
     def test_endpoint_path_consistency(self):
         """Verify endpoint paths are properly formatted."""
         for endpoint in ENDPOINT_REGISTRY.values():
-            assert endpoint.endpoint_path.startswith("/"), (
-                f"Endpoint path {endpoint.endpoint_path} should start with /"
-            )
+            assert endpoint.endpoint_path.startswith(
+                "/"
+            ), f"Endpoint path {endpoint.endpoint_path} should start with /"
             assert endpoint.http_method in [
                 "GET",
                 "POST",
