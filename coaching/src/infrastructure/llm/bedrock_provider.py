@@ -486,7 +486,11 @@ class BedrockLLMProvider:
         estimated_tokens = len(system_prompt) // 4
 
         # Get minimum cache tokens for model type
-        min_tokens = MIN_CACHE_TOKENS_HAIKU if "haiku" in resolved_model.lower() else MIN_CACHE_TOKENS_DEFAULT
+        min_tokens = (
+            MIN_CACHE_TOKENS_HAIKU
+            if "haiku" in resolved_model.lower()
+            else MIN_CACHE_TOKENS_DEFAULT
+        )
 
         # Only add cache_control if prompt meets minimum token requirement
         if estimated_tokens < min_tokens:

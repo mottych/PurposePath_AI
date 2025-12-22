@@ -138,9 +138,7 @@ class TestBedrockProviderValidation:
         # Mock bedrock client converse response (new Converse API format)
         provider.bedrock_client.converse = Mock(
             return_value={
-                "output": {
-                    "message": {"content": [{"text": "Response"}]}
-                },
+                "output": {"message": {"content": [{"text": "Response"}]}},
                 "usage": {"inputTokens": 10, "outputTokens": 20},
                 "stopReason": "end_turn",
             }

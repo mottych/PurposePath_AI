@@ -78,8 +78,8 @@ class StrategySuggestionService(BaseAnalysisService):
             constraints_section = f"""
 **Resource Constraints:**
 - Budget: ${budget:,} if budget else 'Flexible'
-- Timeline: {timeline or 'Flexible'}
-- Available Resources: {', '.join(resources) if resources else 'To be determined'}
+- Timeline: {timeline or "Flexible"}
+- Available Resources: {", ".join(resources) if resources else "To be determined"}
 """
 
         prompt = f"""You are an expert business strategist helping develop actionable strategies for a business goal.

@@ -36,6 +36,12 @@ from coaching.src.api.models.operations import (
     SchedulingResponse,
     StrategicAlignmentResponse,
 )
+from coaching.src.api.models.strategic_planning import (
+    ActionSuggestionsResponse,
+    AlignmentCheckResponse,
+    KPIRecommendationsResponseV2,
+    StrategySuggestionsResponseV2,
+)
 from coaching.src.api.models.strategy_suggestions import (
     StrategySuggestionsResponse,
 )
@@ -64,6 +70,11 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "AlignmentAnalysisResponse": AlignmentAnalysisResponse,
     "AlignmentExplanationResponse": AlignmentExplanationResponse,
     "AlignmentSuggestionsResponse": AlignmentSuggestionsResponse,
+    # Strategic Planning AI Topics (Issue #182)
+    "AlignmentCheckResponse": AlignmentCheckResponse,
+    "StrategySuggestionsResponseV2": StrategySuggestionsResponseV2,
+    "KPIRecommendationsResponseV2": KPIRecommendationsResponseV2,
+    "ActionSuggestionsResponse": ActionSuggestionsResponse,
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,
     "StrategicAlignmentResponse": StrategicAlignmentResponse,

@@ -209,9 +209,9 @@ class TestParameterRegistry:
     def test_registry_parameter_count(self) -> None:
         """Test that registry has expected minimum parameter count."""
         # We have 67+ parameters across all categories
-        assert (
-            len(PARAMETER_REGISTRY) >= 50
-        ), f"Expected at least 50 parameters, got {len(PARAMETER_REGISTRY)}"
+        assert len(PARAMETER_REGISTRY) >= 50, (
+            f"Expected at least 50 parameters, got {len(PARAMETER_REGISTRY)}"
+        )
 
 
 class TestGetParameterDefinition:

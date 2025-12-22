@@ -94,9 +94,9 @@ class TestEndpointRegistry:
         """Test that all endpoints have valid HTTP methods."""
         valid_methods = {"GET", "POST", "PUT", "DELETE", "PATCH"}
         for key, endpoint in ENDPOINT_REGISTRY.items():
-            assert (
-                endpoint.http_method.upper() in valid_methods
-            ), f"Invalid method for {key}: {endpoint.http_method}"
+            assert endpoint.http_method.upper() in valid_methods, (
+                f"Invalid method for {key}: {endpoint.http_method}"
+            )
 
 
 class TestGetEndpointDefinition:

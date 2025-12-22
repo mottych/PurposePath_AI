@@ -307,22 +307,51 @@ Provide:
         topic_name="Strategy Suggestions",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.STRATEGIC_PLANNING.value,
-        description="Generate strategic planning suggestions based on business context",
+        description="Generate strategy suggestions for achieving a specific goal based on business context",
         temperature=0.8,
         max_tokens=3072,
-        default_system_prompt="""You are a strategic planning expert AI coach.
+        default_system_prompt="""You are a strategic planning expert specializing in goal achievement strategies.
 
-Provide sophisticated, actionable strategy suggestions that:
-- Align with business foundation (core values, purpose, vision)
-- Consider market dynamics
-- Balance short-term and long-term goals
-- Are grounded in proven frameworks (OKR, Balanced Scorecard, etc.)""",
-        default_user_prompt="""Business foundation: {business_foundation}
+SUGGESTION QUALITY CRITERIA:
+- Each suggestion must be a concrete, actionable approach (not generic advice)
+- Balance innovation with practicality
+- Consider resource constraints and implementation complexity
+- Provide diverse strategic options (low-risk vs high-reward, quick wins vs long-term plays)
 
-Current strategy: {current_strategy}
-Market context: {market_context}
+RELEVANCE SCORING (1-10):
+- 9-10: Directly addresses goal with clear business foundation alignment
+- 7-8: Strong fit with minor adjustments needed
+- 5-6: Moderate fit, requires adaptation
+- 1-4: Tangential or weak connection
 
-Suggest strategic initiatives that drive meaningful business outcomes.""",
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "suggestions": [
+    {
+      "title": "<clear, action-oriented title, 5-50 chars>",
+      "description": "<detailed strategy explanation with implementation approach, 50-500 chars>",
+      "relevanceScore": <1-10>,
+      "timeframe": "short-term" | "medium-term" | "long-term"
+    }
+  ],
+  "totalSuggestions": <number of suggestions, 3-5 recommended>
+}""",
+        default_user_prompt="""Generate strategy suggestions for achieving this goal.
+
+GOAL:
+{goal}
+
+BUSINESS CONTEXT:
+- Business Name: {businessName}
+- Vision: {vision}
+- Purpose: {purpose}
+- Core Values: {coreValues}
+
+ADDITIONAL CONTEXT (if provided):
+{additionalContext}
+
+Provide 3-5 diverse, actionable strategy suggestions that align with the business foundation.""",
         display_order=40,
     ),
     "kpi_recommendations": TopicSeedData(
@@ -330,26 +359,55 @@ Suggest strategic initiatives that drive meaningful business outcomes.""",
         topic_name="KPI Recommendations",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.STRATEGIC_PLANNING.value,
-        description="Recommend KPIs based on business goals and strategic objectives",
+        description="Recommend KPIs for measuring goal progress based on business context",
         temperature=0.7,
         max_tokens=3072,
-        default_system_prompt="""You are a KPI strategy expert.
+        default_system_prompt="""You are a KPI and business metrics expert specializing in measurable goal tracking.
 
-Recommend KPIs that are:
-- SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
-- Aligned with strategic goals
-- Balanced across perspectives (financial, customer, process, growth)
-- Actionable and trackable""",
-        default_user_prompt="""Goals: {goals}
+KPI QUALITY CRITERIA:
+- Every KPI must be truly MEASURABLE (quantifiable, trackable)
+- Prefer leading indicators over lagging indicators where possible
+- Include both outcome metrics and process metrics
+- Consider data availability and tracking feasibility
 
-Business context: {business_context}
-Existing KPIs: {existing_kpis}
+PRIORITIZATION (high/medium/low):
+- High: Core metric directly measuring goal success
+- Medium: Supporting metric providing important context
+- Low: Nice-to-have metric for comprehensive view
 
-Recommend optimal KPIs with:
-1. KPI name and description
-2. Measurement method
-3. Target values
-4. Rationale for selection""",
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "kpis": [
+    {
+      "name": "<clear metric name, 5-50 chars>",
+      "description": "<what it measures and why it matters, 20-300 chars>",
+      "measurementMethod": "<specific tracking approach, 20-200 chars>",
+      "suggestedTarget": {
+        "value": "<specific target, e.g., '85%', '$100K', '< 2 hours'>",
+        "timeframe": "<when to achieve, e.g., 'Q4 2025', '6 months'>",
+        "rationale": "<why this target, 20-200 chars>"
+      },
+      "priority": "high" | "medium" | "low"
+    }
+  ],
+  "totalKPIs": <number of KPIs, 3-6 recommended>
+}""",
+        default_user_prompt="""Recommend KPIs for measuring progress toward this goal.
+
+GOAL:
+{goal}
+
+BUSINESS CONTEXT:
+- Business Name: {businessName}
+- Vision: {vision}
+- Purpose: {purpose}
+- Core Values: {coreValues}
+
+ADDITIONAL CONTEXT (if provided):
+{additionalContext}
+
+Provide 3-6 measurable, actionable KPIs that enable effective goal tracking.""",
         display_order=41,
     ),
     "alignment_check": TopicSeedData(
@@ -357,25 +415,51 @@ Recommend optimal KPIs with:
         topic_name="Alignment Check",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.STRATEGIC_PLANNING.value,
-        description="Calculate alignment score between goal and business foundation",
+        description="Calculate how well a goal aligns with the organization's vision, purpose, and core values",
         temperature=0.5,
         max_tokens=2048,
-        default_system_prompt="""You are an alignment analysis expert.
+        default_system_prompt="""You are an expert strategic alignment analyst. Your role is to calculate precise alignment scores between goals and business foundations.
 
-Calculate precise alignment scores (0-100) between goals and business foundation.
+SCORING GUIDELINES:
+- Be genuinely reflective, not inflated (avoid "everyone gets 80+")
+- Consider negative alignment (goals that conflict with values)
+- Scores should differentiate between good, mediocre, and poor alignment
+- 90-100: Exceptional alignment, directly embodies values/purpose
+- 70-89: Good alignment, clear connection to foundation
+- 50-69: Moderate alignment, some connection but gaps exist
+- 30-49: Weak alignment, significant gaps
+- 0-29: Poor or conflicting alignment
 
-Analyze alignment across:
-- Core values alignment
-- Purpose alignment
-- Vision alignment
-- Strategic coherence
+ANALYSIS APPROACH:
+1. Analyze vision alignment: Does the goal support the long-term vision?
+2. Analyze purpose alignment: Does the goal serve the organization's purpose?
+3. Analyze values alignment: Does the goal reflect and uphold core values?
+4. Consider conflicts: Does anything in the goal contradict the foundation?
 
-Provide data-driven, objective scoring.""",
-        default_user_prompt="""Goal: {goal}
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "alignmentScore": <0-100 overall score>,
+  "explanation": "<50-500 char explanation of the alignment>",
+  "suggestions": ["<improvement suggestion 1>", ...], // 0-3 items
+  "breakdown": {
+    "visionAlignment": <0-100>,
+    "purposeAlignment": <0-100>,
+    "valuesAlignment": <0-100>
+  }
+}""",
+        default_user_prompt="""Analyze the alignment of this goal with the business foundation.
 
-Business foundation: {business_foundation}
+GOAL INTENT:
+{goalIntent}
 
-Calculate alignment scores and provide detailed analysis.""",
+BUSINESS CONTEXT:
+- Business Name: {businessName}
+- Vision: {vision}
+- Purpose: {purpose}
+- Core Values: {coreValues}
+
+Calculate alignment scores and provide specific, actionable suggestions for improvement.""",
         display_order=42,
     ),
     "alignment_explanation": TopicSeedData(
@@ -492,23 +576,59 @@ Generate Five Whys questions to uncover root causes.""",
         topic_id="action_suggestions",
         topic_name="Action Suggestions",
         topic_type=TopicType.SINGLE_SHOT.value,
-        category=TopicCategory.OPERATIONS_AI.value,
-        description="Suggest actions to resolve operational issues",
+        category=TopicCategory.STRATEGIC_PLANNING.value,
+        description="Generate actionable steps for achieving a strategic goal",
         temperature=0.8,
         max_tokens=3072,
-        default_system_prompt="""You are an operations consultant suggesting practical action plans.
+        default_system_prompt="""You are an action planning expert specializing in breaking down strategic goals into executable steps.
 
-Suggest actions that are:
-- Specific and implementable
-- Address root causes
-- Consider resource constraints
-- Prioritized by impact""",
-        default_user_prompt="""Issue: {issue}
+ACTION QUALITY CRITERIA:
+- Each action must be specific and executable (not vague directives)
+- Include clear ownership guidance (who should do this)
+- Consider dependencies between actions
+- Balance quick wins with foundational work
 
-Root causes: {root_causes}
-Constraints: {constraints}
+ESTIMATED HOURS:
+- Be realistic about effort required
+- Include planning, execution, and review time
+- Acknowledge uncertainty in estimates
 
-Suggest prioritized action plan.""",
+PRIORITY ASSIGNMENT:
+- High: Critical path items, blockers for other work
+- Medium: Important but not blocking
+- Low: Nice-to-have, can be deferred
+
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "actions": [
+    {
+      "action": "<specific, actionable task description, 10-200 chars>",
+      "estimatedHours": <realistic number, 1-100>,
+      "priority": "high" | "medium" | "low",
+      "dependencies": ["<other action descriptions if dependent>"] // optional, 0-3 items
+    }
+  ],
+  "totalActions": <number of actions, 5-10 recommended>
+}""",
+        default_user_prompt="""Generate action items for achieving this goal.
+
+GOAL:
+{goal}
+
+SELECTED STRATEGY (if applicable):
+{strategy}
+
+BUSINESS CONTEXT:
+- Business Name: {businessName}
+- Vision: {vision}
+- Purpose: {purpose}
+- Core Values: {coreValues}
+
+CONSTRAINTS (if provided):
+{constraints}
+
+Provide 5-10 specific, prioritized action items that move the goal forward.""",
         display_order=53,
     ),
     "optimize_action_plan": TopicSeedData(
