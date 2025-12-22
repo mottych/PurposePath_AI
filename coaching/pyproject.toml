@@ -37,9 +37,10 @@ dependencies = [
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
     "langchain-community>=0.3.0",
-    "langchain-aws>=0.2.0",
+    "langchain-aws>=0.2.12",  # ChatBedrockConverse support
     "langchain-anthropic>=0.2.0",
     "langchain-openai>=0.2.0",
+    "openai[aiohttp]>=1.60.0",  # Faster async HTTP client
     "langgraph>=0.2.0",
     "langsmith>=0.1.0",
     "tiktoken>=0.8.0",
@@ -57,7 +58,10 @@ dependencies = [
     "jinja2>=3.1.6",
     "html2text>=2025.4.15",
     "beautifulsoup4>=4.14.3",
-    "google-cloud-aiplatform>=1.40.0",
+    
+    # Google Gen AI SDK (replaces deprecated google-cloud-aiplatform for generative AI)
+    # Migration: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
+    "google-genai>=1.56.0",
 ]
 
 [project.optional-dependencies]

@@ -1,11 +1,18 @@
-"""AWS Bedrock LLM provider implementation with LangChain integration."""
+"""AWS Bedrock LLM provider implementation with LangChain integration.
+
+Uses ChatBedrockConverse for optimized Converse API access with:
+- Better async support
+- Native streaming
+- Prompt caching support
+- Tool/function calling
+"""
 
 import json
 from typing import Any, ClassVar
 
 import boto3
 import structlog
-from langchain_aws import ChatBedrock
+from langchain_aws import ChatBedrockConverse
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 
@@ -104,22 +111,22 @@ class BedrockProvider(BaseProvider):
         try:
             # Use configured model or default to Claude 3.5 Sonnet v2 (inference profile)
             model_name = self.config.model_name or self.DEFAULT_MODEL
-            logger.info("Initializing Bedrock provider", model=model_name)
+            logger.info("Initializing Bedrock provider with Converse API", model=model_name)
 
-            # Create LangChain Bedrock client
-            # Note: LangChain's ChatBedrock signature may vary by version
-            self._client = ChatBedrock(
+            # Create LangChain Bedrock Converse client
+            # ChatBedrockConverse uses the optimized Converse API for:
+            # - Better async support
+            # - Native streaming
+            # - Prompt caching support
+            # - Tool/function calling
+            self._client = ChatBedrockConverse(
                 model=model_name,
-                region=self.config.region_name or "us-east-1",
-                model_kwargs={
-                    "temperature": self.config.temperature,
-                    "max_tokens": self.config.max_tokens or 4096,
-                    "top_p": self.config.top_p or 0.9,
-                },
-                streaming=self.config.streaming,
+                region_name=self.config.region_name or "us-east-1",
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens or 4096,
             )
 
-            logger.info("Bedrock provider initialized successfully")
+            logger.info("Bedrock provider initialized successfully with Converse API")
 
         except Exception as e:
             logger.error("Failed to initialize Bedrock provider", error=str(e))
@@ -197,7 +204,8 @@ class BedrockProvider(BaseProvider):
             bedrock = session.client("bedrock")
 
             # Get model details
-            response = bedrock.get_foundation_model(modelIdentifier=self.config.model_name)
+            model_id = self.config.model_name or self.DEFAULT_MODEL
+            response = bedrock.get_foundation_model(modelIdentifier=model_id)
             model_details = response.get("modelDetails", {})
 
             return {

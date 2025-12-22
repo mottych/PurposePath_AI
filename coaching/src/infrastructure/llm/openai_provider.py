@@ -5,6 +5,24 @@ port interface, supporting GPT-4o, GPT-5 series (including GPT-5 Pro), and other
 
 Uses the Responses API (/v1/responses) which supports all models including
 GPT-5 Pro which is exclusive to this API.
+
+Prompt Caching:
+    OpenAI automatically caches identical prompt prefixes server-side.
+    No explicit configuration required - caching happens automatically for:
+    - Repeated identical system prompts
+    - Common conversation prefixes
+
+    Benefits:
+    - Up to 50% reduction in latency for cache hits
+    - Up to 50% reduction in input token costs
+    - Cache TTL: Up to 1 hour (managed by OpenAI)
+
+    Optimization tips:
+    - Put static content (system prompts) at the beginning
+    - Keep variable content (user messages) at the end
+    - Use consistent system prompts across requests
+
+    See: https://platform.openai.com/docs/guides/prompt-caching
 """
 
 from collections.abc import AsyncIterator
@@ -72,7 +90,10 @@ class OpenAILLMProvider:
         return self.SUPPORTED_MODELS.copy()
 
     async def _get_client(self) -> Any:
-        """Get or create OpenAI async client (lazy initialization)."""
+        """Get or create OpenAI async client (lazy initialization).
+
+        Uses aiohttp for faster async HTTP performance when available.
+        """
         if self._client is None:
             try:
                 from openai import AsyncOpenAI
@@ -93,9 +114,20 @@ class OpenAILLMProvider:
                         "Set OPENAI_API_KEY environment variable or configure AWS secret"
                     )
 
+            # Try to use aiohttp for faster async HTTP (if installed)
+            http_client = None
+            try:
+                from openai import DefaultAioHttpClient
+
+                http_client = DefaultAioHttpClient()
+                logger.debug("Using aiohttp for OpenAI client (faster async)")
+            except ImportError:
+                logger.debug("aiohttp not available, using default httpx client")
+
             self._client = AsyncOpenAI(
                 api_key=api_key,
                 organization=self.organization,
+                http_client=http_client,
             )
             logger.info("OpenAI client initialized")
         return self._client
