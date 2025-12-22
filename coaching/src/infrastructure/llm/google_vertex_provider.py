@@ -1,7 +1,14 @@
-"""Google Vertex AI LLM provider implementation.
+"""Google Vertex AI LLM provider implementation using google-genai SDK.
 
 This module provides a Google Vertex AI-backed implementation of the LLM provider
-port interface, supporting Gemini 2.5 and other Vertex AI models.
+port interface, supporting Gemini 2.5+ and other Vertex AI models.
+
+Migration from deprecated vertexai.generative_models to google.genai SDK:
+- Uses native async support via client.aio.* methods
+- Proper streaming with generate_content_stream()
+- Full feature parity with modern Gemini capabilities
+
+Reference: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
 """
 
 from collections.abc import AsyncIterator
@@ -17,14 +24,20 @@ class GoogleVertexLLMProvider:
     """
     Google Vertex AI adapter implementing LLMProviderPort.
 
-    This adapter provides Google Vertex AI-backed LLM access,
-    implementing the provider port interface defined in the domain layer.
+    This adapter provides Google Vertex AI-backed LLM access using the new
+    google-genai SDK (v1.56.0+), implementing the provider port interface
+    defined in the domain layer.
 
     Design:
-        - Supports Gemini models (2.5 Pro, 2.5 Flash)
-        - Handles both streaming and non-streaming
+        - Uses google.genai.Client with vertexai=True for Vertex AI
+        - Native async support via client.aio.* methods
+        - Supports streaming via generate_content_stream()
         - Includes retry logic and error handling
         - Provides usage metrics
+
+    Migration Note:
+        This replaces the deprecated vertexai.generative_models module.
+        The old module will be removed after June 24, 2026.
     """
 
     # Supported Vertex AI model IDs
@@ -37,6 +50,7 @@ class GoogleVertexLLMProvider:
         "gemini-2.5-flash-lite",
         # Gemini 2.0 Series
         "gemini-2.0-flash",
+        "gemini-2.0-flash-001",
         "gemini-2.0-flash-lite",
         # Gemini 1.5 Series (legacy)
         "gemini-1.5-pro",
@@ -61,6 +75,7 @@ class GoogleVertexLLMProvider:
         self.location = location
         self.credentials = credentials
         self._client: Any | None = None
+        self._initialized = False
         logger.info(
             "Google Vertex AI LLM provider initialized",
             project_id=project_id,
@@ -78,16 +93,19 @@ class GoogleVertexLLMProvider:
         return self.SUPPORTED_MODELS.copy()
 
     async def _get_client(self) -> Any:
-        """Get or create Vertex AI client (lazy initialization)."""
+        """Get or create Vertex AI client (lazy initialization).
+
+        Returns the google.genai.Client configured for Vertex AI.
+        Uses client.aio for async operations.
+        """
         if self._client is None:
             try:
-                from google.cloud import aiplatform
-                from google.oauth2 import service_account
-                from vertexai.generative_models import GenerativeModel
+                from google import genai
+                from google.genai import types
             except ImportError as e:
                 raise ImportError(
-                    "Google Cloud AI Platform SDK not installed. "
-                    "Install with: pip install google-cloud-aiplatform>=1.40.0"
+                    "Google Gen AI SDK not installed. "
+                    "Install with: pip install google-genai>=1.56.0"
                 ) from e
 
             # Get project_id and credentials from Secrets Manager if not provided
@@ -110,11 +128,14 @@ class GoogleVertexLLMProvider:
                 if not credentials:
                     creds_dict = get_google_vertex_credentials()
                     if creds_dict:
-                        # Cast to dict[str, Any] to satisfy type checker
+                        # For google-genai SDK, we can pass credentials dict directly
+                        # or use service account credentials
+                        from google.oauth2 import service_account
+
                         creds_map: dict[str, Any] = creds_dict
                         credentials = service_account.Credentials.from_service_account_info(
                             creds_map
-                        )  # type: ignore[no-untyped-call]
+                        )
                         # Update project_id from credentials if still not set
                         if not project_id:
                             project_id = creds_dict.get("project_id")
@@ -125,15 +146,20 @@ class GoogleVertexLLMProvider:
                     "Set GOOGLE_PROJECT_ID environment variable or configure in AWS Secrets Manager"
                 )
 
-            # Initialize Vertex AI
-            aiplatform.init(
+            # Create google-genai client for Vertex AI
+            # Using vertexai=True enables Vertex AI mode
+            http_options = types.HttpOptions(api_version="v1")
+
+            self._client = genai.Client(
+                vertexai=True,
                 project=project_id,
                 location=self.location,
                 credentials=credentials,
+                http_options=http_options,
             )
+            self._initialized = True
+            logger.info("Google Gen AI client initialized for Vertex AI", project_id=project_id)
 
-            self._client = GenerativeModel
-            logger.info("Vertex AI client initialized", project_id=project_id)
         return self._client
 
     async def generate(
@@ -146,7 +172,7 @@ class GoogleVertexLLMProvider:
         response_schema: dict[str, object] | None = None,
     ) -> LLMResponse:
         """
-        Generate a completion from Google Vertex AI.
+        Generate a completion from Google Vertex AI using async API.
 
         Args:
             messages: Conversation history
@@ -154,16 +180,13 @@ class GoogleVertexLLMProvider:
             temperature: Sampling temperature (0.0-2.0 for Gemini)
             max_tokens: Maximum tokens to generate
             system_prompt: Optional system prompt
-            response_schema: Optional JSON schema (not used by Vertex, for interface compat)
+            response_schema: Optional JSON schema for structured output
 
         Returns:
             LLMResponse with generated content and metadata
 
         Business Rule: Temperature must be between 0.0 and 2.0 for Gemini
         """
-        # Note: response_schema is not used by Google Vertex provider
-        # It's accepted for interface compatibility with OpenAI provider
-        _ = response_schema
         if not 0.0 <= temperature <= 2.0:
             raise ValueError(
                 f"Temperature must be between 0.0 and 2.0 for Gemini, got {temperature}"
@@ -173,59 +196,61 @@ class GoogleVertexLLMProvider:
             raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
-            client_class = await self._get_client()
-            model_instance = client_class(model)
+            from google.genai import types
 
-            # Build conversation content
-            # Gemini API uses a different format than OpenAI/Claude
-            contents = []
+            client = await self._get_client()
 
-            # Add system instruction if provided (Gemini uses system_instruction parameter)
-            generation_config = {
+            # Build contents from messages
+            # google-genai uses types.Content for multi-turn conversations
+            contents: list[types.Content] = []
+
+            for msg in messages:
+                # Map roles: user -> user, assistant/system -> model
+                role = "user" if msg.role == "user" else "model"
+                contents.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+
+            # Build generation config
+            config_params: dict[str, Any] = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens or 8192,
                 "top_p": 0.95,
             }
 
-            # Combine messages into conversation
-            for msg in messages:
-                role = "user" if msg.role == "user" else "model"
-                contents.append({"role": role, "parts": [{"text": msg.content}]})
+            # Add system instruction if provided
+            if system_prompt:
+                config_params["system_instruction"] = system_prompt
 
-            # Call Vertex AI API
+            # Add response schema for structured output if provided
+            if response_schema:
+                config_params["response_mime_type"] = "application/json"
+                config_params["response_schema"] = response_schema
+
+            config = types.GenerateContentConfig(**config_params)
+
+            # Call Vertex AI API using async client
             logger.info(
-                "Calling Google Vertex AI API",
+                "Calling Google Vertex AI API (async)",
                 model=model,
                 num_messages=len(contents),
                 temperature=temperature,
             )
 
-            try:
-                response = model_instance.generate_content(
-                    contents=contents,
-                    generation_config=generation_config,
-                    system_instruction=system_prompt,
-                )
-            except TypeError as e:
-                if "unexpected keyword argument 'system_instruction'" in str(e):
-                    logger.warning(
-                        "System instruction not supported by installed Vertex AI SDK version. "
-                        "Falling back to generating without system instruction.",
-                        model=model,
-                    )
-                    # Fallback for older SDK versions
-                    response = model_instance.generate_content(
-                        contents=contents,
-                        generation_config=generation_config,
-                    )
-                else:
-                    raise
+            # Use client.aio for async operations
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
 
-            # Extract response
+            # Extract response text
             content = response.text if response.text else ""
 
-            # Extract finish reason from Gemini response
-            # Gemini finish reasons: STOP, MAX_TOKENS, SAFETY, RECITATION, OTHER
+            # Extract finish reason
             finish_reason = "stop"  # default
             if hasattr(response, "candidates") and response.candidates:
                 candidate = response.candidates[0]
@@ -244,24 +269,19 @@ class GoogleVertexLLMProvider:
                     }
                     finish_reason = reason_map.get(gemini_reason, gemini_reason.lower())
 
-            # Extract usage metrics (Gemini provides token counts)
+            # Extract usage metrics
             usage = {
-                "prompt_tokens": (
-                    getattr(response.usage_metadata, "prompt_token_count", 0)
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
-                "completion_tokens": (
-                    getattr(response.usage_metadata, "candidates_token_count", 0)
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
-                "total_tokens": (
-                    getattr(response.usage_metadata, "total_token_count", 0)
-                    if hasattr(response, "usage_metadata")
-                    else 0
-                ),
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
             }
+            if hasattr(response, "usage_metadata") and response.usage_metadata:
+                usage_meta = response.usage_metadata
+                usage = {
+                    "prompt_tokens": getattr(usage_meta, "prompt_token_count", 0) or 0,
+                    "completion_tokens": getattr(usage_meta, "candidates_token_count", 0) or 0,
+                    "total_tokens": getattr(usage_meta, "total_token_count", 0) or 0,
+                }
 
             logger.info(
                 "Google Vertex AI API call successful",
@@ -291,7 +311,7 @@ class GoogleVertexLLMProvider:
         system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """
-        Generate a completion with token streaming.
+        Generate a completion with token streaming using async API.
 
         Args:
             messages: Conversation history
@@ -314,38 +334,48 @@ class GoogleVertexLLMProvider:
             raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
-            client_class = await self._get_client()
-            model_instance = client_class(model)
+            from google.genai import types
 
-            # Build conversation content
-            contents = []
-            generation_config = {
+            client = await self._get_client()
+
+            # Build contents from messages
+            contents: list[types.Content] = []
+
+            for msg in messages:
+                role = "user" if msg.role == "user" else "model"
+                contents.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+
+            # Build generation config
+            config_params: dict[str, Any] = {
                 "temperature": temperature,
                 "max_output_tokens": max_tokens or 8192,
                 "top_p": 0.95,
             }
 
-            for msg in messages:
-                role = "user" if msg.role == "user" else "model"
-                contents.append({"role": role, "parts": [{"text": msg.content}]})
+            if system_prompt:
+                config_params["system_instruction"] = system_prompt
 
-            # Call Vertex AI streaming API
+            config = types.GenerateContentConfig(**config_params)
+
+            # Call Vertex AI streaming API using async client
             logger.info(
-                "Calling Google Vertex AI streaming API",
+                "Calling Google Vertex AI streaming API (async)",
                 model=model,
                 num_messages=len(contents),
                 temperature=temperature,
             )
 
-            response_stream = model_instance.generate_content(
+            # Use client.aio.models.generate_content_stream for async streaming
+            async for chunk in await client.aio.models.generate_content_stream(
+                model=model,
                 contents=contents,
-                generation_config=generation_config,
-                system_instruction=system_prompt,
-                stream=True,
-            )
-
-            # Stream tokens
-            for chunk in response_stream:
+                config=config,
+            ):
                 if chunk.text:
                     yield chunk.text
 
@@ -364,15 +394,18 @@ class GoogleVertexLLMProvider:
         Returns:
             Number of tokens
 
-        Note: Gemini has built-in token counting via count_tokens API.
+        Note: Uses google-genai SDK's count_tokens API.
         """
         try:
-            client_class = await self._get_client()
-            model_instance = client_class(model)
+            client = await self._get_client()
 
-            # Use Gemini's token counting API
-            response = model_instance.count_tokens(text)
-            return int(response.total_tokens)
+            # Use the count_tokens API
+            response = await client.aio.models.count_tokens(
+                model=model,
+                contents=text,
+            )
+
+            return int(response.total_tokens) if response.total_tokens else 0
 
         except Exception as e:
             logger.warning("Token counting failed, using approximation", error=str(e), model=model)
@@ -390,6 +423,21 @@ class GoogleVertexLLMProvider:
             True if model is supported and available
         """
         return model in self.SUPPORTED_MODELS
+
+    async def close(self) -> None:
+        """Close the client and release resources.
+
+        Should be called when the provider is no longer needed.
+        """
+        if self._client is not None:
+            try:
+                # Close async client resources
+                await self._client.aio.close()
+            except Exception as e:
+                logger.warning("Error closing Google Gen AI client", error=str(e))
+            finally:
+                self._client = None
+                self._initialized = False
 
 
 __all__ = ["GoogleVertexLLMProvider"]

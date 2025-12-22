@@ -57,7 +57,10 @@ dependencies = [
     "jinja2>=3.1.6",
     "html2text>=2025.4.15",
     "beautifulsoup4>=4.14.3",
-    "google-cloud-aiplatform>=1.40.0",
+    
+    # Google Gen AI SDK (replaces deprecated google-cloud-aiplatform for generative AI)
+    # Migration: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
+    "google-genai>=1.56.0",
 ]
 
 [project.optional-dependencies]
