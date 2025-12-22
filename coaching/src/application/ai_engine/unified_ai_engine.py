@@ -469,10 +469,7 @@ class UnifiedAIEngine:
         try:
             # Use safe_substitute to avoid KeyError for missing keys
             # Convert all parameter values to strings for template rendering
-            safe_params = {
-                k: str(v) if not isinstance(v, dict | list) else str(v)
-                for k, v in parameters.items()
-            }
+            safe_params = {k: str(v) for k, v in parameters.items()}
 
             # Support both Jinja2-style {{param}} and Python-style {param}
             rendered = self._substitute_template_params(template, safe_params)

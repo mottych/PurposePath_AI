@@ -115,10 +115,14 @@ class TestGoogleVertexProviderValidation:
 
             # These should not raise temperature validation errors
             with contextlib.suppress(RuntimeError):
-                await provider.generate(messages=messages, model="gemini-2.5-flash", temperature=0.0)
+                await provider.generate(
+                    messages=messages, model="gemini-2.5-flash", temperature=0.0
+                )
 
             with contextlib.suppress(RuntimeError):
-                await provider.generate(messages=messages, model="gemini-2.5-flash", temperature=2.0)
+                await provider.generate(
+                    messages=messages, model="gemini-2.5-flash", temperature=2.0
+                )
 
     @pytest.mark.asyncio
     async def test_generate_rejects_unsupported_model(

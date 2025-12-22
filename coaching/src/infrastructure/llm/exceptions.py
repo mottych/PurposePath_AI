@@ -76,7 +76,7 @@ class ModelNotFoundError(LLMProviderError):
         self.model_code = model_code
         self.available_models = available_models
         super().__init__(
-            f"Model '{model_code}' not found in registry. " f"Available models: {available_models}"
+            f"Model '{model_code}' not found in registry. Available models: {available_models}"
         )
 
 
@@ -103,8 +103,7 @@ class ProviderGenerationError(LLMProviderError):
         self.model = model
         self.original_error = original_error
         super().__init__(
-            f"LLM generation failed with provider '{provider}' model '{model}': "
-            f"{original_error!s}",
+            f"LLM generation failed with provider '{provider}' model '{model}': {original_error!s}",
             provider=provider,
         )
 

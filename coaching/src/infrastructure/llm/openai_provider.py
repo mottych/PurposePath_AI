@@ -99,7 +99,7 @@ class OpenAILLMProvider:
                 from openai import AsyncOpenAI
             except ImportError as e:
                 raise ImportError(
-                    "OpenAI Python SDK not installed. " "Install with: pip install openai>=1.0.0"
+                    "OpenAI Python SDK not installed. Install with: pip install openai>=1.0.0"
                 ) from e
 
             # Get API key from Secrets Manager if not provided
