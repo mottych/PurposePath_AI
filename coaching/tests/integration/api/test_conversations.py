@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock
 import pytest
 from coaching.src.api.dependencies import get_conversation_repository, get_conversation_service
 from coaching.src.api.dependencies.ai_engine import get_generic_handler
-from coaching.src.api.multitenant_dependencies import get_multitenant_conversation_service
 from coaching.src.api.main import app
+from coaching.src.api.multitenant_dependencies import get_multitenant_conversation_service
 from coaching.src.core.constants import CoachingTopic, ConversationStatus
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation

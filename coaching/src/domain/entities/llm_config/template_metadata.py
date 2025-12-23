@@ -5,7 +5,6 @@ Template content is stored externally, this entity tracks location and metadata.
 """
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 

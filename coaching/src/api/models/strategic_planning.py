@@ -11,6 +11,7 @@ These models match the specifications in Issue #182.
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class StrategicPlanningBaseModel(BaseModel):
     """Shared config for strategic planning response models."""
 
