@@ -1,9 +1,17 @@
 """E2E test for Google Vertex AI with credentials from AWS Secrets Manager."""
 
+import os
+
 import pytest
 from coaching.src.core.config_multitenant import get_google_vertex_credentials, get_settings
 from coaching.src.domain.ports.llm_provider_port import LLMMessage
 from coaching.src.infrastructure.llm.google_vertex_provider import GoogleVertexLLMProvider
+
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("RUN_VERTEX_E2E"),
+    reason="Google Vertex E2E disabled by default; set RUN_VERTEX_E2E=1 to run",
+)
 
 
 @pytest.mark.e2e

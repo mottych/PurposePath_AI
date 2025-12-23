@@ -40,7 +40,7 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -132,7 +132,11 @@ class SessionResponse(BaseModel):
     tenant_id: str
     topic_id: str
     status: ConversationStatus
-    message: str = Field(description="Coach's message")
+    message: str = Field(
+        description="Coach's message",
+        validation_alias=AliasChoices("coach_message", "message"),
+        serialization_alias="coach_message",
+    )
     turn: int = Field(default=1, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
     is_final: bool = Field(default=False, description="Whether session is complete")
@@ -144,7 +148,11 @@ class MessageResponse(BaseModel):
     """Response from sending a message."""
 
     session_id: str
-    message: str = Field(description="Coach's response")
+    message: str = Field(
+        description="Coach's response",
+        validation_alias=AliasChoices("coach_message", "message"),
+        serialization_alias="coach_message",
+    )
     status: ConversationStatus
     turn: int = Field(default=0, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")

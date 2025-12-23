@@ -23,6 +23,8 @@ from coaching.src.services.coaching_session_service import (
     SessionResponse,
     SessionStateResponse,
     SessionSummary,
+    TopicStatus,
+    TopicsWithStatusResponse,
 )
 from fastapi.testclient import TestClient
 
@@ -50,7 +52,7 @@ def mock_session_response() -> SessionResponse:
         tenant_id="tenant_test",
         topic_id="core_values",
         status=ConversationStatus.ACTIVE,
-        coach_message="Welcome! Let's explore your core values.",
+        message="Welcome! Let's explore your core values.",
         message_count=1,
         estimated_completion=0.05,
     )
@@ -61,7 +63,7 @@ def mock_message_response() -> MessageResponse:
     """Create a mock message response."""
     return MessageResponse(
         session_id="session_123",
-        coach_message="That's a great insight! Tell me more.",
+        message="That's a great insight! Tell me more.",
         message_count=3,
         estimated_completion=0.15,
         status=ConversationStatus.ACTIVE,
@@ -74,6 +76,11 @@ def mock_state_response() -> SessionStateResponse:
     return SessionStateResponse(
         session_id="session_123",
         status=ConversationStatus.PAUSED,
+        topic_id="core_values",
+        turn_count=1,
+        max_turns=10,
+        created_at=datetime.now(UTC).isoformat(),
+        updated_at=datetime.now(UTC).isoformat(),
         message="Session paused successfully",
     )
 
@@ -112,6 +119,8 @@ def mock_session_details() -> SessionDetails:
                 timestamp=datetime.now(UTC).isoformat(),
             ),
         ],
+        context={"business_name": "Test Business"},
+        max_turns=10,
         message_count=2,
         estimated_completion=0.1,
         created_at=datetime.now(UTC).isoformat(),
@@ -126,6 +135,7 @@ def mock_session_summary() -> SessionSummary:
         session_id="session_123",
         topic_id="core_values",
         status=ConversationStatus.ACTIVE,
+        turn_count=5,
         message_count=5,
         created_at=datetime.now(UTC).isoformat(),
         updated_at=datetime.now(UTC).isoformat(),
@@ -152,12 +162,31 @@ def mock_coaching_session_service(
         return_value=SessionStateResponse(
             session_id="session_123",
             status=ConversationStatus.CANCELLED,
+            topic_id="core_values",
+            turn_count=1,
+            max_turns=10,
+            created_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
             message="Session cancelled",
         )
     )
     service.complete_session = AsyncMock(return_value=mock_completion_response)
     service.get_session = AsyncMock(return_value=mock_session_details)
     service.list_user_sessions = AsyncMock(return_value=[mock_session_summary])
+    service.get_topics_with_status = AsyncMock(
+        return_value=TopicsWithStatusResponse(
+            topics=[
+                TopicStatus(
+                    topic_id="core_values",
+                    name="Core Values",
+                    description="Define and refine company core values",
+                    status="not_started",
+                    session_id=None,
+                    completed_at=None,
+                )
+            ]
+        )
+    )
     return service
 
 
@@ -332,7 +361,12 @@ class TestPauseSession:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["status"] == "paused"
-
+        assert data["data"]["session_id"] == "session_123"
+        assert data["data"]["topic_id"] == "core_values"
+        assert data["data"]["turn_count"] == 1
+        assert data["data"]["max_turns"] == 10
+        assert "created_at" in data["data"]
+        assert "updated_at" in data["data"]
     def test_pause_session_not_found(self, client, mock_coaching_session_service):
         """Test pause of non-existent session returns 422."""
         from coaching.src.domain.exceptions.session_exceptions import SessionNotFoundError

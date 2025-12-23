@@ -11,7 +11,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from coaching.src.llm.providers.manager import ProviderManager
@@ -39,6 +39,8 @@ class WorkflowStatus(str, Enum):
 
 
 class WorkflowState(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     """Base state model for all workflows."""
 
     workflow_id: str = Field(..., description="Unique workflow identifier")
@@ -66,13 +68,9 @@ class WorkflowState(BaseModel):
     updated_at: str | None = Field(default=None, description="Last update timestamp")
     completed_at: str | None = Field(default=None, description="Completion timestamp")
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
-
-
 class WorkflowConfig(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     """Configuration for workflow execution."""
 
     workflow_type: WorkflowType = Field(..., description="Type of workflow to execute")
@@ -91,11 +89,6 @@ class WorkflowConfig(BaseModel):
     custom_config: dict[str, Any] = Field(
         default_factory=dict, description="Workflow-specific config"
     )
-
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
 
 
 class BaseWorkflow(ABC):
