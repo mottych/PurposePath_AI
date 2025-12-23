@@ -8,7 +8,7 @@ Use LLMTopic instead - topics now own their model configuration directly.
 
 import warnings
 from datetime import datetime
-from typing import Any, ClassVar
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -69,12 +69,6 @@ class LLMConfiguration(BaseModel):
         default_factory=datetime.utcnow, description="Last update timestamp"
     )
     created_by: str = Field(..., description="User ID who created the configuration")
-
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
-        # Not frozen - entity can be updated
 
     def __init__(self, **data: Any) -> None:
         """Initialize LLMConfiguration with deprecation warning."""

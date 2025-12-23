@@ -12,7 +12,7 @@ from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProviderType(str, Enum):
@@ -24,6 +24,8 @@ class ProviderType(str, Enum):
 
 
 class ProviderConfig(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     """Configuration for AI provider initialization.
 
     Note: model_name is optional at registration time since the actual model
@@ -49,11 +51,6 @@ class ProviderConfig(BaseModel):
     streaming: bool = Field(default=False, description="Enable streaming responses")
     timeout: int = Field(default=30, gt=0, description="Request timeout in seconds")
     max_retries: int = Field(default=3, ge=0, description="Maximum retry attempts")
-
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
 
 
 class BaseProvider(ABC):

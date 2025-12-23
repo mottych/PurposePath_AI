@@ -2,10 +2,16 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class StrategySuggestionsRequest(BaseModel):
+class StrategySuggestionsBaseModel(BaseModel):
+    """Shared config for strategy suggestion models."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class StrategySuggestionsRequest(StrategySuggestionsBaseModel):
     """Request for AI-generated strategy recommendations.
 
     Matches specification in backend-integration-coaching-service.md line 199-217.
@@ -54,13 +60,8 @@ class StrategySuggestionsRequest(BaseModel):
         ],
     )
 
-    class Config:
-        """Pydantic config."""
 
-        populate_by_name = True
-
-
-class StrategySuggestion(BaseModel):
+class StrategySuggestion(StrategySuggestionsBaseModel):
     """Individual strategy suggestion."""
 
     title: str = Field(..., description="Strategy title")
@@ -88,13 +89,8 @@ class StrategySuggestion(BaseModel):
         default_factory=list, alias="requiredResources", description="Required resources"
     )
 
-    class Config:
-        """Pydantic config."""
 
-        populate_by_name = True
-
-
-class StrategySuggestionsResponse(BaseModel):
+class StrategySuggestionsResponse(StrategySuggestionsBaseModel):
     """Response containing strategy suggestions.
 
     Matches specification in backend-integration-coaching-service.md line 219-243.

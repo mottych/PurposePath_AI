@@ -5,7 +5,7 @@ Template content is stored externally, this entity tracks location and metadata.
 """
 
 from datetime import datetime
-from typing import Any, ClassVar
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -47,12 +47,6 @@ class TemplateMetadata(BaseModel):
         default_factory=datetime.utcnow, description="Last update timestamp"
     )
     created_by: str = Field(..., description="User ID who created the template")
-
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
-        # Not frozen - entity can be updated
 
     def get_parameters(self) -> dict[str, list[str]]:
         """

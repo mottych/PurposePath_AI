@@ -56,7 +56,7 @@ dependencies = [
     # Data validation
     "email-validator>=2.0.0,<3.0.0",
     "jinja2>=3.1.6",
-    "html2text>=2025.4.15",
+    "html2text>=2024.2.26,<2025.0.0",
     "beautifulsoup4>=4.14.3",
     
     # Google Gen AI SDK (replaces deprecated google-cloud-aiplatform for generative AI)

@@ -9,14 +9,20 @@ Response models for strategic planning AI topics:
 These models match the specifications in Issue #182.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+class StrategicPlanningBaseModel(BaseModel):
+    """Shared config for strategic planning response models."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
 
 # =============================================================================
 # AlignmentCheck Response Models
 # =============================================================================
 
 
-class AlignmentBreakdown(BaseModel):
+class AlignmentBreakdown(StrategicPlanningBaseModel):
     """Breakdown of alignment scores by component."""
 
     vision_alignment: int = Field(
@@ -41,13 +47,7 @@ class AlignmentBreakdown(BaseModel):
         description="Alignment with core values (0-100)",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class AlignmentCheckData(BaseModel):
+class AlignmentCheckData(StrategicPlanningBaseModel):
     """Data payload for alignment check response."""
 
     alignment_score: int = Field(
@@ -73,13 +73,7 @@ class AlignmentCheckData(BaseModel):
         description="Breakdown of alignment scores by component",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class AlignmentCheckResponse(BaseModel):
+class AlignmentCheckResponse(StrategicPlanningBaseModel):
     """Response for alignment_check topic.
 
     Calculates how well a goal aligns with organization's vision, purpose, and values.
@@ -102,18 +96,12 @@ class AlignmentCheckResponse(BaseModel):
         description="Reference to this schema",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
 # =============================================================================
 # StrategySuggestions Response Models
 # =============================================================================
 
 
-class StrategySuggestion(BaseModel):
+class StrategySuggestion(StrategicPlanningBaseModel):
     """Individual strategy suggestion."""
 
     title: str = Field(
@@ -148,13 +136,7 @@ class StrategySuggestion(BaseModel):
         description="Brief KPI names to track this strategy (0-3 items)",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class StrategySuggestionsData(BaseModel):
+class StrategySuggestionsData(StrategicPlanningBaseModel):
     """Data payload for strategy suggestions response."""
 
     suggestions: list[StrategySuggestion] = Field(
@@ -171,13 +153,7 @@ class StrategySuggestionsData(BaseModel):
         description="Meta-commentary on the suggestions",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class StrategySuggestionsResponseV2(BaseModel):
+class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
     """Response for strategy_suggestions topic.
 
     Generates suggested strategies for achieving a goal.
@@ -201,18 +177,12 @@ class StrategySuggestionsResponseV2(BaseModel):
         description="Reference to this schema",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
 # =============================================================================
 # KPIRecommendations Response Models
 # =============================================================================
 
 
-class SuggestedTarget(BaseModel):
+class SuggestedTarget(StrategicPlanningBaseModel):
     """Suggested target for a KPI."""
 
     value: float = Field(
@@ -229,7 +199,7 @@ class SuggestedTarget(BaseModel):
     )
 
 
-class KPIRecommendation(BaseModel):
+class KPIRecommendation(StrategicPlanningBaseModel):
     """Individual KPI recommendation."""
 
     name: str = Field(
@@ -291,13 +261,7 @@ class KPIRecommendation(BaseModel):
         description="Whether this should be the primary KPI",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class KPIRecommendationsData(BaseModel):
+class KPIRecommendationsData(StrategicPlanningBaseModel):
     """Data payload for KPI recommendations response."""
 
     recommendations: list[KPIRecommendation] = Field(
@@ -314,13 +278,7 @@ class KPIRecommendationsData(BaseModel):
         description="Meta-commentary on the recommendations",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class KPIRecommendationsResponseV2(BaseModel):
+class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
     """Response for kpi_recommendations topic.
 
     Recommends KPIs for measuring goal or strategy success.
@@ -344,18 +302,12 @@ class KPIRecommendationsResponseV2(BaseModel):
         description="Reference to this schema",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
 # =============================================================================
 # ActionSuggestions Response Models
 # =============================================================================
 
 
-class ActionSuggestion(BaseModel):
+class ActionSuggestion(StrategicPlanningBaseModel):
     """Individual action suggestion."""
 
     title: str = Field(
@@ -403,13 +355,7 @@ class ActionSuggestion(BaseModel):
         description="Suggested execution order",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class ActionSuggestionsData(BaseModel):
+class ActionSuggestionsData(StrategicPlanningBaseModel):
     """Data payload for action suggestions response."""
 
     suggestions: list[ActionSuggestion] = Field(
@@ -431,13 +377,7 @@ class ActionSuggestionsData(BaseModel):
         description="Overall timeline estimate",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
-
-class ActionSuggestionsResponse(BaseModel):
+class ActionSuggestionsResponse(StrategicPlanningBaseModel):
     """Response for action_suggestions topic.
 
     Suggests specific, actionable tasks to execute a strategy.
@@ -459,12 +399,6 @@ class ActionSuggestionsResponse(BaseModel):
         default="ActionSuggestionsResponse",
         description="Reference to this schema",
     )
-
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
-
 
 __all__ = [
     "ActionSuggestion",
