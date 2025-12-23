@@ -80,7 +80,7 @@ class TestBusinessApiClient:
         assert result["name"] == "Test User"
         assert result["role"] == "Business Owner"
         mock_http_client.get.assert_called_with(
-            "/user/profile", headers=business_client._get_headers()
+            "/user/profile", headers=business_client._get_headers("t1")
         )
 
     async def test_get_organizational_context(self, business_client, mock_http_client):
@@ -93,7 +93,8 @@ class TestBusinessApiClient:
 
         assert result["organization_name"] == "Test Org"
         mock_http_client.get.assert_called_with(
-            "/api/tenants/t1/business-foundation", headers=business_client._get_headers()
+            "/api/tenants/t1/business-foundation",
+            headers=business_client._get_headers("t1"),
         )
 
     async def test_get_user_goals(self, business_client, mock_http_client):
@@ -107,7 +108,9 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "g1"
         mock_http_client.get.assert_called_with(
-            "/goals", headers=business_client._get_headers(), params={"ownerId": "u1"}
+            "/goals",
+            headers=business_client._get_headers("t1"),
+            params={"ownerId": "u1"},
         )
 
     async def test_get_goal_stats(self, business_client, mock_http_client):
@@ -121,7 +124,7 @@ class TestBusinessApiClient:
         assert result["total_goals"] == 10
         assert result["completion_rate"] == 0.8
         mock_http_client.get.assert_called_with(
-            "/goals/stats", headers=business_client._get_headers()
+            "/goals/stats", headers=business_client._get_headers("t1")
         )
 
     async def test_get_performance_score(self, business_client, mock_http_client):
@@ -132,7 +135,7 @@ class TestBusinessApiClient:
 
         assert result["overall_score"] == 85.5
         mock_http_client.get.assert_called_with(
-            "/performance/score", headers=business_client._get_headers()
+            "/performance/score", headers=business_client._get_headers("t1")
         )
 
     async def test_get_operations_actions(self, business_client, mock_http_client):
@@ -146,8 +149,8 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "a1"
         mock_http_client.get.assert_called_with(
-            "/api/operations/actions",
-            headers=business_client._get_headers(),
+            "/operations/actions",
+            headers=business_client._get_headers("t1"),
             params={"limit": 10},
         )
 
@@ -162,8 +165,8 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "i1"
         mock_http_client.get.assert_called_with(
-            "/api/operations/issues",
-            headers=business_client._get_headers(),
+            "/operations/issues",
+            headers=business_client._get_headers("t1"),
             params={"limit": 20, "status": "open"},
         )
 
