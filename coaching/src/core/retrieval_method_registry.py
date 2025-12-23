@@ -379,6 +379,72 @@ async def get_performance_score(context: RetrievalContext) -> dict[str, Any]:
 
 
 @register_retrieval_method(
+    name="get_kpi_by_id",
+    description="Retrieves KPI details for a specific KPI",
+    provides_params=(
+        "kpi",
+        "kpi_name",
+        "kpi_value",
+        "kpi_target",
+        "kpi_unit",
+    ),
+    requires_from_payload=("kpi_id",),
+)
+async def get_kpi_by_id(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve a specific KPI by ID from payload."""
+    kpi_id = context.payload.get("kpi_id")
+    if not kpi_id:
+        logger.warning("retrieval_method.get_kpi_by_id.missing_kpi_id")
+        return {}
+
+    try:
+        logger.debug(
+            "retrieval_method.get_kpi_by_id",
+            kpi_id=kpi_id,
+            tenant_id=context.tenant_id,
+        )
+        kpi = await context.client.get_kpi_by_id(kpi_id, context.tenant_id)
+        return {
+            "kpi": kpi,
+            "name": kpi.get("name", ""),
+            "value": kpi.get("currentValue", 0),
+            "target": kpi.get("targetValue", 0),
+            "unit": kpi.get("unit", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_kpi_by_id.failed",
+            error=str(e),
+            kpi_id=kpi_id,
+            tenant_id=context.tenant_id,
+        )
+        return {}
+
+
+@register_retrieval_method(
+    name="get_kpis_list",
+    description="Retrieves all KPIs for the tenant",
+    provides_params=("kpis_list",),
+)
+async def get_kpis_list(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all KPIs for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_kpis_list",
+            tenant_id=context.tenant_id,
+        )
+        kpis = await context.client.get_kpis(context.tenant_id)
+        return {"kpis_list": kpis}
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_kpis_list.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {"kpis_list": []}
+
+
+@register_retrieval_method(
     name="get_action_by_id",
     description="Retrieves details for a specific action item",
     provides_params=(

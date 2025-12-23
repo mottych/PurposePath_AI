@@ -65,8 +65,8 @@ class BusinessApiClient:
             max_retries=max_retries,
         )
 
-    def _get_headers(self) -> dict[str, str]:
-        """Get HTTP headers including authentication."""
+    def _get_headers(self, tenant_id: str | None = None) -> dict[str, str]:
+        """Get HTTP headers including authentication and tenancy context."""
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -75,7 +75,22 @@ class BusinessApiClient:
         if self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
 
+        if tenant_id:
+            headers["X-Tenant-Id"] = tenant_id
+
         return headers
+
+    @staticmethod
+    def _extract_data(payload: dict[str, Any]) -> Any:
+        """Normalize Traction responses that may nest data multiple times."""
+        data = payload.get("data", payload)
+
+        if isinstance(data, dict) and "data" in data:
+            inner = data.get("data")
+            if inner is not None:
+                return inner
+
+        return data
 
     async def get_user_context(self, user_id: str, tenant_id: str) -> dict[str, Any]:
         """
@@ -109,7 +124,7 @@ class BusinessApiClient:
             # GET /user/profile (Account Service)
             response = await self.client.get(
                 "/user/profile",
-                headers=self._get_headers(),
+                headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
 
@@ -192,7 +207,7 @@ class BusinessApiClient:
             # GET /api/tenants/{tenantId}/business-foundation
             response = await self.client.get(
                 f"/api/tenants/{tenant_id}/business-foundation",
-                headers=self._get_headers(),
+                headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
 
@@ -249,16 +264,18 @@ class BusinessApiClient:
             # GET /goals?ownerId={userId} (Traction Service)
             response = await self.client.get(
                 "/goals",
-                headers=self._get_headers(),
+                headers=self._get_headers(tenant_id),
                 params={"ownerId": user_id},
             )
             response.raise_for_status()
 
-            data = response.json()
-            goals = data.get("data", [])
-
-            # Ensure we return a list
-            if not isinstance(goals, list):
+            payload = response.json()
+            data = self._extract_data(payload)
+            if isinstance(data, list):
+                goals = data
+            elif isinstance(data, dict):
+                goals = data.get("data") or data.get("goals") or []
+            else:
                 goals = []
 
             logger.debug(
@@ -315,12 +332,13 @@ class BusinessApiClient:
 
             response = await self.client.get(
                 "/goals/stats",
-                headers=self._get_headers(),
+                headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
 
-            data = response.json()
-            stats: dict[str, Any] = dict(data.get("data", {}))
+            payload = response.json()
+            data = self._extract_data(payload)
+            stats: dict[str, Any] = dict(data if isinstance(data, dict) else {})
 
             logger.debug(
                 "Goal stats retrieved",
@@ -368,12 +386,13 @@ class BusinessApiClient:
 
             response = await self.client.get(
                 "/performance/score",
-                headers=self._get_headers(),
+                headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
 
-            data = response.json()
-            score: dict[str, Any] = dict(data.get("data", {}))
+            payload = response.json()
+            data = self._extract_data(payload)
+            score: dict[str, Any] = dict(data if isinstance(data, dict) else {})
 
             logger.debug(
                 "Performance score retrieved",
@@ -399,6 +418,76 @@ class BusinessApiClient:
             )
             raise
 
+    async def get_kpi_by_id(self, kpi_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get KPI details by ID from Traction Service."""
+        try:
+            logger.info("Fetching KPI", kpi_id=kpi_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/kpis/{kpi_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching KPI",
+                kpi_id=kpi_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching KPI", kpi_id=kpi_id, error=str(e))
+            raise
+
+    async def get_kpis(self, tenant_id: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """List KPIs for the tenant.
+
+        Args:
+            tenant_id: Tenant identifier for multi-tenancy header
+            params: Optional query parameters (catalogOnly, customOnly, includeShared, category, page, pageSize)
+        """
+        try:
+            logger.info("Fetching KPIs", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/kpis",
+                headers=self._get_headers(tenant_id),
+                params=params or None,
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                kpis = data
+            elif isinstance(data, dict):
+                kpis = data.get("kpis") or data.get("data") or []
+            else:
+                kpis = []
+
+            return cast(list[dict[str, Any]], kpis)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching KPIs",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching KPIs", tenant_id=tenant_id, error=str(e))
+            raise
+
     async def get_operations_actions(self, tenant_id: str, limit: int = 50) -> list[dict[str, Any]]:
         """
         Get recent operations actions from Traction Service.
@@ -421,16 +510,19 @@ class BusinessApiClient:
             logger.info("Fetching operations actions", tenant_id=tenant_id, limit=limit)
 
             response = await self.client.get(
-                "/api/operations/actions",
-                headers=self._get_headers(),
+                "/operations/actions",
+                headers=self._get_headers(tenant_id),
                 params={"limit": limit},
             )
             response.raise_for_status()
 
-            data = response.json()
-            actions = data.get("data", [])
-
-            if not isinstance(actions, list):
+            payload = response.json()
+            data = self._extract_data(payload)
+            if isinstance(data, list):
+                actions = data
+            elif isinstance(data, dict):
+                actions = data.get("data") or data.get("actions") or []
+            else:
                 actions = []
 
             logger.debug(
@@ -480,16 +572,19 @@ class BusinessApiClient:
             logger.info("Fetching operations issues", tenant_id=tenant_id, limit=limit)
 
             response = await self.client.get(
-                "/api/operations/issues",
-                headers=self._get_headers(),
+                "/operations/issues",
+                headers=self._get_headers(tenant_id),
                 params={"limit": limit, "status": "open"},
             )
             response.raise_for_status()
 
-            data = response.json()
-            issues = data.get("data", [])
-
-            if not isinstance(issues, list):
+            payload = response.json()
+            data = self._extract_data(payload)
+            if isinstance(data, list):
+                issues = data
+            elif isinstance(data, dict):
+                issues = data.get("data") or data.get("issues") or []
+            else:
                 issues = []
 
             logger.debug(
