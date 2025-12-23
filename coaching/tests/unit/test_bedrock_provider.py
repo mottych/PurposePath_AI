@@ -11,7 +11,7 @@ from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 class TestBedrockProviderInitialization:
     """Test BedrockLLMProvider initialization."""
 
-    def test_init_with_client(self):
+    def test_init_with_client(self) -> None:
         """Test initialization with bedrock client."""
         # Arrange
         mock_client = Mock()
@@ -24,7 +24,7 @@ class TestBedrockProviderInitialization:
         assert provider.region == "us-east-1"
         assert provider.provider_name == "bedrock"
 
-    def test_init_with_custom_region(self):
+    def test_init_with_custom_region(self) -> None:
         """Test initialization with custom region."""
         # Arrange
         mock_client = Mock()
@@ -41,7 +41,7 @@ class TestBedrockProviderInitialization:
 class TestBedrockProviderProperties:
     """Test BedrockLLMProvider properties."""
 
-    def test_provider_name(self):
+    def test_provider_name(self) -> None:
         """Test provider_name property."""
         # Arrange
         provider = BedrockLLMProvider(bedrock_client=Mock())
@@ -49,7 +49,7 @@ class TestBedrockProviderProperties:
         # Act & Assert
         assert provider.provider_name == "bedrock"
 
-    def test_supported_models(self):
+    def test_supported_models(self) -> None:
         """Test supported_models property."""
         # Arrange
         provider = BedrockLLMProvider(bedrock_client=Mock())
@@ -63,7 +63,7 @@ class TestBedrockProviderProperties:
         assert "anthropic.claude-3-sonnet-20240229-v1:0" in models
         assert "anthropic.claude-3-haiku-20240307-v1:0" in models
 
-    def test_supported_models_returns_copy(self):
+    def test_supported_models_returns_copy(self) -> None:
         """Test that supported_models returns a copy."""
         # Arrange
         provider = BedrockLLMProvider(bedrock_client=Mock())
@@ -82,12 +82,12 @@ class TestBedrockProviderValidation:
     """Test validation in BedrockLLMProvider."""
 
     @pytest.fixture
-    def provider(self):
+    def provider(self) -> BedrockLLMProvider:
         """Create BedrockLLMProvider with mocked client."""
         mock_client = Mock()
         return BedrockLLMProvider(bedrock_client=mock_client)
 
-    async def test_generate_validates_temperature_too_low(self, provider):
+    async def test_generate_validates_temperature_too_low(self, provider: BedrockLLMProvider) -> None:
         """Test that temperature < 0 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -101,7 +101,7 @@ class TestBedrockProviderValidation:
                 temperature=-0.1,
             )
 
-    async def test_generate_validates_temperature_too_high(self, provider):
+    async def test_generate_validates_temperature_too_high(self, provider: BedrockLLMProvider) -> None:
         """Test that temperature > 1 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -115,7 +115,7 @@ class TestBedrockProviderValidation:
                 temperature=1.1,
             )
 
-    async def test_generate_validates_supported_model(self, provider):
+    async def test_generate_validates_supported_model(self, provider: BedrockLLMProvider) -> None:
         """Test that unsupported model raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -129,7 +129,7 @@ class TestBedrockProviderValidation:
                 temperature=0.7,
             )
 
-    async def test_generate_accepts_valid_temperature_boundaries(self, provider):
+    async def test_generate_accepts_valid_temperature_boundaries(self, provider: BedrockLLMProvider) -> None:
         """Test that temperature 0.0 and 1.0 are accepted."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -160,7 +160,7 @@ class TestBedrockProviderValidation:
 class TestBedrockProviderModelSupport:
     """Test model support detection."""
 
-    def test_supports_claude_models(self):
+    def test_supports_claude_models(self) -> None:
         """Test that Claude models are supported."""
         # Arrange
         provider = BedrockLLMProvider(bedrock_client=Mock())
@@ -170,7 +170,7 @@ class TestBedrockProviderModelSupport:
         assert "anthropic.claude-3-haiku-20240307-v1:0" in provider.supported_models
         assert "anthropic.claude-3-5-sonnet-20240620-v1:0" in provider.supported_models
 
-    def test_supports_llama_models(self):
+    def test_supports_llama_models(self) -> None:
         """Test that Llama models are supported."""
         # Arrange
         provider = BedrockLLMProvider(bedrock_client=Mock())
@@ -185,14 +185,14 @@ class TestBedrockProviderEdgeCases:
     """Test edge cases in BedrockLLMProvider."""
 
     @pytest.fixture
-    def provider(self):
+    def provider(self) -> BedrockLLMProvider:
         """Create BedrockLLMProvider with mocked client."""
         return BedrockLLMProvider(bedrock_client=Mock())
 
-    async def test_generate_with_empty_messages(self, provider):
+    async def test_generate_with_empty_messages(self, provider: BedrockLLMProvider) -> None:
         """Test generate with empty messages list."""
         # Arrange
-        messages = []
+        messages: list[LLMMessage] = []
         model = "anthropic.claude-3-sonnet-20240229-v1:0"
 
         # Act - Should handle gracefully or raise appropriate error
@@ -213,7 +213,7 @@ class TestBedrockProviderEdgeCases:
             # Exception is acceptable for empty messages
             pass
 
-    async def test_generate_with_none_system_prompt(self, provider):
+    async def test_generate_with_none_system_prompt(self, provider: BedrockLLMProvider) -> None:
         """Test generate with None system prompt."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -238,7 +238,7 @@ class TestBedrockProviderEdgeCases:
         assert result is not None
         assert result.content == "Response"
 
-    async def test_generate_with_none_max_tokens(self, provider):
+    async def test_generate_with_none_max_tokens(self, provider: BedrockLLMProvider) -> None:
         """Test generate with None max_tokens."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -269,7 +269,7 @@ class TestBedrockProviderMultipleModels:
     """Test behavior with different model types."""
 
     @pytest.fixture
-    def provider(self):
+    def provider(self) -> BedrockLLMProvider:
         """Create BedrockLLMProvider with mocked client."""
         mock_client = Mock()
         mock_client.converse = Mock(
@@ -281,7 +281,7 @@ class TestBedrockProviderMultipleModels:
         )
         return BedrockLLMProvider(bedrock_client=mock_client)
 
-    async def test_generate_with_claude_model(self, provider):
+    async def test_generate_with_claude_model(self, provider: BedrockLLMProvider) -> None:
         """Test generation with Claude model."""
         # Arrange
         messages = [LLMMessage(role="user", content="Hello")]
@@ -294,7 +294,7 @@ class TestBedrockProviderMultipleModels:
         assert result is not None
         assert result.content == "Test response"
 
-    async def test_generate_with_different_claude_versions(self, provider):
+    async def test_generate_with_different_claude_versions(self, provider: BedrockLLMProvider) -> None:
         """Test generation with different Claude versions."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -316,7 +316,7 @@ class TestBedrockProviderMultipleModels:
 class TestBedrockProviderConfiguration:
     """Test configuration options."""
 
-    def test_multiple_providers_different_regions(self):
+    def test_multiple_providers_different_regions(self) -> None:
         """Test creating multiple providers with different regions."""
         # Arrange & Act
         provider1 = BedrockLLMProvider(Mock(), region="us-east-1")
@@ -328,7 +328,7 @@ class TestBedrockProviderConfiguration:
         assert provider2.region == "eu-west-1"
         assert provider3.region == "ap-south-1"
 
-    def test_provider_name_consistent(self):
+    def test_provider_name_consistent(self) -> None:
         """Test that provider_name is always 'bedrock'."""
         # Arrange
         provider1 = BedrockLLMProvider(Mock())
@@ -348,7 +348,7 @@ class TestInferenceProfileResolution:
     inference profiles (region-prefixed model IDs) for invocation.
     """
 
-    def test_region_prefix_for_us_regions(self):
+    def test_region_prefix_for_us_regions(self) -> None:
         """Test that US regions get 'us' prefix."""
         # Test various US regions
         us_regions = ["us-east-1", "us-west-2", "ca-central-1"]
@@ -356,21 +356,21 @@ class TestInferenceProfileResolution:
             provider = BedrockLLMProvider(Mock(), region=region)
             assert provider._region_prefix == "us", f"Expected 'us' for region {region}"
 
-    def test_region_prefix_for_eu_regions(self):
+    def test_region_prefix_for_eu_regions(self) -> None:
         """Test that EU regions get 'eu' prefix."""
         eu_regions = ["eu-west-1", "eu-central-1", "eu-north-1"]
         for region in eu_regions:
             provider = BedrockLLMProvider(Mock(), region=region)
             assert provider._region_prefix == "eu", f"Expected 'eu' for region {region}"
 
-    def test_region_prefix_for_apac_regions(self):
+    def test_region_prefix_for_apac_regions(self) -> None:
         """Test that APAC regions get 'apac' prefix."""
         apac_regions = ["ap-southeast-1", "ap-northeast-1", "ap-south-1", "me-south-1", "sa-east-1"]
         for region in apac_regions:
             provider = BedrockLLMProvider(Mock(), region=region)
             assert provider._region_prefix == "apac", f"Expected 'apac' for region {region}"
 
-    def test_resolve_inference_profile_model(self):
+    def test_resolve_inference_profile_model(self) -> None:
         """Test that inference profile models get region prefix added."""
         provider = BedrockLLMProvider(Mock(), region="us-east-1")
 
@@ -394,7 +394,7 @@ class TestInferenceProfileResolution:
             resolved = provider._resolve_model_id(input_model)
             assert resolved == expected_output, f"Expected {expected_output}, got {resolved}"
 
-    def test_resolve_direct_invocation_model(self):
+    def test_resolve_direct_invocation_model(self) -> None:
         """Test that direct invocation models are not modified."""
         provider = BedrockLLMProvider(Mock(), region="us-east-1")
 
@@ -410,7 +410,7 @@ class TestInferenceProfileResolution:
             resolved = provider._resolve_model_id(model)
             assert resolved == model, f"Model {model} should not be modified"
 
-    def test_resolve_already_prefixed_model(self):
+    def test_resolve_already_prefixed_model(self) -> None:
         """Test that already-prefixed models are not double-prefixed."""
         provider = BedrockLLMProvider(Mock(), region="us-east-1")
 
@@ -425,7 +425,7 @@ class TestInferenceProfileResolution:
             resolved = provider._resolve_model_id(model)
             assert resolved == model, f"Already-prefixed model {model} should not be modified"
 
-    def test_resolve_model_respects_provider_region(self):
+    def test_resolve_model_respects_provider_region(self) -> None:
         """Test that model resolution uses the provider's region prefix."""
         # US region provider
         us_provider = BedrockLLMProvider(Mock(), region="us-east-1")

@@ -1243,12 +1243,14 @@ def get_registry_statistics() -> dict[str, int]:
     }
 
 
-__all__ = [
+__all__: list[str] = [
     "ENDPOINT_REGISTRY",
     "TOPIC_INDEX",
     "EndpointDefinition",
     "ParameterInfo",
     "ParameterRef",
+    "TemplateType",
+    "TopicType",
     "get_endpoint_by_topic_id",
     "get_endpoint_definition",
     "get_parameter_refs_for_topic",

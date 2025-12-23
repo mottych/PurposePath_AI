@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator, Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -6,7 +7,7 @@ from coaching.src.llm.providers.bedrock import BedrockProvider
 
 
 @pytest.fixture
-def provider_config():
+def provider_config() -> ProviderConfig:
     return ProviderConfig(
         provider_type=ProviderType.BEDROCK,
         model_name="anthropic.claude-3-sonnet-20240229-v1:0",
@@ -16,20 +17,22 @@ def provider_config():
 
 
 @pytest.fixture
-def mock_boto3():
+def mock_boto3() -> Iterator[MagicMock]:
     with patch("boto3.Session") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_chat_bedrock():
+def mock_chat_bedrock() -> Iterator[MagicMock]:
     """Mock ChatBedrockConverse for testing."""
     with patch("coaching.src.llm.providers.bedrock.ChatBedrockConverse") as mock:
         yield mock
 
 
 @pytest.mark.asyncio
-async def test_initialize(provider_config, mock_boto3, mock_chat_bedrock):
+async def test_initialize(
+    provider_config: ProviderConfig, mock_boto3: MagicMock, mock_chat_bedrock: MagicMock
+) -> None:
     provider = BedrockProvider(provider_config)
     await provider.initialize()
     assert provider._client is not None
@@ -37,7 +40,9 @@ async def test_initialize(provider_config, mock_boto3, mock_chat_bedrock):
 
 
 @pytest.mark.asyncio
-async def test_invoke(provider_config, mock_boto3, mock_chat_bedrock):
+async def test_invoke(
+    provider_config: ProviderConfig, mock_boto3: MagicMock, mock_chat_bedrock: MagicMock
+) -> None:
     provider = BedrockProvider(provider_config)
     await provider.initialize()
 
@@ -51,14 +56,14 @@ async def test_invoke(provider_config, mock_boto3, mock_chat_bedrock):
 
 
 @pytest.mark.asyncio
-async def test_stream(provider_config, mock_chat_bedrock):
+async def test_stream(provider_config: ProviderConfig, mock_chat_bedrock: MagicMock) -> None:
     provider = BedrockProvider(provider_config)
     await provider.initialize()
 
     mock_llm = mock_chat_bedrock.return_value
 
     # Mock astream to return an async iterator
-    async def async_generator():
+    async def async_generator() -> AsyncIterator[MagicMock]:
         yield MagicMock(content="Chunk 1")
         yield MagicMock(content="Chunk 2")
 
@@ -72,7 +77,7 @@ async def test_stream(provider_config, mock_chat_bedrock):
 
 
 @pytest.mark.asyncio
-async def test_validate_model_supported(provider_config):
+async def test_validate_model_supported(provider_config: ProviderConfig) -> None:
     provider = BedrockProvider(provider_config)
 
     with patch("boto3.Session") as mock_session:
@@ -88,14 +93,14 @@ async def test_validate_model_supported(provider_config):
 
 
 @pytest.mark.asyncio
-async def test_validate_model_unsupported(provider_config):
+async def test_validate_model_unsupported(provider_config: ProviderConfig) -> None:
     provider = BedrockProvider(provider_config)
     is_valid = await provider.validate_model("unsupported-model")
     assert is_valid is False
 
 
 @pytest.mark.asyncio
-async def test_get_model_info(provider_config):
+async def test_get_model_info(provider_config: ProviderConfig) -> None:
     provider = BedrockProvider(provider_config)
 
     with patch("boto3.Session") as mock_session:
@@ -112,7 +117,7 @@ async def test_get_model_info(provider_config):
 
 
 @pytest.mark.asyncio
-async def test_cleanup(provider_config):
+async def test_cleanup(provider_config: ProviderConfig) -> None:
     provider = BedrockProvider(provider_config)
     await provider.initialize()
     assert provider._client is not None
@@ -121,7 +126,7 @@ async def test_cleanup(provider_config):
     assert provider._client is None
 
 
-def test_count_tokens(provider_config):
+def test_count_tokens(provider_config: ProviderConfig) -> None:
     provider = BedrockProvider(provider_config)
     # Mock tokenizer
     provider.tokenizer = MagicMock()

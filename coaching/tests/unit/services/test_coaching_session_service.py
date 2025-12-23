@@ -16,11 +16,10 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from coaching.src.core.constants import ConversationStatus, TopicCategory
+from coaching.src.core.constants import ConversationStatus, TopicCategory, TopicType
 from coaching.src.core.topic_registry import (
     EndpointDefinition,
     TemplateType,
-    TopicType,
 )
 from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingSession

@@ -764,7 +764,8 @@ async def get_website_content(context: RetrievalContext) -> dict[str, Any]:
         meta_desc = soup.find("meta", {"name": "description"})
         if not meta_desc:
             meta_desc = soup.find("meta", {"property": "og:description"})
-        meta_description = meta_desc.get("content", "").strip() if meta_desc else ""
+        meta_content = meta_desc.get("content") if meta_desc else None
+        meta_description = meta_content.strip() if isinstance(meta_content, str) else ""
 
         # Remove non-content elements
         for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
@@ -823,7 +824,7 @@ async def get_website_content(context: RetrievalContext) -> dict[str, Any]:
         }
 
 
-__all__ = [
+__all__: list[str] = [
     "RETRIEVAL_METHODS",
     "RetrievalContext",
     "RetrievalMethodDefinition",
