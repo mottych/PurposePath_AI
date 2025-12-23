@@ -447,7 +447,9 @@ class BusinessApiClient:
             logger.error("Request error fetching KPI", kpi_id=kpi_id, error=str(e))
             raise
 
-    async def get_kpis(self, tenant_id: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def get_kpis(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """List KPIs for the tenant.
 
         Args:

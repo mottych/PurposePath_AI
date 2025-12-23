@@ -367,6 +367,7 @@ class TestPauseSession:
         assert data["data"]["max_turns"] == 10
         assert "created_at" in data["data"]
         assert "updated_at" in data["data"]
+
     def test_pause_session_not_found(self, client, mock_coaching_session_service):
         """Test pause of non-existent session returns 422."""
         from coaching.src.domain.exceptions.session_exceptions import SessionNotFoundError

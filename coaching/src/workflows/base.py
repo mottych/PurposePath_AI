@@ -68,6 +68,7 @@ class WorkflowState(BaseModel):
     updated_at: str | None = Field(default=None, description="Last update timestamp")
     completed_at: str | None = Field(default=None, description="Completion timestamp")
 
+
 class WorkflowConfig(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 

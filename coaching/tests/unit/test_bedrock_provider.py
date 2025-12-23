@@ -87,7 +87,9 @@ class TestBedrockProviderValidation:
         mock_client = Mock()
         return BedrockLLMProvider(bedrock_client=mock_client)
 
-    async def test_generate_validates_temperature_too_low(self, provider: BedrockLLMProvider) -> None:
+    async def test_generate_validates_temperature_too_low(
+        self, provider: BedrockLLMProvider
+    ) -> None:
         """Test that temperature < 0 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -101,7 +103,9 @@ class TestBedrockProviderValidation:
                 temperature=-0.1,
             )
 
-    async def test_generate_validates_temperature_too_high(self, provider: BedrockLLMProvider) -> None:
+    async def test_generate_validates_temperature_too_high(
+        self, provider: BedrockLLMProvider
+    ) -> None:
         """Test that temperature > 1 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -129,7 +133,9 @@ class TestBedrockProviderValidation:
                 temperature=0.7,
             )
 
-    async def test_generate_accepts_valid_temperature_boundaries(self, provider: BedrockLLMProvider) -> None:
+    async def test_generate_accepts_valid_temperature_boundaries(
+        self, provider: BedrockLLMProvider
+    ) -> None:
         """Test that temperature 0.0 and 1.0 are accepted."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
@@ -294,7 +300,9 @@ class TestBedrockProviderMultipleModels:
         assert result is not None
         assert result.content == "Test response"
 
-    async def test_generate_with_different_claude_versions(self, provider: BedrockLLMProvider) -> None:
+    async def test_generate_with_different_claude_versions(
+        self, provider: BedrockLLMProvider
+    ) -> None:
         """Test generation with different Claude versions."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]

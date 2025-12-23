@@ -48,6 +48,7 @@ class AlignmentBreakdown(StrategicPlanningBaseModel):
         description="Alignment with core values (0-100)",
     )
 
+
 class AlignmentCheckData(StrategicPlanningBaseModel):
     """Data payload for alignment check response."""
 
@@ -74,6 +75,7 @@ class AlignmentCheckData(StrategicPlanningBaseModel):
         description="Breakdown of alignment scores by component",
     )
 
+
 class AlignmentCheckResponse(StrategicPlanningBaseModel):
     """Response for alignment_check topic.
 
@@ -96,6 +98,7 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
         default="AlignmentCheckResponse",
         description="Reference to this schema",
     )
+
 
 # =============================================================================
 # StrategySuggestions Response Models
@@ -137,6 +140,7 @@ class StrategySuggestion(StrategicPlanningBaseModel):
         description="Brief KPI names to track this strategy (0-3 items)",
     )
 
+
 class StrategySuggestionsData(StrategicPlanningBaseModel):
     """Data payload for strategy suggestions response."""
 
@@ -153,6 +157,7 @@ class StrategySuggestionsData(StrategicPlanningBaseModel):
         max_length=300,
         description="Meta-commentary on the suggestions",
     )
+
 
 class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
     """Response for strategy_suggestions topic.
@@ -177,6 +182,7 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
         default="StrategySuggestionsResponseV2",
         description="Reference to this schema",
     )
+
 
 # =============================================================================
 # KPIRecommendations Response Models
@@ -262,6 +268,7 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         description="Whether this should be the primary KPI",
     )
 
+
 class KPIRecommendationsData(StrategicPlanningBaseModel):
     """Data payload for KPI recommendations response."""
 
@@ -278,6 +285,7 @@ class KPIRecommendationsData(StrategicPlanningBaseModel):
         max_length=300,
         description="Meta-commentary on the recommendations",
     )
+
 
 class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
     """Response for kpi_recommendations topic.
@@ -302,6 +310,7 @@ class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
         default="KPIRecommendationsResponseV2",
         description="Reference to this schema",
     )
+
 
 # =============================================================================
 # ActionSuggestions Response Models
@@ -356,6 +365,7 @@ class ActionSuggestion(StrategicPlanningBaseModel):
         description="Suggested execution order",
     )
 
+
 class ActionSuggestionsData(StrategicPlanningBaseModel):
     """Data payload for action suggestions response."""
 
@@ -377,6 +387,7 @@ class ActionSuggestionsData(StrategicPlanningBaseModel):
         alias="timelineEstimate",
         description="Overall timeline estimate",
     )
+
 
 class ActionSuggestionsResponse(StrategicPlanningBaseModel):
     """Response for action_suggestions topic.
@@ -400,6 +411,7 @@ class ActionSuggestionsResponse(StrategicPlanningBaseModel):
         default="ActionSuggestionsResponse",
         description="Reference to this schema",
     )
+
 
 __all__ = [
     "ActionSuggestion",
