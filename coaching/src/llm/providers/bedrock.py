@@ -113,6 +113,12 @@ class BedrockProvider(BaseProvider):
             model_name = self.config.model_name or self.DEFAULT_MODEL
             logger.info("Initializing Bedrock provider with Converse API", model=model_name)
 
+            # Guard against langchain versions that removed the global verbose attr
+            import langchain  # local import to keep provider optional
+
+            if not hasattr(langchain, "verbose"):
+                langchain.verbose = False
+
             # Create LangChain Bedrock Converse client
             # ChatBedrockConverse uses the optimized Converse API for:
             # - Better async support
