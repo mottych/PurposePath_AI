@@ -86,8 +86,6 @@ coaching_sessions_table = aws.dynamodb.Table(
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
     bucket=f"purposepath-coaching-prompts-380276784420-{stack}",
-    object_ownership="BucketOwnerEnforced",
-    acl=None,
     versioning=aws.s3.BucketVersioningArgs(enabled=True),
     server_side_encryption_configuration=aws.s3.BucketServerSideEncryptionConfigurationArgs(
         rule=aws.s3.BucketServerSideEncryptionConfigurationRuleArgs(
@@ -97,6 +95,15 @@ prompts_bucket = aws.s3.Bucket(
         ),
     ),
     tags={**common_tags, "Name": "coaching_prompts", "Purpose": "LLM-Prompt-Storage"},
+)
+
+# Configure bucket ownership controls
+aws.s3.BucketOwnershipControls(
+    "coaching-prompts-bucket-ownership",
+    bucket=prompts_bucket.id,
+    rule=aws.s3.BucketOwnershipControlsRuleArgs(
+        object_ownership="BucketOwnerEnforced",
+    ),
 )
 
 # Block public access to prompts bucket
