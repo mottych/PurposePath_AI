@@ -691,7 +691,7 @@ class UnifiedAIEngine:
 
     def _add_additional_properties_false(self, schema: dict[str, Any]) -> None:
         """Recursively add additionalProperties: false to all object schemas.
-        
+
         Also ensures 'required' array includes all properties for OpenAI strict mode.
 
         Args:
@@ -699,13 +699,13 @@ class UnifiedAIEngine:
         """
         if schema.get("type") == "object":
             schema["additionalProperties"] = False
-            
+
             # OpenAI strict mode requires 'required' to include all properties
             properties = schema.get("properties", {})
             if properties:
                 # Set required to include all property keys if not already set
                 schema["required"] = list(properties.keys())
-            
+
             for prop in properties.values():
                 self._add_additional_properties_false(prop)
 
