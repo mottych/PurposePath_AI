@@ -19,6 +19,7 @@ DEPRECATED (defined but not called by Admin UI):
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Annotated, Any
+import time
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -32,7 +33,16 @@ from coaching.src.api.dependencies.ai_engine import (
     get_unified_ai_engine,
 )
 from coaching.src.api.models.auth import UserContext
-from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
+from coaching.src.application.ai_engine.response_serializer import SerializationError
+from coaching.src.application.ai_engine.unified_ai_engine import (
+    ParameterValidationError,
+    PromptRenderError,
+    TopicNotFoundError,
+    UnifiedAIEngine,
+    UnifiedAIEngineError,
+)
+from coaching.src.core.constants import TopicType
+from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
     ENDPOINT_REGISTRY,
     get_endpoint_by_topic_id,
@@ -69,7 +79,7 @@ from coaching.src.models.admin_topics import (
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 
@@ -1203,27 +1213,46 @@ async def validate_topic_config(
 # ========== New Endpoints for Issue #113 ==========
 
 
+class LLMRunMetadata(BaseModel):
+    """Metadata about the LLM invocation for a test run."""
+
+    provider: str
+    model: str
+    usage: dict[str, int] | None = None
+    finish_reason: str | None = None
+
+
 class TopicTestRequest(BaseModel):
     """Request model for testing a topic."""
 
-    parameters: dict[str, Any]
-    use_draft_prompts: bool = False
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    allow_inactive: bool = False
 
 
 class TopicTestResponse(BaseModel):
-    """Response model for topic testing."""
+    """Response model for topic testing including rendered prompts."""
 
     success: bool
-    result: dict[str, Any] | None = None
+    topic_id: str
+    rendered_system_prompt: str | None = None
+    rendered_user_prompt: str | None = None
+    enriched_parameters: dict[str, Any] | None = None
+    response: dict[str, Any] | None = None
+    response_model: str | None = None
+    response_schema: dict[str, Any] | None = None
+    llm_metadata: LLMRunMetadata | None = None
     execution_time_ms: float
-    tokens_used: int | None = None
     error: str | None = None
 
 
-class TestResponseModel(BaseModel):
-    """Generic response model for testing."""
+def _serialize_response_payload(response: BaseModel | Any) -> dict[str, Any]:
+    """Serialize response payload to a dictionary for API responses."""
 
-    model_config = {"extra": "allow"}
+    if isinstance(response, BaseModel):
+        return response.model_dump()
+    if isinstance(response, dict):
+        return response
+    return {"value": response}
 
 
 @router.post("/{topic_id}/test", response_model=TopicTestResponse)
@@ -1234,42 +1263,51 @@ async def test_topic(
     unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
     jwt_token: str | None = Depends(get_jwt_token),
 ) -> TopicTestResponse:
-    """Test a topic with sample parameters.
+    """Test a topic by rendering prompts, enriching parameters, and executing the LLM.
 
-    Requires admin:topics:write permission.
-    Enhanced for Issue #113 - Topic-Driven Endpoint Architecture.
-
-    This endpoint allows admins to test topic configurations and prompts
-    before deploying them to production endpoints.
+    Returns rendered system/user prompts, enriched parameters, serialized AI response,
+    and LLM metadata to help admins validate templates before rollout.
     """
-    try:
-        import time
 
-        start_time = time.time()
+    start_time = time.time()
 
-        logger.info(
-            "Testing topic",
-            topic_id=topic_id,
-            user_id=user.user_id,
-            use_draft=request.use_draft_prompts,
+    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    if endpoint_def is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic not found: {topic_id}",
         )
 
-        # Create template processor for parameter enrichment (if token available)
+    if endpoint_def.topic_type != TopicType.SINGLE_SHOT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Topic {topic_id} is type {endpoint_def.topic_type.value}, "
+                "only single-shot topics are supported for template testing"
+            ),
+        )
+
+    response_model_cls = get_response_model(endpoint_def.response_model)
+    if response_model_cls is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Response model not configured: {endpoint_def.response_model}",
+        )
+
+    try:
         template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        # Execute single-shot with topic
-        # Note: This is a simplified version - in full implementation,
-        # we'd need to determine the response_model from topic metadata
-        result = await unified_engine.execute_single_shot(
+        debug_context = await unified_engine.execute_single_shot_debug(
             topic_id=topic_id,
             parameters=request.parameters,
-            response_model=TestResponseModel,  # Use generic model for testing
+            response_model=response_model_cls,
             user_id=user.user_id,
             tenant_id=user.tenant_id,
             template_processor=template_processor,
+            allow_inactive=request.allow_inactive,
         )
 
-        execution_time = (time.time() - start_time) * 1000  # Convert to ms
+        execution_time = (time.time() - start_time) * 1000
 
         logger.info(
             "Topic test successful",
@@ -1279,23 +1317,55 @@ async def test_topic(
 
         return TopicTestResponse(
             success=True,
-            result=result.model_dump() if isinstance(result, BaseModel) else {"data": str(result)},
+            topic_id=topic_id,
+            rendered_system_prompt=debug_context.rendered_system_prompt,
+            rendered_user_prompt=debug_context.rendered_user_prompt,
+            enriched_parameters=debug_context.enriched_parameters,
+            response=_serialize_response_payload(debug_context.serialized_response),
+            response_model=debug_context.response_model_name,
+            response_schema=debug_context.response_schema,
+            llm_metadata=LLMRunMetadata(
+                provider=debug_context.llm_response.provider,
+                model=debug_context.llm_response.model,
+                usage=debug_context.llm_response.usage,
+                finish_reason=debug_context.llm_response.finish_reason,
+            ),
             execution_time_ms=execution_time,
-            tokens_used=None,  # Could be extracted from LLM response metadata
         )
 
-    except Exception as e:
-        execution_time = (time.time() - start_time) * 1000 if "start_time" in locals() else 0
+    except TopicNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic configuration not found: {e.topic_id}",
+        ) from e
+    except ParameterValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Missing required parameters: {', '.join(e.missing_params)}",
+        ) from e
+    except PromptRenderError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to render {e.prompt_type} prompt",
+        ) from e
+    except SerializationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to serialize AI response for {e.response_model}",
+        ) from e
+    except UnifiedAIEngineError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI processing failed",
+        ) from e
+    except Exception as e:  # noqa: BLE001
         logger.error(
             "Topic test failed",
             topic_id=topic_id,
             error=str(e),
             exc_info=True,
         )
-
-        return TopicTestResponse(
-            success=False,
-            result=None,
-            execution_time_ms=execution_time,
-            error=str(e),
-        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
