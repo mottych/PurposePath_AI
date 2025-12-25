@@ -16,10 +16,10 @@ DEPRECATED (defined but not called by Admin UI):
 - POST /topics/{topic_id}/test: test topic - UI doesn't call
 """
 
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Annotated, Any
-import time
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -1358,7 +1358,7 @@ async def test_topic(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI processing failed",
         ) from e
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.error(
             "Topic test failed",
             topic_id=topic_id,

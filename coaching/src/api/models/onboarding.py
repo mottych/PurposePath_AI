@@ -63,29 +63,76 @@ class ProductInfo(BaseModel):
     )
 
 
+class WebsiteScanCompanyProfile(BaseModel):
+    """Company profile details extracted from the website."""
+
+    company_name: str = Field(..., description="Public-facing company name")
+    legal_name: str = Field(..., description="Registered legal entity name")
+    tagline: str = Field(..., description="Marketing tagline or headline")
+    overview: str = Field(..., description="One-paragraph business overview")
+
+
+class WebsiteScanTargetMarket(BaseModel):
+    """Target market insights."""
+
+    primary_audience: str = Field(..., description="Primary audience or buyer persona")
+    segments: list[str] = Field(..., description="Market segments served")
+    pain_points: list[str] = Field(..., description="Key pain points addressed")
+
+
+class WebsiteScanOffers(BaseModel):
+    """Products and offers highlighted on the site."""
+
+    primary_product: str = Field(..., description="Main product or offer")
+    categories: list[str] = Field(..., description="Product/solution categories")
+    features: list[str] = Field(..., description="Notable features or capabilities")
+    differentiators: list[str] = Field(..., description="Differentiators vs competitors")
+
+
+class WebsiteScanTestimonial(BaseModel):
+    """Customer testimonial snippet."""
+
+    quote: str = Field(..., description="Customer quote")
+    attribution: str = Field(..., description="Attribution for the quote")
+
+
+class WebsiteScanCredibility(BaseModel):
+    """Signals that build trust."""
+
+    notable_clients: list[str] = Field(..., description="List of notable clients")
+    testimonials: list[WebsiteScanTestimonial] = Field(
+        default_factory=list, description="Testimonials pulled from the site"
+    )
+
+
+class WebsiteScanSupportingAsset(BaseModel):
+    """Supporting asset promoted on the page."""
+
+    label: str = Field(..., description="Display label for the asset")
+    url: str = Field(..., description="URL to the asset")
+
+
+class WebsiteScanConversion(BaseModel):
+    """Conversion-oriented content from the site."""
+
+    primary_cta_text: str = Field(..., description="Primary call-to-action text")
+    primary_cta_url: str = Field(..., description="Primary call-to-action URL")
+    supporting_assets: list[WebsiteScanSupportingAsset] = Field(
+        default_factory=list, description="Supporting assets for conversion"
+    )
+
+
 class WebsiteScanResponse(BaseModel):
-    """Response from website scan with extracted business information.
+    """Data payload for website_scan topic results (no wrappers)."""
 
-    The LLM analyzes the website content and extracts structured business
-    information to pre-fill the onboarding form.
-    """
-
-    products: list[ProductInfo] = Field(
-        ...,
-        description="List of products/services offered by the business",
-    )
-    niche: str = Field(
-        ...,
-        description="Target market and business niche description (2-3 sentences)",
-    )
-    ica: str = Field(
-        ...,
-        description="Ideal Customer Avatar - demographics, pain points, and goals",
-    )
-    value_proposition: str = Field(
-        ...,
-        description="Main value proposition - what makes this business unique (1-2 sentences)",
-    )
+    scan_id: str = Field(..., description="Unique identifier for this scan run")
+    captured_at: str = Field(..., description="ISO8601 timestamp when the scan was captured")
+    source_url: str = Field(..., description="URL that was scanned")
+    company_profile: WebsiteScanCompanyProfile
+    target_market: WebsiteScanTargetMarket
+    offers: WebsiteScanOffers
+    credibility: WebsiteScanCredibility
+    conversion: WebsiteScanConversion
 
 
 # Coaching endpoint models
@@ -170,6 +217,11 @@ __all__ = [
     "OnboardingSuggestionRequest",
     "OnboardingSuggestionResponse",
     "SuggestionVariation",
+    "WebsiteScanCompanyProfile",
+    "WebsiteScanConversion",
+    "WebsiteScanCredibility",
+    "WebsiteScanOffers",
     "WebsiteScanRequest",
     "WebsiteScanResponse",
+    "WebsiteScanTargetMarket",
 ]

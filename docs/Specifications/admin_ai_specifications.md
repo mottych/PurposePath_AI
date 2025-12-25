@@ -878,30 +878,50 @@ POST /api/v1/admin/topics/{topic_id}/test
 ```json
 {
   "parameters": {
-    "user_name": "Test User",
-    "core_values": "integrity, growth, compassion",
-    "user_input": "How can I stay aligned with my values at work?"
+    "website_url": "https://example.com",
+    "scan_depth": 2
   },
-  "use_draft_prompts": false
+  "allow_inactive": false
 }
 ```
 
 **Notes:**
 
-- Parameters not provided in the request will be auto-enriched from the user's profile if the admin has a valid JWT token
-- `use_draft_prompts`: Reserved for future A/B testing (currently ignored)
+- Parameters not provided will be auto-enriched if a JWT token is supplied (template processor enabled)
+- `allow_inactive`: When true, permits testing inactive topics for draft validation
 
 **Response (Success):**
 
 ```json
 {
   "success": true,
-  "result": {
-    "response": "Based on your core values of integrity, growth, and compassion...",
-    "recommendations": ["..."]
+  "topic_id": "website_scan",
+  "rendered_system_prompt": "...system prompt after substitutions...",
+  "rendered_user_prompt": "...user prompt after substitutions...",
+  "enriched_parameters": {
+    "website_url": "https://example.com",
+    "scan_depth": 2,
+    "website_content": "..."
   },
-  "execution_time_ms": 1245.5,
-  "tokens_used": null
+  "response": {
+    "scan_id": "a1d3b5d8-42cd-4d76-80db-92cf3b4a1a91",
+    "captured_at": "2025-12-24T05:10:11Z",
+    "source_url": "https://example.com",
+    "company_profile": {"company_name": "Acme", "legal_name": "Acme, Inc.", "tagline": "...", "overview": "..."},
+    "target_market": {"primary_audience": "...", "segments": ["..."], "pain_points": ["..."]},
+    "offers": {"primary_product": "...", "categories": ["..."], "features": ["..."], "differentiators": ["..."]},
+    "credibility": {"notable_clients": ["..."], "testimonials": [{"quote": "...", "attribution": "..."}]},
+    "conversion": {"primary_cta_text": "...", "primary_cta_url": "https://example.com/demo", "supporting_assets": [{"label": "ROI calculator", "url": "https://example.com/roi"}]}
+  },
+  "response_model": "WebsiteScanResponse",
+  "response_schema": {"title": "WebsiteScanResponse", "type": "object", "properties": {"scan_id": {"type": "string"}, "captured_at": {"type": "string"}}},
+  "llm_metadata": {
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-20241022",
+    "usage": {"prompt_tokens": 1200, "completion_tokens": 600, "total_tokens": 1800},
+    "finish_reason": "stop"
+  },
+  "execution_time_ms": 1245.5
 }
 ```
 
@@ -910,10 +930,9 @@ POST /api/v1/admin/topics/{topic_id}/test
 ```json
 {
   "success": false,
-  "result": null,
-  "execution_time_ms": 150.2,
-  "tokens_used": null,
-  "error": "Missing required parameter: user_input"
+  "topic_id": "website_scan",
+  "error": "Missing required parameters: website_url",
+  "execution_time_ms": 150.2
 }
 ```
 

@@ -69,33 +69,66 @@ TOPIC_SEED_DATA: dict[str, TopicSeedData] = {
         topic_name="Website Scan",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.ONBOARDING.value,
-        description="Scan a website and extract comprehensive business information including purpose, services, values, and market positioning",
+        description=(
+            "Scan a website and return structured company profile, target market, offers, "
+            "credibility signals, and conversion assets"
+        ),
         model_code="anthropic.claude-3-5-sonnet-20241022-v1:0",
         temperature=0.7,
         max_tokens=4096,
-        default_system_prompt="""You are an expert business analyst specializing in website content analysis.
-Your role is to extract meaningful business intelligence from website content, identifying:
-- Business purpose and value proposition
-- Core services and offerings
-- Target market and customer segments
-- Company values and culture
-- Market positioning and differentiation
+        default_system_prompt="""You are an expert business analyst performing structured extraction from website content.
+- Read provided content only; avoid speculation.
+- Populate every field with concise, factual statements; if absent, leave the list empty or use a short placeholder such as "Unknown".
+- Return JSON using the exact field names requested.
+- Prefer bullet-friendly phrasing for lists; keep overview sentences tight.""",
+        default_user_prompt="""Analyze this website content and produce a structured JSON object.
 
-Analyze thoroughly but concisely, focusing on actionable insights.""",
-        default_user_prompt="""Analyze the website at: {url}
+URL: {website_url}
+Title: {website_title}
+Meta description: {meta_description}
+Body: {website_content}
 
-Scan depth: {scan_depth}
+Return JSON with this exact shape:
+{
+        "scan_id": "<new short id>",
+        "captured_at": "<ISO8601 timestamp>",
+        "source_url": "{website_url}",
+        "company_profile": {
+                "company_name": "<public name>",
+                "legal_name": "<registered legal name>",
+                "tagline": "<marketing headline>",
+                "overview": "<1-3 sentence business overview>"
+        },
+        "target_market": {
+                "primary_audience": "<primary buyer persona>",
+                "segments": ["<segment>", "<segment>", "<segment>", ...],
+                "pain_points": ["<pain point>", "<pain point>", "<pain point>", ...]
+        },
+        "offers": {
+                "primary_product": "<main offer>",
+                "categories": ["<category>", ...],
+                "features": ["<feature>", ...],
+                "differentiators": ["<differentiator>", ...]
+        },
+        "credibility": {
+                "notable_clients": ["<client>", ...],
+                "testimonials": [
+                        {"quote": "<short quote>", "attribution": "<name or role>"}
+                ]
+        },
+        "conversion": {
+                "primary_cta_text": "<CTA text>",
+                "primary_cta_url": "<CTA URL>",
+                "supporting_assets": [
+                        {"label": "<asset label>", "url": "<asset URL>"}
+                ]
+        }
+}
 
-Provide a comprehensive analysis including:
-1. Business Purpose & Value Proposition
-2. Core Services/Products
-3. Target Market & Customer Segments
-4. Company Values & Culture
-5. Market Positioning
-6. Key Differentiators
-7. Strategic Insights
-
-Format as structured JSON with clear sections.""",
+Rules:
+- Keep lists meaningful (3-5 items when available); use empty arrays if nothing is present.
+- Do not add extra top-level keys or narrative outside the JSON.
+- Provide real URLs only when present in content; otherwise omit rather than fabricate.""",
         display_order=10,
     ),
     "onboarding_suggestions": TopicSeedData(
