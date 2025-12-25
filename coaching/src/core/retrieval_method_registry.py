@@ -255,10 +255,13 @@ async def get_goal_by_id(context: RetrievalContext) -> dict[str, Any]:
             if goal.get("id") == goal_id:
                 return {
                     "goal": goal,
-                    "goal_title": goal.get("title", ""),
-                    "goal_intent": goal.get("intent", ""),
+                    # Map new API fields: 'name' instead of 'title'
+                    "goal_title": goal.get("name", ""),
+                    "goal_intent": goal.get("description", ""),  # description maps to intent
                     "goal_status": goal.get("status", ""),
-                    "goal_horizon": goal.get("horizon", ""),
+                    "goal_horizon": goal.get(
+                        "type", ""
+                    ),  # type maps to horizon (annual, quarterly, etc)
                     "goal_strategies": goal.get("strategies", []),
                     "goal_kpis": goal.get("kpis", []),
                     "goal_progress": goal.get("progress", 0),
@@ -480,8 +483,10 @@ async def get_action_by_id(context: RetrievalContext) -> dict[str, Any]:
                     "action_description": action.get("description", ""),
                     "action_status": action.get("status", ""),
                     "action_priority": action.get("priority", ""),
-                    "action_due_date": action.get("due_date", ""),
-                    "action_assigned_to": action.get("assigned_to", ""),
+                    # Map new API fields: 'dueDate' camelCase instead of snake_case
+                    "action_due_date": action.get("dueDate", ""),
+                    # Map new API fields: 'assignedPersonName' instead of 'assigned_to'
+                    "action_assigned_to": action.get("assignedPersonName", ""),
                 }
         logger.warning("retrieval_method.get_action_by_id.not_found", action_id=action_id)
         return {}
@@ -508,7 +513,8 @@ async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
         )
         actions = await context.client.get_operations_actions(context.tenant_id)
         actions_list = list(actions)
-        pending = [a for a in actions_list if a.get("status") in ("pending", "in_progress")]
+        # Map new API fields: status values are snake_case (not_started, in_progress)
+        pending = [a for a in actions_list if a.get("status") in ("not_started", "in_progress")]
         return {
             "actions": actions_list,
             "actions_count": len(actions_list),
@@ -557,10 +563,13 @@ async def get_issue_by_id(context: RetrievalContext) -> dict[str, Any]:
                     "issue": issue,
                     "issue_title": issue.get("title", ""),
                     "issue_description": issue.get("description", ""),
-                    "issue_status": issue.get("status", ""),
+                    # Map new API fields: uses statusConfigId, not simple 'status' string
+                    "issue_status": issue.get("statusConfigId", ""),
                     "issue_priority": issue.get("priority", ""),
-                    "issue_business_impact": issue.get("business_impact", ""),
-                    "issue_assigned_to": issue.get("assigned_to", ""),
+                    # Map new API fields: 'impact' instead of 'business_impact'
+                    "issue_business_impact": issue.get("impact", ""),
+                    # Map new API fields: 'assignedPersonName' instead of 'assigned_to'
+                    "issue_assigned_to": issue.get("assignedPersonName", ""),
                 }
         logger.warning("retrieval_method.get_issue_by_id.not_found", issue_id=issue_id)
         return {}
