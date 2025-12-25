@@ -242,17 +242,18 @@ class BusinessApiClient:
         """
         Get user's goals from Traction Service.
 
-        Uses existing /goals endpoint with ownerId filter.
+        Uses /goals endpoint with personId filter (updated from ownerId).
+        Response format changed to paginated structure with items array.
 
         Args:
-            user_id: User identifier (used as ownerId filter)
+            user_id: User identifier (used as personId filter)
             tenant_id: Tenant identifier (for context, included in headers)
 
         Returns:
             List of goals owned by the user:
-            - id, title, intent, status, horizon
-            - strategies, kpis, progress
-            - owner_id, owner_name
+            - id, name, description, status, type
+            - targetDate, startDate, progress
+            - owner (object with id, firstName, lastName, email)
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -261,17 +262,21 @@ class BusinessApiClient:
         try:
             logger.info("Fetching user goals", user_id=user_id, tenant_id=tenant_id)
 
-            # GET /goals?ownerId={userId} (Traction Service)
+            # GET /goals?personId={userId} (Traction Service - updated query param)
             response = await self.client.get(
                 "/goals",
                 headers=self._get_headers(tenant_id),
-                params={"ownerId": user_id},
+                params={"personId": user_id},  # Changed from ownerId to personId
             )
             response.raise_for_status()
 
             payload = response.json()
             data = self._extract_data(payload)
-            if isinstance(data, list):
+
+            # Handle new paginated response structure
+            if isinstance(data, dict) and "items" in data:
+                goals = data.get("items", [])
+            elif isinstance(data, list):
                 goals = data
             elif isinstance(data, dict):
                 goals = data.get("data") or data.get("goals") or []
@@ -494,15 +499,19 @@ class BusinessApiClient:
         """
         Get recent operations actions from Traction Service.
 
+        Response format: double-nested data structure (success.data.data array).
+
         Args:
             tenant_id: Tenant identifier
             limit: Maximum number of actions to retrieve
 
         Returns:
             List of recent actions:
-            - id, title, description, status
-            - priority, due_date, assigned_to
-            - created_at, updated_at
+            - id, tenantId, title, description, status
+            - priority, dueDate, assignedPersonId, assignedPersonName
+            - progress, estimatedHours, actualHours
+            - connections: {goalIds, strategyIds, issueIds}
+            - createdAt, updatedAt
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -519,11 +528,22 @@ class BusinessApiClient:
             response.raise_for_status()
 
             payload = response.json()
+            # Handle double-nested data structure: {success, data: {success, data: [...]}}
             data = self._extract_data(payload)
-            if isinstance(data, list):
+
+            if isinstance(data, dict) and "data" in data:
+                # Extract from double-nested structure
+                inner_data = data.get("data")
+                if isinstance(inner_data, list):
+                    actions = inner_data
+                elif isinstance(inner_data, dict) and "items" in inner_data:
+                    actions = inner_data.get("items", [])
+                else:
+                    actions = []
+            elif isinstance(data, list):
                 actions = data
             elif isinstance(data, dict):
-                actions = data.get("data") or data.get("actions") or []
+                actions = data.get("actions") or []
             else:
                 actions = []
 
@@ -556,15 +576,22 @@ class BusinessApiClient:
         """
         Get open operations issues from Traction Service.
 
+        Updated endpoint path: /api/issues (not /operations/issues).
+        Uses statusCategory=open filter for open issues.
+
         Args:
             tenant_id: Tenant identifier
             limit: Maximum number of issues to retrieve
 
         Returns:
             List of open issues:
-            - id, title, description, status
-            - business_impact, priority
-            - assigned_to, created_at
+            - id, title, description
+            - typeConfigId, statusConfigId
+            - impact, priority
+            - reporterId, reporterName, assignedPersonId, assignedPersonName
+            - dueDate, estimatedHours, actualHours, tags
+            - connections: {goalIds, strategyIds, actionIds}
+            - createdAt, updatedAt
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
@@ -573,15 +600,18 @@ class BusinessApiClient:
         try:
             logger.info("Fetching operations issues", tenant_id=tenant_id, limit=limit)
 
+            # Updated endpoint: /api/issues with statusCategory filter
             response = await self.client.get(
-                "/operations/issues",
+                "/api/issues",
                 headers=self._get_headers(tenant_id),
-                params={"limit": limit, "status": "open"},
+                params={"limit": limit, "statusCategory": "open"},
             )
             response.raise_for_status()
 
             payload = response.json()
             data = self._extract_data(payload)
+
+            # Handle array response (not paginated for this endpoint)
             if isinstance(data, list):
                 issues = data
             elif isinstance(data, dict):
