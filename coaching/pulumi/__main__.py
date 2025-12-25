@@ -326,6 +326,9 @@ ai_job_executor_rule = aws.cloudwatch.EventRule(
         {
             "source": ["purposepath.ai"],
             "detail-type": ["ai.job.created"],
+            "detail": {
+                "stage": [stack]  # Filter by environment to prevent cross-stage execution
+            },
         }
     ),
     tags={"Environment": stack, "Service": "coaching-ai"},

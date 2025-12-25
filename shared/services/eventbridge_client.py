@@ -65,6 +65,7 @@ class EventBridgePublisher:
         region_name: str = "us-east-1",
         event_bus_name: str = DEFAULT_EVENT_BUS,
         source: str = AI_EVENT_SOURCE,
+        stage: str = "dev",
     ) -> None:
         """Initialize the EventBridge publisher.
 
@@ -72,10 +73,12 @@ class EventBridgePublisher:
             region_name: AWS region
             event_bus_name: EventBridge bus name (default: "default")
             source: Event source identifier
+            stage: Environment stage (dev/staging/production) for event filtering
         """
         self._client: Any = get_eventbridge_client(region_name)
         self._event_bus_name = event_bus_name
         self._source = source
+        self._stage = stage
 
     def publish(self, event: DomainEvent) -> str:
         """Publish a domain event to EventBridge.
@@ -96,6 +99,7 @@ class EventBridgePublisher:
             "topicId": event.data.get("topicId", ""),
             "eventType": event.event_type,
             "data": event.data,
+            "stage": self._stage,  # Add stage for environment filtering
         }
 
         entry = {

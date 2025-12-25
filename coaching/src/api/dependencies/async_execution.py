@@ -50,8 +50,13 @@ async def get_event_publisher() -> EventBridgePublisher:
             region_name=settings.aws_region,
             event_bus_name="default",  # Using default EventBridge bus
             source="purposepath.ai",
+            stage=settings.stage,
         )
-        logger.info("EventBridgePublisher initialized", source="purposepath.ai")
+        logger.info(
+            "EventBridgePublisher initialized",
+            source="purposepath.ai",
+            stage=settings.stage,
+        )
 
     return _event_publisher
 
