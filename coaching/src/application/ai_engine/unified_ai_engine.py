@@ -6,6 +6,7 @@ topic-driven configuration, supporting both single-shot and conversation flows.
 
 import json
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -16,7 +17,7 @@ from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.ports.conversation_repository_port import ConversationRepositoryPort
-from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort
+from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort, LLMResponse
 from coaching.src.domain.value_objects.conversation_context import ConversationContext
 from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
@@ -27,6 +28,20 @@ if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
+
+
+@dataclass
+class SingleShotExecutionContext:
+    """Debug context for single-shot executions."""
+
+    topic_id: str
+    response_model_name: str
+    rendered_system_prompt: str
+    rendered_user_prompt: str
+    enriched_parameters: dict[str, Any]
+    response_schema: dict[str, object] | None
+    llm_response: LLMResponse
+    serialized_response: BaseModel
 
 
 # Response format instructions template appended to system prompts
@@ -166,6 +181,7 @@ class UnifiedAIEngine:
         user_id: str | None = None,
         tenant_id: str | None = None,
         template_processor: "TemplateParameterProcessor | None" = None,
+        allow_inactive: bool = False,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
@@ -197,15 +213,64 @@ class UnifiedAIEngine:
             PromptRenderError: If prompt rendering fails
             SerializationError: If response serialization fails
         """
+        context = await self._build_single_shot_context(
+            topic_id=topic_id,
+            parameters=parameters,
+            response_model=response_model,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            template_processor=template_processor,
+            allow_inactive=allow_inactive,
+        )
+
+        return context.serialized_response
+
+    async def execute_single_shot_debug(
+        self,
+        *,
+        topic_id: str,
+        parameters: dict[str, Any],
+        response_model: type[BaseModel],
+        user_id: str | None = None,
+        tenant_id: str | None = None,
+        template_processor: "TemplateParameterProcessor | None" = None,
+        allow_inactive: bool = False,
+    ) -> SingleShotExecutionContext:
+        """Execute single-shot and return debug context with prompts and metadata."""
+
+        return await self._build_single_shot_context(
+            topic_id=topic_id,
+            parameters=parameters,
+            response_model=response_model,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            template_processor=template_processor,
+            allow_inactive=allow_inactive,
+        )
+
+    async def _build_single_shot_context(
+        self,
+        *,
+        topic_id: str,
+        parameters: dict[str, Any],
+        response_model: type[BaseModel],
+        user_id: str | None,
+        tenant_id: str | None,
+        template_processor: "TemplateParameterProcessor | None",
+        allow_inactive: bool,
+    ) -> SingleShotExecutionContext:
+        """Execute single-shot flow and return full context for debugging."""
+
         self.logger.info(
             "Executing single-shot AI request",
             topic_id=topic_id,
             response_model=response_model.__name__,
             param_count=len(parameters),
+            allow_inactive=allow_inactive,
         )
 
         # Step 1: Get topic configuration
-        topic = await self._get_active_topic(topic_id)
+        topic = await self._get_active_topic(topic_id, allow_inactive=allow_inactive)
 
         # Step 2: Load prompts from S3
         system_prompt_content = await self._load_prompt(topic, "system")
@@ -260,8 +325,8 @@ class UnifiedAIEngine:
             finish_reason=llm_response.finish_reason,
         )
 
-        # Step 7: Serialize response
-        result = await self.response_serializer.serialize(
+        # Step 8: Serialize response
+        serialized = await self.response_serializer.serialize(
             ai_response=llm_response.content,
             response_model=response_model,
             topic_id=topic_id,
@@ -270,10 +335,19 @@ class UnifiedAIEngine:
         self.logger.info(
             "Single-shot execution completed",
             topic_id=topic_id,
-            result_type=type(result).__name__,
+            result_type=type(serialized).__name__,
         )
 
-        return result
+        return SingleShotExecutionContext(
+            topic_id=topic_id,
+            response_model_name=response_model.__name__,
+            rendered_system_prompt=rendered_system,
+            rendered_user_prompt=rendered_user,
+            enriched_parameters=enriched_params,
+            response_schema=response_schema,
+            llm_response=llm_response,
+            serialized_response=serialized,
+        )
 
     async def _enrich_parameters(
         self,
@@ -361,25 +435,16 @@ class UnifiedAIEngine:
 
         return enriched
 
-    async def _get_active_topic(self, topic_id: str) -> LLMTopic:
-        """Get topic and verify it's active.
+    async def _get_active_topic(self, topic_id: str, *, allow_inactive: bool = False) -> LLMTopic:
+        """Get topic and verify it's active unless explicitly allowed."""
 
-        Args:
-            topic_id: Topic identifier
-
-        Returns:
-            Active LLMTopic entity
-
-        Raises:
-            TopicNotFoundError: If topic not found or inactive
-        """
         topic = await self.topic_repo.get(topic_id=topic_id)
 
         if topic is None:
             self.logger.error("Topic not found", topic_id=topic_id)
             raise TopicNotFoundError(topic_id)
 
-        if not topic.is_active:
+        if not topic.is_active and not allow_inactive:
             self.logger.error("Topic is inactive", topic_id=topic_id)
             raise TopicNotFoundError(topic_id)
 
