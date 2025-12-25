@@ -100,7 +100,7 @@ class TestBusinessApiClient:
     async def test_get_user_goals(self, business_client, mock_http_client):
         """Test get_user_goals."""
         mock_http_client.get.return_value.json.return_value = {
-            "data": [{"id": "g1", "title": "Goal 1"}]
+            "data": {"items": [{"id": "g1", "title": "Goal 1"}]}
         }
 
         result = await business_client.get_user_goals("u1", "t1")
@@ -110,7 +110,7 @@ class TestBusinessApiClient:
         mock_http_client.get.assert_called_with(
             "/goals",
             headers=business_client._get_headers("t1"),
-            params={"ownerId": "u1"},
+            params={"personId": "u1"},
         )
 
     async def test_get_goal_stats(self, business_client, mock_http_client):
@@ -165,9 +165,9 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "i1"
         mock_http_client.get.assert_called_with(
-            "/operations/issues",
+            "/api/issues",
             headers=business_client._get_headers("t1"),
-            params={"limit": 20, "status": "open"},
+            params={"limit": 20, "statusCategory": "open"},
         )
 
     async def test_get_subscription_tiers(self, business_client, mock_http_client):

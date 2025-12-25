@@ -1,6 +1,6 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: December 14, 2025
+- Last Updated: December 25, 2025
 
 ## Overview
 
@@ -887,6 +887,7 @@ POST /api/v1/admin/topics/{topic_id}/test
 
 **Notes:**
 
+- **Only supports `single_shot` topics** - conversation_coaching and other topic types cannot be tested via this endpoint
 - Parameters not provided will be auto-enriched if a JWT token is supplied (template processor enabled)
 - `allow_inactive`: When true, permits testing inactive topics for draft validation
 
@@ -939,9 +940,12 @@ POST /api/v1/admin/topics/{topic_id}/test
 **Status Codes:**
 
 - `200 OK`: Test completed (check `success` field)
+- `400 Bad Request`: Unsupported topic type (only single_shot topics supported)
 - `404 Not Found`: Topic not found
+- `422 Unprocessable Entity`: Missing required parameters
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: AI processing or serialization failure
 
 ---
 
