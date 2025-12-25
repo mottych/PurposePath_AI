@@ -361,8 +361,7 @@ class TestWebsiteScanResponse:
         """Test response with many testimonials."""
         # Arrange
         testimonials = [
-            WebsiteScanTestimonial(quote=f"Quote {i}", attribution=f"Person {i}")
-            for i in range(20)
+            WebsiteScanTestimonial(quote=f"Quote {i}", attribution=f"Person {i}") for i in range(20)
         ]
 
         # Act
