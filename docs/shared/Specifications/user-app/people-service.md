@@ -282,37 +282,23 @@ List people with filtering and pagination.
         "id": "string (GUID)",
         "first_name": "string",
         "last_name": "string",
+        "display_name": "string",
         "email": "string?",
-        "is_email_verified": "boolean",
         "phone": "string?",
         "title": "string?",
-        "person_type": {
-          "id": "string (GUID)",
-          "code": "string",
-          "name": "string"
-        },
-        "is_active": "boolean",
+        "person_type_name": "string?",
         "is_assignable": "boolean",
-        "primary_role": {
-          "id": "string (GUID)",
-          "name": "string"
-        },
-        "tags": [
-          {
-            "id": "string (GUID)",
-            "name": "string"
-          }
-        ],
-        "has_system_access": "boolean",
-        "created_at": "string (ISO 8601)",
-        "updated_at": "string (ISO 8601)?"
+        "status": "active | inactive",
+        "primary_role_name": "string?"
       }
     ],
     "pagination": {
       "page": "number",
       "page_size": "number",
       "total_items": "number",
-      "total_pages": "number"
+      "total_pages": "number",
+      "has_next_page": "boolean",
+      "has_previous_page": "boolean"
     }
   }
 }
