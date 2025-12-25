@@ -272,6 +272,7 @@ coaching_lambda = aws.lambda_.Function(
             "JWT_SECRET_NAME": stack_config["jwt_secret"],
             "JWT_ISSUER": stack_config["jwt_issuer"],
             "JWT_AUDIENCE": stack_config["jwt_audience"],
+            "FALLBACK_LLM_PROVIDERS": '["anthropic"]',  # Exclude OpenAI (deactivated account)
         }
     ),
 )
