@@ -1,0 +1,167 @@
+# Cross-Repository Documentation Sync Workflow
+#
+# This workflow syncs the docs/shared/ folder across all PurposePath repositories.
+# When documentation is updated in any repo, it propagates to all other repos.
+#
+# The docs/shared/ folder contains:
+# - Specifications (backend/frontend API specs)
+# - Shared documentation across all repos
+#
+# Setup Requirements:
+# 1. Create a PAT with 'repo' scope that has access to all PurposePath repos
+# 2. Add the PAT as a secret named 'DOCS_SYNC_PAT' to all repositories
+# 3. Copy this workflow file to all repositories
+#
+# Synced Repositories:
+# - PurposePath_Api (Backend API)
+# - PurposePath_Web (User Frontend)
+# - PurposePath_AI (Coaching Service)
+# - PurposePath_Admin (Admin Frontend)
+# - PurposePath_Kpi (KPI Integration)
+
+name: Sync Shared Documentation
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'docs/shared/**'
+  
+  # Allow manual trigger for initial sync or troubleshooting
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to sync to (dev or main)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - main
+
+# Prevent concurrent syncs to avoid race conditions
+concurrency:
+  group: docs-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync-docs:
+    # Skip if this push was from a sync operation (prevents infinite loops)
+    if: "!contains(github.event.head_commit.message, '[docs-sync]')"
+    
+    runs-on: ubuntu-latest
+    
+    env:
+      # List of repositories to sync to (excluding the source repo)
+      ALL_REPOS: |
+        PurposePath_Api
+        PurposePath_Web
+        PurposePath_AI
+        PurposePath_Admin
+        PurposePath_Kpi
+      
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: source
+          
+      - name: Get current repo name
+        id: current-repo
+        run: echo "name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+        
+      - name: Get commit info
+        id: commit-info
+        run: |
+          cd source
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "message=$(git log -1 --pretty=%s | head -c 50)" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=%an)" >> $GITHUB_OUTPUT
+          
+      - name: Sync to other repositories
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_SYNC_PAT }}
+          CURRENT_REPO: ${{ steps.current-repo.outputs.name }}
+          SOURCE_SHA: ${{ steps.commit-info.outputs.sha }}
+          SOURCE_MESSAGE: ${{ steps.commit-info.outputs.message }}
+          SOURCE_AUTHOR: ${{ steps.commit-info.outputs.author }}
+          SOURCE_BRANCH: ${{ github.event.inputs.target_branch || github.ref_name }}
+        run: |
+          # Configure git
+          git config --global user.name "GitHub Actions (Docs Sync)"
+          git config --global user.email "actions@github.com"
+          
+          # Process each repository
+          echo "$ALL_REPOS" | while read -r repo; do
+            # Skip empty lines and current repo
+            [ -z "$repo" ] && continue
+            [ "$repo" = "$CURRENT_REPO" ] && continue
+            
+            echo "=========================================="
+            echo "Syncing to: $repo"
+            echo "=========================================="
+            
+            # Clone target repo
+            TARGET_DIR="target-$repo"
+            if ! git clone --depth=1 --branch="$SOURCE_BRANCH" \
+              "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/${repo}.git" \
+              "$TARGET_DIR" 2>/dev/null; then
+              echo "WARNING: Branch $SOURCE_BRANCH does not exist in $repo, skipping"
+              continue
+            fi
+            
+            # Create docs/shared if it doesn't exist
+            mkdir -p "$TARGET_DIR/docs/shared"
+            
+            # Sync docs/shared/ if it exists in source
+            if [ -d "source/docs/shared" ]; then
+              rsync -av --delete \
+                --exclude='.git' \
+                "source/docs/shared/" "$TARGET_DIR/docs/shared/"
+            fi
+            
+            # Check for changes
+            cd "$TARGET_DIR"
+            if git diff --quiet && git diff --cached --quiet; then
+              echo "No changes needed for $repo"
+              cd ..
+              continue
+            fi
+            
+            # Stage and commit changes
+            git add docs/shared/
+            
+            git commit -m "docs: sync shared documentation from $CURRENT_REPO [docs-sync]" \
+              -m "Synced from: $CURRENT_REPO@$SOURCE_SHA" \
+              -m "Original commit: $SOURCE_MESSAGE" \
+              -m "Original author: $SOURCE_AUTHOR" \
+              -m "Branch: $SOURCE_BRANCH" \
+              -m "[skip ci]"
+            
+            # Push changes
+            if git push; then
+              echo "Successfully synced to $repo"
+            else
+              echo "Failed to push to $repo"
+            fi
+            
+            cd ..
+          done
+          
+          echo "=========================================="
+          echo "Sync complete!"
+          echo "=========================================="
+          
+      - name: Summary
+        run: |
+          echo "## Documentation Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.event.inputs.target_branch || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ steps.commit-info.outputs.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Message:** $(echo '${{ steps.commit-info.outputs.message }}' | head -c 50)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Documentation in docs/shared/ has been synced to all PurposePath repositories." >> $GITHUB_STEP_SUMMARY
