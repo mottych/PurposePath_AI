@@ -86,6 +86,8 @@ coaching_sessions_table = aws.dynamodb.Table(
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
     bucket=f"purposepath-coaching-prompts-380276784420-{stack}",
+    object_ownership="BucketOwnerEnforced",
+    acl=None,
     versioning=aws.s3.BucketVersioningArgs(enabled=True),
     server_side_encryption_configuration=aws.s3.BucketServerSideEncryptionConfigurationArgs(
         rule=aws.s3.BucketServerSideEncryptionConfigurationRuleArgs(
