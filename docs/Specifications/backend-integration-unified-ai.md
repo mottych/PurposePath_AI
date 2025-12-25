@@ -327,21 +327,68 @@ Scan a website URL and extract business information for onboarding.
   "topic_id": "website_scan",
   "success": true,
   "data": {
-    "products": [
-      {
-        "id": "coaching-program",
-        "name": "Business Coaching Program",
-        "problem": "Helps entrepreneurs overcome growth plateaus"
-      },
-      {
-        "id": "strategy-workshop",
-        "name": "Strategy Workshop",
-        "problem": "Provides clarity on business direction and priorities"
-      }
-    ],
-    "niche": "Business coaching for growth-stage entrepreneurs seeking to scale their companies while maintaining work-life balance.",
-    "ica": "Mid-career entrepreneurs (35-50) running businesses with $500K-$5M revenue, feeling stuck at a growth plateau, seeking strategic guidance and accountability.",
-    "value_proposition": "Transform your business growth while reclaiming your personal time through our proven coaching methodology."
+    "scan_id": "scan_f3c9ab",
+    "captured_at": "2025-12-24T03:12:54Z",
+    "source_url": "https://example.com",
+    "company_profile": {
+      "company_name": "Example Corp",
+      "legal_name": "Example Corporation, Inc.",
+      "tagline": "Data-driven growth for modern teams",
+      "overview": "Example Corp provides analytics-driven marketing platforms that help mid-market teams launch, test, and scale campaigns."
+    },
+    "target_market": {
+      "primary_audience": "Marketing and revenue leaders at mid-market SaaS companies",
+      "segments": [
+        "B2B SaaS (ARR $5M-$50M)",
+        "Hybrid go-to-market teams",
+        "Demand generation leaders"
+      ],
+      "pain_points": [
+        "Fragmented channel analytics",
+        "Slow experimentation cycles",
+        "Unclear attribution for pipeline"
+      ]
+    },
+    "offers": {
+      "primary_product": "Growth Experimentation Platform",
+      "categories": [
+        "Marketing analytics",
+        "Campaign orchestration"
+      ],
+      "features": [
+        "Channel performance dashboards",
+        "Experiment templates",
+        "Automated reporting"
+      ],
+      "differentiators": [
+        "Playbooks tuned for B2B SaaS",
+        "Fast setup with existing data stack",
+        "Revenue-aware experimentation scoring"
+      ]
+    },
+    "credibility": {
+      "notable_clients": [
+        "Northwind Analytics",
+        "Contoso Labs",
+        "Fabrikam Cloud"
+      ],
+      "testimonials": [
+        {
+          "quote": "We doubled qualified pipeline after standardizing experiments in one place.",
+          "attribution": "VP Growth, Northwind"
+        }
+      ]
+    },
+    "conversion": {
+      "primary_cta_text": "Book a growth audit",
+      "primary_cta_url": "https://example.com/demo",
+      "supporting_assets": [
+        {
+          "label": "2025 SaaS Growth Benchmark Report",
+          "url": "https://example.com/benchmark"
+        }
+      ]
+    }
   },
   "schema_ref": "WebsiteScanResponse",
   "metadata": {
