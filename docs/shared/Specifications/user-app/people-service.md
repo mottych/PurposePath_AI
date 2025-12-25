@@ -582,13 +582,17 @@ Update an existing person.
 
 ---
 
-### DELETE /api/people/{id}
+### DELETE /people/{id}
 
-Soft delete a person (sets inactive).
+Soft delete (deactivate) a person. Optionally reassign their work items to another person.
 
 **Path Parameters:**
 
 - `id` - Person ID (GUID)
+
+**Query Parameters:**
+
+- `reassignTo` - Optional: Person ID (GUID) to reassign work items to
 
 **Headers Required:**
 
@@ -599,37 +603,45 @@ Soft delete a person (sets inactive).
 
 ```json
 {
-  "success": true
+  "success": true,
+  "message": "Person deactivated successfully",
+  "data": {
+    "id": "string (GUID)",
+    "first_name": "string",
+    "last_name": "string",
+    "display_name": "string",
+    "email": "string?",
+    "phone": "string?",
+    "title": "string?",
+    "person_type": {
+      "id": "string (GUID)",
+      "name": "string"
+    },
+    "is_assignable": false,
+    "is_primary": false,
+    "notes": "string?",
+    "status": "inactive",
+    "linked_user_id": "string (GUID)?",
+    "is_email_verified": false,
+    "tags": ["string (GUID)"],
+    "role_assignments": [],
+    "created_by": "string (GUID)",
+    "created_at": "string (ISO 8601)",
+    "updated_by": "string (GUID)",
+    "updated_at": "string (ISO 8601)"
+  }
 }
 ```
 
 **Error Responses:**
 
-```json
-{
-  "success": false,
-  "error": "Cannot delete person with linked user account",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "details": {
-    "linked_user_id": "guid"
-  }
-}
-```
-
-```json
-{
-  "success": false,
-  "error": "Cannot delete person with active role assignments",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "details": {
-    "active_assignments": 2
-  }
-}
-```
+- **404 Not Found** - Person not found
+- **400 Bad Request** - Invalid person ID format, invalid reassignTo ID, or deactivation failed
+- **500 Internal Server Error** - Server error
 
 ---
 
-### POST /api/people/{id}/activate
+### POST /people/{id}/activate
 
 Reactivate a deactivated person.
 
@@ -647,77 +659,44 @@ Reactivate a deactivated person.
 ```json
 {
   "success": true,
+  "message": "Person activated successfully",
   "data": {
     "id": "string (GUID)",
-    "is_active": true
-  }
-}
-```
-
----
-
-### POST /api/people/{id}/deactivate
-
-Deactivate a person (terminates role assignments, optionally reassigns work).
-
-**Path Parameters:**
-
-- `id` - Person ID (GUID)
-
-**Headers Required:**
-
-- `Authorization: Bearer {accessToken}`
-- `X-Tenant-Id: {tenantId}`
-
-**Request (Optional):**
-
-```json
-{
-  "reassign_work_items_to": "string (GUID)?"
-}
-```
-
-**Field Constraints:**
-
-| Field | Type | Required | Constraints |
-|-------|------|----------|-------------|
-| reassign_work_items_to | GUID | No | Must be active, assignable person |
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "deactivated": true,
-    "role_assignments_terminated": 2,
-    "work_items_affected": {
-      "actions": 5,
-      "kpis": 2,
-      "issues": 1
+    "first_name": "string",
+    "last_name": "string",
+    "display_name": "string",
+    "email": "string?",
+    "phone": "string?",
+    "title": "string?",
+    "person_type": {
+      "id": "string (GUID)",
+      "name": "string"
     },
-    "work_items_reassigned_to": "string (GUID)?"
+    "is_assignable": true,
+    "is_primary": false,
+    "notes": "string?",
+    "status": "active",
+    "linked_user_id": "string (GUID)?",
+    "is_email_verified": false,
+    "tags": ["string (GUID)"],
+    "role_assignments": [],
+    "created_by": "string (GUID)",
+    "created_at": "string (ISO 8601)",
+    "updated_by": "string (GUID)",
+    "updated_at": "string (ISO 8601)"
   }
 }
 ```
 
 **Error Responses:**
 
-```json
-{
-  "success": false,
-  "error": "Cannot deactivate person linked to active user",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "details": {
-    "linked_user_id": "guid",
-    "suggestion": "Deactivate the user account first"
-  }
-}
-```
+- **404 Not Found** - Person not found
+- **400 Bad Request** - Invalid person ID format or activation failed
+- **500 Internal Server Error** - Server error
 
 ---
 
-### POST /api/people/{id}/link-user
+### POST /people/{id}/link-user
 
 Link a person to an existing user account.
 
