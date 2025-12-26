@@ -926,6 +926,7 @@ Get complete org chart tree structure.
 | root_role_id | GUID | - | Start tree from specific role |
 | max_depth | number | 10 | Maximum hierarchy depth |
 | include_vacant | boolean | true | Include vacant positions |
+| include_inactive | boolean | false | Include inactive roles |
 
 **Response:**
 
@@ -981,6 +982,7 @@ Get flat list for table/grid display.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | include_vacant | boolean | true | Include vacant positions |
+| include_inactive | boolean | false | Include inactive roles |
 | sort_by | string | `hierarchy` | `hierarchy`, `name`, `code` |
 
 **Response:**
