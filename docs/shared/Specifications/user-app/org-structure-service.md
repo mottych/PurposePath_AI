@@ -1,16 +1,22 @@
 # Organizational Structure Service - API Specification
 
-**Version:** 1.2  
-**Created:** December 21, 2025  
-**Updated:** December 23, 2025  
+**Version:** 2.0  
+**Last Updated:** December 26, 2025  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
-> **⚠️ MIGRATION NOTE (v1.1):** Roles and Org Chart endpoints have been migrated from Traction service to Account service. Update frontend clients to use `accountClient` instead of `tractionClient`.
+[← People Service](./people-service.md) | [Back to Index](./index.md)
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|----------|
+| 2.0 | December 26, 2025 | **BREAKING:** Converted all JSON properties from snake_case to camelCase to match C#/.NET implementation (e.g., `role_id` → `roleId`, `reports_to` → `reportsTo`). Query parameters also converted to camelCase. This matches ASP.NET Core default JSON serialization. |
+| 1.2 | December 23, 2025 | Moved admin template endpoints to Admin Portal specification |
+| 1.1 | December 21, 2025 | Migrated endpoints from Traction service to Account service |
+| 1.0 | December 21, 2025 | Initial version |
 
 > **📋 NOTE:** Admin Template endpoints have been moved to the [Admin Portal API Specification](../admin-portal/admin-api-specification.md#role-templates).
-
-[← People Service](./people-service.md) | [Back to Index](./index.md)
 
 ---
 
@@ -54,9 +60,9 @@ List all roles with filtering and pagination.
 | vacant | boolean | - | Filter for vacant roles only |
 | search | string | - | Search by name or code |
 | page | number | 1 | Page number (1-based) |
-| page_size | number | 20 | Items per page (max 100) |
-| sort_by | string | `name` | Sort field: `name`, `code`, `created_at` |
-| sort_order | string | `asc` | Sort order: `asc`, `desc` |
+| pageSize | number | 20 | Items per page (max 100) |
+| sortBy | string | `name` | Sort field: `name`, `code`, `createdAt` |
+| sortOrder | string | `asc` | Sort order: `asc`, `desc` |
 
 **Response:**
 
@@ -70,26 +76,26 @@ List all roles with filtering and pagination.
         "code": "string",
         "name": "string",
         "description": "string?",
-        "is_active": "boolean",
-        "current_occupant": {
+        "isActive": "boolean",
+        "currentOccupant": {
           "id": "string (GUID)?",
           "name": "string?",
           "since": "string (ISO 8601)?"
         },
-        "reports_to": {
-          "role_id": "string (GUID)?",
-          "role_name": "string?"
+        "reportsTo": {
+          "roleId": "string (GUID)?",
+          "roleName": "string?"
         },
-        "direct_reports_count": "number",
-        "created_at": "string (ISO 8601)",
-        "updated_at": "string (ISO 8601)?"
+        "directReportsCount": "number",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
       }
     ],
     "pagination": {
       "page": "number",
-      "page_size": "number",
-      "total_items": "number",
-      "total_pages": "number"
+      "pageSize": "number",
+      "totalItems": "number",
+      "totalPages": "number"
     }
   }
 }
@@ -110,8 +116,8 @@ Get simplified role list for dropdowns.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| include_vacant | boolean | true | Include vacant roles |
-| exclude_id | string (GUID) | - | Exclude specific role (for relationship forms) |
+| includeVacant | boolean | true | Include vacant roles |
+| excludeId | string (GUID) | - | Exclude specific role (for relationship forms) |
 
 **Response:**
 
@@ -123,8 +129,8 @@ Get simplified role list for dropdowns.
       "id": "string (GUID)",
       "code": "string",
       "name": "string",
-      "occupant_name": "string?",
-      "is_vacant": "boolean"
+      "occupantName": "string?",
+      "isVacant": "boolean"
     }
   ]
 }
@@ -156,47 +162,47 @@ Get detailed role information.
     "name": "string",
     "accountability": "string",
     "description": "string?",
-    "is_active": "boolean",
-    "current_occupant": {
+    "isActive": "boolean",
+    "currentOccupant": {
       "id": "string (GUID)?",
-      "first_name": "string?",
-      "last_name": "string?",
+      "firstName": "string?",
+      "lastName": "string?",
       "email": "string?",
       "title": "string?",
       "since": "string (ISO 8601)?",
-      "is_primary_role": "boolean?"
+      "isPrimaryRole": "boolean?"
     },
-    "assignment_history": [
+    "assignmentHistory": [
       {
-        "person_id": "string (GUID)",
-        "person_name": "string",
-        "effective_date": "string (ISO 8601)",
-        "termination_date": "string (ISO 8601)?"
+        "personId": "string (GUID)",
+        "personName": "string",
+        "effectiveDate": "string (ISO 8601)",
+        "terminationDate": "string (ISO 8601)?"
       }
     ],
-    "reports_to": {
-      "role_id": "string (GUID)?",
-      "role_code": "string?",
-      "role_name": "string?",
-      "occupant_name": "string?"
+    "reportsTo": {
+      "roleId": "string (GUID)?",
+      "roleCode": "string?",
+      "roleName": "string?",
+      "occupantName": "string?"
     },
-    "direct_reports": [
+    "directReports": [
       {
-        "role_id": "string (GUID)",
-        "role_code": "string",
-        "role_name": "string",
-        "occupant_name": "string?"
+        "roleId": "string (GUID)",
+        "roleCode": "string",
+        "roleName": "string",
+        "occupantName": "string?"
       }
     ],
     "relationships": [
       {
-        "relationship_id": "string (GUID)",
+        "relationshipId": "string (GUID)",
         "direction": "from | to",
-        "role_id": "string (GUID)",
-        "role_code": "string",
-        "role_name": "string",
-        "occupant_name": "string?",
-        "relationship_type": {
+        "roleId": "string (GUID)",
+        "roleCode": "string",
+        "roleName": "string",
+        "occupantName": "string?",
+        "relationshipType": {
           "code": "string",
           "name": "string",
           "verb": "string"
@@ -204,10 +210,10 @@ Get detailed role information.
         "description": "string?"
       }
     ],
-    "created_at": "string (ISO 8601)",
-    "updated_at": "string (ISO 8601)?",
-    "created_by": "string (GUID)",
-    "updated_by": "string (GUID)?"
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?",
+    "createdBy": "string (GUID)",
+    "updatedBy": "string (GUID)?"
   }
 }
 ```
@@ -220,8 +226,8 @@ Get detailed role information.
   "error": "Role not found",
   "code": "RESOURCE_NOT_FOUND",
   "details": {
-    "resource_type": "Role",
-    "resource_id": "guid"
+    "resourceType": "Role",
+    "resourceId": "guid"
   }
 }
 ```
@@ -245,7 +251,7 @@ Create a new role.
   "name": "string",
   "accountability": "string",
   "description": "string?",
-  "reports_to_role_id": "string (GUID)?"
+  "reportsToRoleId": "string (GUID)?"
 }
 ```
 
@@ -257,7 +263,7 @@ Create a new role.
 | name | string | Yes | 1-100 characters |
 | accountability | string | Yes | 1-500 characters, describes what this role is accountable for |
 | description | string | No | Max 2000 characters (detailed responsibilities, can include markdown) |
-| reports_to_role_id | GUID | No | Must be valid active role |
+| reportsToRoleId | GUID | No | Must be valid active role |
 
 **Response:**
 
@@ -270,13 +276,13 @@ Create a new role.
     "name": "string",
     "accountability": "string",
     "description": "string?",
-    "is_active": true,
-    "current_occupant": null,
-    "reports_to": [],
-    "direct_reports": [],
-    "collaborates_with": [],
-    "created_at": "string (ISO 8601)",
-    "created_by": "string (GUID)"
+    "isActive": true,
+    "currentOccupant": null,
+    "reportsTo": [],
+    "directReports": [],
+    "collaboratesWith": [],
+    "createdAt": "string (ISO 8601)",
+    "createdBy": "string (GUID)"
   }
 }
 ```
@@ -311,7 +317,7 @@ Update an existing role.
   "name": "string?",
   "accountability": "string?",
   "description": "string?",
-  "reports_to_role_id": "string (GUID)?"
+  "reportsToRoleId": "string (GUID)?"
 }
 ```
 
@@ -322,13 +328,13 @@ Update an existing role.
 | name | string | No | 1-100 characters |
 | accountability | string | No | 1-500 characters, describes what this role is accountable for |
 | description | string | No | Max 2000 characters (detailed responsibilities) |
-| reports_to_role_id | GUID | No | Must be active role, cannot create circular reference, set to `null` to remove |
+| reportsToRoleId | GUID | No | Must be active role, cannot create circular reference, set to `null` to remove |
 
 **Notes:**
 
 - `code` cannot be changed after creation
-- Setting `reports_to_role_id` to `null` removes the reporting relationship (makes role a top-level role)
-- Backend validates no circular references when changing reports_to
+- Setting `reportsToRoleId` to `null` removes the reporting relationship (makes role a top-level role)
+- Backend validates no circular references when changing reportsTo
 - Non-hierarchical relationships (SUPPORT, ADVISE, etc.) managed via separate endpoints
 
 **Response:**
@@ -371,8 +377,8 @@ Soft delete a role.
   "error": "Cannot delete role with active assignment",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "occupant_id": "guid",
-    "occupant_name": "John Smith"
+    "occupantId": "guid",
+    "occupantName": "John Smith"
   }
 }
 ```
@@ -383,7 +389,7 @@ Soft delete a role.
   "error": "Cannot delete role with direct reports",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "direct_reports_count": 5
+    "directReportsCount": 5
   }
 }
 ```
@@ -405,7 +411,7 @@ Reactivate a deactivated role.
   "success": true,
   "data": {
     "id": "string (GUID)",
-    "is_active": true
+    "isActive": true
   }
 }
 ```
@@ -424,8 +430,8 @@ Deactivate a role (unassigns person, removes from hierarchy).
 
 ```json
 {
-  "cascade_direct_reports": "boolean?",
-  "new_parent_role_id": "string (GUID)?"
+  "cascadeDirectReports": "boolean?",
+  "newParentRoleId": "string (GUID)?"
 }
 ```
 
@@ -433,12 +439,12 @@ Deactivate a role (unassigns person, removes from hierarchy).
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| cascade_direct_reports | boolean | No | If true, deactivate all direct reports |
-| new_parent_role_id | GUID | No | Reassign direct reports to this role |
+| cascadeDirectReports | boolean | No | If true, deactivate all direct reports |
+| newParentRoleId | GUID | No | Reassign direct reports to this role |
 
 **Default Behavior (when no options provided):**
 
-- Direct reports' `reports_to_role_id` is set to `null` (they become top-level roles)
+- Direct reports' `reportsToRoleId` is set to `null` (they become top-level roles)
 - The deactivated role's person assignment is terminated (if any)
 - All relationships (SUPPORT, ADVISE, etc.) involving this role are removed
 
@@ -449,11 +455,11 @@ Deactivate a role (unassigns person, removes from hierarchy).
   "success": true,
   "data": {
     "deactivated": true,
-    "person_unassigned": "boolean",
-    "relationships_removed": "number",
-    "direct_reports_handled": {
-      "reassigned_to": "string (GUID)?",
-      "deactivated_count": "number?"
+    "personUnassigned": "boolean",
+    "relationshipsRemoved": "number",
+    "directReportsHandled": {
+      "reassignedTo": "string (GUID)?",
+      "deactivatedCount": "number?"
     }
   }
 }
@@ -476,8 +482,8 @@ List all role relationships.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| type | string | - | Filter by type: `reports_to`, `collaborates_with` |
-| role_id | GUID | - | Get relationships for specific role |
+| type | string | - | Filter by type: `reportsTo`, `collaboratesWith` |
+| roleId | GUID | - | Get relationships for specific role |
 
 **Response:**
 
@@ -487,25 +493,25 @@ List all role relationships.
   "data": [
     {
       "id": "string (GUID)",
-      "from_role": {
+      "fromRole": {
         "id": "string (GUID)",
         "code": "string",
         "name": "string",
-        "occupant_name": "string?"
+        "occupantName": "string?"
       },
-      "to_role": {
+      "toRole": {
         "id": "string (GUID)",
         "code": "string",
         "name": "string",
-        "occupant_name": "string?"
+        "occupantName": "string?"
       },
-      "relationship_type": {
+      "relationshipType": {
         "id": "string (GUID)",
         "code": "string",
         "name": "string"
       },
       "description": "string?",
-      "created_at": "string (ISO 8601)"
+      "createdAt": "string (ISO 8601)"
     }
   ]
 }
@@ -526,9 +532,9 @@ Create a role relationship.
 
 ```json
 {
-  "from_role_id": "string (GUID)",
-  "to_role_id": "string (GUID)",
-  "relationship_type_code": "string",
+  "fromRoleId": "string (GUID)",
+  "toRoleId": "string (GUID)",
+  "relationshipTypeCode": "string",
   "description": "string?"
 }
 ```
@@ -537,9 +543,9 @@ Create a role relationship.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| from_role_id | GUID | Yes | Must be active role |
-| to_role_id | GUID | Yes | Must be active role, different from from_role_id |
-| relationship_type_code | string | Yes | Valid relationship type code (e.g., `SUPPORT`, `ADVISE`, `COLLABORATE`, `MENTOR`) |
+| fromRoleId | GUID | Yes | Must be active role |
+| toRoleId | GUID | Yes | Must be active role, different from fromRoleId |
+| relationshipTypeCode | string | Yes | Valid relationship type code (e.g., `SUPPORT`, `ADVISE`, `COLLABORATE`, `MENTOR`) |
 | description | string | No | Max 500 chars |
 
 **Response:**
@@ -549,23 +555,23 @@ Create a role relationship.
   "success": true,
   "data": {
     "id": "string (GUID)",
-    "from_role": {
+    "fromRole": {
       "id": "string (GUID)",
       "code": "string",
       "name": "string"
     },
-    "to_role": {
+    "toRole": {
       "id": "string (GUID)",
       "code": "string",
       "name": "string"
     },
-    "relationship_type": {
+    "relationshipType": {
       "id": "string (GUID)",
       "code": "string",
       "name": "string"
     },
     "description": "string?",
-    "created_at": "string (ISO 8601)"
+    "createdAt": "string (ISO 8601)"
   }
 }
 ```
@@ -578,7 +584,7 @@ Create a role relationship.
   "error": "Relationship already exists between these roles with this type",
   "code": "DUPLICATE_RESOURCE",
   "details": {
-    "existing_relationship_id": "guid"
+    "existingRelationshipId": "guid"
   }
 }
 ```
@@ -589,8 +595,8 @@ Create a role relationship.
   "error": "Relationship type does not allow multiple relationships",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "relationship_type_code": "MENTOR",
-    "existing_relationship_id": "guid"
+    "relationshipTypeCode": "MENTOR",
+    "existingRelationshipId": "guid"
   }
 }
 ```
@@ -660,7 +666,7 @@ List available relationship types.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| include_inactive | boolean | false | Include inactive types |
+| includeInactive | boolean | false | Include inactive types |
 
 **Response:**
 
@@ -672,41 +678,41 @@ List available relationship types.
       "id": "string (GUID)",
       "code": "SUPPORT",
       "name": "Support",
-      "forward_verb": "supports",
-      "reverse_verb": "is supported by",
-      "allows_multiple": true,
-      "is_active": true,
-      "is_system": true
+      "forwardVerb": "supports",
+      "reverseVerb": "is supported by",
+      "allowsMultiple": true,
+      "isActive": true,
+      "isSystem": true
     },
     {
       "id": "string (GUID)",
       "code": "ADVISE",
       "name": "Advise",
-      "forward_verb": "advises",
-      "reverse_verb": "is advised by",
-      "allows_multiple": true,
-      "is_active": true,
-      "is_system": true
+      "forwardVerb": "advises",
+      "reverseVerb": "is advised by",
+      "allowsMultiple": true,
+      "isActive": true,
+      "isSystem": true
     },
     {
       "id": "string (GUID)",
       "code": "COLLABORATE",
       "name": "Collaborate",
-      "forward_verb": "collaborates with",
-      "reverse_verb": "collaborates with",
-      "allows_multiple": true,
-      "is_active": true,
-      "is_system": true
+      "forwardVerb": "collaborates with",
+      "reverseVerb": "collaborates with",
+      "allowsMultiple": true,
+      "isActive": true,
+      "isSystem": true
     },
     {
       "id": "string (GUID)",
       "code": "MENTOR",
       "name": "Mentor",
-      "forward_verb": "mentors",
-      "reverse_verb": "is mentored by",
-      "allows_multiple": true,
-      "is_active": true,
-      "is_system": true
+      "forwardVerb": "mentors",
+      "reverseVerb": "is mentored by",
+      "allowsMultiple": true,
+      "isActive": true,
+      "isSystem": true
     }
   ]
 }
@@ -714,9 +720,9 @@ List available relationship types.
 
 **Notes:**
 
-- `is_system` indicates seeded types that cannot be deleted
-- `forward_verb` used when displaying "Role A {forward_verb} Role B"
-- `reverse_verb` used when displaying "Role B {reverse_verb} Role A"
+- `isSystem` indicates seeded types that cannot be deleted
+- `forwardVerb` used when displaying "Role A {forwardVerb} Role B"
+- `reverseVerb` used when displaying "Role B {reverseVerb} Role A"
 
 ---
 
@@ -742,14 +748,14 @@ Get relationship type details.
     "id": "string (GUID)",
     "code": "string",
     "name": "string",
-    "forward_verb": "string",
-    "reverse_verb": "string",
-    "allows_multiple": "boolean",
-    "is_active": "boolean",
-    "is_system": "boolean",
-    "usage_count": "number",
-    "created_at": "string (ISO 8601)",
-    "updated_at": "string (ISO 8601)?"
+    "forwardVerb": "string",
+    "reverseVerb": "string",
+    "allowsMultiple": "boolean",
+    "isActive": "boolean",
+    "isSystem": "boolean",
+    "usageCount": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
   }
 }
 ```
@@ -771,9 +777,9 @@ Create a custom relationship type.
 {
   "code": "string",
   "name": "string",
-  "forward_verb": "string",
-  "reverse_verb": "string",
-  "allows_multiple": "boolean?"
+  "forwardVerb": "string",
+  "reverseVerb": "string",
+  "allowsMultiple": "boolean?"
 }
 ```
 
@@ -783,9 +789,9 @@ Create a custom relationship type.
 |-------|------|----------|-------------|
 | code | string | Yes | 2-20 chars, uppercase alphanumeric + underscore, unique within tenant |
 | name | string | Yes | 1-50 characters |
-| forward_verb | string | Yes | 1-50 characters (e.g., "manages") |
-| reverse_verb | string | Yes | 1-50 characters (e.g., "is managed by") |
-| allows_multiple | boolean | No | Default: true |
+| forwardVerb | string | Yes | 1-50 characters (e.g., "manages") |
+| reverseVerb | string | Yes | 1-50 characters (e.g., "is managed by") |
+| allowsMultiple | boolean | No | Default: true |
 
 **Response:**
 
@@ -796,12 +802,12 @@ Create a custom relationship type.
     "id": "string (GUID)",
     "code": "string",
     "name": "string",
-    "forward_verb": "string",
-    "reverse_verb": "string",
-    "allows_multiple": "boolean",
-    "is_active": true,
-    "is_system": false,
-    "created_at": "string (ISO 8601)"
+    "forwardVerb": "string",
+    "reverseVerb": "string",
+    "allowsMultiple": "boolean",
+    "isActive": true,
+    "isSystem": false,
+    "createdAt": "string (ISO 8601)"
   }
 }
 ```
@@ -839,16 +845,16 @@ Update a relationship type.
 ```json
 {
   "name": "string?",
-  "forward_verb": "string?",
-  "reverse_verb": "string?",
-  "allows_multiple": "boolean?"
+  "forwardVerb": "string?",
+  "reverseVerb": "string?",
+  "allowsMultiple": "boolean?"
 }
 ```
 
 **Notes:**
 
 - `code` cannot be changed after creation
-- System types (`is_system = true`) can have name/verbs updated but not deleted
+- System types (`isSystem = true`) can have name/verbs updated but not deleted
 
 **Response:**
 
@@ -890,7 +896,7 @@ Deactivate a relationship type.
   "error": "Cannot delete system relationship type",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "is_system": true
+    "isSystem": true
   }
 }
 ```
@@ -901,7 +907,7 @@ Deactivate a relationship type.
   "error": "Cannot delete relationship type with existing relationships",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "usage_count": 5
+    "usageCount": 5
   }
 }
 ```
@@ -923,10 +929,10 @@ Get complete org chart tree structure.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| root_role_id | GUID | - | Start tree from specific role |
-| max_depth | number | 10 | Maximum hierarchy depth |
-| include_vacant | boolean | true | Include vacant positions |
-| include_inactive | boolean | false | Include inactive roles |
+| rootRoleId | GUID | - | Start tree from specific role |
+| maxDepth | number | 10 | Maximum hierarchy depth |
+| includeVacant | boolean | true | Include vacant positions |
+| includeInactive | boolean | false | Include inactive roles |
 
 **Response:**
 
@@ -945,26 +951,26 @@ Get complete org chart tree structure.
           "id": "string (GUID)?",
           "name": "string?",
           "title": "string?",
-          "avatar_url": "string?"
+          "avatarUrl": "string?"
         },
-        "is_vacant": "boolean",
+        "isVacant": "boolean",
         "depth": "number",
         "children": [
           "recursive RoleNode"
         ]
       }
     ],
-    "total_roles": "number",
-    "total_vacant": "number",
-    "max_depth": "number"
+    "totalRoles": "number",
+    "totalVacant": "number",
+    "maxDepth": "number"
   }
 }
 ```
 
 **Notes:**
 
-- Top-level roles (no reports_to) are roots of separate trees
-- If `root_role_id` specified, returns single tree starting from that role
+- Top-level roles (no reportsTo) are roots of separate trees
+- If `rootRoleId` specified, returns single tree starting from that role
 
 ---
 
@@ -981,9 +987,9 @@ Get flat list for table/grid display.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| include_vacant | boolean | true | Include vacant positions |
-| include_inactive | boolean | false | Include inactive roles |
-| sort_by | string | `hierarchy` | `hierarchy`, `name`, `code` |
+| includeVacant | boolean | true | Include vacant positions |
+| includeInactive | boolean | false | Include inactive roles |
+| sortBy | string | `hierarchy` | `hierarchy`, `name`, `code` |
 
 **Response:**
 
@@ -992,16 +998,16 @@ Get flat list for table/grid display.
   "success": true,
   "data": [
     {
-      "role_id": "string (GUID)",
-      "role_code": "string",
-      "role_name": "string",
-      "occupant_id": "string (GUID)?",
-      "occupant_name": "string?",
-      "reports_to_role_id": "string (GUID)?",
-      "reports_to_role_name": "string?",
+      "roleId": "string (GUID)",
+      "roleCode": "string",
+      "roleName": "string",
+      "occupantId": "string (GUID)?",
+      "occupantName": "string?",
+      "reportsToRoleId": "string (GUID)?",
+      "reportsToRoleName": "string?",
       "depth": "number",
       "path": "string",
-      "is_vacant": "boolean"
+      "isVacant": "boolean"
     }
   ]
 }
@@ -1031,8 +1037,8 @@ Get subtree under a specific role.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| max_depth | number | 10 | Maximum depth from role |
-| include_vacant | boolean | true | Include vacant positions |
+| maxDepth | number | 10 | Maximum depth from role |
+| includeVacant | boolean | true | Include vacant positions |
 
 **Response:**
 
@@ -1041,8 +1047,8 @@ Get subtree under a specific role.
   "success": true,
   "data": {
     "root": "RoleNode",
-    "total_descendants": "number",
-    "vacant_count": "number"
+    "totalDescendants": "number",
+    "vacantCount": "number"
   }
 }
 ```
@@ -1087,11 +1093,11 @@ interface RelationshipType {
   id: string;
   code: string;
   name: string;
-  forward_verb: string;  // "supports", "advises", "mentors"
-  reverse_verb: string;  // "is supported by", "is advised by", "is mentored by"
-  allows_multiple: boolean;
-  is_active: boolean;
-  is_system: boolean;    // System types cannot be deleted
+  forwardVerb: string;  // "supports", "advises", "mentors"
+  reverseVerb: string;  // "is supported by", "is advised by", "is mentored by"
+  allowsMultiple: boolean;
+  isActive: boolean;
+  isSystem: boolean;    // System types cannot be deleted
 }
 ```
 
@@ -1108,9 +1114,9 @@ interface RoleNode {
     id: string | null;
     name: string | null;
     title: string | null;
-    avatar_url: string | null;
+    avatarUrl: string | null;
   } | null;
-  is_vacant: boolean;
+  isVacant: boolean;
   depth: number;
   children: RoleNode[];
 }
@@ -1137,7 +1143,7 @@ interface RoleNode {
 | COLLABORATE | Collaborate | collaborates with | collaborates with | Yes |
 | MENTOR | Mentor | mentors | is mentored by | Yes |
 
-**Note:** "Reports To" is NOT a relationship type. Reporting hierarchy is defined directly on the Role entity via the `reports_to_role_id` field. This keeps the hierarchy simple and unidirectional.
+**Note:** "Reports To" is NOT a relationship type. Reporting hierarchy is defined directly on the Role entity via the `reportsToRoleId` field. This keeps the hierarchy simple and unidirectional.
 
 ---
 
@@ -1170,7 +1176,7 @@ const OrgChartNode = ({ role, occupant, isVacant, children }) => (
 ### Circular Reference Prevention (Frontend - Reports To Only)
 
 ```typescript
-// Before setting reports_to_role_id, check for cycles in the hierarchy
+// Before setting reportsToRoleId, check for cycles in the hierarchy
 const wouldCreateCycle = (
   roleId: string, 
   newReportsToId: string, 
@@ -1186,7 +1192,7 @@ const wouldCreateCycle = (
     
     // Find what this role reports to
     const role = roles.find(r => r.id === current);
-    current = role?.reports_to_role_id || '';
+    current = role?.reportsToRoleId || '';
   }
   
   return false;
@@ -1202,7 +1208,7 @@ const handleReportsToChange = (newReportsToId: string) => {
 };
 ```
 
-**Note:** This validation only applies to `reports_to_role_id` on the Role entity. Role relationships (SUPPORT, ADVISE, etc.) are not hierarchical and don't need cycle detection.
+**Note:** This validation only applies to `reportsToRoleId` on the Role entity. Role relationships (SUPPORT, ADVISE, etc.) are not hierarchical and don't need cycle detection.
 
 ---
 
@@ -1214,8 +1220,8 @@ The following real-time events will be supported:
 |-------|---------|-------------|
 | `role.created` | RoleResponse | New role created |
 | `role.updated` | RoleResponse | Role details changed |
-| `role.deactivated` | { role_id } | Role deactivated |
-| `role.assignment_changed` | { role_id, person_id, action } | Person assigned/unassigned |
+| `role.deactivated` | { roleId } | Role deactivated |
+| `role.assignment_changed` | { roleId, personId, action } | Person assigned/unassigned |
 | `org_chart.updated` | - | Hierarchy changed |
 
 ---

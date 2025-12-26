@@ -1,14 +1,19 @@
 # People & Organizational Structure - Backend Integration Specifications (Part 1: People)
 
-**Version:** 1.1  
-**Created:** December 21, 2025  
-**Updated:** December 23, 2025  
+**Version:** 2.0  
+**Last Updated:** December 26, 2025  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (People & Auth endpoints)  
 **Default (Localhost):** `http://localhost:8001` (Account)
 
-> **⚠️ MIGRATION NOTE (v1.1):** People endpoints have been migrated from Traction service to Account service. Update frontend clients to use `accountClient` instead of `tractionClient`.
-
 [← Back to Index](./index.md) | [Part 2: Organizational Structure →](./org-structure-service.md)
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|----------|
+| 2.0 | December 26, 2025 | **BREAKING:** Converted all JSON properties from snake_case to camelCase to match C#/.NET implementation (e.g., `person_id` → `personId`, `first_name` → `firstName`). Query parameters also converted to camelCase. This matches ASP.NET Core default JSON serialization. |
+| 1.1 | December 23, 2025 | Migrated People endpoints from Traction service to Account service |
+| 1.0 | December 21, 2025 | Initial version |
 
 ---
 
@@ -34,7 +39,7 @@ The People module manages all person records within a tenant, including employee
 
 ### Email Verification
 
-A Person's `is_email_verified` flag is set to `true` when:
+A Person's `isEmailVerified` flag is set to `true` when:
 1. They accept a user invitation and create their account (primary flow)
 2. They complete email verification during password reset
 
@@ -72,23 +77,23 @@ User authentication with username/password.
 {
   "success": true,
   "data": {
-    "access_token": "string",
-    "refresh_token": "string",
+    "accessToken": "string",
+    "refreshToken": "string",
     "user": {
-      "user_id": "string (GUID)",
+      "userId": "string (GUID)",
       "username": "string",
-      "person_id": "string (GUID)",
-      "tenant_id": "string (GUID)",
-      "avatar_url": "string?",
-      "created_at": "string (ISO 8601)",
-      "updated_at": "string (ISO 8601)",
+      "personId": "string (GUID)",
+      "tenantId": "string (GUID)",
+      "avatarUrl": "string?",
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)",
       "status": "active | inactive | locked",
       "preferences": {}
     },
     "person": {
       "id": "string (GUID)",
-      "first_name": "string",
-      "last_name": "string",
+      "firstName": "string",
+      "lastName": "string",
       "email": "string?",
       "phone": "string?",
       "title": "string?"
@@ -117,15 +122,15 @@ User authentication with username/password.
   "error": "Account is locked",
   "code": "ACCOUNT_LOCKED",
   "details": {
-    "locked_until": "2025-12-22T10:30:00Z"
+    "lockedUntil": "2025-12-22T10:30:00Z"
   }
 }
 ```
 
 **Frontend Handling:**
 
-- Stores `access_token` → `localStorage.accessToken`
-- Stores `refresh_token` → `localStorage.refreshToken`
+- Stores `accessToken` → `localStorage.accessToken`
+- Stores `refreshToken` → `localStorage.refreshToken`
 - Stores `tenant.id` → `localStorage.tenantId`
 - Person data available for profile display
 
@@ -180,8 +185,8 @@ Change current user's username.
 
 ```json
 {
-  "new_username": "string",
-  "current_password": "string"
+  "newUsername": "string",
+  "currentPassword": "string"
 }
 ```
 
@@ -189,8 +194,8 @@ Change current user's username.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| new_username | string | Yes | 3-50 chars, alphanumeric + `.` `_` `-` `@`, must start with alphanumeric |
-| current_password | string | Yes | Current password for verification |
+| newUsername | string | Yes | 3-50 chars, alphanumeric + `.` `_` `-` `@`, must start with alphanumeric |
+| currentPassword | string | Yes | Current password for verification |
 
 **Response:**
 
@@ -199,8 +204,8 @@ Change current user's username.
   "success": true,
   "data": {
     "username": "string",
-    "previous_username": "string",
-    "next_change_allowed_at": "string (ISO 8601)"
+    "previousUsername": "string",
+    "nextChangeAllowedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -213,7 +218,7 @@ Change current user's username.
   "error": "Username is already taken",
   "code": "DUPLICATE_RESOURCE",
   "details": {
-    "field": "new_username"
+    "field": "newUsername"
   }
 }
 ```
@@ -224,7 +229,7 @@ Change current user's username.
   "error": "Username can only be changed once every 30 days",
   "code": "RATE_LIMIT_EXCEEDED",
   "details": {
-    "next_change_allowed_at": "2025-01-15T10:30:00Z"
+    "nextChangeAllowedAt": "2025-01-15T10:30:00Z"
   }
 }
 ```
@@ -262,14 +267,14 @@ List people with filtering and pagination.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | status | string | `active` | Filter: `active`, `inactive`, `all` |
-| is_assignable | boolean | - | Filter by assignable flag |
-| person_type_id | string (GUID) | - | Filter by person type |
+| isAssignable | boolean | - | Filter by assignable flag |
+| personTypeId | string (GUID) | - | Filter by person type |
 | tags | string | - | Comma-separated tag GUIDs (any match) |
 | search | string | - | Search by name, email, or title |
 | page | number | 1 | Page number (1-based) |
-| page_size | number | 20 | Items per page (max 100) |
-| sort_by | string | `name` | Sort field: `name`, `created_at`, `type` |
-| sort_order | string | `asc` | Sort order: `asc`, `desc` |
+| pageSize | number | 20 | Items per page (max 100) |
+| sortBy | string | `name` | Sort field: `name`, `createdAt`, `type` |
+| sortOrder | string | `asc` | Sort order: `asc`, `desc` |
 
 **Response:**
 
@@ -280,20 +285,20 @@ List people with filtering and pagination.
     "items": [
       {
         "id": "string (GUID)",
-        "first_name": "string",
-        "last_name": "string",
+        "firstName": "string",
+        "lastName": "string",
         "email": "string?",
-        "is_email_verified": "boolean",
+        "isEmailVerified": "boolean",
         "phone": "string?",
         "title": "string?",
-        "person_type": {
+        "personType": {
           "id": "string (GUID)",
           "code": "string",
           "name": "string"
         },
-        "is_active": "boolean",
-        "is_assignable": "boolean",
-        "primary_role": {
+        "isActive": "boolean",
+        "isAssignable": "boolean",
+        "primaryRole": {
           "id": "string (GUID)",
           "name": "string"
         },
@@ -303,16 +308,16 @@ List people with filtering and pagination.
             "name": "string"
           }
         ],
-        "has_system_access": "boolean",
-        "created_at": "string (ISO 8601)",
-        "updated_at": "string (ISO 8601)?"
+        "hasSystemAccess": "boolean",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
       }
     ],
     "pagination": {
       "page": "number",
-      "page_size": "number",
-      "total_items": "number",
-      "total_pages": "number"
+      "pageSize": "number",
+      "totalItems": "number",
+      "totalPages": "number"
     }
   }
 }
@@ -334,7 +339,7 @@ Get list of people available for work assignment dropdowns.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | tags | string | - | Comma-separated tag GUIDs (any match) |
-| person_type_id | string (GUID) | - | Filter by person type |
+| personTypeId | string (GUID) | - | Filter by person type |
 | search | string | - | Search by name |
 
 **Response:**
@@ -347,8 +352,8 @@ Get list of people available for work assignment dropdowns.
       "id": "string (GUID)",
       "name": "string",
       "title": "string?",
-      "primary_role": "string?",
-      "is_current_user": "boolean"
+      "primaryRole": "string?",
+      "isCurrentUser": "boolean"
     }
   ]
 }
@@ -356,8 +361,8 @@ Get list of people available for work assignment dropdowns.
 
 **Notes:**
 
-- Returns only people where `is_active = true` AND `is_assignable = true`
-- `is_current_user` is `true` if this Person is linked to the authenticated User
+- Returns only people where `isActive = true` AND `isAssignable = true`
+- `isCurrentUser` is `true` if this Person is linked to the authenticated User
 - Sorted alphabetically by name, with current user first
 
 ---
@@ -382,19 +387,19 @@ Get detailed person information.
   "success": true,
   "data": {
     "id": "string (GUID)",
-    "first_name": "string",
-    "last_name": "string",
+    "firstName": "string",
+    "lastName": "string",
     "email": "string?",
-    "is_email_verified": "boolean",
+    "isEmailVerified": "boolean",
     "phone": "string?",
     "title": "string?",
-    "person_type": {
+    "personType": {
       "id": "string (GUID)",
       "code": "string",
       "name": "string"
     },
-    "is_active": "boolean",
-    "is_assignable": "boolean",
+    "isActive": "boolean",
+    "isAssignable": "boolean",
     "notes": "string?",
     "tags": [
       {
@@ -405,20 +410,20 @@ Get detailed person information.
     "roles": [
       {
         "id": "string (GUID)",
-        "role_id": "string (GUID)",
-        "role_code": "string",
-        "role_name": "string",
-        "is_primary": "boolean",
-        "effective_date": "string (ISO 8601)",
-        "termination_date": "string (ISO 8601)?"
+        "roleId": "string (GUID)",
+        "roleCode": "string",
+        "roleName": "string",
+        "isPrimary": "boolean",
+        "effectiveDate": "string (ISO 8601)",
+        "terminationDate": "string (ISO 8601)?"
       }
     ],
-    "linked_user_id": "string (GUID)?",
-    "has_system_access": "boolean",
-    "created_at": "string (ISO 8601)",
-    "updated_at": "string (ISO 8601)?",
-    "created_by": "string (GUID)",
-    "updated_by": "string (GUID)?"
+    "linkedUserId": "string (GUID)?",
+    "hasSystemAccess": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?",
+    "createdBy": "string (GUID)",
+    "updatedBy": "string (GUID)?"
   }
 }
 ```
@@ -431,8 +436,8 @@ Get detailed person information.
   "error": "Person not found",
   "code": "RESOURCE_NOT_FOUND",
   "details": {
-    "resource_type": "Person",
-    "resource_id": "guid"
+    "resourceType": "Person",
+    "resourceId": "guid"
   }
 }
 ```
@@ -452,13 +457,13 @@ Create a new person.
 
 ```json
 {
-  "first_name": "string",
-  "last_name": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string?",
   "phone": "string?",
   "title": "string?",
-  "person_type_id": "string (GUID)",
-  "is_assignable": "boolean?",
+  "personTypeId": "string (GUID)",
+  "isAssignable": "boolean?",
   "notes": "string?",
   "tags": ["string (GUID)"]
 }
@@ -468,13 +473,13 @@ Create a new person.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| first_name | string | Yes | 1-100 characters |
-| last_name | string | Yes | 1-100 characters |
+| firstName | string | Yes | 1-100 characters |
+| lastName | string | Yes | 1-100 characters |
 | email | string | No* | Valid email format, unique within tenant |
 | phone | string | No | Max 20 characters |
 | title | string | No | Max 100 characters |
-| person_type_id | GUID | Yes | Must exist and be active |
-| is_assignable | boolean | No | Defaults from PersonType.is_assignable_by_default |
+| personTypeId | GUID | Yes | Must exist and be active |
+| isAssignable | boolean | No | Defaults from PersonType.isAssignableByDefault |
 | notes | string | No | Max 2000 characters |
 | tags | GUID[] | No | Must be valid tag IDs |
 
@@ -487,26 +492,26 @@ Create a new person.
   "success": true,
   "data": {
     "id": "string (GUID)",
-    "first_name": "string",
-    "last_name": "string",
+    "firstName": "string",
+    "lastName": "string",
     "email": "string?",
-    "is_email_verified": false,
+    "isEmailVerified": false,
     "phone": "string?",
     "title": "string?",
-    "person_type": {
+    "personType": {
       "id": "string (GUID)",
       "code": "string",
       "name": "string"
     },
-    "is_active": true,
-    "is_assignable": "boolean",
+    "isActive": true,
+    "isAssignable": "boolean",
     "notes": "string?",
     "tags": [],
     "roles": [],
-    "linked_user_id": null,
-    "has_system_access": false,
-    "created_at": "string (ISO 8601)",
-    "created_by": "string (GUID)"
+    "linkedUserId": null,
+    "hasSystemAccess": false,
+    "createdAt": "string (ISO 8601)",
+    "createdBy": "string (GUID)"
   }
 }
 ```
@@ -530,7 +535,7 @@ Create a new person.
   "error": "Person type not found or inactive",
   "code": "VALIDATION_ERROR",
   "details": {
-    "field": "person_type_id"
+    "field": "personTypeId"
   }
 }
 ```
@@ -554,13 +559,13 @@ Update an existing person.
 
 ```json
 {
-  "first_name": "string?",
-  "last_name": "string?",
+  "firstName": "string?",
+  "lastName": "string?",
   "email": "string?",
   "phone": "string?",
   "title": "string?",
-  "person_type_id": "string (GUID)?",
-  "is_assignable": "boolean?",
+  "personTypeId": "string (GUID)?",
+  "isAssignable": "boolean?",
   "notes": "string?"
 }
 ```
@@ -568,7 +573,7 @@ Update an existing person.
 **Notes:**
 
 - All fields are optional (partial update)
-- Cannot update `is_active` via this endpoint (use activate/deactivate)
+- Cannot update `isActive` via this endpoint (use activate/deactivate)
 - Tags managed via separate endpoints
 
 **Response:**
@@ -607,28 +612,28 @@ Soft delete (deactivate) a person. Optionally reassign their work items to anoth
   "message": "Person deactivated successfully",
   "data": {
     "id": "string (GUID)",
-    "first_name": "string",
-    "last_name": "string",
-    "display_name": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "displayName": "string",
     "email": "string?",
     "phone": "string?",
     "title": "string?",
-    "person_type": {
+    "personType": {
       "id": "string (GUID)",
       "name": "string"
     },
-    "is_assignable": false,
-    "is_primary": false,
+    "isAssignable": false,
+    "isPrimary": false,
     "notes": "string?",
     "status": "inactive",
-    "linked_user_id": "string (GUID)?",
-    "is_email_verified": false,
+    "linkedUserId": "string (GUID)?",
+    "isEmailVerified": false,
     "tags": ["string (GUID)"],
-    "role_assignments": [],
-    "created_by": "string (GUID)",
-    "created_at": "string (ISO 8601)",
-    "updated_by": "string (GUID)",
-    "updated_at": "string (ISO 8601)"
+    "roleAssignments": [],
+    "createdBy": "string (GUID)",
+    "createdAt": "string (ISO 8601)",
+    "updatedBy": "string (GUID)",
+    "updatedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -662,28 +667,28 @@ Reactivate a deactivated person.
   "message": "Person activated successfully",
   "data": {
     "id": "string (GUID)",
-    "first_name": "string",
-    "last_name": "string",
-    "display_name": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "displayName": "string",
     "email": "string?",
     "phone": "string?",
     "title": "string?",
-    "person_type": {
+    "personType": {
       "id": "string (GUID)",
       "name": "string"
     },
-    "is_assignable": true,
-    "is_primary": false,
+    "isAssignable": true,
+    "isPrimary": false,
     "notes": "string?",
     "status": "active",
-    "linked_user_id": "string (GUID)?",
-    "is_email_verified": false,
+    "linkedUserId": "string (GUID)?",
+    "isEmailVerified": false,
     "tags": ["string (GUID)"],
-    "role_assignments": [],
-    "created_by": "string (GUID)",
-    "created_at": "string (ISO 8601)",
-    "updated_by": "string (GUID)",
-    "updated_at": "string (ISO 8601)"
+    "roleAssignments": [],
+    "createdBy": "string (GUID)",
+    "createdAt": "string (ISO 8601)",
+    "updatedBy": "string (GUID)",
+    "updatedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -713,7 +718,7 @@ Link a person to an existing user account.
 
 ```json
 {
-  "user_id": "string (GUID)"
+  "userId": "string (GUID)"
 }
 ```
 
@@ -723,9 +728,9 @@ Link a person to an existing user account.
 {
   "success": true,
   "data": {
-    "person_id": "string (GUID)",
-    "user_id": "string (GUID)",
-    "linked_at": "string (ISO 8601)"
+    "personId": "string (GUID)",
+    "userId": "string (GUID)",
+    "linkedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -738,7 +743,7 @@ Link a person to an existing user account.
   "error": "Person is already linked to a user",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "existing_user_id": "guid"
+    "existingUserId": "guid"
   }
 }
 ```
@@ -749,7 +754,7 @@ Link a person to an existing user account.
   "error": "User is already linked to another person",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "existing_person_id": "guid"
+    "existingPersonId": "guid"
   }
 }
 ```
@@ -781,7 +786,7 @@ Add tags to a person.
 
 ```json
 {
-  "tag_ids": ["string (GUID)"]
+  "tagIds": ["string (GUID)"]
 }
 ```
 
@@ -795,7 +800,7 @@ Add tags to a person.
       {
         "id": "string (GUID)",
         "name": "string",
-        "assigned_at": "string (ISO 8601)"
+        "assignedAt": "string (ISO 8601)"
       }
     ]
   }
@@ -856,9 +861,9 @@ Get person's current role assignments.
         "code": "string",
         "name": "string"
       },
-      "is_primary": "boolean",
-      "effective_date": "string (ISO 8601)",
-      "termination_date": null
+      "isPrimary": "boolean",
+      "effectiveDate": "string (ISO 8601)",
+      "terminationDate": null
     }
   ]
 }
@@ -893,8 +898,8 @@ Get person's complete role assignment history.
           "code": "string",
           "name": "string"
         },
-        "is_primary": "boolean",
-        "effective_date": "string (ISO 8601)"
+        "isPrimary": "boolean",
+        "effectiveDate": "string (ISO 8601)"
       }
     ],
     "historical": [
@@ -905,9 +910,9 @@ Get person's complete role assignment history.
           "code": "string",
           "name": "string"
         },
-        "is_primary": "boolean",
-        "effective_date": "string (ISO 8601)",
-        "termination_date": "string (ISO 8601)"
+        "isPrimary": "boolean",
+        "effectiveDate": "string (ISO 8601)",
+        "terminationDate": "string (ISO 8601)"
       }
     ]
   }
@@ -933,9 +938,9 @@ Assign a role to a person.
 
 ```json
 {
-  "role_id": "string (GUID)",
-  "is_primary": "boolean?",
-  "effective_date": "string (ISO 8601)?"
+  "roleId": "string (GUID)",
+  "isPrimary": "boolean?",
+  "effectiveDate": "string (ISO 8601)?"
 }
 ```
 
@@ -943,9 +948,9 @@ Assign a role to a person.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| role_id | GUID | Yes | Must be active role |
-| is_primary | boolean | No | Default: `true` if first role, else `false` |
-| effective_date | ISO 8601 | No | Default: current date |
+| roleId | GUID | Yes | Must be active role |
+| isPrimary | boolean | No | Default: `true` if first role, else `false` |
+| effectiveDate | ISO 8601 | No | Default: current date |
 
 **Response:**
 
@@ -959,9 +964,9 @@ Assign a role to a person.
       "code": "string",
       "name": "string"
     },
-    "is_primary": "boolean",
-    "effective_date": "string (ISO 8601)",
-    "previous_occupant_terminated": "boolean"
+    "isPrimary": "boolean",
+    "effectiveDate": "string (ISO 8601)",
+    "previousOccupantTerminated": "boolean"
   }
 }
 ```
@@ -969,7 +974,7 @@ Assign a role to a person.
 **Notes:**
 
 - If role already has an occupant, their assignment is auto-terminated
-- `previous_occupant_terminated` indicates if this happened
+- `previousOccupantTerminated` indicates if this happened
 
 **Error Responses:**
 
@@ -987,7 +992,7 @@ Assign a role to a person.
   "error": "Role not found or inactive",
   "code": "VALIDATION_ERROR",
   "details": {
-    "field": "role_id"
+    "field": "roleId"
   }
 }
 ```
@@ -1014,8 +1019,8 @@ Set a role as the person's primary role.
 {
   "success": true,
   "data": {
-    "previous_primary_role_id": "string (GUID)?",
-    "new_primary_role_id": "string (GUID)"
+    "previousPrimaryRoleId": "string (GUID)?",
+    "newPrimaryRoleId": "string (GUID)"
   }
 }
 ```
@@ -1050,7 +1055,7 @@ Unassign a role from a person.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| termination_date | ISO 8601 | now | When assignment ends |
+| terminationDate | ISO 8601 | now | When assignment ends |
 
 **Response:**
 
@@ -1059,9 +1064,9 @@ Unassign a role from a person.
   "success": true,
   "data": {
     "terminated": true,
-    "termination_date": "string (ISO 8601)",
-    "was_primary": "boolean",
-    "new_primary_role_id": "string (GUID)?"
+    "terminationDate": "string (ISO 8601)",
+    "wasPrimary": "boolean",
+    "newPrimaryRoleId": "string (GUID)?"
   }
 }
 ```
@@ -1087,7 +1092,7 @@ List all person types for the tenant.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| include_inactive | boolean | false | Include inactive types |
+| includeInactive | boolean | false | Include inactive types |
 
 **Response:**
 
@@ -1100,11 +1105,11 @@ List all person types for the tenant.
       "code": "string",
       "name": "string",
       "description": "string?",
-      "is_assignable_by_default": "boolean",
-      "display_order": "number",
-      "is_active": "boolean",
-      "created_at": "string (ISO 8601)",
-      "updated_at": "string (ISO 8601)?"
+      "isAssignableByDefault": "boolean",
+      "displayOrder": "number",
+      "isActive": "boolean",
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)?"
     }
   ]
 }
@@ -1130,12 +1135,12 @@ Get person type details.
     "code": "string",
     "name": "string",
     "description": "string?",
-    "is_assignable_by_default": "boolean",
-    "display_order": "number",
-    "is_active": "boolean",
-    "person_count": "number",
-    "created_at": "string (ISO 8601)",
-    "updated_at": "string (ISO 8601)?"
+    "isAssignableByDefault": "boolean",
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "personCount": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
   }
 }
 ```
@@ -1158,8 +1163,8 @@ Create a new person type.
   "code": "string",
   "name": "string",
   "description": "string?",
-  "is_assignable_by_default": "boolean",
-  "display_order": "number?"
+  "isAssignableByDefault": "boolean",
+  "displayOrder": "number?"
 }
 ```
 
@@ -1170,8 +1175,8 @@ Create a new person type.
 | code | string | Yes | 2-20 chars, uppercase alphanumeric + underscore, unique within tenant |
 | name | string | Yes | 1-100 characters |
 | description | string | No | Max 500 characters |
-| is_assignable_by_default | boolean | Yes | - |
-| display_order | number | No | Default: next available |
+| isAssignableByDefault | boolean | Yes | - |
+| displayOrder | number | No | Default: next available |
 
 **Response:**
 
@@ -1211,15 +1216,15 @@ Update a person type.
 {
   "name": "string?",
   "description": "string?",
-  "is_assignable_by_default": "boolean?",
-  "display_order": "number?"
+  "isAssignableByDefault": "boolean?",
+  "displayOrder": "number?"
 }
 ```
 
 **Notes:**
 
 - `code` cannot be changed after creation
-- Changes to `is_assignable_by_default` do not affect existing persons
+- Changes to `isAssignableByDefault` do not affect existing persons
 
 **Response:**
 
@@ -1256,7 +1261,7 @@ Deactivate a person type.
   "error": "Cannot delete person type with existing persons",
   "code": "BUSINESS_RULE_VIOLATION",
   "details": {
-    "person_count": 15
+    "personCount": 15
   }
 }
 ```
@@ -1283,8 +1288,8 @@ List all tags for the tenant.
     {
       "id": "string (GUID)",
       "name": "string",
-      "person_count": "number",
-      "created_at": "string (ISO 8601)"
+      "personCount": "number",
+      "createdAt": "string (ISO 8601)"
     }
   ]
 }
@@ -1323,7 +1328,7 @@ Create a new tag.
   "data": {
     "id": "string (GUID)",
     "name": "string",
-    "created_at": "string (ISO 8601)"
+    "createdAt": "string (ISO 8601)"
   }
 }
 ```
@@ -1387,7 +1392,7 @@ Delete a tag (cascade removes all person-tag assignments).
 {
   "success": true,
   "data": {
-    "assignments_removed": "number"
+    "assignmentsRemoved": "number"
   }
 }
 ```

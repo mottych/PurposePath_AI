@@ -1,11 +1,21 @@
 # Account Service Backend Integration Specifications
 
-**Version:** 3.0  
+**Version:** 4.0  
+**Last Updated:** December 26, 2025  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`  
 **Dev Environment:** `https://api.dev.purposepath.app/account/api/v1`
 
-[← Back to Index](./backend-integration-index.md)
+[← Back to Index](./index.md)
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|----------|
+| 4.0 | December 26, 2025 | **BREAKING:** Converted all JSON properties from snake_case to camelCase to match C#/.NET implementation (e.g., `user_id` → `userId`, `first_name` → `firstName`). Query parameters also converted to camelCase (e.g., `page_size` → `pageSize`). This matches ASP.NET Core default JSON serialization. |
+| 3.0 | October 13, 2025 | Multi-service architecture documentation split |
+| 2.1 | October 1, 2025 | Added clarifications |
+| 2.0 | Previous | Initial multi-service version |
 
 ## Overview
 
@@ -43,18 +53,18 @@ User authentication with email/password.
 {
   "success": true,
   "data": {
-    "access_token": "string",
-    "refresh_token": "string",
+    "accessToken": "string",
+    "refreshToken": "string",
     "user": {
-      "user_id": "string",
+      "userId": "string",
       "email": "string",
-      "first_name": "string",
-      "last_name": "string",
-      "avatar_url": "string?",
-      "created_at": "string",
-      "updated_at": "string",
+      "firstName": "string",
+      "lastName": "string",
+      "avatarUrl": "string?",
+      "createdAt": "string",
+      "updatedAt": "string",
       "status": "string",
-      "email_verified": "boolean",
+      "isEmailVerified": "boolean",
       "preferences": {}
     },
     "tenant": {
@@ -71,10 +81,9 @@ User authentication with email/password.
 
 **Frontend Handling:**
 
-- Stores `access_token` → `localStorage.accessToken`
-- Stores `refresh_token` → `localStorage.refreshToken`
+- Stores `accessToken` → `localStorage.accessToken`
+- Stores `refreshToken` → `localStorage.refreshToken`
 - Stores `tenant.id` → `localStorage.tenantId`
-- Maps backend snake_case to frontend camelCase
 
 **Implementation:** `src/services/api.ts` → `ApiClient.login()`
 
@@ -113,8 +122,8 @@ New user registration.
 {
   "email": "string",
   "password": "string",
-  "first_name": "string",
-  "last_name": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string?"
 }
 ```
@@ -125,8 +134,8 @@ New user registration.
 {
   "success": true,
   "data": {
-    "access_token": "string",
-    "refresh_token": "string",
+    "accessToken": "string",
+    "refreshToken": "string",
     "user": "UserProfile",
     "tenant": "TenantInfo"
   }
@@ -139,8 +148,8 @@ New user registration.
 {
   "success": true,
   "data": {
-    "requires_email_verification": true,
-    "tenant_id": "string"
+    "requiresEmailVerification": true,
+    "tenantId": "string"
   }
 }
 ```
@@ -190,7 +199,7 @@ Complete password reset with token.
 ```json
 {
   "token": "string",
-  "new_password": "string"
+  "newPassword": "string"
 }
 ```
 
@@ -214,7 +223,7 @@ Refresh access token using refresh token.
 
 ```json
 {
-  "refresh_token": "string"
+  "refreshToken": "string"
 }
 ```
 
@@ -224,8 +233,8 @@ Refresh access token using refresh token.
 {
   "success": true,
   "data": {
-    "access_token": "string",
-    "refresh_token": "string"
+    "accessToken": "string",
+    "refreshToken": "string"
   }
 }
 ```
@@ -296,7 +305,7 @@ Validate email confirmation token without consuming it.
 {
   "success": true,
   "data": {
-    "status": "valid|used|expired|not_found"
+    "status": "valid|used|expired|notFound"
   }
 }
 ```
@@ -309,7 +318,7 @@ User logout (invalidates refresh token).
 
 **Query Parameters:**
 
-- `refresh_token` - Refresh token to invalidate
+- `refreshToken` - Refresh token to invalidate
 
 **Response:**
 
@@ -343,15 +352,15 @@ Get current authenticated user's profile.
 {
   "success": true,
   "data": {
-    "user_id": "string",
+    "userId": "string",
     "email": "string",
-    "first_name": "string",
-    "last_name": "string",
-    "avatar_url": "string?",
-    "created_at": "string",
-    "updated_at": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "avatarUrl": "string?",
+    "createdAt": "string",
+    "updatedAt": "string",
     "status": "string",
-    "email_verified": "boolean",
+    "isEmailVerified": "boolean",
     "preferences": {}
   }
 }
@@ -369,10 +378,10 @@ Update user profile.
 
 ```json
 {
-  "first_name": "string?",
-  "last_name": "string?",
+  "firstName": "string?",
+  "lastName": "string?",
   "phone": "string?",
-  "avatar_url": "string?",
+  "avatarUrl": "string?",
   "preferences": {}
 }
 ```
@@ -462,11 +471,11 @@ Get user by ID (for display purposes like assignee names).
 {
   "success": true,
   "data": {
-    "user_id": "string",
+    "userId": "string",
     "email": "string",
-    "first_name": "string",
-    "last_name": "string",
-    "avatar_url": "string?"
+    "firstName": "string",
+    "lastName": "string",
+    "avatarUrl": "string?"
   }
 }
 ```
@@ -744,7 +753,7 @@ Get Stripe billing portal URL for subscription management.
 
 ```json
 {
-  "return_url": "string?"
+  "returnUrl": "string?"
 }
 ```
 
@@ -860,7 +869,7 @@ Extend trial subscription for a user (admin only).
 {
   "newExpirationDate": "2025-12-01T00:00:00Z",
   "reason": "Customer success initiative",
-  "extendedBy": "admin_user_id"
+  "extendedBy": "adminUserId"
 }
 ```
 
