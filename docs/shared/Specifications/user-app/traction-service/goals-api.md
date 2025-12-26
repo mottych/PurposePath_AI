@@ -2,8 +2,8 @@
 
 **Controller:** `GoalsController`  
 **Base Route:** `/goals`  
-**Version:** 7.0  
-**Last Updated:** December 23, 2025
+**Version:** 7.1  
+**Last Updated:** December 27, 2025
 
 [← Back to API Index](./README.md)
 
@@ -13,13 +13,13 @@
 
 The Goals API manages the complete lifecycle of business goals, including creation, updates, status transitions, strategies, and activity tracking.
 
-**Endpoints:** 13 total
+**Endpoints:** 14 total
 - 3 CRUD operations (List, Create, Get, Update, Delete)
 - 3 status transitions (Close, Activate, Pause)
 - 2 activity endpoints (Get activity, Add activity)
 - 1 notes endpoint
 - 1 statistics endpoint
-- 1 KPI threshold endpoint
+- 2 KPI endpoints (Set KPI threshold, Get available KPIs)
 - 2 strategy endpoints (Create strategy, Update strategy)
 
 ---
@@ -758,6 +758,149 @@ Set a threshold percentage for a KPI linked to a goal.
 
 ---
 
+### 14. Get Available KPIs
+
+**GET** `/goals/{goalId}/available-kpis`
+
+Retrieve all KPIs available for linking to a specific goal, including:
+- Catalog KPIs (predefined industry-standard KPIs)
+- Tenant custom KPIs (organization-specific KPIs)
+
+Each KPI includes usage statistics showing how many goals are currently using it and whether the specified goal is already using it.
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `goalId` | string (UUID) | Goal identifier |
+
+#### Response 200
+
+```json
+{
+  "success": true,
+  "data": {
+    "catalogKpis": [
+      {
+        "id": "catalog-001",
+        "name": "Monthly Recurring Revenue",
+        "description": "Total predictable revenue from subscriptions",
+        "category": "Financial",
+        "unit": "USD",
+        "direction": "increase",
+        "type": "leading",
+        "valueType": "currency",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Sum of all active subscription values",
+        "isIntegrationEnabled": true,
+        "usageInfo": {
+          "goalCount": 3,
+          "isUsedByThisGoal": false
+        }
+      }
+    ],
+    "tenantCustomKpis": [
+      {
+        "id": "custom-kpi-001",
+        "name": "Customer Satisfaction Score",
+        "description": "Average CSAT from post-purchase surveys",
+        "category": "Customer Experience",
+        "unit": "score",
+        "direction": "increase",
+        "type": "lagging",
+        "valueType": "percentage",
+        "aggregationType": "average",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Average of all survey responses",
+        "kpiCatalogId": null,
+        "isIntegrationEnabled": false,
+        "createdAt": "2025-01-15T10:00:00.000Z",
+        "createdBy": "user-123",
+        "usageInfo": {
+          "goalCount": 1,
+          "isUsedByThisGoal": true
+        }
+      }
+    ]
+  },
+  "error": null,
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+#### Response Fields
+
+**Catalog KPI:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | KPI catalog entry ID |
+| `name` | string | KPI display name |
+| `description` | string | What the KPI measures |
+| `category` | string | Business category (Financial, Operations, Customer, etc.) |
+| `unit` | string | Measurement unit (USD, %, count, score, etc.) |
+| `direction` | string | `"increase"` or `"decrease"` - desired trend |
+| `type` | string | `"leading"` or `"lagging"` indicator |
+| `valueType` | string | `"number"`, `"currency"`, `"percentage"`, `"boolean"` |
+| `aggregationType` | string | `"sum"`, `"average"`, `"max"`, `"min"`, `"count"`, `"latest"` |
+| `aggregationPeriod` | string | `"daily"`, `"weekly"`, `"monthly"`, `"quarterly"`, `"annually"` |
+| `calculationMethod` | string | How the KPI is calculated |
+| `isIntegrationEnabled` | boolean | Whether external integrations can populate this KPI |
+| `usageInfo` | object | Usage statistics for this KPI |
+
+**Tenant Custom KPI:**
+| Field | Type | Description |
+|-------|------|-------------|
+| All fields from Catalog KPI | - | Same as above |
+| `kpiCatalogId` | string (UUID) or null | Reference to catalog KPI if based on template |
+| `createdAt` | string (ISO 8601) | When the custom KPI was created |
+| `createdBy` | string (UUID) | User who created the custom KPI |
+
+**Usage Info:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `goalCount` | number | Number of goals currently using this KPI |
+| `isUsedByThisGoal` | boolean | Whether the specified goal is already using this KPI |
+
+#### Use Cases
+
+1. **KPI Selection Dialog**: Display available KPIs when user wants to link KPI to goal
+2. **Prevent Duplicates**: Show `isUsedByThisGoal` to prevent linking same KPI twice
+3. **Popular KPIs**: Sort by `goalCount` to show most commonly used KPIs
+4. **Filter by Category**: Group KPIs by category for better UX
+
+#### Error Responses
+
+**404 Not Found**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Goal not found",
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+**400 Bad Request**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid goal ID format",
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+#### Notes
+
+- Returns both catalog KPIs (predefined) and tenant custom KPIs
+- Usage statistics updated in real-time
+- Only returns KPIs accessible to the tenant
+- Catalog KPIs are read-only; tenant custom KPIs can be modified
+- Use [KPI Links API](./kpi-links-api.md) to actually link a KPI to the goal
+
+---
+
 ## Error Responses
 
 ### 400 Bad Request
@@ -869,10 +1012,16 @@ await traction.post(`/goals/${goalId}:close`, {
 
 ## Changelog
 
+### v7.1 (December 27, 2025)
+- **Restored** `/goals/{goalId}/available-kpis` endpoint (Issue #413)
+- Updated to work with new `IKpiLinkRepository` architecture
+- Added comprehensive documentation with usage examples
+- Endpoint now supports unified KPI linking for Goals, Strategies, and People
+
 ### v7.0 (December 23, 2025)
 - Removed deprecated `/goals/{goalId}/kpis:link` endpoint
 - Removed deprecated `/goals/{goalId}/kpis:unlink` endpoint  
-- Removed deprecated `/goals/{goalId}/available-kpis` endpoint
+- ~~Removed deprecated `/goals/{goalId}/available-kpis` endpoint~~ (Restored in v7.1)
 - KPI operations moved to dedicated `/kpi-links` API
 - Added comprehensive documentation with examples
 
