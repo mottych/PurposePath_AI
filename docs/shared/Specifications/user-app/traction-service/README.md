@@ -38,7 +38,8 @@ This directory contains detailed API specifications for the Traction Service, or
 
 | Document | Controller | Endpoints | Description |
 |----------|------------|-----------|-------------|
-| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management, strategies |
+| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management |
+| [Strategies API](./strategies-api.md) | StrategiesController | 6 endpoints | Strategy management and alignment |
 | [KPIs API](./kpis-api.md) | KpisController | 5 endpoints | KPI instance management |
 | [KPI Links API](./kpi-links-api.md) | KpiLinksController | 6 endpoints | Link KPIs to goals, people, strategies |
 | [KPI Data API](./kpi-data-api.md) | KpiDataController | 8 endpoints | Targets, actuals, projections |
