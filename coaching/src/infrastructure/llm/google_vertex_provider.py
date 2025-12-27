@@ -163,14 +163,20 @@ class GoogleVertexLLMProvider:
                 if not credentials:
                     creds_dict = get_google_vertex_credentials()
                     if creds_dict:
-                        # For google-genai SDK, we can pass credentials dict directly
-                        # or use service account credentials
+                        # For google-genai SDK, create service account credentials
+                        # Vertex AI requires specific IAM roles on the service account:
+                        # - roles/aiplatform.user (for Vertex AI API access)
+                        # - roles/ml.developer (for ML operations)
                         from google.oauth2 import service_account
 
                         creds_map: dict[str, Any] = creds_dict
+                        # Create credentials with Vertex AI scopes
                         credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
                             creds_map,
-                            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+                            scopes=[
+                                "https://www.googleapis.com/auth/cloud-platform",
+                                "https://www.googleapis.com/auth/aiplatform",
+                            ],
                         )
                         # Update project_id from credentials if still not set
                         if not project_id:
