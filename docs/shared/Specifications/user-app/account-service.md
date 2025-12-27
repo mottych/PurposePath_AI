@@ -1,21 +1,14 @@
 # Account Service Backend Integration Specifications
 
-**Version:** 4.0  
+**Version:** 5.0  
 **Last Updated:** December 26, 2025  
+**Audit Summary:** Added complete Business Foundation endpoints including 6 new section-specific PATCH endpoints (/foundation/profile, /foundation/identity, /foundation/market, /foundation/proposition, /foundation/model), full response DTOs with 40+ fields across 5 sections, wizard-progress endpoints, and all enumeration definitions.
+
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`  
 **Dev Environment:** `https://api.dev.purposepath.app/account/api/v1`
 
 [← Back to Index](./index.md)
-
-## Changelog
-
-| Version | Date | Changes |
-|---------|------|----------|
-| 4.0 | December 26, 2025 | **BREAKING:** Converted all JSON properties from snake_case to camelCase to match C#/.NET implementation (e.g., `user_id` → `userId`, `first_name` → `firstName`). Query parameters also converted to camelCase (e.g., `page_size` → `pageSize`). This matches ASP.NET Core default JSON serialization. |
-| 3.0 | October 13, 2025 | Multi-service architecture documentation split |
-| 2.1 | October 1, 2025 | Added clarifications |
-| 2.0 | Previous | Initial multi-service version |
 
 ## Overview
 
@@ -1163,11 +1156,19 @@ Delete product entry.
 
 ## Business Foundation Endpoints
 
-The Business Foundation endpoints manage the strategic foundation of the business including vision, purpose, core values, and market positioning. This data is used by the strategic planning module and AI alignment engine.
+The Business Foundation endpoints manage the strategic foundation of the business including company profile, core identity (vision, purpose, mission), target market, value proposition, and business model. This data is used by the strategic planning module and AI alignment engine.
+
+**Base Path:** `/business/foundation`
 
 ### GET /business/foundation
 
-Get business identity and strategic foundation.
+Get complete business foundation with all sections and related entities.
+
+**Query Parameters:**
+
+- `includeCoreValues` (boolean, default: true) - Include related core values
+- `includeProducts` (boolean, default: true) - Include related products
+- `includeIdealCustomerAvatars` (boolean, default: false) - Include related ICAs
 
 **Response:**
 
@@ -1175,52 +1176,325 @@ Get business identity and strategic foundation.
 {
   "success": true,
   "data": {
-    "businessName": "string",
-    "vision": "string",
-    "purpose": "string",
-    "coreValues": ["string"],
-    "targetMarket": "string?",
-    "valueProposition": "string?"
+    "id": "string (GUID)",
+    "tenantId": "string (GUID)",
+    "completionPercentage": "number (0-100)",
+    "version": "number",
+    "profile": {
+      "companyName": "string",
+      "companyDescription": "string?",
+      "industry": "string?",
+      "subIndustry": "string?",
+      "stage": "CompanyStage?",
+      "size": "CompanySize?",
+      "revenueRange": "RevenueRange?",
+      "yearFounded": "number?",
+      "geographicFocus": "GeographicFocus?",
+      "website": "string?",
+      "address": {
+        "street": "string?",
+        "city": "string?",
+        "state": "string?",
+        "postalCode": "string?",
+        "country": "string?"
+      }
+    },
+    "coreIdentity": {
+      "purpose": "string?",
+      "vision": "string?",
+      "visionTimeframe": "number?",
+      "mission": "string?",
+      "whoWeServe": "string?",
+      "coreValueIds": ["string (GUID)"]
+    },
+    "targetMarket": {
+      "niche": "string?",
+      "primaryAudience": "string?",
+      "marketSize": "string?",
+      "growthTrend": "GrowthTrend?",
+      "painPoints": ["string"],
+      "desires": ["string"],
+      "idealCustomerAvatarIds": ["string (GUID)"]
+    },
+    "valueProposition": {
+      "statement": "string?",
+      "uniqueSellingProposition": "string?",
+      "keyBenefits": ["string"],
+      "differentiators": ["string"],
+      "proofPoints": ["string"],
+      "customerOutcomes": ["string"],
+      "brandPromise": "string?",
+      "primaryCompetitors": ["string"],
+      "competitiveAdvantage": "string?",
+      "marketPosition": "MarketPosition?"
+    },
+    "businessModel": {
+      "type": "BusinessModelType?",
+      "secondaryTypes": ["BusinessModelType"],
+      "primaryRevenueStream": "string?",
+      "revenueStreams": ["string"],
+      "pricingStrategy": "string?",
+      "keyPartners": ["string"],
+      "distributionChannels": ["string"],
+      "customerAcquisitionStrategy": "string?",
+      "marketPosition": "MarketPosition?",
+      "productIds": ["string (GUID)"]
+    },
+    "coreValues": [
+      {
+        "id": "string (GUID)",
+        "tenantId": "string (GUID)",
+        "businessFoundationId": "string (GUID)",
+        "name": "string",
+        "description": "string?",
+        "behaviors": ["string"],
+        "displayOrder": "number",
+        "isActive": "boolean",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ],
+    "idealCustomerAvatars": [
+      {
+        "id": "string (GUID)",
+        "tenantId": "string (GUID)",
+        "businessFoundationId": "string (GUID)",
+        "name": "string",
+        "description": "string?",
+        "isPrimary": "boolean",
+        "isActive": "boolean",
+        "ageRange": "string?",
+        "gender": "string?",
+        "location": "string?",
+        "education": "string?",
+        "incomeRange": "string?",
+        "jobTitle": "string?",
+        "industry": "string?",
+        "companySize": "string?",
+        "goals": ["string"],
+        "challenges": ["string"],
+        "values": ["string"],
+        "objections": ["string"],
+        "motivations": ["string"],
+        "onlineChannels": ["string"],
+        "contentPreferences": ["string"],
+        "communicationPreference": "string?",
+        "buyingProcess": "string?",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ],
+    "products": [
+      {
+        "id": "string (GUID)",
+        "tenantId": "string (GUID)",
+        "businessFoundationId": "string (GUID)?",
+        "name": "string",
+        "description": "string?",
+        "type": "ProductType",
+        "status": "ProductStatus",
+        "displayOrder": "number",
+        "isFlagship": "boolean",
+        "pricingTier": "PricingTier?",
+        "pricingModel": "PricingModel?",
+        "revenueContribution": "RevenueContribution?",
+        "features": ["string"],
+        "targetSegments": ["string"],
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
   }
 }
 ```
-
-**Response Fields:**
-
-- `businessName` - Company name
-- `vision` - Long-term vision statement
-- `purpose` - Company purpose/mission
-- `coreValues` - Array of core values (e.g., ["Innovation", "Integrity", "Customer Focus"])
-- `targetMarket` - Target market description (optional)
-- `valueProposition` - Unique value proposition (optional)
-
-**Frontend Handling:**
-
-- Cached for 5 minutes by `BusinessFoundationService`
-- Used by alignment engine for strategic alignment calculations
-- Required for strategic planning module
-- Used in onboarding completeness checks
 
 **Implementation:** `src/services/business-foundation-service.ts` → `getBusinessFoundation()`
 
 ---
 
-### PUT /business/foundation
+### PATCH /business/foundation
 
-Update business foundation information (partial updates supported).
+Update a single field of business foundation using field/value pattern.
+
+**Request:**
+
+```json
+{
+  "field": "string (required)",
+  "value": "any (required)"
+}
+```
+
+**Field Options:**
+
+| Field | Value Type | Description |
+|-------|-----------|-------------|
+| `vision` | string | Long-term vision statement |
+| `purpose` | string | Company purpose/mission |
+| `coreValues` | string[] | Array of core value names |
+| `valueProposition` | string | Unique value proposition |
+| `businessName` | string | Company name |
+| `targetMarket` | string | Target market description |
+
+**Response:** Complete `BusinessFoundationResponse` (see GET response above)
+
+**Implementation:** `src/services/business-foundation-service.ts` → `patchBusinessFoundation()`
+
+---
+
+### PATCH /business/foundation/profile
+
+Update the business profile section.
 
 **Request:**
 
 ```json
 {
   "businessName": "string?",
-  "vision": "string?",
-  "purpose": "string?",
-  "coreValues": ["string"]?,
-  "targetMarket": "string?",
-  "valueProposition": "string?"
+  "businessDescription": "string? (max 2000 chars)",
+  "industry": "string?",
+  "subIndustry": "string?",
+  "website": "string?",
+  "address": {
+    "street": "string?",
+    "city": "string?",
+    "state": "string?",
+    "zip": "string?",
+    "country": "string?"
+  },
+  "headquartersLocation": "string?",
+  "companyStage": "CompanyStage?",
+  "companySize": "CompanySize?",
+  "revenueRange": "RevenueRange?",
+  "yearFounded": "number?",
+  "geographicFocus": ["GeographicFocus"]?"
 }
 ```
+
+**Response:** Complete `BusinessFoundationResponse`
+
+---
+
+### PATCH /business/foundation/identity
+
+Update the core identity section (purpose, vision, mission).
+
+**Request:**
+
+```json
+{
+  "purpose": "string?",
+  "vision": "string?",
+  "visionTimeframe": "string? (e.g., '5 years' → parsed to 5)",
+  "mission": "string?",
+  "whoWeServe": "string?"
+}
+```
+
+**Response:** Complete `BusinessFoundationResponse`
+
+---
+
+### PATCH /business/foundation/market
+
+Update the target market section.
+
+**Request:**
+
+```json
+{
+  "niche": "string?",
+  "primaryAudience": "string?",
+  "marketSize": "string?",
+  "growthTrend": "GrowthTrend?",
+  "painPoints": ["string"]?,
+  "desires": ["string"]?"
+}
+```
+
+**GrowthTrend Enum Values:**
+
+- `Declining` - Market is shrinking
+- `Stable` - Market is stable
+- `Growing` - Market is growing
+- `RapidlyGrowing` - Market is rapidly expanding
+
+**Response:** Complete `BusinessFoundationResponse`
+
+---
+
+### PATCH /business/foundation/proposition
+
+Update the value proposition section.
+
+**Request:**
+
+```json
+{
+  "statement": "string?",
+  "uniqueSellingProposition": "string?",
+  "keyBenefits": ["string"]?,
+  "differentiators": ["string"]?,
+  "proofPoints": ["string"]?,
+  "customerOutcomes": ["string"]?,
+  "brandPromise": "string?",
+  "primaryCompetitors": ["string"]?,
+  "competitiveAdvantage": "string?",
+  "marketPosition": "MarketPosition?"
+}
+```
+
+**MarketPosition Enum Values:**
+
+- `Leader` - Market leader
+- `Challenger` - Challenging the leader
+- `Niche` - Specialized niche player
+- `Emerging` - New market entrant
+
+**Response:** Complete `BusinessFoundationResponse`
+
+---
+
+### PATCH /business/foundation/model
+
+Update the business model section.
+
+**Request:**
+
+```json
+{
+  "type": "BusinessModelType?",
+  "secondaryTypes": ["BusinessModelType"]?,
+  "primaryRevenueStream": "string?",
+  "revenueStreams": ["string"]?,
+  "pricingStrategy": "string?",
+  "keyPartners": ["string"]?,
+  "distributionChannels": ["string"]?,
+  "customerAcquisitionStrategy": "string?",
+  "marketPosition": "MarketPosition?"
+}
+```
+
+**BusinessModelType Enum Values:**
+
+- `B2B` - Business to Business
+- `B2C` - Business to Consumer
+- `B2B2C` - Business to Business to Consumer
+- `Marketplace` - Two-sided marketplace
+- `SaaS` - Software as a Service
+- `Consulting` - Consulting/Advisory services
+- `Ecommerce` - E-commerce/online retail
+- `Other` - Other business model
+
+**Response:** Complete `BusinessFoundationResponse`
+
+---
+
+### GET /business/foundation/wizard-progress
+
+Get the current wizard progress state for the business foundation wizard.
 
 **Response:**
 
@@ -1228,24 +1502,131 @@ Update business foundation information (partial updates supported).
 {
   "success": true,
   "data": {
-    "businessName": "string",
-    "vision": "string",
-    "purpose": "string",
-    "coreValues": ["string"],
-    "targetMarket": "string?",
-    "valueProposition": "string?"
+    "id": "string (GUID)",
+    "tenantId": "string (GUID)",
+    "businessFoundationId": "string (GUID)",
+    "currentStep": "number",
+    "completedSteps": ["number"],
+    "stepData": {
+      "step1": { ... },
+      "step2": { ... }
+    },
+    "lastActiveAt": "string (ISO 8601)",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
   }
 }
 ```
 
-**Notes:**
+---
 
-- All fields are optional (partial update pattern)
-- Returns complete updated foundation
-- Updates invalidate the cache in `BusinessFoundationService`
-- Typically called during onboarding or business settings
+### PUT /business/foundation/wizard-progress
 
-**Implementation:** `src/services/business-foundation-service.ts` → `updateBusinessFoundation()`
+Update the wizard progress state.
+
+**Request:**
+
+```json
+{
+  "currentStep": "number",
+  "completedSteps": ["number"]?,
+  "stepData": "object?"
+}
+```
+
+**Response:** Complete wizard progress response (see GET response above)
+
+---
+
+## Business Foundation Enumerations Reference
+
+### CompanyStage
+
+| Value | Description |
+|-------|-------------|
+| `Startup` | 0-2 years, finding product-market fit |
+| `Growth` | 2-5 years, scaling operations |
+| `Scale` | 5-10 years, expanding markets |
+| `Mature` | 10+ years, optimizing operations |
+
+### CompanySize
+
+| Value | Description |
+|-------|-------------|
+| `Solo` | 1 employee (solopreneur) |
+| `Micro` | 2-9 employees |
+| `Small` | 10-49 employees |
+| `Medium` | 50-249 employees |
+| `Large` | 250-999 employees |
+| `Enterprise` | 1000+ employees |
+
+### RevenueRange
+
+| Value | Description |
+|-------|-------------|
+| `PreRevenue` | No revenue yet |
+| `Under100K` | $1 - $100K annually |
+| `From100KTo500K` | $100K - $500K annually |
+| `From500KTo1M` | $500K - $1M annually |
+| `From1MTo5M` | $1M - $5M annually |
+| `From5MTo10M` | $5M - $10M annually |
+| `From10MTo50M` | $10M - $50M annually |
+| `Over50M` | $50M+ annually |
+| `NotDisclosed` | Prefer not to disclose |
+
+### GeographicFocus
+
+| Value | Description |
+|-------|-------------|
+| `Local` | Single city or local region |
+| `Regional` | Multiple regions within a country |
+| `National` | Entire country |
+| `Global` | Multiple countries/international |
+
+### ProductType
+
+| Value | Description |
+|-------|-------------|
+| `Product` | Physical or digital product |
+| `Service` | Professional service |
+| `Subscription` | Recurring subscription offering |
+| `Hybrid` | Combination of product and service |
+
+### ProductStatus
+
+| Value | Description |
+|-------|-------------|
+| `Active` | Currently available and active |
+| `InDevelopment` | Currently being developed |
+| `Planned` | Planned for future release |
+| `Retired` | No longer offered |
+
+### PricingTier
+
+| Value | Description |
+|-------|-------------|
+| `Premium` | High-end/premium pricing |
+| `MidMarket` | Middle-tier pricing |
+| `EntryLevel` | Budget-friendly/entry-level pricing |
+| `Free` | Free offering |
+
+### PricingModel
+
+| Value | Description |
+|-------|-------------|
+| `OneTime` | One-time purchase |
+| `Subscription` | Recurring subscription |
+| `UsageBased` | Pay per use/consumption |
+| `Freemium` | Free tier with paid features |
+| `Custom` | Custom/negotiated pricing |
+
+### RevenueContribution
+
+| Value | Description |
+|-------|-------------|
+| `Primary` | Main revenue source |
+| `Secondary` | Supporting revenue stream |
+| `Emerging` | New/growing revenue stream |
 
 ---
 
