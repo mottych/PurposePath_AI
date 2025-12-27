@@ -64,6 +64,8 @@ from coaching.src.services.coaching_session_service import (
     SessionStateResponse,
     SessionSummary,
     SessionValidationError,
+    TemplateNotFoundError,
+    TopicNotActiveError,
     TopicsWithStatusResponse,
 )
 from coaching.src.services.coaching_session_service import (
@@ -293,6 +295,29 @@ async def start_session(
         raise HTTPException(
             status_code=422,
             detail={"code": "INVALID_TOPIC", "message": str(e)},
+        ) from e
+
+    except TopicNotActiveError as e:
+        logger.warning(
+            "coaching_sessions.start_session.topic_not_active",
+            topic_id=request.topic_id,
+            tenant_id=context.tenant_id,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "TOPIC_NOT_ACTIVE", "message": str(e)},
+        ) from e
+
+    except TemplateNotFoundError as e:
+        logger.error(
+            "coaching_sessions.start_session.template_not_found",
+            topic_id=request.topic_id,
+            tenant_id=context.tenant_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "TEMPLATE_NOT_FOUND", "message": str(e)},
         ) from e
 
     except SessionValidationError as e:

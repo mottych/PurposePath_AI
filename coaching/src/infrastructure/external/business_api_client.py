@@ -142,7 +142,7 @@ class BusinessApiClient:
                 "email": user_data.get("email"),
                 "first_name": first_name,
                 "last_name": last_name,
-                "name": full_name,
+                "user_name": full_name,  # Changed from "name" to "user_name" to match parameter extraction
                 "tenant_id": tenant_id,
                 # MVP Fallbacks
                 "role": "Business Owner",

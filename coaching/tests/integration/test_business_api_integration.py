@@ -164,7 +164,7 @@ class TestBusinessApiIntegration:
             # Verify expected fields
             assert "user_id" in result
             assert "email" in result
-            assert "name" in result
+            assert "user_name" in result
             assert "tenant_id" in result
 
             # Verify MVP fallback fields

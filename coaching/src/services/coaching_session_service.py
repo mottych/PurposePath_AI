@@ -487,9 +487,9 @@ class CoachingSessionService:
                 logger.info(
                     "coaching_service.session_idle_creating_new",
                     old_session_id=str(existing.session_id),
-                    last_activity_at=existing.last_activity_at.isoformat()
-                    if existing.last_activity_at
-                    else None,
+                    last_activity_at=(
+                        existing.last_activity_at.isoformat() if existing.last_activity_at else None
+                    ),
                 )
                 existing.complete(result={})
                 await self.session_repository.update(existing)
@@ -910,9 +910,9 @@ class CoachingSessionService:
         if session.is_idle():
             raise SessionIdleTimeoutError(
                 session_id=session_id,
-                last_activity_at=session.last_activity_at.isoformat()
-                if session.last_activity_at
-                else "unknown",
+                last_activity_at=(
+                    session.last_activity_at.isoformat() if session.last_activity_at else "unknown"
+                ),
                 idle_timeout_minutes=session.idle_timeout_minutes,
             )
 

@@ -19,9 +19,9 @@ class UserLimitsCache:
         Args:
             ttl_seconds: Time-to-live for cache entries in seconds
         """
-        self._cache: dict[
-            str, tuple[dict[str, Any], float, int]
-        ] = {}  # user_id -> (limits, timestamp, token_hash)
+        self._cache: dict[str, tuple[dict[str, Any], float, int]] = (
+            {}
+        )  # user_id -> (limits, timestamp, token_hash)
         self._ttl = ttl_seconds
 
     def get(self, user_id: str, token: str) -> dict[str, Any] | None:
