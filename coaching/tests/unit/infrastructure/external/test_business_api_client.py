@@ -77,7 +77,7 @@ class TestBusinessApiClient:
         result = await business_client.get_user_context("u1", "t1")
 
         assert result["user_id"] == "u1"
-        assert result["name"] == "Test User"
+        assert result["user_name"] == "Test User"
         assert result["role"] == "Business Owner"
         mock_http_client.get.assert_called_with(
             "/user/profile", headers=business_client._get_headers("t1")

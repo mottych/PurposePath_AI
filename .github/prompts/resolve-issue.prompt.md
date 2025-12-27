@@ -45,6 +45,7 @@ agent: agent
 3. **Implement tests alongside code** (TDD when possible)
 4. **Use structured logging** (structlog) with context
 5. Apply the **right** solution, and NOT the simplest quick fix 
+6. When running terminal commands, use flags to minimize interactive prompts
 
 ### STEP 3: Code Quality Validation (MANDATORY - ALL MUST PASS)
 

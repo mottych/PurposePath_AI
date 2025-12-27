@@ -395,9 +395,11 @@ async def list_available_topics() -> list[TopicInfo]:
         topics.append(
             TopicInfo(
                 topic_id=endpoint.topic_id,
-                name=endpoint.description.split(" - ")[0]
-                if " - " in endpoint.description
-                else endpoint.topic_id.replace("_", " ").title(),
+                name=(
+                    endpoint.description.split(" - ")[0]
+                    if " - " in endpoint.description
+                    else endpoint.topic_id.replace("_", " ").title()
+                ),
                 description=endpoint.description,
                 topic_type="single_shot",
                 response_model=endpoint.response_model,
