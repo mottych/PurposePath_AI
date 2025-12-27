@@ -170,13 +170,15 @@ class GoogleVertexLLMProvider:
                         from google.oauth2 import service_account
 
                         creds_map: dict[str, Any] = creds_dict
-                        # Create credentials with Vertex AI scopes
-                        credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
+                        # Create credentials WITHOUT scopes parameter, then use with_scopes()
+                        # This ensures proper scope handling through token refresh
+                        base_creds = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
                             creds_map,
-                            scopes=[
-                                "https://www.googleapis.com/auth/cloud-platform",
-                                "https://www.googleapis.com/auth/aiplatform",
-                            ],
+                        )
+                        # For Vertex AI API via google-genai SDK, use cloud-platform scope
+                        # which provides broad GCP API access including Vertex AI
+                        credentials = base_creds.with_scopes(
+                            ["https://www.googleapis.com/auth/cloud-platform"]
                         )
                         # Update project_id from credentials if still not set
                         if not project_id:
