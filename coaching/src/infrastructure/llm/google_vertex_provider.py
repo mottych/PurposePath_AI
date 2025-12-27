@@ -169,7 +169,8 @@ class GoogleVertexLLMProvider:
 
                         creds_map: dict[str, Any] = creds_dict
                         credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
-                            creds_map
+                            creds_map,
+                            scopes=["https://www.googleapis.com/auth/cloud-platform"],
                         )
                         # Update project_id from credentials if still not set
                         if not project_id:
