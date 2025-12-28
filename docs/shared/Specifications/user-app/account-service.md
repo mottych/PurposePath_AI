@@ -1,8 +1,10 @@
 # Account Service Backend Integration Specifications
 
-**Version:** 5.0  
-**Last Updated:** December 26, 2025  
-**Audit Summary:** Added complete Business Foundation endpoints including 6 new section-specific PATCH endpoints (/foundation/profile, /foundation/identity, /foundation/market, /foundation/proposition, /foundation/model), full response DTOs with 40+ fields across 5 sections, wizard-progress endpoints, and all enumeration definitions.
+**Version:** 5.1  
+**Last Updated:** December 28, 2025  
+**Audit Summary:** Added `personId` field to all authentication and user profile responses (login, register, Google OAuth, user profile endpoints). This enables frontend to use correct PersonId for Traction API calls instead of sending UserId. Non-breaking change - adds optional field to existing responses.
+
+**Previous Changes (v5.0, December 26, 2025):** Added complete Business Foundation endpoints including 6 new section-specific PATCH endpoints (/foundation/profile, /foundation/identity, /foundation/market, /foundation/proposition, /foundation/model), full response DTOs with 40+ fields across 5 sections, wizard-progress endpoints, and all enumeration definitions.
 
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`  
@@ -53,6 +55,7 @@ User authentication with email/password.
       "email": "string",
       "firstName": "string",
       "lastName": "string",
+      "personId": "string?",
       "avatarUrl": "string?",
       "createdAt": "string",
       "updatedAt": "string",
@@ -349,6 +352,7 @@ Get current authenticated user's profile.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
+    "personId": "string?",
     "avatarUrl": "string?",
     "createdAt": "string",
     "updatedAt": "string",
@@ -358,6 +362,11 @@ Get current authenticated user's profile.
   }
 }
 ```
+
+**Notes:**
+- `personId` links to the Person entity in the organization structure
+- May be `null` if Person record not yet created for user
+- Frontend should use `personId` (not `userId`) for Traction API calls that require Person identification
 
 **Implementation:** `src/services/api.ts` → `ApiClient.getUserProfile()`
 
@@ -384,9 +393,25 @@ Update user profile.
 ```json
 {
   "success": true,
-  "data": "UserProfile"
+  "data": {
+    "userId": "string",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "personId": "string?",
+    "avatarUrl": "string?",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "status": "string",
+    "isEmailVerified": "boolean",
+    "preferences": {}
+  }
 }
 ```
+
+**Notes:**
+- Returns updated profile with same structure as GET /user/profile
+- `personId` included in response
 
 **Implementation:** `src/services/api.ts` → `ApiClient.updateUserProfile()`
 
