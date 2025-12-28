@@ -1538,11 +1538,100 @@ Update the wizard progress state.
 
 ---
 
+## Tenant Settings Endpoints
+
+### GET /tenants/settings
+
+Get current tenant settings (KPI configuration, etc).
+
+**Authentication:** Required  
+**Headers:**
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}` (auto-injected by frontend)
+
+**Request:** None
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "targetLineMode": "single" | "three"
+  }
+}
+```
+
+**Response Fields:**
+- `targetLineMode` (string): KPI target line configuration
+  - `"single"` - Only expected target line (default)
+  - `"three"` - Expected, optimal, and minimal target lines
+
+**Status Codes:**
+- `200` - Success
+- `401` - Unauthorized (missing/invalid token)
+- `404` - Tenant not found
+- `500` - Server error
+
+**Frontend Handling:** `src/services/account.ts`
+
+---
+
+### PUT /tenants/settings
+
+Update current tenant settings.
+
+**Authentication:** Required  
+**Headers:**
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}` (auto-injected by frontend)
+
+**Request:**
+
+```json
+{
+  "targetLineMode": "single" | "three"
+}
+```
+
+**Request Fields:**
+- `targetLineMode` (string, required): Target line mode configuration
+  - Valid values: `"single"` or `"three"`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "targetLineMode": "single" | "three"
+  }
+}
+```
+
+**Status Codes:**
+- `200` - Success
+- `400` - Invalid request (missing field or invalid value)
+- `401` - Unauthorized (missing/invalid token)
+- `404` - Tenant not found
+- `500` - Server error
+
+**Business Rules:**
+- Mode change does NOT affect existing KPI data
+- Single mode: UI hides optimal/minimal target inputs
+- Three mode: UI shows all three target inputs
+- Charts always show expected line; optional lines only if data exists
+
+**Frontend Handling:** `src/services/account.ts`
+
+---
+
 ## Business Foundation Enumerations Reference
 
 ### CompanyStage
 
 | Value | Description |
+````
 |-------|-------------|
 | `Startup` | 0-2 years, finding product-market fit |
 | `Growth` | 2-5 years, scaling operations |
