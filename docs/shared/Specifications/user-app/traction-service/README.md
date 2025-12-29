@@ -45,16 +45,13 @@ This directory contains detailed API specifications for the Traction Service, or
 | [KPI Data API](./kpi-data-api.md) | KpiDataController | 8 endpoints | Targets, actuals, projections |
 | [Actions API](./actions-api.md) | ActionsController | 7 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
-| [People API](./people-api.md) | PeopleController | 4 endpoints | People/team management |
-| [Dashboard API](./dashboard-api.md) | DashboardController | 3 endpoints | Command center data |
-| [Reports API](./reports-api.md) | ReportsController | 2 endpoints | Reporting and analytics |
-| [Activities API](./activities-api.md) | ActivitiesController | 2 endpoints | Activity feeds |
+| [Dashboard, Reports & Activities](./dashboard-reports-activities-api.md) | Multiple | 5 endpoints | Command center, reports, activity feeds |
+
+> **Note:** People API has been deferred and moved to Account Service for better organizational alignment.
 
 ### Reference Data APIs
 
-| Document | Description |
-|----------|-------------|
-| [Reference Data API](./reference-data-api.md) | Issue types, statuses, person types, tags, roles |
+> **Note:** Reference data endpoints (issue types, statuses, tags) are integrated within their respective API documents above.
 
 ---
 

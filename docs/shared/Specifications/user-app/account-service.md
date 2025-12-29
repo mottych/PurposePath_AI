@@ -1090,18 +1090,33 @@ Update onboarding data (partial or complete).
 
 ### POST /business/onboarding/products
 
-Create new product entry in onboarding.
+Create a new product during onboarding.
 
 **URL:** `POST /business/onboarding/products`
 
-**Request:**
+**Request (current schema):**
+
+Only `name` is required. All other fields are optional.
 
 ```json
 {
   "name": "string",
-  "problem": "string"
+  "tagline": "string",
+  "description": "string",
+  "problemSolved": "string",
+  "type": "Product|Service|Subscription|Hybrid",
+  "status": "Active|InDevelopment|Planned|Retired",
+  "targetAudienceIcaId": "guid",
+  "keyFeatures": ["string"],
+  "pricingTier": "Premium|MidMarket|EntryLevel|Free",
+  "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom",
+  "revenueContribution": "Primary|Secondary|Emerging",
+  "differentiators": "string",
+  "displayOrder": 0
 }
 ```
+
+Legacy input `problem` is accepted and mapped to `problemSolved`.
 
 **Response:**
 
@@ -1110,8 +1125,25 @@ Create new product entry in onboarding.
   "success": true,
   "data": {
     "id": "string",
+    "tenantId": "guid",
+    "businessFoundationId": "guid|null",
     "name": "string",
-    "problem": "string"
+    "tagline": "string|null",
+    "description": "string|null",
+    "problemSolved": "string|null",
+    "type": "Product|Service|Subscription|Hybrid",
+    "status": "Active|InDevelopment|Planned|Retired",
+    "targetAudienceIcaId": "guid|null",
+    "keyFeatures": ["string"],
+    "pricingTier": "Premium|MidMarket|EntryLevel|Free|null",
+    "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom|null",
+    "revenueContribution": "Primary|Secondary|Emerging|null",
+    "differentiators": "string|null",
+    "displayOrder": 0,
+    "isFlagship": false,
+    "isActive": true,
+    "createdAt": "ISO-8601",
+    "updatedAt": "ISO-8601|null"
   }
 }
 ```
@@ -1122,7 +1154,7 @@ Create new product entry in onboarding.
 
 ### PUT /business/onboarding/products/{id}
 
-Update product entry.
+Update an existing onboarding product.
 
 **URL:** `PUT /business/onboarding/products/{id}`
 
@@ -1130,27 +1162,33 @@ Update product entry.
 
 - `id` - Product ID
 
-**Request:**
+**Request (current schema):**
+
+Only `name` is required. All other fields are optional.
 
 ```json
 {
   "name": "string",
-  "problem": "string"
+  "tagline": "string",
+  "description": "string",
+  "problemSolved": "string",
+  "type": "Product|Service|Subscription|Hybrid",
+  "status": "Active|InDevelopment|Planned|Retired",
+  "targetAudienceIcaId": "guid",
+  "keyFeatures": ["string"],
+  "pricingTier": "Premium|MidMarket|EntryLevel|Free",
+  "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom",
+  "revenueContribution": "Primary|Secondary|Emerging",
+  "differentiators": "string",
+  "displayOrder": 0
 }
 ```
+
+Legacy input `problem` is accepted and mapped to `problemSolved`.
 
 **Response:**
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "name": "string",
-    "problem": "string"
-  }
-}
-```
+Same as POST response schema.
 
 **Implementation:** `src/services/api.ts` → `ApiClient.updateOnboardingProduct()`
 
