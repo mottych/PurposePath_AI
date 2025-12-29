@@ -103,6 +103,8 @@ Each API document follows this structure:
 4. **Data Types** - TypeScript interfaces, enums
 5. **Error Codes** - Standard error codes
 
+Specification shoud **not** include version history or audit and revision comment, **only reflect current state**.
+
 ### Naming Conventions
 
 | Type | Convention | Example |
