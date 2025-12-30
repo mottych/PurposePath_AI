@@ -14,10 +14,11 @@ Specifications/
 │
 ├── user-app/                    # User Application (React Frontend)
 │   ├── index.md                 # Master index for user-facing APIs
-│   ├── account-service.md       # Auth, users, billing
-│   ├── coaching-service.md      # AI/ML coaching endpoints
+│   ├── user-tenant-service.md   # Auth, users, subscriptions, billing
+│   ├── business-foundation-service.md # Business foundation, wizard, values, ICAs, products
 │   ├── people-service.md        # People CRUD operations
-│   ├── org-structure-service.md # Roles, org chart (user endpoints)
+│   ├── org-structure-service.md # Roles, relationships, org chart
+│   ├── coaching-service.md      # AI/ML coaching endpoints
 │   ├── common-patterns.md       # Shared patterns & data models
 │   └── traction-service/        # Traction feature APIs
 │       ├── README.md            # Traction service index
@@ -47,13 +48,14 @@ Specifications/
 
 | Document | Description | Endpoints |
 |----------|-------------|-----------|
-| [Account Service](./user-app/account-service.md) | Authentication, users, billing | ~20 |
-| [Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~15 |
+| [User & Tenant Management](./user-app/user-tenant-service.md) | Authentication, user profile, subscriptions, billing | 16 |
+| [Business Foundation](./user-app/business-foundation-service.md) | Business profile, identity, market, model, wizard, values, ICAs, products | 25 |
 | [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
 | [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
+| [Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~15 |
 | [Traction Service](./user-app/traction-service/README.md) | Goals, KPIs, Actions, Issues | 66 |
 
-**Total User App Endpoints:** ~146
+**Total User App Endpoints:** ~167
 
 ### Admin Portal APIs
 
@@ -89,6 +91,13 @@ Specifications/
 
 ## Document Standards
 
+### Document Header ###
+1. Docuemnt Nae
+2. Document version
+3. Last Update Date
+4. List of endpoints in the docuemnt `GET /auth/login`
+5. Revisions audit table, including date, version, short summary of the cahnge 
+
 ### API Documentation Format
 
 Each API document follows this structure:
@@ -109,10 +118,12 @@ Specification shoud **not** include version history or audit and revision commen
 
 | Type | Convention | Example |
 |------|------------|---------|
-| File names | kebab-case | `people-service.md` |
-| Endpoint paths | kebab-case | `/api/people/{id}/tags` |
-| Request/Response fields | snake_case | `first_name`, `created_at` |
-| TypeScript types | PascalCase | `PersonResponse` |
+| File names | kebab-case | `user-tenant-service.md` |
+| Endpoint paths | kebab-case | `/api/business-foundation/core-values` |
+| Request/Response fields | **camelCase** | `businessName`, `createdAt` |
+| TypeScript types | PascalCase | `UserProfile`, `BusinessFoundation` |
+
+**IMPORTANT:** All REST API field names use **camelCase** (not snake_case) to match frontend TypeScript types.
 
 ---
 
@@ -126,6 +137,7 @@ Specification shoud **not** include version history or audit and revision commen
 
 | Date | Version | Changes |
 |------|---------|---------|
+| Dec 30, 2025 | 1.0 | Account Service split into User & Tenant Management and Business Foundation. Removed deprecated onboarding/admin/people endpoints. Standardized to camelCase throughout. Specifications now reflect actual implementation. |
 | Dec 23, 2025 | 7.0 | Documentation reorganization, v7 traction specs |
 | Dec 22, 2025 | 1.1 | People/Org endpoints migrated to Account service |
 | Dec 21, 2025 | 7.0 | KPI Link/Data refactoring, modular traction specs |
