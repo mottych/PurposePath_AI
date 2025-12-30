@@ -118,10 +118,10 @@ Specification shoud **not** include version history or audit and revision commen
 
 | Type | Convention | Example |
 |------|------------|---------|
-| File names | kebab-case | `user-tenant-service.md` |
-| Endpoint paths | kebab-case | `/api/business-foundation/core-values` |
-| Request/Response fields | **camelCase** | `businessName`, `createdAt` |
-| TypeScript types | PascalCase | `UserProfile`, `BusinessFoundation` |
+| File names | kebab-case | `user-tenant-service.md`, `people-service.md` |
+| Endpoint paths | kebab-case | `/api/business-foundation/core-values`, `/api/people/{id}/tags` |
+| Request/Response fields | **camelCase** | `businessName`, `firstName`, `createdAt` |
+| TypeScript types | PascalCase | `UserProfile`, `BusinessFoundation`, `PersonResponse` |
 
 **IMPORTANT:** All REST API field names use **camelCase** (not snake_case) to match frontend TypeScript types.
 

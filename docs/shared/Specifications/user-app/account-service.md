@@ -1,10 +1,12 @@
 # Account Service Backend Integration Specifications
 
-**Version:** 5.1  
-**Last Updated:** December 28, 2025  
-**Audit Summary:** Added `personId` field to all authentication and user profile responses (login, register, Google OAuth, user profile endpoints). This enables frontend to use correct PersonId for Traction API calls instead of sending UserId. Non-breaking change - adds optional field to existing responses.
+**Version:** 5.2  
+**Last Updated:** December 29, 2025  
+**Audit Summary:** Added Core Values Management endpoints (POST, GET, PUT, DELETE, PUT:reorder) at `/business/foundation/values`. Core values now support detailed fields: name, meaning, implementation, and behaviors (max 10). These CRUD endpoints provide full management separate from the legacy PATCH endpoint which only handles core value names as string arrays.
 
-**Previous Changes (v5.0, December 26, 2025):** Added complete Business Foundation endpoints including 6 new section-specific PATCH endpoints (/foundation/profile, /foundation/identity, /foundation/market, /foundation/proposition, /foundation/model), full response DTOs with 40+ fields across 5 sections, wizard-progress endpoints, and all enumeration definitions.
+**Previous Changes:**
+- **v5.1 (December 28, 2025):** Added `personId` field to authentication and user profile responses
+- **v5.0 (December 26, 2025):** Added complete Business Foundation endpoints with section-specific PATCH endpoints
 
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`  
@@ -1552,6 +1554,233 @@ Update the business model section.
 - `Other` - Other business model
 
 **Response:** Complete `BusinessFoundationResponse`
+
+---
+
+## Core Values Management Endpoints
+
+The following endpoints manage the detailed core values for a business foundation. Core values can have name, meaning, implementation, and behaviors. These endpoints provide full CRUD operations for managing core values separately from the foundation PATCH endpoints which only handle core value names.
+
+### POST /business/foundation/values
+
+Create a new core value for the business foundation.
+
+**Request:**
+
+```json
+{
+  "name": "string (required, max 100 chars)",
+  "meaning": "string? (max 500 chars)",
+  "implementation": "string? (max 500 chars)",
+  "behaviors": ["string"]? (max 10 items, each max 500 chars)",
+  "displayOrder": "number?"
+}
+```
+
+**Field Descriptions:**
+
+- `name` - The name of the core value (e.g., "Integrity", "Innovation", "Excellence")
+- `meaning` - What this core value means to the organization
+- `implementation` - How this core value is implemented in practice
+- `behaviors` - Observable behaviors that demonstrate this core value (max 10)
+- `displayOrder` - Sorting position (optional, defaults to next available)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "tenantId": "string",
+    "businessFoundationId": "string",
+    "name": "string",
+    "meaning": "string?",
+    "implementation": "string?",
+    "behaviors": ["string"],
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string? (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201 Created` - Core value created successfully
+- `400 Bad Request` - Validation error (invalid data)
+- `404 Not Found` - Business foundation not found
+- `401 Unauthorized` - Missing or invalid authentication
+
+---
+
+### GET /business/foundation/values/{id}
+
+Get a specific core value by ID.
+
+**Path Parameters:**
+
+- `id` - Core value ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "tenantId": "string",
+    "businessFoundationId": "string",
+    "name": "string",
+    "meaning": "string?",
+    "implementation": "string?",
+    "behaviors": ["string"],
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string? (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Core value retrieved successfully
+- `404 Not Found` - Core value not found
+- `401 Unauthorized` - Missing or invalid authentication
+
+---
+
+### PUT /business/foundation/values/{id}
+
+Update an existing core value.
+
+**Path Parameters:**
+
+- `id` - Core value ID (GUID)
+
+**Request:**
+
+```json
+{
+  "name": "string? (max 100 chars)",
+  "meaning": "string? (max 500 chars)",
+  "implementation": "string? (max 500 chars)",
+  "behaviors": ["string"]? (max 10 items)",
+  "displayOrder": "number?",
+  "isActive": "boolean?"
+}
+```
+
+**Note:** All fields are optional. Only provided fields will be updated.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "tenantId": "string",
+    "businessFoundationId": "string",
+    "name": "string",
+    "meaning": "string?",
+    "implementation": "string?",
+    "behaviors": ["string"],
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Core value updated successfully
+- `400 Bad Request` - Validation error
+- `404 Not Found` - Core value not found
+- `401 Unauthorized` - Missing or invalid authentication
+
+---
+
+### DELETE /business/foundation/values/{id}
+
+Delete (deactivate) a core value.
+
+**Path Parameters:**
+
+- `id` - Core value ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "deleted": true
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Core value deleted successfully
+- `404 Not Found` - Core value not found
+- `401 Unauthorized` - Missing or invalid authentication
+
+**Note:** Core values are soft-deleted (marked inactive) rather than permanently removed.
+
+---
+
+### PUT /business/foundation/values:reorder
+
+Reorder core values by specifying the desired sequence of IDs.
+
+**Request:**
+
+```json
+{
+  "coreValueIds": ["string"] (required, array of core value IDs in desired order)
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string",
+      "tenantId": "string",
+      "businessFoundationId": "string",
+      "name": "string",
+      "meaning": "string?",
+      "implementation": "string?",
+      "behaviors": ["string"],
+      "displayOrder": "number",
+      "isActive": "boolean",
+      "createdAt": "string (ISO 8601)",
+      "updatedAt": "string (ISO 8601)"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Core values reordered successfully
+- `400 Bad Request` - Invalid request (missing or invalid core value IDs)
+- `401 Unauthorized` - Missing or invalid authentication
+
+**Notes:**
+
+- All core values must belong to the same business foundation
+- Display order is automatically assigned based on array position (1, 2, 3, ...)
+- Only active core values in the provided array will be updated
 
 ---
 
