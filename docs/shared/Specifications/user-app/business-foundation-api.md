@@ -781,9 +781,10 @@ These endpoints update individual sections without affecting others. They may fa
 ```json
 {
   "name": "string (required, max 100)",
-  "meaning": "string (required, max 500)",
-  "implementation": "string (required, max 500)",
-  "behaviors": ["string"]|null (max 10 items, each max 200 chars)
+  "meaning": "string|null (optional, max 500)",
+  "implementation": "string|null (optional, max 500)",
+  "behaviors": ["string"]|null (optional, max 10 items, each max 500 chars),
+  "displayOrder": "number|null (optional, auto-assigned if not specified)"
 }
 ```
 
@@ -794,11 +795,14 @@ These endpoints update individual sections without affecting others. They may fa
   "success": true,
   "data": {
     "id": "string (UUID)",
+    "tenantId": "string (UUID)",
+    "businessFoundationId": "string (UUID)",
     "name": "string",
-    "meaning": "string",
-    "implementation": "string",
-    "behaviors": ["string"]|null,
+    "meaning": "string|null",
+    "implementation": "string|null",
+    "behaviors": ["string"],
     "displayOrder": "number",
+    "isActive": "boolean",
     "createdAt": "string (ISO 8601 datetime)",
     "updatedAt": "string (ISO 8601 datetime)"
   }
@@ -830,14 +834,35 @@ These endpoints update individual sections without affecting others. They may fa
 
 ```json
 {
-  "name": "string|null",
-  "meaning": "string|null",
-  "implementation": "string|null",
-  "behaviors": ["string"]|null
+  "name": "string|null (max 100 chars)",
+  "meaning": "string|null (optional, max 500 chars)",
+  "implementation": "string|null (optional, max 500 chars)",
+  "behaviors": ["string"]|null (optional, max 10 items, each max 500 chars),
+  "displayOrder": "number|null (optional)",
+  "isActive": "boolean|null (optional)"
 }
 ```
 
-**Response:** 200 OK (same structure as POST response)
+**Response:** 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (UUID)",
+    "tenantId": "string (UUID)",
+    "businessFoundationId": "string (UUID)",
+    "name": "string",
+    "meaning": "string|null",
+    "implementation": "string|null",
+    "behaviors": ["string"],
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601 datetime)",
+    "updatedAt": "string (ISO 8601 datetime)"
+  }
+}
+```
 
 **Fallback Behavior:**
 - If endpoint returns 404, returns mock response
@@ -868,8 +893,8 @@ These endpoints update individual sections without affecting others. They may fa
 {
   "success": true,
   "data": {
-    "deleted": true,
-    "id": "string (UUID)"
+    "id": "string (UUID)",
+    "deleted": true
   }
 }
 ```
@@ -894,7 +919,7 @@ These endpoints update individual sections without affecting others. They may fa
 
 ```json
 {
-  "orderedIds": ["string (UUID)", "string (UUID)", ...]
+  "coreValueIds": ["string (UUID)", "string (UUID)", ...]
 }
 ```
 
@@ -903,19 +928,26 @@ These endpoints update individual sections without affecting others. They may fa
 ```json
 {
   "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "string (UUID)",
-        "displayOrder": "number"
-      }
-    ]
-  }
+  "data": [
+    {
+      "id": "string (UUID)",
+      "tenantId": "string (UUID)",
+      "businessFoundationId": "string (UUID)",
+      "name": "string",
+      "meaning": "string|null",
+      "implementation": "string|null",
+      "behaviors": ["string"],
+      "displayOrder": "number",
+      "isActive": "boolean",
+      "createdAt": "string (ISO 8601 datetime)",
+      "updatedAt": "string (ISO 8601 datetime)"
+    }
+  ]
 }
 ```
 
 **Validation:**
-- `orderedIds` - Required array, min 1 item
+- `coreValueIds` - Required array, min 1 item
 
 **Fallback Behavior:**
 - If endpoint returns 404, returns mock response
