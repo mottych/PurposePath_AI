@@ -1052,6 +1052,239 @@ Get subtree under a specific role.
   }
 }
 ```
+
+---
+
+### GET /api/org-chart/layouts/active
+
+Get the current user's active org chart layout (node positions).
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": true,
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `404` - No active layout found
+
+---
+
+### GET /api/org-chart/layouts
+
+Get all org chart layouts for the current user.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layouts": [
+      {
+        "layoutId": "string (GUID)",
+        "layoutName": "string",
+        "isActive": "boolean",
+        "positionCount": "number",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### POST /api/org-chart/layouts
+
+Create a new layout or update an existing layout with node positions.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Request:**
+
+```json
+{
+  "layoutId": "string (GUID)?",
+  "layoutName": "string",
+  "positions": [
+    {
+      "roleId": "string (GUID)",
+      "positionX": "number",
+      "positionY": "number"
+    }
+  ],
+  "setAsActive": "boolean"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| layoutId | GUID | No | If provided, updates existing layout. Must belong to current user. |
+| layoutName | string | Yes | 1-100 characters |
+| positions | array | Yes | Array of node positions |
+| positions[].roleId | GUID | Yes | Must be valid role in tenant |
+| positions[].positionX | number | Yes | X coordinate |
+| positions[].positionY | number | Yes | Y coordinate |
+| setAsActive | boolean | No | Default: false. If true, sets as active layout after save. |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": "boolean",
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201` - Created (new layout)
+- `200` - OK (updated existing layout)
+- `400` - Validation error
+- `404` - Layout not found (when updating with layoutId)
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- If `layoutId` is null, creates new layout
+- If `layoutId` provided, updates existing layout (must belong to current user)
+- First layout for user is automatically activated regardless of `setAsActive`
+- When `setAsActive` is true, deactivates other layouts for the user
+
+---
+
+### PUT /api/org-chart/layouts/{layoutId}/activate
+
+Set a specific layout as the active layout for the current user.
+
+**Path Parameters:**
+
+- `layoutId` - Layout ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": true,
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `404` - Layout not found
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- Automatically deactivates any currently active layout for the user
+- If layout is already active, returns success without changes
+
+---
+
+### DELETE /api/org-chart/layouts/{layoutId}
+
+Delete a layout. Cannot delete the active layout.
+
+**Path Parameters:**
+
+- `layoutId` - Layout ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Layout deleted successfully"
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Cannot delete active layout
+- `404` - Layout not found
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- Cannot delete a layout that is currently active
+- To delete active layout, activate a different layout first
+
+---
+
 ## Error Codes Reference
 
 | Code | HTTP Status | Description |
