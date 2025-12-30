@@ -579,9 +579,9 @@ These endpoints update individual sections without affecting others. They may fa
 
 ## Products Endpoints
 
-**Base Path:** `/business/onboarding/products` (NOT `/business/foundation/products`)
+**Base Path:** `/business/foundation/products`
 
-### 8. POST /business/onboarding/products
+### 8. POST /business/foundation/products
 
 **Description:** Create a new product or service.
 
@@ -645,7 +645,7 @@ These endpoints update individual sections without affecting others. They may fa
 
 ---
 
-### 9. PUT /business/onboarding/products/{id}
+### 9. PUT /business/foundation/products/{id}
 
 **Description:** Update an existing product.
 
@@ -687,7 +687,7 @@ These endpoints update individual sections without affecting others. They may fa
 
 ---
 
-### 10. DELETE /business/onboarding/products/{id}
+### 10. DELETE /business/foundation/products/{id}
 
 **Description:** Delete a product.
 
@@ -720,7 +720,7 @@ These endpoints update individual sections without affecting others. They may fa
 
 ---
 
-### 11. PUT /business/onboarding/products:reorder
+### 11. PUT /business/foundation/products:reorder
 
 **Description:** Reorder products in display sequence.
 
