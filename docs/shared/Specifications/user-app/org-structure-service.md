@@ -929,10 +929,7 @@ Get complete org chart tree structure.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| rootRoleId | GUID | - | Start tree from specific role |
-| maxDepth | number | 10 | Maximum hierarchy depth |
 | includeVacant | boolean | true | Include vacant positions |
-| includeInactive | boolean | false | Include inactive roles |
 
 **Response:**
 
@@ -940,29 +937,39 @@ Get complete org chart tree structure.
 {
   "success": true,
   "data": {
-    "tree": [
+    "rootNodes": [
       {
         "role": {
           "id": "string (GUID)",
           "code": "string",
-          "name": "string"
+          "name": "string",
+          "accountability": "string",
+          "description": "string?",
+          "isVacant": "boolean",
+          "isActive": "boolean"
         },
-        "occupant": {
-          "id": "string (GUID)?",
-          "name": "string?",
-          "title": "string?",
-          "avatarUrl": "string?"
-        },
-        "isVacant": "boolean",
-        "depth": "number",
+        "assignedPersons": [
+          {
+            "id": "string (GUID)",
+            "displayName": "string",
+            "title": "string?",
+            "email": "string?",
+            "isPrimary": "boolean",
+            "effectiveDate": "string (ISO 8601)"
+          }
+        ],
         "children": [
           "recursive RoleNode"
-        ]
+        ],
+        "relationships": null,
+        "depth": "number"
       }
     ],
     "totalRoles": "number",
-    "totalVacant": "number",
-    "maxDepth": "number"
+    "totalPersons": "number",
+    "vacantRoles": "number",
+    "maxDepth": "number",
+    "generatedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -970,7 +977,8 @@ Get complete org chart tree structure.
 **Notes:**
 
 - Top-level roles (no reportsTo) are roots of separate trees
-- If `rootRoleId` specified, returns single tree starting from that role
+- `assignedPersons` is an array to support multiple people assigned to one role
+- Empty array when role is vacant
 
 ---
 
