@@ -60,7 +60,7 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "items": [
+    "data": [
       {
         "id": "123e4567-e89b-12d3-a456-426614174000",
         "tenantId": "tenant-123",
@@ -83,9 +83,11 @@ X-Tenant-Id: {tenantId}
         "isDeleted": false
       }
     ],
-    "totalCount": 1,
-    "page": 1,
-    "pageSize": 50
+    "pagination": {
+      "totalCount": 1,
+      "page": 1,
+      "pageSize": 50
+    }
   },
   "error": null
 }
