@@ -380,7 +380,7 @@ Atomically update the display order of multiple strategies within a goal.
 ## Related APIs
 
 - [Goals API](./goals-api.md) - Parent goals management
-- [KPI Links API](./kpi-links-api.md) - Link KPIs to strategies
+- [Measure Links API](./measure-links-api.md) - Link KPIs to strategies
 
 ---
 

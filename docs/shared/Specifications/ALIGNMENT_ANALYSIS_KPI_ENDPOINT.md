@@ -1,5 +1,5 @@
-# KPI Endpoint Alignment Analysis
-## GET /kpis Implementation vs. Specification (v7.0)
+# Measure Endpoint Alignment Analysis
+## GET /measures Implementation vs. Specification (v7.0)
 
 **Date:** December 30, 2025  
 **Analyzed By:** Code Review  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The `GET /kpis` endpoint implementation in `KpisController.cs` is **well-aligned** with the specification defined in `kpis-api.md (v7.0)`. The controller correctly implements all required query parameters, filtering logic, response structure, and error handling as specified.
+The `GET /measures` endpoint implementation in `KpisController.cs` is **well-aligned** with the specification defined in `measures-api.md (v7.0)`. The controller correctly implements all required query parameters, filtering logic, response structure, and error handling as specified.
 
 **Alignment Score:** 95/100
 
@@ -31,7 +31,7 @@ The `GET /kpis` endpoint implementation in `KpisController.cs` is **well-aligned
 
 | Aspect | Specification | Implementation | Status |
 |--------|---------------|----------------|--------|
-| **Route** | `GET /kpis` | `[HttpGet]` at route `kpis` | ✅ Aligned |
+| **Route** | `GET /measures` | `[HttpGet]` at route `measures` | ✅ Aligned |
 | **HTTP Method** | GET | `[HttpGet]` | ✅ Aligned |
 | **Authentication Required** | Yes (Bearer + X-Tenant-Id) | Inherited from `BaseApiController` | ✅ Aligned |
 | **Response Wrapper** | `ApiResponse<PaginatedKpisResponse>` | `ApiResponse<PaginatedKpisResponse>` | ✅ Aligned |
@@ -40,7 +40,7 @@ The `GET /kpis` endpoint implementation in `KpisController.cs` is **well-aligned
 
 **Specification Requirement:**
 ```
-ownerId (string, optional) - Filter by KPI owner
+ownerId (string, optional) - Filter by Measure owner
 goalId (string, optional) - Filter by linked goal
 strategyId (string, optional) - Filter by linked strategy
 ```
@@ -72,9 +72,9 @@ strategyId (string, optional) - Filter by linked strategy
 | page | ❌ Not mentioned | ✅ Added (default: 1) | ✅ Enhancement | Reasonable addition for pagination |
 | size | ❌ Not mentioned | ✅ Added (default: 10) | ✅ Enhancement | Pagination support |
 | sort | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Additional filtering capability |
-| type | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Filter by KPI type (Leading/Lagging) |
-| direction | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Filter by KPI direction (Increase/Decrease) |
-| search | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Text search on KPI name/description |
+| type | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Filter by Measure type (Leading/Lagging) |
+| direction | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Filter by Measure direction (Increase/Decrease) |
+| search | ❌ Not mentioned | ✅ Added | ✅ Enhancement | Text search on Measure name/description |
 
 **Conclusion:** ✅ **FULLY ALIGNED** - Implementation includes all required parameters and adds reasonable enhancements for filtering flexibility.
 
@@ -135,7 +135,7 @@ else
 {
   "success": true,
   "data": {
-    "items": [ /* KPI objects */ ],
+    "items": [ /* Measure objects */ ],
     "totalCount": number,
     "page": number,
     "pageSize": number
@@ -144,12 +144,12 @@ else
 }
 ```
 
-**Implementation Response DTO (KpiResponses.cs, Lines 100-103):**
+**Implementation Response DTO (MeasureResponses.cs, Lines 100-103):**
 
 ```csharp
 public record PaginatedKpisResponse
 {
-    public KpiResponse[] Data { get; init; } = Array.Empty<KpiResponse>();
+    public MeasureResponse[] Data { get; init; } = Array.Empty<MeasureResponse>();
     public PaginationInfo Pagination { get; init; } = new();
 }
 ```
@@ -157,7 +157,7 @@ public record PaginatedKpisResponse
 **Analysis:**
 
 The implementation uses `PaginatedKpisResponse` which contains:
-- `Data` - Array of `KpiResponse` objects (equivalent to `items`)
+- `Data` - Array of `MeasureResponse` objects (equivalent to `items`)
 - `Pagination` - Contains pagination metadata
 
 This is wrapped in the `ApiResponse<T>` generic wrapper:
@@ -204,7 +204,7 @@ But the implementation uses:
 1. ✅ **Option A (Recommended):** Update specification example to match actual implementation (pagination is nested)
 2. ❌ **Option B:** Modify implementation to flatten pagination into response root (breaks pagination encapsulation)
 
-### 5. KPI Response Fields
+### 5. Measure Response Fields
 
 **Specification Lists These Fields (Per Endpoint 1):**
 
@@ -230,10 +230,10 @@ But the implementation uses:
 | updatedAt | datetime | ✅ Yes | In spec |
 | isDeleted | boolean | ✅ Yes | In spec |
 
-**Implementation KpiResponse Fields (Lines 6-31):**
+**Implementation MeasureResponse Fields (Lines 6-31):**
 
 ```csharp
-public record KpiResponse
+public record MeasureResponse
 {
     public string Id { get; init; }
     public string? CatalogId { get; init; }
@@ -258,7 +258,7 @@ public record KpiResponse
     public string? TenantId { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
-    public KpiProgressResponse? Progress { get; init; }
+    public MeasureProgressResponse? Progress { get; init; }
 }
 ```
 
@@ -297,11 +297,11 @@ The specification explicitly shows `isDeleted` in the response example:
 }
 ```
 
-However, the `KpiResponse` DTO does not include this field. 
+However, the `MeasureResponse` DTO does not include this field. 
 
 **Impact:** When soft-deleted KPIs are excluded from list queries, this field is not needed in the response, but the specification includes it, so frontend code may expect it.
 
-**Recommendation:** Add `isDeleted` boolean field to `KpiResponse` for specification compliance, even though it will typically be `false` for all list results.
+**Recommendation:** Add `isDeleted` boolean field to `MeasureResponse` for specification compliance, even though it will typically be `false` for all list results.
 
 ### 6. Error Handling
 
@@ -313,7 +313,7 @@ However, the `KpiResponse` DTO does not include this field.
 400 Bad Request - Invalid enum value
 401 Unauthorized - Missing/invalid token
 403 Forbidden - Insufficient permissions
-404 Not Found - KPI not found
+404 Not Found - Measure not found
 422 Unprocessable Entity - Validation failure
 500 Internal Server Error - Server error
 ```
@@ -414,7 +414,7 @@ The controller delegates to `GetKpisByOwnerQuery`, `GetKpisByGoalQuery`, and `Ge
 4. ✅ Filtering priority correctly implemented
 5. ✅ Default behavior (current user's KPIs)
 6. ✅ Response wrapper structure (ApiResponse<T>)
-7. ✅ Response includes all core KPI fields
+7. ✅ Response includes all core Measure fields
 8. ✅ Tenant isolation implemented
 9. ✅ Error handling for invalid input
 10. ✅ HTTP 200 OK for success
@@ -435,11 +435,11 @@ The controller delegates to `GetKpisByOwnerQuery`, `GetKpisByGoalQuery`, and `Ge
    - Impact: Low (same information, different structure)
    - Recommendation: Update specification example to match implementation
 
-2. **Missing `isDeleted` Field** - Not in KpiResponse DTO
+2. **Missing `isDeleted` Field** - Not in MeasureResponse DTO
    - Specification includes `isDeleted: false` in response
-   - Implementation KpiResponse doesn't include this field
+   - Implementation MeasureResponse doesn't include this field
    - Impact: Low (soft-deleted KPIs excluded from list results anyway)
-   - Recommendation: Add `isDeleted: boolean` field to KpiResponse for spec compliance
+   - Recommendation: Add `isDeleted: boolean` field to MeasureResponse for spec compliance
 
 ### ❌ Breaking Misalignments
 
@@ -451,8 +451,8 @@ None identified. No breaking specification violations found.
 
 ### Priority 1 (High - Address Now)
 
-1. **Add `isDeleted` Field to KpiResponse**
-   - File: `Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiResponses.cs`
+1. **Add `isDeleted` Field to MeasureResponse**
+   - File: `Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs`
    - Add line: `public bool IsDeleted { get; init; } = false;`
    - Reason: Specification explicitly includes this field in response examples
    - Impact: Frontend may expect this field; improves spec compliance
@@ -460,7 +460,7 @@ None identified. No breaking specification violations found.
 ### Priority 2 (Medium - Consider)
 
 2. **Update Specification Example for Response Structure**
-   - File: `docs/shared/Specifications/user-app/traction-service/kpis-api.md`
+   - File: `docs/shared/Specifications/user-app/traction-service/measures-api.md`
    - Section: "Endpoint 1: List KPIs - Response"
    - Action: Modify example to show nested pagination structure:
      ```json
@@ -508,7 +508,7 @@ None identified. No breaking specification violations found.
 4. **Test error cases:**
    - Invalid GUID format returns 400
    - Missing authentication returns 401
-   - KPI not found returns 404 (if applicable)
+   - Measure not found returns 404 (if applicable)
 
 5. **Test tenant isolation:**
    - Results only include KPIs for current tenant
@@ -518,7 +518,7 @@ None identified. No breaking specification violations found.
 
 ## Conclusion
 
-The `GET /kpis` endpoint implementation is **well-aligned with the specification** (95/100 alignment score). The controller correctly implements:
+The `GET /measures` endpoint implementation is **well-aligned with the specification** (95/100 alignment score). The controller correctly implements:
 
 ✅ All required query parameters  
 ✅ Correct filtering priority  

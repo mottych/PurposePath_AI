@@ -287,7 +287,7 @@ async function apiCallWithRetry(maxRetries = 3) {
 type FeatureName = 
   | 'goals'           // Goals module access
   | 'operations'      // Operations module access
-  | 'kpis'           // KPIs module access
+  | 'measures'           // KPIs module access
   | 'strategies'      // Strategic planning module access
   | 'reports'         // Report generation capability
   | 'realtime'        // Real-time updates via SSE
@@ -304,7 +304,7 @@ type FeatureName =
 ```typescript
 type LimitName = 
   | 'goals'           // Maximum number of goals
-  | 'kpis'           // Maximum number of KPIs
+  | 'measures'           // Maximum number of KPIs
   | 'actions'        // Maximum number of actions
   | 'strategies'     // Maximum number of strategies
   | 'attachments'    // Maximum number of attachments per goal
@@ -352,7 +352,7 @@ type OnboardingCoachingTopic = 'coreValues' | 'purpose' | 'vision';
 type OnboardingStatus = 'notStarted' | 'inProgress' | 'completed';
 ```
 
-### KPI
+### Measure
 
 ```typescript
 type KPIDirection = 'up' | 'down'; // up = higher is better, down = lower is better
@@ -412,7 +412,7 @@ type RealtimeEventType =
   | 'activityCreated'
   | 'decisionCreated'
   | 'attachmentCreated'
-  | 'kpiReadingCreated';
+  | 'measureReadingCreated';
 ```
 
 ---
@@ -519,7 +519,7 @@ All API responses use **camelCase** for JSON property names:
 - `createdAt`, `updatedAt` - Timestamps
 - `ownerId` - Resource owner identifier
 - `valueTags` - Array of value identifiers
-- `sharedKpiId` - Shared KPI identifier
+- `sharedKpiId` - Shared Measure identifier
 - `thresholdPct` - Percentage threshold value
 - `businessImpact` - Business impact description
 - `assignedPersonId` - Person assignment identifier

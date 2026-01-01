@@ -2,19 +2,19 @@
 
 **Version:** 7.0  
 **Last Updated:** December 23, 2025  
-**Base Path:** `/kpis`  
+**Base Path:** `/measures`  
 **Controller:** `KpisController.cs`
 
 ## Overview
 
-The KPIs API manages Key Performance Indicators (KPIs) within the PurposePath system. KPIs measure progress toward strategies and goals, supporting both catalog-based KPIs (from the KPI library) and custom user-defined KPIs.
+The KPIs API manages Key Performance Indicators (KPIs) within the PurposePath system. KPIs measure progress toward strategies and goals, supporting both catalog-based KPIs (from the Measure library) and custom user-defined KPIs.
 
 ### Key Features
 - List KPIs with filtering by owner, goal, or strategy
 - Create catalog-based or custom KPIs
-- Update KPI details or current values
+- Update Measure details or current values
 - Soft delete KPIs (preserves historical data)
-- Query KPI-goal relationships
+- Query Measure-goal relationships
 
 ---
 
@@ -32,13 +32,13 @@ All endpoints require:
 
 Retrieve KPIs with optional filtering.
 
-**Endpoint:** `GET /kpis`
+**Endpoint:** `GET /measures`
 
 #### Query Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `ownerId` | string (GUID) | No | Filter by KPI owner (person responsible) |
+| `ownerId` | string (GUID) | No | Filter by Measure owner (person responsible) |
 | `goalId` | string (GUID) | No | Filter by linked goal |
 | `strategyId` | string (GUID) | No | Filter by linked strategy |
 
@@ -47,7 +47,7 @@ Retrieve KPIs with optional filtering.
 #### Request Example
 
 ```http
-GET /kpis?goalId=550e8400-e29b-41d4-a716-446655440000
+GET /measures?goalId=550e8400-e29b-41d4-a716-446655440000
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -74,7 +74,7 @@ X-Tenant-Id: {tenantId}
         "category": "Finance",
         "measurementFrequency": "Monthly",
         "dataSource": "Stripe API",
-        "catalogId": "kpi-catalog-001",
+        "catalogId": "measure-catalog-001",
         "ownerId": "owner-123",
         "strategyId": "strategy-456",
         "currentValueDate": "2025-12-15T00:00:00Z",
@@ -97,23 +97,23 @@ X-Tenant-Id: {tenantId}
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string (GUID) | Unique KPI identifier |
+| `id` | string (GUID) | Unique Measure identifier |
 | `tenantId` | string | Organization identifier |
-| `name` | string | KPI name (max 200 chars) |
+| `name` | string | Measure name (max 200 chars) |
 | `description` | string | Detailed description (max 1000 chars) |
 | `currentValue` | decimal | Latest recorded value |
 | `targetValue` | decimal | Goal/target value |
 | `unit` | string | Measurement unit (e.g., "USD", "%", "count") |
 | `direction` | enum | `Increase` or `Decrease` (desired trend) |
 | `type` | enum | `Leading` or `Lagging` indicator |
-| `category` | string | KPI category (e.g., "Finance", "Sales", "Operations") |
+| `category` | string | Measure category (e.g., "Finance", "Sales", "Operations") |
 | `measurementFrequency` | string | How often measured (e.g., "Daily", "Weekly", "Monthly") |
 | `dataSource` | string | Where data comes from |
-| `catalogId` | string | If from KPI library, the catalog entry ID |
-| `ownerId` | string (GUID) | Person responsible for this KPI |
+| `catalogId` | string | If from Measure library, the catalog entry ID |
+| `ownerId` | string (GUID) | Person responsible for this Measure |
 | `strategyId` | string (GUID) | Linked strategy |
 | `currentValueDate` | datetime | When current value was recorded |
-| `createdAt` | datetime | When KPI was created |
+| `createdAt` | datetime | When Measure was created |
 | `updatedAt` | datetime | Last update timestamp |
 | `isDeleted` | boolean | Soft delete flag |
 
@@ -129,11 +129,11 @@ X-Tenant-Id: {tenantId}
 
 ---
 
-### 2. Create KPI
+### 2. Create Measure
 
-Create a new KPI (catalog-based or custom).
+Create a new Measure (catalog-based or custom).
 
-**Endpoint:** `POST /kpis`
+**Endpoint:** `POST /measures`
 
 #### Request Body
 
@@ -151,7 +151,7 @@ Create a new KPI (catalog-based or custom).
   "dataSource": "CRM System",
   "ownerId": "owner-123",
   "strategyId": "strategy-456",
-  "catalogId": "kpi-catalog-002",
+  "catalogId": "measure-catalog-002",
   "aggregationType": "Average",
   "aggregationPeriod": "Month",
   "valueType": "Percentage",
@@ -164,30 +164,30 @@ Create a new KPI (catalog-based or custom).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | **Yes** | KPI name (max 200 chars) |
+| `name` | string | **Yes** | Measure name (max 200 chars) |
 | `description` | string | No | Detailed description |
 | `currentValue` | decimal | No | Initial value |
 | `targetValue` | decimal | No | Goal value |
 | `unit` | string | No | Measurement unit |
 | `direction` | enum | No | `Increase` or `Decrease` |
 | `type` | enum | No | `Leading` or `Lagging` |
-| `category` | string | No | KPI category |
+| `category` | string | No | Measure category |
 | `measurementFrequency` | No | No | Default: "Monthly" |
 | `dataSource` | string | No | Data source identifier |
 | `ownerId` | string (GUID) | No | Person responsible (defaults to creator) |
 | `strategyId` | string (GUID) | No | Linked strategy |
-| `catalogId` | string | No | KPI catalog entry (for library KPIs) |
+| `catalogId` | string | No | Measure catalog entry (for library KPIs) |
 | `aggregationType` | string | No | How data is aggregated (e.g., "Sum", "Average") |
 | `aggregationPeriod` | string | No | Time period for aggregation |
 | `valueType` | string | No | Data type (e.g., "Number", "Percentage", "Currency") |
 | `calculationMethod` | string | No | Formula or method for calculation |
 | `currentValueDate` | datetime | No | When current value was recorded (defaults to now) |
-| `goalId` | string (GUID) | No | **⚠️ Deprecated:** Link KPI to goal via `/kpi-links` instead |
+| `goalId` | string (GUID) | No | **⚠️ Deprecated:** Link Measure to goal via `/measure-links` instead |
 
 #### Response
 
 **Status:** `201 Created`  
-**Location:** `/kpis/{id}`
+**Location:** `/measures/{id}`
 
 ```json
 {
@@ -205,7 +205,7 @@ Create a new KPI (catalog-based or custom).
     "category": "Customer Success",
     "measurementFrequency": "Monthly",
     "dataSource": "CRM System",
-    "catalogId": "kpi-catalog-002",
+    "catalogId": "measure-catalog-002",
     "ownerId": "owner-123",
     "strategyId": "strategy-456",
     "currentValueDate": "2025-12-15T00:00:00Z",
@@ -219,10 +219,10 @@ Create a new KPI (catalog-based or custom).
 
 #### Business Rules
 
-- **Catalog vs Custom:** If `catalogId` is provided, KPI is linked to library entry; otherwise, it's custom
+- **Catalog vs Custom:** If `catalogId` is provided, Measure is linked to library entry; otherwise, it's custom
 - **Owner Assignment:** If `ownerId` is not provided, defaults to the current user (creator)
-- **Tenant Isolation:** KPI is automatically associated with the current tenant
-- **⚠️ Goal Linking Deprecated:** The `goalId` field in request is deprecated. Use `/kpi-links` endpoint to link KPIs to goals
+- **Tenant Isolation:** Measure is automatically associated with the current tenant
+- **⚠️ Goal Linking Deprecated:** The `goalId` field in request is deprecated. Use `/measure-links` endpoint to link KPIs to goals
 
 #### Validation Rules
 
@@ -234,22 +234,22 @@ Create a new KPI (catalog-based or custom).
 
 ---
 
-### 3. Get KPI Details
+### 3. Get Measure Details
 
-Retrieve detailed information about a specific KPI, including linked goals.
+Retrieve detailed information about a specific Measure, including linked goals.
 
-**Endpoint:** `GET /kpis/{id}`
+**Endpoint:** `GET /measures/{id}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string (GUID) | **Yes** | KPI identifier |
+| `id` | string (GUID) | **Yes** | Measure identifier |
 
 #### Request Example
 
 ```http
-GET /kpis/123e4567-e89b-12d3-a456-426614174000
+GET /measures/123e4567-e89b-12d3-a456-426614174000
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -274,7 +274,7 @@ X-Tenant-Id: {tenantId}
     "category": "Finance",
     "measurementFrequency": "Monthly",
     "dataSource": "Stripe API",
-    "catalogId": "kpi-catalog-001",
+    "catalogId": "measure-catalog-001",
     "ownerId": "owner-123",
     "strategyId": "strategy-456",
     "currentValueDate": "2025-12-15T00:00:00Z",
@@ -309,13 +309,13 @@ X-Tenant-Id: {tenantId}
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `linkedGoals` | array | Goals linked to this KPI |
+| `linkedGoals` | array | Goals linked to this Measure |
 | `linkedGoals[].goalId` | string (GUID) | Goal identifier |
 | `linkedGoals[].goalName` | string | Goal name |
-| `linkedGoals[].linkId` | string (GUID) | KPI link identifier |
-| `linkedGoals[].isPrimary` | boolean | Is this the primary KPI for the goal? |
+| `linkedGoals[].linkId` | string (GUID) | Measure link identifier |
+| `linkedGoals[].isPrimary` | boolean | Is this the primary Measure for the goal? |
 | `linkedGoals[].linkedAt` | datetime | When link was created |
-| `historicalValues` | array | Previous KPI values (last 12) |
+| `historicalValues` | array | Previous Measure values (last 12) |
 | `historicalValues[].value` | decimal | Historical value |
 | `historicalValues[].recordedAt` | datetime | When value was recorded |
 
@@ -326,7 +326,7 @@ X-Tenant-Id: {tenantId}
 {
   "success": false,
   "data": null,
-  "error": "Invalid KPI ID format"
+  "error": "Invalid Measure ID format"
 }
 ```
 
@@ -335,23 +335,23 @@ X-Tenant-Id: {tenantId}
 {
   "success": false,
   "data": null,
-  "error": "KPI not found"
+  "error": "Measure not found"
 }
 ```
 
 ---
 
-### 4. Update KPI
+### 4. Update Measure
 
-Update KPI details (name, description, target, etc.). Does not update current value — use `PUT /kpis/{id}/value` for that.
+Update Measure details (name, description, target, etc.). Does not update current value — use `PUT /measures/{id}/value` for that.
 
-**Endpoint:** `PUT /kpis/{id}`
+**Endpoint:** `PUT /measures/{id}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string (GUID) | **Yes** | KPI identifier |
+| `id` | string (GUID) | **Yes** | Measure identifier |
 
 #### Request Body
 
@@ -376,18 +376,18 @@ All fields are optional. Only provided fields will be updated.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | string | KPI name (max 200 chars) |
+| `name` | string | Measure name (max 200 chars) |
 | `description` | string | Detailed description |
 | `targetValue` | decimal | Updated target value |
 | `unit` | string | Measurement unit |
 | `direction` | enum | `Increase` or `Decrease` |
 | `type` | enum | `Leading` or `Lagging` |
-| `category` | string | KPI category |
+| `category` | string | Measure category |
 | `measurementFrequency` | string | Measurement frequency |
 | `dataSource` | string | Data source identifier |
 | `ownerId` | string (GUID) | New owner (person responsible) |
 
-**Note:** `currentValue` cannot be updated via this endpoint. Use `PUT /kpis/{id}/value` instead.
+**Note:** `currentValue` cannot be updated via this endpoint. Use `PUT /measures/{id}/value` instead.
 
 #### Response
 
@@ -420,22 +420,22 @@ All fields are optional. Only provided fields will be updated.
 
 - **Partial Updates:** Only provided fields are updated; others remain unchanged
 - **Current Value:** Cannot be updated via this endpoint (use value endpoint)
-- **Tenant & ID:** Cannot change KPI's tenant or ID
+- **Tenant & ID:** Cannot change Measure's tenant or ID
 - **Catalog ID:** Cannot change `catalogId` after creation
 
 ---
 
-### 5. Update KPI Value
+### 5. Update Measure Value
 
-Update only the current value of a KPI (records new measurement).
+Update only the current value of a Measure (records new measurement).
 
-**Endpoint:** `PUT /kpis/{id}/value`
+**Endpoint:** `PUT /measures/{id}/value`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string (GUID) | **Yes** | KPI identifier |
+| `id` | string (GUID) | **Yes** | Measure identifier |
 
 #### Request Body
 
@@ -451,7 +451,7 @@ Update only the current value of a KPI (records new measurement).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `value` | decimal | **Yes** | New KPI value |
+| `value` | decimal | **Yes** | New Measure value |
 | `recordedAt` | datetime | No | When value was recorded (defaults to now) |
 | `notes` | string | No | Additional context or notes |
 
@@ -476,7 +476,7 @@ Update only the current value of a KPI (records new measurement).
 
 - **Historical Tracking:** Previous value is stored in history before updating
 - **Timestamp:** If `recordedAt` is not provided, uses current UTC time
-- **Event Publishing:** Triggers `KpiValueUpdated` domain event
+- **Event Publishing:** Triggers `MeasureValueUpdated` domain event
 - **Percentage Change:** System calculates change from previous value
 
 #### Validation Rules
@@ -487,22 +487,22 @@ Update only the current value of a KPI (records new measurement).
 
 ---
 
-### 6. Delete KPI
+### 6. Delete Measure
 
-Soft delete a KPI (marks as deleted, preserves historical data).
+Soft delete a Measure (marks as deleted, preserves historical data).
 
-**Endpoint:** `DELETE /kpis/{id}`
+**Endpoint:** `DELETE /measures/{id}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string (GUID) | **Yes** | KPI identifier |
+| `id` | string (GUID) | **Yes** | Measure identifier |
 
 #### Request Example
 
 ```http
-DELETE /kpis/123e4567-e89b-12d3-a456-426614174000
+DELETE /measures/123e4567-e89b-12d3-a456-426614174000
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -520,7 +520,7 @@ X-Tenant-Id: {tenantId}
 {
   "success": false,
   "data": null,
-  "error": "Invalid KPI ID format"
+  "error": "Invalid Measure ID format"
 }
 ```
 
@@ -529,25 +529,25 @@ X-Tenant-Id: {tenantId}
 {
   "success": false,
   "data": null,
-  "error": "KPI not found"
+  "error": "Measure not found"
 }
 ```
 
 #### Business Rules
 
-- **Soft Delete:** KPI is marked as deleted (`isDeleted: true`) but not physically removed
+- **Soft Delete:** Measure is marked as deleted (`isDeleted: true`) but not physically removed
 - **Historical Data:** All historical values and links are preserved
 - **List Queries:** Deleted KPIs are excluded from list results by default
 - **Restoration:** Can be restored by admin/support team
-- **Cascade:** KPI links to goals are also soft deleted
+- **Cascade:** Measure links to goals are also soft deleted
 
 ---
 
-### 7. Get KPI Linked Goals (Deprecated)
+### 7. Get Measure Linked Goals (Deprecated)
 
-⚠️ **DEPRECATED (Issue #374):** This endpoint is being migrated to the new KpiLink design.
+⚠️ **DEPRECATED (Issue #374):** This endpoint is being migrated to the new MeasureLink design.
 
-**Endpoint:** `GET /kpis/{id}/linked-goals`
+**Endpoint:** `GET /measures/{id}/linked-goals`
 
 #### Current Behavior
 
@@ -557,35 +557,35 @@ Returns `501 Not Implemented` with migration message.
 {
   "success": false,
   "data": null,
-  "error": "This endpoint is being migrated to the new KpiLink design. Please use the new KpiLink endpoints."
+  "error": "This endpoint is being migrated to the new MeasureLink design. Please use the new MeasureLink endpoints."
 }
 ```
 
 #### Migration Path
 
 Use the following endpoints instead:
-- **List KPI Links:** `GET /kpi-links?kpiId={id}`
-- **KPI Details with Links:** `GET /kpis/{id}` (includes `linkedGoals` in response)
+- **List Measure Links:** `GET /measure-links?measureId={id}`
+- **Measure Details with Links:** `GET /measures/{id}` (includes `linkedGoals` in response)
 
-See [KPI Links API](./kpi-links-api.md) for details.
+See [Measure Links API](./measure-links-api.md) for details.
 
 ---
 
 ## Data Models
 
-### KpiDirection Enum
+### MeasureDirection Enum
 
 ```typescript
-enum KpiDirection {
+enum MeasureDirection {
   Increase = "Increase", // Higher is better (e.g., revenue, customers)
   Decrease = "Decrease"  // Lower is better (e.g., costs, churn)
 }
 ```
 
-### KpiType Enum
+### MeasureType Enum
 
 ```typescript
-enum KpiType {
+enum MeasureType {
   Leading = "Leading",   // Predictive indicator (e.g., leads generated)
   Lagging = "Lagging"    // Historical indicator (e.g., revenue achieved)
 }
@@ -593,7 +593,7 @@ enum KpiType {
 
 ### Common Categories
 
-Standard KPI categories (not enforced, but commonly used):
+Standard Measure categories (not enforced, but commonly used):
 - `Finance` - Revenue, costs, profitability
 - `Sales` - Pipeline, conversions, deals
 - `Marketing` - Leads, CAC, ROAS
@@ -620,12 +620,12 @@ Standard KPI categories (not enforced, but commonly used):
 
 | Code | Scenario | Message Example |
 |------|----------|-----------------|
-| 400 | Invalid GUID format | "Invalid KPI ID format" |
+| 400 | Invalid GUID format | "Invalid Measure ID format" |
 | 400 | Missing required field | "Name is required" |
 | 400 | Invalid enum value | "Direction must be 'Increase' or 'Decrease'" |
 | 401 | Missing/invalid token | "Unauthorized" |
-| 403 | Insufficient permissions | "Access denied to this KPI" |
-| 404 | KPI not found | "KPI not found" |
+| 403 | Insufficient permissions | "Access denied to this Measure" |
+| 404 | Measure not found | "Measure not found" |
 | 422 | Validation failure | "Target value must be greater than 0" |
 | 500 | Server error | "Internal server error" |
 
@@ -639,41 +639,41 @@ Standard KPI categories (not enforced, but commonly used):
 import { traction } from './traction';
 
 // List KPIs for a goal
-const kpis = await traction.get<PaginatedKpisResponse>('/kpis', {
+const measures = await traction.get<PaginatedKpisResponse>('/measures', {
   params: { goalId: 'goal-123' }
 });
 
-// Create catalog-based KPI
-const newKpi = await traction.post<KpiResponse>('/kpis', {
+// Create catalog-based Measure
+const newKpi = await traction.post<MeasureResponse>('/measures', {
   name: 'Customer Acquisition Cost',
-  catalogId: 'kpi-catalog-003',
+  catalogId: 'measure-catalog-003',
   targetValue: 100.00,
   unit: 'USD',
   ownerId: 'owner-123',
   strategyId: 'strategy-456'
 });
 
-// Update KPI value
-await traction.put(`/kpis/${kpiId}/value`, {
+// Update Measure value
+await traction.put(`/measures/${measureId}/value`, {
   value: 95.50,
   recordedAt: new Date().toISOString(),
   notes: 'Monthly update'
 });
 
-// Get KPI details with linked goals
-const kpiDetails = await traction.get<KpiDetailResponse>(`/kpis/${kpiId}`);
-console.log(`Linked to ${kpiDetails.data.linkedGoals.length} goals`);
+// Get Measure details with linked goals
+const measureDetails = await traction.get<MeasureDetailResponse>(`/measures/${measureId}`);
+console.log(`Linked to ${measureDetails.data.linkedGoals.length} goals`);
 
-// Delete KPI (soft delete)
-await traction.delete(`/kpis/${kpiId}`);
+// Delete Measure (soft delete)
+await traction.delete(`/measures/${measureId}`);
 ```
 
 ---
 
 ## Related APIs
 
-- **[KPI Links API](./kpi-links-api.md)** - Link KPIs to goals
-- **[KPI Data API](./kpi-data-api.md)** - Record targets, actuals, projections
+- **[Measure Links API](./measure-links-api.md)** - Link KPIs to goals
+- **[Measure Data API](./measure-data-api.md)** - Record targets, actuals, projections
 - **[Goals API](./goals-api.md)** - Manage goals that KPIs measure
 - **[Strategies API](./strategies-api.md)** - Strategies that KPIs support
 
@@ -683,16 +683,16 @@ await traction.delete(`/kpis/${kpiId}`);
 
 ### v7.0 (December 23, 2025)
 - ✅ Documented all 7 endpoints with complete examples
-- ⚠️ Deprecated `GET /kpis/{id}/linked-goals` (returns 501)
-- ⚠️ Deprecated `goalId` field in `POST /kpis` request
-- ✨ Added `linkedGoals` to `GET /kpis/{id}` response
+- ⚠️ Deprecated `GET /measures/{id}/linked-goals` (returns 501)
+- ⚠️ Deprecated `goalId` field in `POST /measures` request
+- ✨ Added `linkedGoals` to `GET /measures/{id}` response
 - ✨ Added `historicalValues` to detail response
-- 📝 Documented catalog-based vs custom KPI creation
+- 📝 Documented catalog-based vs custom Measure creation
 - 📝 Clarified filtering behavior and priorities
 - 📝 Added frontend TypeScript usage examples
 
 ### v6.0 (December 21, 2025)
-- Initial KPI endpoints
+- Initial Measure endpoints
 
 ---
 

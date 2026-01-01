@@ -1,25 +1,25 @@
-# KPI Data API Specification
+# Measure Data API Specification
 
 **Version:** 7.0  
 **Last Updated:** December 23, 2025  
-**Base Path:** `/kpi-links/{linkId}`  
-**Controller:** `KpiDataController.cs`
+**Base Path:** `/measure-links/{linkId}`  
+**Controller:** `MeasureDataController.cs`
 
 ## Overview
 
-The KPI Data API manages target values and actual measurements for KPI links. This is the v7 unified data model that replaced the deprecated KpiMilestone, KpiActual, and KpiReading entities (issue #374).
+The Measure Data API manages target values and actual measurements for Measure links. This is the v7 unified data model that replaced the deprecated MeasureMilestone, MeasureActual, and MeasureReading entities (issue #374).
 
 ### Key Features
 - **Targets:** Set expected, optimal, and minimal target values
 - **Actuals:** Record measured values and estimates
-- **Time-series data:** Track KPI progress over time
+- **Time-series data:** Track Measure progress over time
 - **Override support:** Manual corrections with audit trail
 - **Replan triggers:** Flag actuals that require goal replanning
 - **Combined queries:** Get all targets + actuals in one request
 
 ### Design Philosophy
-- **Unified model:** Single `KpiData` entity with subtypes (replaces 3 separate entities)
-- **Link-scoped:** All data is associated with a KPI link (not just a KPI)
+- **Unified model:** Single `MeasureData` entity with subtypes (replaces 3 separate entities)
+- **Link-scoped:** All data is associated with a Measure link (not just a Measure)
 - **Category + Subtype:** `Target` (Expected/Optimal/Minimal) or `Actual` (Measured/Estimate)
 - **Historical tracking:** All values are preserved with timestamps
 
@@ -37,15 +37,15 @@ All endpoints require:
 
 ### 1. Get Targets
 
-Retrieve all target values for a KPI link.
+Retrieve all target values for a Measure link.
 
-**Endpoint:** `GET /kpi-links/{linkId}/targets`
+**Endpoint:** `GET /measure-links/{linkId}/targets`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 
 #### Query Parameters
 
@@ -56,7 +56,7 @@ Retrieve all target values for a KPI link.
 #### Request Example
 
 ```http
-GET /kpi-links/link-123/targets?targetSubtype=Expected
+GET /measure-links/link-123/targets?targetSubtype=Expected
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -69,12 +69,12 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "targetSubtypeFilter": "Expected",
     "targets": [
       {
         "id": "target-001",
-        "kpiLinkId": "link-123",
+        "measureLinkId": "link-123",
         "dataCategory": "Target",
         "targetSubtype": "Expected",
         "actualSubtype": null,
@@ -105,8 +105,8 @@ X-Tenant-Id: {tenantId}
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string (GUID) | Unique KPI data entry identifier |
-| `kpiLinkId` | string (GUID) | Associated KPI link |
+| `id` | string (GUID) | Unique Measure data entry identifier |
+| `measureLinkId` | string (GUID) | Associated Measure link |
 | `dataCategory` | enum | `Target` or `Actual` |
 | `targetSubtype` | enum | For targets: `Expected`, `Optimal`, `Minimal` |
 | `actualSubtype` | enum | For actuals: `Measured`, `Estimate` |
@@ -136,15 +136,15 @@ X-Tenant-Id: {tenantId}
 
 ### 2. Create Target
 
-Set a new target value for a KPI link.
+Set a new target value for a Measure link.
 
-**Endpoint:** `POST /kpi-links/{linkId}/targets`
+**Endpoint:** `POST /measure-links/{linkId}/targets`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 
 #### Request Body
 
@@ -181,7 +181,7 @@ Set a new target value for a KPI link.
   "success": true,
   "data": {
     "id": "target-new-001",
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "dataCategory": "Target",
     "targetSubtype": "Expected",
     "postValue": 50000.00,
@@ -209,13 +209,13 @@ Set a new target value for a KPI link.
 
 Update an existing target value or properties.
 
-**Endpoint:** `PUT /kpi-links/{linkId}/targets/{targetId}`
+**Endpoint:** `PUT /measure-links/{linkId}/targets/{targetId}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 | `targetId` | string (GUID) | **Yes** | Target entry identifier |
 
 #### Request Body
@@ -251,7 +251,7 @@ All fields are optional. Only provided fields will be updated.
   "success": true,
   "data": {
     "id": "target-001",
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "dataCategory": "Target",
     "targetSubtype": "Expected",
     "postValue": 55000.00,
@@ -271,13 +271,13 @@ All fields are optional. Only provided fields will be updated.
 
 Remove a target entry.
 
-**Endpoint:** `DELETE /kpi-links/{linkId}/targets/{targetId}`
+**Endpoint:** `DELETE /measure-links/{linkId}/targets/{targetId}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 | `targetId` | string (GUID) | **Yes** | Target entry identifier |
 
 #### Response
@@ -297,7 +297,7 @@ Remove a target entry.
 #### Business Rules
 
 - **Soft delete:** Target is marked as deleted but preserved for historical analysis
-- **Cascade:** Does not affect actuals or the KPI link itself
+- **Cascade:** Does not affect actuals or the Measure link itself
 
 ---
 
@@ -305,15 +305,15 @@ Remove a target entry.
 
 ### 5. Get Actuals
 
-Retrieve all actual measurements for a KPI link.
+Retrieve all actual measurements for a Measure link.
 
-**Endpoint:** `GET /kpi-links/{linkId}/actuals`
+**Endpoint:** `GET /measure-links/{linkId}/actuals`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 
 #### Query Parameters
 
@@ -324,7 +324,7 @@ Retrieve all actual measurements for a KPI link.
 #### Request Example
 
 ```http
-GET /kpi-links/link-123/actuals?actualSubtype=Measured
+GET /measure-links/link-123/actuals?actualSubtype=Measured
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -337,11 +337,11 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "actuals": [
       {
         "id": "actual-001",
-        "kpiLinkId": "link-123",
+        "measureLinkId": "link-123",
         "dataCategory": "Actual",
         "targetSubtype": null,
         "actualSubtype": "Measured",
@@ -376,13 +376,13 @@ X-Tenant-Id: {tenantId}
 
 Record a new actual measurement or estimate.
 
-**Endpoint:** `POST /kpi-links/{linkId}/actuals`
+**Endpoint:** `POST /measure-links/{linkId}/actuals`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 
 #### Request Body
 
@@ -419,7 +419,7 @@ Record a new actual measurement or estimate.
   "success": true,
   "data": {
     "id": "actual-new-001",
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "dataCategory": "Actual",
     "actualSubtype": "Measured",
     "postValue": 48500.00,
@@ -447,13 +447,13 @@ Record a new actual measurement or estimate.
 
 Manually override an actual value with a correction.
 
-**Endpoint:** `PUT /kpi-links/{linkId}/actuals/{actualId}/override`
+**Endpoint:** `PUT /measure-links/{linkId}/actuals/{actualId}/override`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 | `actualId` | string (GUID) | **Yes** | Actual entry identifier |
 
 #### Request Body
@@ -481,7 +481,7 @@ Manually override an actual value with a correction.
   "success": true,
   "data": {
     "id": "actual-001",
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "dataCategory": "Actual",
     "actualSubtype": "Measured",
     "postValue": 49000.00,
@@ -506,13 +506,13 @@ Manually override an actual value with a correction.
 
 Flag an actual as triggering goal replanning.
 
-**Endpoint:** `POST /kpi-links/{linkId}/actuals/{actualId}/replan-trigger`
+**Endpoint:** `POST /measure-links/{linkId}/actuals/{actualId}/replan-trigger`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 | `actualId` | string (GUID) | **Yes** | Actual entry identifier |
 
 #### Request Body
@@ -540,7 +540,7 @@ Flag an actual as triggering goal replanning.
   "success": true,
   "data": {
     "id": "actual-001",
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "triggersReplan": true,
     "replanThresholdExceeded": true,
     "updatedAt": "2025-12-23T17:30:00Z"
@@ -561,20 +561,20 @@ Flag an actual as triggering goal replanning.
 
 ### 9. Get All Series
 
-Retrieve all targets and actuals for a KPI link in one request.
+Retrieve all targets and actuals for a Measure link in one request.
 
-**Endpoint:** `GET /kpi-links/{linkId}/all-series`
+**Endpoint:** `GET /measure-links/{linkId}/all-series`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | KPI link identifier |
+| `linkId` | string (GUID) | **Yes** | Measure link identifier |
 
 #### Request Example
 
 ```http
-GET /kpi-links/link-123/all-series
+GET /measure-links/link-123/all-series
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -587,9 +587,9 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "kpiLinkId": "link-123",
+    "measureLinkId": "link-123",
     "targets": {
-      "kpiLinkId": "link-123",
+      "measureLinkId": "link-123",
       "expected": [
         {
           "id": "target-001",
@@ -732,7 +732,7 @@ enum DataSource {
 | 400 | Missing required field | "TargetValue is required" |
 | 400 | Invalid subtype | "Invalid target subtype. Must be 'Expected', 'Optimal', or 'Minimal'" |
 | 401 | Missing/invalid token | "Unauthorized" |
-| 403 | Insufficient permissions | "Access denied to this KPI link" |
+| 403 | Insufficient permissions | "Access denied to this Measure link" |
 | 404 | Entry not found | "Target not found" |
 | 422 | Validation failure | "MeasurementDate cannot be in the future" |
 | 500 | Server error | "Internal server error" |
@@ -746,14 +746,14 @@ enum DataSource {
 ```typescript
 import { traction } from './traction';
 
-// Get all targets for a KPI link
-const targets = await traction.get<KpiTargetsListResponse>(
-  `/kpi-links/${linkId}/targets`
+// Get all targets for a Measure link
+const targets = await traction.get<MeasureTargetsListResponse>(
+  `/measure-links/${linkId}/targets`
 );
 
 // Create an expected target
-const newTarget = await traction.post<KpiDataResponse>(
-  `/kpi-links/${linkId}/targets`,
+const newTarget = await traction.post<MeasureDataResponse>(
+  `/measure-links/${linkId}/targets`,
   {
     targetSubtype: 'Expected',
     targetValue: 50000.00,
@@ -765,8 +765,8 @@ const newTarget = await traction.post<KpiDataResponse>(
 );
 
 // Record a measured actual
-const actual = await traction.post<KpiDataResponse>(
-  `/kpi-links/${linkId}/actuals`,
+const actual = await traction.post<MeasureDataResponse>(
+  `/measure-links/${linkId}/actuals`,
   {
     actualSubtype: 'Measured',
     actualValue: 48500.00,
@@ -777,14 +777,14 @@ const actual = await traction.post<KpiDataResponse>(
 );
 
 // Override an actual with correction
-await traction.put(`/kpi-links/${linkId}/actuals/${actualId}/override`, {
+await traction.put(`/measure-links/${linkId}/actuals/${actualId}/override`, {
   newValue: 49000.00,
   overrideComment: 'Corrected for data sync issue'
 });
 
 // Get all data (targets + actuals) for charts
 const allData = await traction.get<AllKpiDataResponse>(
-  `/kpi-links/${linkId}/all-series`
+  `/measure-links/${linkId}/all-series`
 );
 
 // Chart the data
@@ -805,23 +805,23 @@ renderChart({
 
 | Old Entity (v6) | New Entity (v7) | Notes |
 |-----------------|-----------------|-------|
-| `KpiMilestone` | `KpiData` (Target subtype) | Unified into single entity |
-| `KpiActual` | `KpiData` (Actual subtype) | Unified into single entity |
-| `KpiReading` | `KpiData` (Actual subtype) | Merged with KpiActual |
+| `MeasureMilestone` | `MeasureData` (Target subtype) | Unified into single entity |
+| `MeasureActual` | `MeasureData` (Actual subtype) | Unified into single entity |
+| `MeasureReading` | `MeasureData` (Actual subtype) | Merged with MeasureActual |
 
 ### Key Differences
 
 **v6 (Separate entities):**
-- `KpiMilestone` for target values
-- `KpiActual` for measured values
-- `KpiReading` for estimates
+- `MeasureMilestone` for target values
+- `MeasureActual` for measured values
+- `MeasureReading` for estimates
 - Different endpoints for each type
 
 **v7 (Unified model):**
-- Single `KpiData` entity with `DataCategory` (Target/Actual)
+- Single `MeasureData` entity with `DataCategory` (Target/Actual)
 - Target subtypes: Expected/Optimal/Minimal
 - Actual subtypes: Measured/Estimate
-- Consistent endpoints: `/kpi-links/{linkId}/targets` and `/kpi-links/{linkId}/actuals`
+- Consistent endpoints: `/measure-links/{linkId}/targets` and `/measure-links/{linkId}/actuals`
 
 ### Benefits of v7 Design
 
@@ -835,8 +835,8 @@ renderChart({
 
 ## Related APIs
 
-- **[KPI Links API](./kpi-links-api.md)** - Link KPIs to goals/persons/strategies
-- **[KPIs API](./kpis-api.md)** - Manage KPIs
+- **[Measure Links API](./measure-links-api.md)** - Link KPIs to goals/persons/strategies
+- **[KPIs API](./measures-api.md)** - Manage KPIs
 - **[Goals API](./goals-api.md)** - Manage goals
 
 ---
@@ -844,7 +844,7 @@ renderChart({
 ## Changelog
 
 ### v7.0 (December 23, 2025)
-- ✨ New unified KpiData model replacing KpiMilestone/KpiActual/KpiReading (Issue #374)
+- ✨ New unified MeasureData model replacing MeasureMilestone/MeasureActual/MeasureReading (Issue #374)
 - ✅ Documented 9 endpoints with complete examples
 - ✨ Target subtypes: Expected, Optimal, Minimal
 - ✨ Actual subtypes: Measured, Estimate
@@ -856,7 +856,7 @@ renderChart({
 - 📝 Migration guide from v6 entities
 
 ### v6.0 (December 21, 2025)
-- ⚠️ Deprecated KpiMilestone, KpiActual, KpiReading
+- ⚠️ Deprecated MeasureMilestone, MeasureActual, MeasureReading
 
 ---
 

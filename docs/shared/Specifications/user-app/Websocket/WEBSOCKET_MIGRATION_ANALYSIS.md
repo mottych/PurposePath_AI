@@ -22,7 +22,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 ❌ **What's Missing:**
 - **No WebSocket implementation** (only SSE with EventSource)
 - **No global real-time connection manager**
-- **No support for action, KPI, or issue events**
+- **No support for action, Measure, or issue events**
 - **No reconnection logic** (EventSource auto-reconnects but limited control)
 - **No connection state management**
 - **No event handlers for most backend event types**
@@ -66,7 +66,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - activity.created
 - decision.created
 - attachment.created
-- kpi.reading.created (mentioned but not in backend spec)
+- measure.reading.created (mentioned but not in backend spec)
 ```
 
 **Backend WebSocket Event Types (from spec):**
@@ -86,8 +86,8 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - action.reassigned
 - action.progress_updated
 
-// KPI Events
-- kpi.reading.created
+// Measure Events
+- measure.reading.created
 
 // Issue Events
 - issue.created
@@ -119,7 +119,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - ❌ **No global Goal context** (components load goals individually via `listGoals()`)
 - ❌ **No global Action context** (loaded per component)
 - ❌ **No global Issue context** (loaded per component)
-- ❌ **No global KPI context** (loaded per component)
+- ❌ **No global Measure context** (loaded per component)
 - ✅ Uses service layer for data fetching (`src/services/`)
 
 **Current Pattern:**
@@ -403,7 +403,7 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
    - Goal created/completed
    - High-priority actions created
    - Critical issues created
-   - KPI thresholds breached (red zone)
+   - Measure thresholds breached (red zone)
 
 4. **Activity Feed Live Updates**
    - Goal activity feed updates in real-time

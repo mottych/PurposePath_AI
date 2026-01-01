@@ -1,6 +1,6 @@
 # Traction Service Backend Integration Specifications (v6)
 
-**Version:** 6.0 - KPI Linking & Data Model Refactoring  
+**Version:** 6.0 - Measure Linking & Data Model Refactoring  
 **Last Updated:** 2025-12-21  
 **Service Base URL:** `{REACT_APP_TRACTION_API_URL}`  
 **Default (Localhost):** `http://localhost:8002`
@@ -51,39 +51,39 @@ This specification documents **ALL** Traction API endpoints currently called by 
 11. `DELETE /goals/{goalId}/strategies/{id}` - Delete strategy
 12. `PUT /goals/{goalId}/strategies:reorder` - Reorder strategies
 
-### KPI Management (7 endpoints)
-13. `POST /kpis` - Create KPI instance
-14. `GET /kpis/{id}` - Get KPI details
-15. `PUT /kpis/{id}` - Update KPI instance
-16. `DELETE /kpis/{id}` - Delete KPI instance
-17. `GET /kpis` - List KPIs
-18. `GET /goals/{goalId}/kpis` - List KPIs for goal
-19. `PUT /goals/{goalId}/kpis/{kpiId}:setPrimary` - Set KPI as primary
+### Measure Management (7 endpoints)
+13. `POST /measures` - Create Measure instance
+14. `GET /measures/{id}` - Get Measure details
+15. `PUT /measures/{id}` - Update Measure instance
+16. `DELETE /measures/{id}` - Delete Measure instance
+17. `GET /measures` - List KPIs
+18. `GET /goals/{goalId}/measures` - List KPIs for goal
+19. `PUT /goals/{goalId}/measures/{measureId}:setPrimary` - Set Measure as primary
 
-### KPI Linking (9 endpoints)
-20. `POST /goals/{goalId}/kpis:link` - Link KPI to goal (with person and optional strategy)
-21. `POST /goals/{goalId}/kpis:unlink` - Unlink KPI from goal
-22. `POST /goals/{goalId}/kpis/{kpiId}:setThreshold` - Set KPI threshold
-23. `GET /goals/{goalId}/kpis/{kpiId}:link` - Get KPI linkage details
-24. `GET /goals/{goalId}/available-kpis` - Get available KPIs for goal
-25. `GET /people/{personId}/kpis` - List personal scorecard KPIs
-26. `POST /people/{personId}/kpis:link` - Link KPI to person (personal scorecard)
-27. `POST /people/{personId}/kpis:unlink` - Unlink KPI from person
-28. `GET /strategies/{strategyId}/kpis` - List KPIs for strategy
+### Measure Linking (9 endpoints)
+20. `POST /goals/{goalId}/measures:link` - Link Measure to goal (with person and optional strategy)
+21. `POST /goals/{goalId}/measures:unlink` - Unlink Measure from goal
+22. `POST /goals/{goalId}/measures/{measureId}:setThreshold` - Set Measure threshold
+23. `GET /goals/{goalId}/measures/{measureId}:link` - Get Measure linkage details
+24. `GET /goals/{goalId}/available-measures` - Get available KPIs for goal
+25. `GET /people/{personId}/measures` - List personal scorecard KPIs
+26. `POST /people/{personId}/measures:link` - Link Measure to person (personal scorecard)
+27. `POST /people/{personId}/measures:unlink` - Unlink Measure from person
+28. `GET /strategies/{strategyId}/measures` - List KPIs for strategy
 
-### KPI Data & Planning (12 endpoints)
-29. `GET /kpi-links/{linkId}/targets` - Get targets for a KPI link (all subtypes)
-30. `POST /kpi-links/{linkId}/targets` - Create target (with subtype)
-31. `PUT /kpi-links/{linkId}/targets/{targetId}` - Update target
-32. `DELETE /kpi-links/{linkId}/targets/{targetId}` - Delete target
-33. `GET /kpi-links/{linkId}/actuals` - Get actuals for a KPI link
-34. `POST /kpi-links/{linkId}/actuals` - Record actual (with subtype)
-35. `GET /kpi-links/{linkId}/all-series` - Get all target lines + actuals
-36. `GET /kpi-planning/goals/{goalId}/kpi-planning` - Get goal KPI planning overview
-37. `POST /kpi-planning/kpis/{id}/adjust` - Adjust KPI plan
-38. `GET /kpi-planning/kpis/{kpiId}/cross-goal-impact` - Get cross-goal impact
-39. `GET /kpi-planning/kpis/{id}/replan-rule` - Get replan rule
-40. `PUT /kpi-planning/kpis/{id}/replan-rule` - Update replan rule
+### Measure Data & Planning (12 endpoints)
+29. `GET /measure-links/{linkId}/targets` - Get targets for a Measure link (all subtypes)
+30. `POST /measure-links/{linkId}/targets` - Create target (with subtype)
+31. `PUT /measure-links/{linkId}/targets/{targetId}` - Update target
+32. `DELETE /measure-links/{linkId}/targets/{targetId}` - Delete target
+33. `GET /measure-links/{linkId}/actuals` - Get actuals for a Measure link
+34. `POST /measure-links/{linkId}/actuals` - Record actual (with subtype)
+35. `GET /measure-links/{linkId}/all-series` - Get all target lines + actuals
+36. `GET /measure-planning/goals/{goalId}/measure-planning` - Get goal Measure planning overview
+37. `POST /measure-planning/measures/{id}/adjust` - Adjust Measure plan
+38. `GET /measure-planning/measures/{measureId}/cross-goal-impact` - Get cross-goal impact
+39. `GET /measure-planning/measures/{id}/replan-rule` - Get replan rule
+40. `PUT /measure-planning/measures/{id}/replan-rule` - Update replan rule
 
 ### Actions (7 endpoints)
 41. `GET /operations/actions` - List actions
@@ -122,10 +122,10 @@ This specification documents **ALL** Traction API endpoints currently called by 
 66. `POST /issues/{id}/close` - Close issue
 
 ### Operations Integration (4 endpoints)
-67. `POST /operations/kpi-updates` - Sync KPI update
+67. `POST /operations/measure-updates` - Sync Measure update
 68. `POST /operations/actions/goals` - Get goals for actions
 69. `POST /operations/actions/strategies` - Get strategies for actions
-70. `POST /operations/goals/kpis` - Get KPIs for goals
+70. `POST /operations/goals/measures` - Get KPIs for goals
 
 ### Activity (2 endpoints)
 71. `GET /goals/{goalId}/activity` - Get goal activity
@@ -161,48 +161,48 @@ type IssueImpact = 'low' | 'medium' | 'high' | 'critical';
 type IssuePriority = 'low' | 'medium' | 'high' | 'critical';
 type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
 
-// KPI direction
+// Measure direction
 type KPIDirection = 'up' | 'down'; // up = higher is better, down = lower is better
 
-// KPI types
+// Measure types
 type KPIType = 'quantitative' | 'qualitative' | 'binary';
 
-// KPI aggregation types
+// Measure aggregation types
 type AggregationType = 'sum' | 'average' | 'min' | 'max' | 'latest' | 'count' | 'pointInTime';
 
-// KPI aggregation periods
+// Measure aggregation periods
 type AggregationPeriod = 'none' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
-// KPI data nature
+// Measure data nature
 type DataNature = 'snapshot' | 'aggregate' | 'other';
 
-// KPI data category (v6: unified target/actual storage)
-type KpiDataCategory = 'Target' | 'Actual';
+// Measure data category (v6: unified target/actual storage)
+type MeasureDataCategory = 'Target' | 'Actual';
 
-// KPI target subtypes (v6: three target lines for planning)
+// Measure target subtypes (v6: three target lines for planning)
 type TargetSubtype = 'Expected' | 'Optimal' | 'Minimal';
 // Expected = Primary target line (black) - realistic goal
 // Optimal = Stretch target line (green) - best-case scenario
 // Minimal = Floor threshold line (red) - minimum acceptable
 
-// KPI actual subtypes (v6: distinguish estimate vs measured)
+// Measure actual subtypes (v6: distinguish estimate vs measured)
 type ActualSubtype = 'Estimate' | 'Measured';
 // Estimate = User's best guess when measurement not available
 // Measured = Actual recorded measurement from data source
 
-// KPI link types (v6: flexible linking to Person, Goal, Strategy)
-type KpiLinkType = 'personal' | 'goal' | 'strategy';
-// personal = KPI linked only to Person (personal scorecard)
-// goal = KPI linked to Person + Goal
-// strategy = KPI linked to Person + Goal + Strategy
+// Measure link types (v6: flexible linking to Person, Goal, Strategy)
+type MeasureLinkType = 'personal' | 'goal' | 'strategy';
+// personal = Measure linked only to Person (personal scorecard)
+// goal = Measure linked to Person + Goal
+// strategy = Measure linked to Person + Goal + Strategy
 
-// KPI interpolation methods
+// Measure interpolation methods
 type InterpolationMethod = 'linear' | 'exponential' | 'step';
 
-// KPI adjustment strategies
+// Measure adjustment strategies
 type AdjustmentStrategy = 'maintain_final_goal' | 'proportional_shift' | 'custom';
 
-// KPI data sources
+// Measure data sources
 type KPIDataSource = 'manual' | 'action' | 'integration';
 
 // Cross-goal alert decisions
@@ -248,7 +248,7 @@ Create a new goal.
     "alignmentExplanation": "",
     "alignmentSuggestions": [],
     "strategies": [],
-    "kpis": [],
+    "measures": [],
     "createdAt": "2025-01-15T10:30:00Z",
     "updatedAt": "2025-01-15T10:30:00Z"
   }
@@ -259,7 +259,7 @@ Create a new goal.
 - `status`: defaults to `"draft"`
 - `alignmentScore`: number, 0-100
 - `strategies`: array, initially empty
-- `kpis`: array, initially empty
+- `measures`: array, initially empty
 - Dates are ISO 8601 strings
 
 ---
@@ -301,11 +301,11 @@ List goals with optional filtering.
             "updatedAt": "2025-01-15T11:00:00Z"
           }
         ],
-        "kpis": [
+        "measures": [
           {
             "id": "goalkpi_101",
             "goalId": "goal_456",
-            "kpiId": "kpi_202",
+            "measureId": "kpi_202",
             "order": 1,
             "createdAt": "2025-01-15T11:30:00Z",
             "updatedAt": "2025-01-15T11:30:00Z"
@@ -369,11 +369,11 @@ Get detailed goal information.
         "updatedAt": "2025-01-16T09:00:00Z"
       }
     ],
-    "kpis": [
+    "measures": [
       {
         "id": "goalkpi_101",
         "goalId": "goal_456",
-        "kpiId": "kpi_202",
+        "measureId": "kpi_202",
         "order": 1,
         "createdAt": "2025-01-15T11:30:00Z",
         "updatedAt": "2025-01-15T11:30:00Z"
@@ -698,11 +698,11 @@ Reorder strategies within a goal.
 
 ---
 
-## KPI Management
+## Measure Management
 
-### 13. POST /kpis
+### 13. POST /measures
 
-Create a new KPI instance (catalog-based or custom).
+Create a new Measure instance (catalog-based or custom).
 
 **Request Body:**
 ```json
@@ -728,11 +728,11 @@ Create a new KPI instance (catalog-based or custom).
 
 **Request Constraints:**
 
-**If `catalogId` provided** (catalog-based KPI):
+**If `catalogId` provided** (catalog-based Measure):
 - `name`, `description`, `unit`, `direction`, `type`, `category`: OPTIONAL (inherited from catalog, can be overridden)
 - `aggregationType`, `aggregationPeriod`, `valueType`: OPTIONAL (inherited from catalog, can be overridden)
 
-**If `catalogId` is null/omitted** (custom KPI):
+**If `catalogId` is null/omitted** (custom Measure):
 - `name`: REQUIRED, max 200 characters
 - `description`: REQUIRED, max 2000 characters
 - `unit`: REQUIRED, max 50 characters
@@ -773,7 +773,7 @@ Create a new KPI instance (catalog-based or custom).
   - `"other"` = neither snapshot nor aggregate
 - `category`: OPTIONAL, max 100 characters
 
-**Optional fields (all KPI types):**
+**Optional fields (all Measure types):**
 - `currentValue`: number, optional (defaults to null if omitted)
 - `currentValueDate`: ISO date string, optional (defaults to null if omitted)
 - `calculationMethod`: string, max 1000 characters
@@ -818,18 +818,18 @@ Create a new KPI instance (catalog-based or custom).
 - `linkedGoalCount`: number, always `0` for newly created KPIs
 
 **Status Codes:**
-- `201` - KPI created successfully
+- `201` - Measure created successfully
 - `400` - Validation error (missing required fields, invalid enum values)
-- `404` - Catalog KPI not found (if catalogId provided)
+- `404` - Catalog Measure not found (if catalogId provided)
 
 ---
 
-### 14. GET /kpis/{id}
+### 14. GET /measures/{id}
 
-Get complete details for a single KPI instance.
+Get complete details for a single Measure instance.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -878,26 +878,26 @@ Get complete details for a single KPI instance.
 
 **Response Constraints:**
 - `isShared`: boolean, true if linked to multiple goals
-- `linkedGoalCount`: number, count of goals this KPI is linked to
+- `linkedGoalCount`: number, count of goals this Measure is linked to
 - `linkedGoals`: array of goal link details with `isPrimary` indicator
 
 **Status Codes:**
 - `200` - Success
-- `404` - KPI not found
+- `404` - Measure not found
 
 ---
 
-### 15. PUT /kpis/{id}
+### 15. PUT /measures/{id}
 
-Update properties of an existing KPI instance. Changes affect all goals linked to this KPI.
+Update properties of an existing Measure instance. Changes affect all goals linked to this Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body (all fields optional for partial update):**
 ```json
 {
-  "name": "Updated KPI Name",
+  "name": "Updated Measure Name",
   "description": "Updated description",
   "unit": "USD",
   "direction": "up",
@@ -911,10 +911,10 @@ Update properties of an existing KPI instance. Changes affect all goals linked t
 **Request Constraints:**
 - All fields optional (partial update)
 - **CANNOT update**: `catalogId`, `currentValue`, `currentValueDate`, `aggregationType`, `aggregationPeriod`, `valueType`
-- If KPI is linked to catalog (`catalogId` not null):
+- If Measure is linked to catalog (`catalogId` not null):
   - Updating `name`, `description`, `unit`, `direction` creates instance-specific override
   - Original catalog values remain unchanged
-- Field constraints same as POST /kpis
+- Field constraints same as POST /measures
 
 **Response:**
 ```json
@@ -922,7 +922,7 @@ Update properties of an existing KPI instance. Changes affect all goals linked t
   "success": true,
   "data": {
     "id": "kpi_456",
-    "name": "Updated KPI Name",
+    "name": "Updated Measure Name",
     "description": "Updated description",
     "unit": "USD",
     "direction": "up",
@@ -938,16 +938,16 @@ Update properties of an existing KPI instance. Changes affect all goals linked t
 **Status Codes:**
 - `200` - Success
 - `400` - Validation error
-- `404` - KPI not found
+- `404` - Measure not found
 
 ---
 
-### 16. DELETE /kpis/{id}
+### 16. DELETE /measures/{id}
 
-Soft-delete a KPI instance. Only allowed if KPI is not linked to any goals.
+Soft-delete a Measure instance. Only allowed if Measure is not linked to any goals.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -956,22 +956,22 @@ Soft-delete a KPI instance. Only allowed if KPI is not linked to any goals.
   "data": {
     "id": "kpi_456",
     "deletedAt": "2025-01-20T10:00:00Z",
-    "message": "KPI soft-deleted successfully"
+    "message": "Measure soft-deleted successfully"
   }
 }
 ```
 
 **Business Rules:**
-- Returns `400` if KPI is linked to any goals
+- Returns `400` if Measure is linked to any goals
 - Must unlink from all goals before deletion
 - **Soft-delete behavior**:
-  - KPI marked as `isDeleted: true`, `deletedAt` timestamp set
-  - KPI record preserved in database (not physically deleted)
+  - Measure marked as `isDeleted: true`, `deletedAt` timestamp set
+  - Measure record preserved in database (not physically deleted)
   - All associated data retained:
-    - ✅ Milestones preserved (linked via KpiId)
-    - ✅ Actuals preserved (linked via KpiId)
-    - ✅ Plan adjustments preserved (linked via KpiId)
-    - ✅ Replan rules preserved (linked via KpiId)
+    - ✅ Milestones preserved (linked via MeasureId)
+    - ✅ Actuals preserved (linked via MeasureId)
+    - ✅ Plan adjustments preserved (linked via MeasureId)
+    - ✅ Replan rules preserved (linked via MeasureId)
   - Soft-deleted KPIs excluded from list/search queries by default
   - Can be permanently deleted or restored by admin operations (future feature)
   - Historical data remains queryable for reporting/audit purposes
@@ -979,17 +979,17 @@ Soft-delete a KPI instance. Only allowed if KPI is not linked to any goals.
 **Data Retention Rationale:**
 - Milestones and actuals represent historical business data that should not be lost
 - Enables audit trails and historical reporting
-- Allows potential KPI restoration without data loss
-- Maintains referential integrity for cross-goal KPI analysis
+- Allows potential Measure restoration without data loss
+- Maintains referential integrity for cross-goal Measure analysis
 
 **Status Codes:**
 - `200` - Success
-- `400` - KPI is linked to goals (cannot delete)
-- `404` - KPI not found
+- `400` - Measure is linked to goals (cannot delete)
+- `404` - Measure not found
 
 ---
 
-### 17. GET /kpis
+### 17. GET /measures
 
 List all KPIs for the tenant.
 
@@ -1006,7 +1006,7 @@ List all KPIs for the tenant.
 {
   "success": true,
   "data": {
-    "kpis": [
+    "measures": [
       {
         "id": "kpi_456",
         "name": "Monthly Recurring Revenue",
@@ -1038,7 +1038,7 @@ List all KPIs for the tenant.
 
 ---
 
-### 18. GET /goals/{goalId}/kpis
+### 18. GET /goals/{goalId}/measures
 
 List all KPIs linked to a specific goal with primary indicator.
 
@@ -1052,10 +1052,10 @@ List all KPIs linked to a specific goal with primary indicator.
   "data": {
     "goalId": "goal_456",
     "goalName": "Increase Revenue",
-    "kpis": [
+    "measures": [
       {
         "linkId": "goalkpi_101",
-        "kpiId": "kpi_456",
+        "measureId": "kpi_456",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
         "direction": "up",
@@ -1071,7 +1071,7 @@ List all KPIs linked to a specific goal with primary indicator.
       },
       {
         "linkId": "goalkpi_102",
-        "kpiId": "kpi_457",
+        "measureId": "kpi_457",
         "name": "Customer Retention Rate",
         "unit": "%",
         "direction": "up",
@@ -1089,7 +1089,7 @@ List all KPIs linked to a specific goal with primary indicator.
     "totalKpis": 2,
     "hasPrimary": true,
     "primaryKpi": {
-      "kpiId": "kpi_456",
+      "measureId": "kpi_456",
       "name": "Monthly Recurring Revenue"
     }
   }
@@ -1097,10 +1097,10 @@ List all KPIs linked to a specific goal with primary indicator.
 ```
 
 **Response Constraints:**
-- `isPrimary`: boolean, indicates if this KPI is the primary KPI for this goal
-- `isShared`: boolean, true if KPI is linked to multiple goals
-- `sharedGoalCount`: number, total count of goals this KPI is linked to
-- `primaryKpi`: object with details of the primary KPI (null if no KPIs linked)
+- `isPrimary`: boolean, indicates if this Measure is the primary Measure for this goal
+- `isShared`: boolean, true if Measure is linked to multiple goals
+- `sharedGoalCount`: number, total count of goals this Measure is linked to
+- `primaryKpi`: object with details of the primary Measure (null if no KPIs linked)
 
 **Status Codes:**
 - `200` - Success
@@ -1108,13 +1108,13 @@ List all KPIs linked to a specific goal with primary indicator.
 
 ---
 
-### 19. PUT /goals/{goalId}/kpis/{kpiId}:setPrimary
+### 19. PUT /goals/{goalId}/measures/{measureId}:setPrimary
 
-Set a specific KPI as the primary KPI for this goal.
+Set a specific Measure as the primary Measure for this goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID to set as primary
+- `measureId`: string, required - Measure ID to set as primary
 
 **Request Body:**
 ```json
@@ -1135,22 +1135,22 @@ Set a specific KPI as the primary KPI for this goal.
 ```
 
 **Business Rules:**
-- KPI must already be linked to the goal
-- Previous primary KPI (if any) automatically demoted to `isPrimary: false`
-- Only one KPI can be primary per goal
+- Measure must already be linked to the goal
+- Previous primary Measure (if any) automatically demoted to `isPrimary: false`
+- Only one Measure can be primary per goal
 
 **Status Codes:**
 - `200` - Success
-- `400` - KPI is not linked to this goal
-- `404` - Goal or KPI not found
+- `400` - Measure is not linked to this goal
+- `404` - Goal or Measure not found
 
 ---
 
-## KPI Linking
+## Measure Linking
 
-### 20. POST /goals/{goalId}/kpis:link
+### 20. POST /goals/{goalId}/measures:link
 
-Link a KPI to a goal with a responsible person.
+Link a Measure to a goal with a responsible person.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1158,7 +1158,7 @@ Link a KPI to a goal with a responsible person.
 **Request Body:**
 ```json
 {
-  "kpiId": "kpi_456",
+  "measureId": "kpi_456",
   "personId": "person_789",
   "strategyId": null,
   "thresholdPct": 80,
@@ -1170,13 +1170,13 @@ Link a KPI to a goal with a responsible person.
 ```
 
 **Request Constraints:**
-- `kpiId`: string, required, valid KPI ID (existing KPI instance)
+- `measureId`: string, required, valid Measure ID (existing Measure instance)
 - `personId`: string, required, valid Person ID (person responsible for targets/actuals)
 - `strategyId`: string, optional, valid Strategy ID (only if linking to a specific strategy within the goal)
 - `thresholdPct`: number, optional, 0-100, percentage threshold for goal achievement
 - `isPrimary`: boolean, optional
-  - If `true`: This KPI becomes primary (any existing primary is demoted)
-  - If `false` or omitted and goal has no KPIs: Auto-set to `true` (first KPI is primary by default)
+  - If `true`: This Measure becomes primary (any existing primary is demoted)
+  - If `false` or omitted and goal has no KPIs: Auto-set to `true` (first Measure is primary by default)
   - If `false` or omitted and goal has existing KPIs: Defaults to `false`
 - `linkType`: string, optional, one of: `"primary"`, `"secondary"`, `"supporting"`, `"monitoring"`
 - `weight`: number, optional, 0.0-1.0, importance weight for composite progress calculation
@@ -1188,7 +1188,7 @@ Link a KPI to a goal with a responsible person.
   "success": true,
   "data": {
     "id": "kpilink_101",
-    "kpiId": "kpi_456",
+    "measureId": "kpi_456",
     "personId": "person_789",
     "personName": "John Doe",
     "goalId": "goal_456",
@@ -1204,23 +1204,23 @@ Link a KPI to a goal with a responsible person.
 ```
 
 **Business Rules:**
-- Every KPI link requires a personId (the person responsible for targets/actuals)
-- First KPI linked to a goal automatically becomes primary
+- Every Measure link requires a personId (the person responsible for targets/actuals)
+- First Measure linked to a goal automatically becomes primary
 - If `isPrimary: true` is set, previous primary (if any) is automatically demoted
-- KPI can be linked to multiple goals simultaneously
-- Goal-level links: Only ONE link allowed per KpiId+GoalId combination (without strategyId)
-- Strategy-level links: Only ONE link allowed per KpiId+StrategyId combination
+- Measure can be linked to multiple goals simultaneously
+- Goal-level links: Only ONE link allowed per MeasureId+GoalId combination (without strategyId)
+- Strategy-level links: Only ONE link allowed per MeasureId+StrategyId combination
 
 **Status Codes:**
-- `201` - KPI linked successfully
-- `400` - KPI already linked to this goal/strategy
-- `404` - Goal, KPI, Person, or Strategy not found
+- `201` - Measure linked successfully
+- `400` - Measure already linked to this goal/strategy
+- `404` - Goal, Measure, Person, or Strategy not found
 
 ---
 
-### 21. POST /goals/{goalId}/kpis:unlink
+### 21. POST /goals/{goalId}/measures:unlink
 
-Unlink a KPI from a goal.
+Unlink a Measure from a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1228,17 +1228,17 @@ Unlink a KPI from a goal.
 **Request Body:**
 ```json
 {
-  "kpiId": "kpi_456",
+  "measureId": "kpi_456",
   "newPrimaryKpiId": "kpi_789"
 }
 ```
 
 **Request Constraints:**
-- `kpiId`: string, required, KPI ID to unlink
+- `measureId`: string, required, Measure ID to unlink
 - `newPrimaryKpiId`: string, optional
-  - **REQUIRED** if `kpiId` is the current primary KPI AND goal has other KPIs linked
-  - **FORBIDDEN** if `kpiId` is not the current primary KPI
-  - **FORBIDDEN** if `kpiId` is the only KPI linked to goal
+  - **REQUIRED** if `measureId` is the current primary Measure AND goal has other KPIs linked
+  - **FORBIDDEN** if `measureId` is not the current primary Measure
+  - **FORBIDDEN** if `measureId` is the only Measure linked to goal
 
 **Response:**
 ```json
@@ -1254,25 +1254,25 @@ Unlink a KPI from a goal.
 ```
 
 **Business Rules:**
-- Cannot unlink primary KPI without selecting new primary (if other KPIs exist)
-- If removing last KPI from goal: Allowed, goal will have no primary KPI
-- Unlinking KPI does not delete the KPI instance (still exists for other goals)
+- Cannot unlink primary Measure without selecting new primary (if other KPIs exist)
+- If removing last Measure from goal: Allowed, goal will have no primary Measure
+- Unlinking Measure does not delete the Measure instance (still exists for other goals)
 
 **Status Codes:**
 - `200` - Success
-- `400` - Attempting to unlink primary KPI without providing `newPrimaryKpiId` when other KPIs exist
+- `400` - Attempting to unlink primary Measure without providing `newPrimaryKpiId` when other KPIs exist
 - `400` - Provided `newPrimaryKpiId` is not linked to this goal
-- `404` - KPI not linked to this goal
+- `404` - Measure not linked to this goal
 
 ---
 
-### 22. POST /goals/{goalId}/kpis/{kpiId}:setThreshold
+### 22. POST /goals/{goalId}/measures/{measureId}:setThreshold
 
-Set threshold percentage for a KPI linked to a goal.
+Set threshold percentage for a Measure linked to a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID
+- `measureId`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1293,13 +1293,13 @@ Set threshold percentage for a KPI linked to a goal.
 
 ---
 
-### 23. GET /goals/{goalId}/kpis/{kpiId}:link
+### 23. GET /goals/{goalId}/measures/{measureId}:link
 
-Get KPI linkage information including threshold, person, and strategy.
+Get Measure linkage information including threshold, person, and strategy.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID
+- `measureId`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -1307,7 +1307,7 @@ Get KPI linkage information including threshold, person, and strategy.
   "success": true,
   "data": {
     "id": "kpilink_101",
-    "kpiId": "kpi_456",
+    "measureId": "kpi_456",
     "personId": "person_789",
     "personName": "John Doe",
     "goalId": "goal_456",
@@ -1329,7 +1329,7 @@ Get KPI linkage information including threshold, person, and strategy.
 
 ---
 
-### 24. GET /goals/{goalId}/available-kpis
+### 24. GET /goals/{goalId}/available-measures
 
 Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
 
@@ -1378,15 +1378,15 @@ Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
 
 **Response Constraints:**
 - `catalogKpis`: array of KPICatalogItem
-- `tenantCustomKpis`: array of KPI
-- `usageInfo.goalCount`: number, count of goals using this KPI
-- `usageInfo.isUsedByThisGoal`: boolean, whether this KPI is already linked to the goal
+- `tenantCustomKpis`: array of Measure
+- `usageInfo.goalCount`: number, count of goals using this Measure
+- `usageInfo.isUsedByThisGoal`: boolean, whether this Measure is already linked to the goal
 
 ---
 
-## KPI Linking - Person-based Endpoints
+## Measure Linking - Person-based Endpoints
 
-### 25. GET /people/{personId}/kpis
+### 25. GET /people/{personId}/measures
 
 List all KPIs linked to a person (personal scorecard).
 
@@ -1400,10 +1400,10 @@ List all KPIs linked to a person (personal scorecard).
   "data": {
     "personId": "person_789",
     "personName": "John Doe",
-    "kpis": [
+    "measures": [
       {
         "linkId": "kpilink_101",
-        "kpiId": "kpi_456",
+        "measureId": "kpi_456",
         "name": "Billable Hours",
         "unit": "hours",
         "direction": "up",
@@ -1423,9 +1423,9 @@ List all KPIs linked to a person (personal scorecard).
 
 ---
 
-### 26. POST /people/{personId}/kpis:link
+### 26. POST /people/{personId}/measures:link
 
-Link a KPI to a person as a personal scorecard metric.
+Link a Measure to a person as a personal scorecard metric.
 
 **Path Parameters:**
 - `personId`: string, required - Person ID
@@ -1433,7 +1433,7 @@ Link a KPI to a person as a personal scorecard metric.
 **Request Body:**
 ```json
 {
-  "kpiId": "kpi_456",
+  "measureId": "kpi_456",
   "thresholdPct": 80,
   "isPrimary": true,
   "linkType": "primary",
@@ -1448,7 +1448,7 @@ Link a KPI to a person as a personal scorecard metric.
   "success": true,
   "data": {
     "id": "kpilink_101",
-    "kpiId": "kpi_456",
+    "measureId": "kpi_456",
     "personId": "person_789",
     "goalId": null,
     "strategyId": null,
@@ -1460,14 +1460,14 @@ Link a KPI to a person as a personal scorecard metric.
 ```
 
 **Business Rules:**
-- Multiple people CAN have the same KPI linked (personal metrics)
+- Multiple people CAN have the same Measure linked (personal metrics)
 - No Goal or Strategy association (personal scorecard only)
 
 ---
 
-### 27. POST /people/{personId}/kpis:unlink
+### 27. POST /people/{personId}/measures:unlink
 
-Unlink a KPI from a person's personal scorecard.
+Unlink a Measure from a person's personal scorecard.
 
 **Path Parameters:**
 - `personId`: string, required - Person ID
@@ -1475,7 +1475,7 @@ Unlink a KPI from a person's personal scorecard.
 **Request Body:**
 ```json
 {
-  "kpiLinkId": "kpilink_101"
+  "measureLinkId": "kpilink_101"
 }
 ```
 
@@ -1488,7 +1488,7 @@ Unlink a KPI from a person's personal scorecard.
 
 ---
 
-### 28. GET /strategies/{strategyId}/kpis
+### 28. GET /strategies/{strategyId}/measures
 
 List all KPIs linked to a specific strategy.
 
@@ -1502,10 +1502,10 @@ List all KPIs linked to a specific strategy.
   "data": {
     "strategyId": "strategy_456",
     "goalId": "goal_123",
-    "kpis": [
+    "measures": [
       {
         "linkId": "kpilink_102",
-        "kpiId": "kpi_789",
+        "measureId": "kpi_789",
         "name": "Conversion Rate",
         "unit": "%",
         "personId": "person_123",
@@ -1520,14 +1520,14 @@ List all KPIs linked to a specific strategy.
 
 ---
 
-## KPI Data & Planning
+## Measure Data & Planning
 
-### 29. GET /kpi-links/{linkId}/targets
+### 29. GET /measure-links/{linkId}/targets
 
-Get all targets for a KPI link (supports filtering by subtype).
+Get all targets for a Measure link (supports filtering by subtype).
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
+- `linkId`: string, required - MeasureLink ID
 
 **Query Parameters:**
 - `subtype`: string, optional - Filter by target subtype: `"Expected"`, `"Optimal"`, `"Minimal"`
@@ -1539,7 +1539,7 @@ Get all targets for a KPI link (supports filtering by subtype).
   "data": [
     {
       "id": "kpidata_123",
-      "kpiLinkId": "kpilink_101",
+      "measureLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Expected",
       "postValue": 50000,
@@ -1553,7 +1553,7 @@ Get all targets for a KPI link (supports filtering by subtype).
     },
     {
       "id": "kpidata_124",
-      "kpiLinkId": "kpilink_101",
+      "measureLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Optimal",
       "postValue": 60000,
@@ -1563,7 +1563,7 @@ Get all targets for a KPI link (supports filtering by subtype).
     },
     {
       "id": "kpidata_125",
-      "kpiLinkId": "kpilink_101",
+      "measureLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Minimal",
       "postValue": 40000,
@@ -1583,12 +1583,12 @@ Get all targets for a KPI link (supports filtering by subtype).
 
 ---
 
-### 30. POST /kpi-links/{linkId}/targets
+### 30. POST /measure-links/{linkId}/targets
 
-Create a new target for a KPI link.
+Create a new target for a Measure link.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
+- `linkId`: string, required - MeasureLink ID
 
 **Request Body:**
 ```json
@@ -1618,7 +1618,7 @@ Create a new target for a KPI link.
   "success": true,
   "data": {
     "id": "kpidata_123",
-    "kpiLinkId": "kpilink_101",
+    "measureLinkId": "kpilink_101",
     "dataCategory": "Target",
     "targetSubtype": "Expected",
     "postValue": 50000,
@@ -1630,13 +1630,13 @@ Create a new target for a KPI link.
 
 ---
 
-### 31. PUT /kpi-links/{linkId}/targets/{targetId}
+### 31. PUT /measure-links/{linkId}/targets/{targetId}
 
 Update an existing target.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
-- `targetId`: string, required - KpiData ID (target)
+- `linkId`: string, required - MeasureLink ID
+- `targetId`: string, required - MeasureData ID (target)
 
 **Request Body:**
 ```json
@@ -1653,13 +1653,13 @@ Same structure as POST response.
 
 ---
 
-### 32. DELETE /kpi-links/{linkId}/targets/{targetId}
+### 32. DELETE /measure-links/{linkId}/targets/{targetId}
 
 Delete a target.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
-- `targetId`: string, required - KpiData ID (target)
+- `linkId`: string, required - MeasureLink ID
+- `targetId`: string, required - MeasureData ID (target)
 
 **Response:**
 ```json
@@ -1670,12 +1670,12 @@ Delete a target.
 
 ---
 
-### 33. GET /kpi-links/{linkId}/actuals
+### 33. GET /measure-links/{linkId}/actuals
 
-Get all actuals for a KPI link.
+Get all actuals for a Measure link.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
+- `linkId`: string, required - MeasureLink ID
 
 **Query Parameters:**
 - `startDate`: string, optional, ISO date - filter from date
@@ -1689,7 +1689,7 @@ Get all actuals for a KPI link.
   "data": [
     {
       "id": "kpidata_200",
-      "kpiLinkId": "kpilink_101",
+      "measureLinkId": "kpilink_101",
       "dataCategory": "Actual",
       "actualSubtype": "Measured",
       "postValue": 45000,
@@ -1716,12 +1716,12 @@ Get all actuals for a KPI link.
 
 ---
 
-### 34. POST /kpi-links/{linkId}/actuals
+### 34. POST /measure-links/{linkId}/actuals
 
-Record an actual value for a KPI link.
+Record an actual value for a Measure link.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
+- `linkId`: string, required - MeasureLink ID
 
 **Request Body:**
 ```json
@@ -1750,7 +1750,7 @@ Record an actual value for a KPI link.
   "data": {
     "actual": {
       "id": "kpidata_200",
-      "kpiLinkId": "kpilink_101",
+      "measureLinkId": "kpilink_101",
       "dataCategory": "Actual",
       "actualSubtype": "Measured",
       "postValue": 45000,
@@ -1774,12 +1774,12 @@ Record an actual value for a KPI link.
 
 ---
 
-### 35. GET /kpi-links/{linkId}/all-series
+### 35. GET /measure-links/{linkId}/all-series
 
 Get all target lines (Expected, Optimal, Minimal) plus actuals for charting.
 
 **Path Parameters:**
-- `linkId`: string, required - KpiLink ID
+- `linkId`: string, required - MeasureLink ID
 
 **Query Parameters:**
 - `startDate`: string, optional, ISO date
@@ -1790,8 +1790,8 @@ Get all target lines (Expected, Optimal, Minimal) plus actuals for charting.
 {
   "success": true,
   "data": {
-    "kpiLinkId": "kpilink_101",
-    "kpi": {
+    "measureLinkId": "kpilink_101",
+    "measure": {
       "id": "kpi_456",
       "name": "Monthly Recurring Revenue",
       "unit": "USD",
@@ -1838,9 +1838,9 @@ Get all target lines (Expected, Optimal, Minimal) plus actuals for charting.
 
 ---
 
-### 36. GET /kpi-planning/goals/{goalId}/kpi-planning
+### 36. GET /measure-planning/goals/{goalId}/measure-planning
 
-Get complete KPI planning summary for a goal (all KPI links associated with the goal).
+Get complete Measure planning summary for a goal (all Measure links associated with the goal).
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1855,11 +1855,11 @@ Get complete KPI planning summary for a goal (all KPI links associated with the 
       "name": "Increase Revenue",
       "intent": "We want to increase revenue by 50%..."
     },
-    "kpiLinks": [
+    "measureLinks": [
       {
         "linkId": "kpilink_101",
-        "kpiId": "kpi_456",
-        "kpiName": "Monthly Recurring Revenue",
+        "measureId": "kpi_456",
+        "measureName": "Monthly Recurring Revenue",
         "unit": "USD",
         "personId": "person_789",
         "personName": "John Doe",
@@ -1908,12 +1908,12 @@ Get complete KPI planning summary for a goal (all KPI links associated with the 
 
 ---
 
-### 37. POST /kpi-planning/kpis/{id}/adjust
+### 37. POST /measure-planning/measures/{id}/adjust
 
-Apply a KPI plan adjustment (replanning based on actuals).
+Apply a Measure plan adjustment (replanning based on actuals).
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1938,7 +1938,7 @@ Apply a KPI plan adjustment (replanning based on actuals).
   "data": {
     "adjustment": {
       "id": "adjustment_789",
-      "kpiId": "kpi_456",
+      "measureId": "kpi_456",
       "adjustmentDate": "2025-02-01T15:00:00Z",
       "effectiveDate": "2025-02-01",
       "adjustmentType": "milestone_updated",
@@ -1968,20 +1968,20 @@ Apply a KPI plan adjustment (replanning based on actuals).
 
 ---
 
-### 38. GET /kpi-planning/kpis/{kpiId}/cross-goal-impact
+### 38. GET /measure-planning/measures/{measureId}/cross-goal-impact
 
-Shows which goals use this KPI and their impact level.
+Shows which goals use this Measure and their impact level.
 
 **Path Parameters:**
-- `kpiId`: string, required - KPI ID
+- `measureId`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "kpiId": "kpi_123",
-    "kpiName": "Monthly Recurring Revenue",
+    "measureId": "kpi_123",
+    "measureName": "Monthly Recurring Revenue",
     "affectedGoals": [
       {
         "goalId": "goal_456",
@@ -2003,12 +2003,12 @@ Shows which goals use this KPI and their impact level.
 
 ---
 
-### 39. GET /kpi-planning/kpis/{id}/replan-rule
+### 39. GET /measure-planning/measures/{id}/replan-rule
 
-Get auto-replan configuration for a KPI.
+Get auto-replan configuration for a Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -2016,7 +2016,7 @@ Get auto-replan configuration for a KPI.
   "success": true,
   "data": {
     "id": "rule_123",
-    "kpiId": "kpi_456",
+    "measureId": "kpi_456",
     "varianceThresholdPercentage": 10.0,
     "consecutiveMissesRequired": 2,
     "autoAdjustEnabled": true,
@@ -2029,19 +2029,19 @@ Get auto-replan configuration for a KPI.
 ```
 
 **Response Constraints:**
-- Returns `404` if no replan rule exists for the KPI
+- Returns `404` if no replan rule exists for the Measure
 - `varianceThresholdPercentage`: number, 0-100
 - `consecutiveMissesRequired`: number, min 1
 - `adjustmentStrategy`: AdjustmentStrategy enum
 
 ---
 
-### 40. PUT /kpi-planning/kpis/{id}/replan-rule
+### 40. PUT /measure-planning/measures/{id}/replan-rule
 
 Create or update auto-replan configuration.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -2960,15 +2960,15 @@ None (empty body)
 
 ## Operations Integration
 
-### 67. POST /operations/kpi-updates
+### 67. POST /operations/measure-updates
 
-Sync KPI update from an action.
+Sync Measure update from an action.
 
 **Request Body:**
 ```json
 {
   "actionId": "action_123",
-  "kpiId": "kpi_456",
+  "measureId": "kpi_456",
   "horizonId": "horizon_789",
   "newValue": 1000,
   "updateDate": "2025-02-01",
@@ -2978,8 +2978,8 @@ Sync KPI update from an action.
 
 **Request Constraints:**
 - `actionId`: string, required, valid action ID
-- `kpiId`: string, required, valid KPI ID
-- `kpiId`: string, required, valid KPI ID
+- `measureId`: string, required, valid Measure ID
+- `measureId`: string, required, valid Measure ID
 - `horizonId`: string, required, valid time horizon ID
 - `newValue`: number, required
 - `updateDate`: string, required, ISO date (YYYY-MM-DD)
@@ -3062,7 +3062,7 @@ Get strategies for specific actions.
 
 ---
 
-### 70. POST /operations/goals/kpis
+### 70. POST /operations/goals/measures
 
 Get KPIs for specific goals.
 
@@ -3083,17 +3083,17 @@ Get KPIs for specific goals.
   "data": [
     {
       "id": "kpi_456",
-      "kpiId": "kpi_catalog_1",
+      "measureId": "kpi_catalog_1",
       "name": "Monthly Recurring Revenue",
       "unit": "USD",
       "direction": "up",
-      // ... other KPI fields
+      // ... other Measure fields
     }
   ]
 }
 ```
 
-**Response:** Array of KPI objects
+**Response:** Array of Measure objects
 
 ---
 
@@ -3321,7 +3321,7 @@ All error responses follow this consistent format:
 ```json
 {
   "success": false,
-  "error": "Cannot unlink primary KPI without designating a new primary",
+  "error": "Cannot unlink primary Measure without designating a new primary",
   "code": "PRIMARY_KPI_REQUIRED"
 }
 ```
@@ -3422,8 +3422,8 @@ All error responses follow this consistent format:
 | `RESOURCE_NOT_FOUND` | 404 | Requested resource does not exist |
 | `DUPLICATE_RESOURCE` | 409 | Resource with same identifier already exists |
 | `BUSINESS_RULE_VIOLATION` | 400 | Operation violates business rules |
-| `PRIMARY_KPI_REQUIRED` | 400 | Cannot remove primary KPI without replacement |
-| `KPI_LINKED_TO_GOALS` | 400 | Cannot delete KPI that is linked to goals |
+| `PRIMARY_KPI_REQUIRED` | 400 | Cannot remove primary Measure without replacement |
+| `KPI_LINKED_TO_GOALS` | 400 | Cannot delete Measure that is linked to goals |
 | `INVALID_STATE_TRANSITION` | 400 | Invalid goal state change requested |
 | `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error |
 
@@ -3472,7 +3472,7 @@ Content-Type: application/json
 
 ### KPIs
 - Invalidate on: milestone updates, actual recordings, plan adjustments
-- Goal-specific KPI cache invalidation
+- Goal-specific Measure cache invalidation
 
 ---
 
@@ -3493,8 +3493,8 @@ REACT_APP_TRACTION_API_URL=http://localhost:8002
 ## Implementation Files Reference
 
 - `src/services/traction.ts` - Axios instance with interceptors
-- `src/services/goal-service.ts` - Goals, Strategies, KPI linking
-- `src/services/kpi-planning-service.ts` - KPI Planning
+- `src/services/goal-service.ts` - Goals, Strategies, Measure linking
+- `src/services/measure-planning-service.ts` - Measure Planning
 - `src/services/operations-traction-service.ts` - Core Operations API
 - `src/services/issue-service.ts` - Issue lifecycle (uses fetch)
 - `src/services/activity.ts` - Goal activity
@@ -3504,21 +3504,21 @@ REACT_APP_TRACTION_API_URL=http://localhost:8002
 
 ## Version History
 
-**v6.0 (2025-12-21) - KPI Linking & Data Model Refactoring**
-- **BREAKING**: Renamed `GoalKpiLink` to `KpiLink` with extended linking support
-- **BREAKING**: Merged `KpiMilestone` and `KpiActual` into unified `KpiData` entity
+**v6.0 (2025-12-21) - Measure Linking & Data Model Refactoring**
+- **BREAKING**: Renamed `GoalKpiLink` to `MeasureLink` with extended linking support
+- **BREAKING**: Merged `MeasureMilestone` and `MeasureActual` into unified `MeasureData` entity
 - **BREAKING**: Field renames: `actualValue`→`postValue`, `measurementDate`→`postDate`
-- **NEW**: KPI linking now requires `personId` (person responsible for targets/actuals)
-- **NEW**: KPI linking supports optional `strategyId` (strategy-level links within goals)
-- **NEW**: Personal scorecard endpoints (`/people/{personId}/kpis`)
-- **NEW**: Strategy-level KPI endpoints (`/strategies/{strategyId}/kpis`)
+- **NEW**: Measure linking now requires `personId` (person responsible for targets/actuals)
+- **NEW**: Measure linking supports optional `strategyId` (strategy-level links within goals)
+- **NEW**: Personal scorecard endpoints (`/people/{personId}/measures`)
+- **NEW**: Strategy-level Measure endpoints (`/strategies/{strategyId}/measures`)
 - **NEW**: Three target subtypes: Expected (primary), Optimal (stretch), Minimal (floor)
 - **NEW**: Two actual subtypes: Estimate (user guess), Measured (real data)
-- **NEW**: `aggregationPeriodCount` field on KPI for multi-period aggregation
+- **NEW**: `aggregationPeriodCount` field on Measure for multi-period aggregation
 - **NEW**: All-series endpoint for charting (all 3 target lines + actuals)
 - **REMOVED**: Persisted `expectedValue`, `variance`, `variancePercentage` (now calculated on-the-fly)
-- **REMOVED**: Old `/kpi-planning/kpis/{id}/milestones` endpoints (replaced by targets)
-- **REMOVED**: Old `/kpi-planning/kpis/{id}/actuals` endpoints (replaced by kpi-links endpoints)
+- **REMOVED**: Old `/measure-planning/measures/{id}/milestones` endpoints (replaced by targets)
+- **REMOVED**: Old `/measure-planning/measures/{id}/actuals` endpoints (replaced by measure-links endpoints)
 - Total: 74 API endpoints (6 new, some deprecated)
 
 **v5.0 (2025-01-XX)**
@@ -3528,11 +3528,11 @@ REACT_APP_TRACTION_API_URL=http://localhost:8002
 - Complete data constraints and validation rules
 - Clear separation of concerns
 - Removed mixed specifications and changes
-- Removed cross-goal-alerts endpoints (25-27) - visual indication via `isShared` and `sharedGoals` in KPI responses is sufficient
-- Updated KPI planning routes: `/shared-kpis/` → `/kpi-planning/kpis/` with `/kpi-planning/` prefix
+- Removed cross-goal-alerts endpoints (25-27) - visual indication via `isShared` and `sharedGoals` in Measure responses is sufficient
+- Updated Measure planning routes: `/shared-measures/` → `/measure-planning/measures/` with `/measure-planning/` prefix
 
 **v4.0 (2025-11-20)**
-- KPI route consolidation from `/shared-kpis/...` to `/kpis/...`
+- Measure route consolidation from `/shared-measures/...` to `/measures/...`
 
 **v3.0 (2025-11-10)**
 - Complete audit of all frontend API calls

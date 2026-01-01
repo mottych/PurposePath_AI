@@ -1,24 +1,24 @@
-# Issue #XXX-2: Domain - Create KpiLink Entity
+# Issue #XXX-2: Domain - Create MeasureLink Entity
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
-**Labels:** `domain`, `entity`, `kpi-link`  
+**Labels:** `domain`, `entity`, `measure-link`  
 **Estimated Effort:** 4-6 hours
 
 ---
 
 ## 📋 Description
 
-Create the new `KpiLink` entity by renaming and enhancing `GoalKpiLink` to support linking KPIs to Goals, Strategies, and Persons.
+Create the new `MeasureLink` entity by renaming and enhancing `GoalKpiLink` to support linking KPIs to Goals, Strategies, and Persons.
 
 ---
 
 ## 🏗️ Entity Design
 
-### KpiLink Entity
+### MeasureLink Entity
 
-Location: `PurposePath.Domain/Entities/KpiLink.cs`
+Location: `PurposePath.Domain/Entities/MeasureLink.cs`
 
 ```csharp
 using PurposePath.Domain.Common;
@@ -28,31 +28,31 @@ using PurposePath.Domain.ValueObjects;
 namespace PurposePath.Domain.Entities;
 
 /// <summary>
-/// Represents a link between a KPI and an entity (Person, Goal, Strategy)
-/// A KPI is always linked to a Person who is responsible for the values.
-/// Optionally, the KPI can be linked to a Goal and/or Strategy for organizational context.
+/// Represents a link between a Measure and an entity (Person, Goal, Strategy)
+/// A Measure is always linked to a Person who is responsible for the values.
+/// Optionally, the Measure can be linked to a Goal and/or Strategy for organizational context.
 /// </summary>
-public class KpiLink : FullyAuditableEntity
+public class MeasureLink : FullyAuditableEntity
 {
-    public KpiLinkId Id { get; private set; }
+    public MeasureLinkId Id { get; private set; }
     public TenantId TenantId { get; private set; }
-    public KpiId KpiId { get; private set; }
+    public MeasureId MeasureId { get; private set; }
     
     /// <summary>
     /// Person responsible for targets/actuals on this link.
-    /// Required - every KpiLink must have a person assigned.
+    /// Required - every MeasureLink must have a person assigned.
     /// </summary>
     public PersonId PersonId { get; private set; }
     
     /// <summary>
     /// Optional Goal association.
-    /// When set, this KpiLink measures progress toward a specific goal.
+    /// When set, this MeasureLink measures progress toward a specific goal.
     /// </summary>
     public GoalId? GoalId { get; private set; }
     
     /// <summary>
     /// Optional Strategy association (only valid when GoalId is set).
-    /// When set, this KpiLink measures progress toward a specific strategy within the goal.
+    /// When set, this MeasureLink measures progress toward a specific strategy within the goal.
     /// </summary>
     public StrategyId? StrategyId { get; private set; }
     
@@ -66,23 +66,23 @@ public class KpiLink : FullyAuditableEntity
     public decimal? ThresholdPct { get; private set; }
 
     // Navigation properties
-    public Kpi? Kpi { get; private set; }
+    public Measure? Measure { get; private set; }
     public Goal? Goal { get; private set; }
     public Strategy? Strategy { get; private set; }
 
-    private KpiLink()
+    private MeasureLink()
     {
         Id = null!;
         TenantId = null!;
-        KpiId = null!;
+        MeasureId = null!;
         PersonId = null!;
         CreatedBy = null!;
     }
 
-    public KpiLink(
-        KpiLinkId id,
+    public MeasureLink(
+        MeasureLinkId id,
         TenantId tenantId,
-        KpiId kpiId,
+        MeasureId measureId,
         PersonId personId,
         UserId createdBy,
         GoalId? goalId = null,
@@ -100,7 +100,7 @@ public class KpiLink : FullyAuditableEntity
 
         Id = id ?? throw new ArgumentNullException(nameof(id));
         TenantId = tenantId ?? throw new ArgumentNullException(nameof(tenantId));
-        KpiId = kpiId ?? throw new ArgumentNullException(nameof(kpiId));
+        MeasureId = measureId ?? throw new ArgumentNullException(nameof(measureId));
         PersonId = personId ?? throw new ArgumentNullException(nameof(personId));
         CreatedBy = createdBy ?? throw new ArgumentNullException(nameof(createdBy));
         GoalId = goalId;
@@ -112,16 +112,16 @@ public class KpiLink : FullyAuditableEntity
         IsPrimary = isPrimary;
         LinkedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new KpiLinkedEvent(Id, TenantId, KpiId, PersonId, GoalId, StrategyId, CreatedBy));
+        AddDomainEvent(new MeasureLinkedEvent(Id, TenantId, MeasureId, PersonId, GoalId, StrategyId, CreatedBy));
     }
 
     /// <summary>
-    /// Factory method to restore KpiLink from persistence layer
+    /// Factory method to restore MeasureLink from persistence layer
     /// </summary>
-    public static KpiLink Restore(
-        KpiLinkId id,
+    public static MeasureLink Restore(
+        MeasureLinkId id,
         TenantId tenantId,
-        KpiId kpiId,
+        MeasureId measureId,
         PersonId personId,
         UserId createdBy,
         DateTime linkedAt,
@@ -134,11 +134,11 @@ public class KpiLink : FullyAuditableEntity
         bool isPrimary = false,
         DateTime? updatedAt = null)
     {
-        return new KpiLink
+        return new MeasureLink
         {
             Id = id,
             TenantId = tenantId,
-            KpiId = kpiId,
+            MeasureId = measureId,
             PersonId = personId,
             GoalId = goalId,
             StrategyId = strategyId,
@@ -154,11 +154,11 @@ public class KpiLink : FullyAuditableEntity
     }
 
     /// <summary>
-    /// Factory method for creating a new KPI link
+    /// Factory method for creating a new Measure link
     /// </summary>
-    public static KpiLink Create(
+    public static MeasureLink Create(
         TenantId tenantId,
-        KpiId kpiId,
+        MeasureId measureId,
         PersonId personId,
         UserId createdBy,
         GoalId? goalId = null,
@@ -169,10 +169,10 @@ public class KpiLink : FullyAuditableEntity
         int? displayOrder = null,
         bool isPrimary = false)
     {
-        return new KpiLink(
-            KpiLinkId.New(),
+        return new MeasureLink(
+            MeasureLinkId.New(),
             tenantId,
-            kpiId,
+            measureId,
             personId,
             createdBy,
             goalId,
@@ -187,7 +187,7 @@ public class KpiLink : FullyAuditableEntity
     // Query methods
     public bool BelongsToGoal(GoalId goalId) => GoalId == goalId;
     public bool BelongsToStrategy(StrategyId strategyId) => StrategyId == strategyId;
-    public bool BelongsToKpi(KpiId kpiId) => KpiId == kpiId;
+    public bool BelongsToKpi(MeasureId measureId) => MeasureId == measureId;
     public bool BelongsToPerson(PersonId personId) => PersonId == personId;
     public bool IsPersonOnly => GoalId == null && StrategyId == null;
     public bool IsGoalLevel => GoalId != null && StrategyId == null;
@@ -199,7 +199,7 @@ public class KpiLink : FullyAuditableEntity
         ValidateThreshold(thresholdPct);
         ThresholdPct = thresholdPct;
         UpdatedAt = DateTime.UtcNow;
-        AddDomainEvent(new KpiLinkThresholdUpdatedEvent(Id, TenantId, KpiId, thresholdPct));
+        AddDomainEvent(new MeasureLinkThresholdUpdatedEvent(Id, TenantId, MeasureId, thresholdPct));
     }
 
     public void UpdateLinkType(string? linkType)
@@ -240,7 +240,7 @@ public class KpiLink : FullyAuditableEntity
         {
             throw new InvalidOperationException(
                 "StrategyId can only be set when GoalId is also set. " +
-                "A KPI can be linked to a Strategy only within the context of a Goal.");
+                "A Measure can be linked to a Strategy only within the context of a Goal.");
         }
     }
 
@@ -270,19 +270,19 @@ public class KpiLink : FullyAuditableEntity
 
 | File | Action |
 |------|--------|
-| `PurposePath.Domain/Entities/KpiLink.cs` | Create |
+| `PurposePath.Domain/Entities/MeasureLink.cs` | Create |
 | `PurposePath.Domain/Entities/GoalKpiLink.cs` | Keep for now (mark deprecated) |
-| `PurposePath.Domain/Events/KpiLinkedEvent.cs` | Create (rename from GoalKpiLinkedEvent) |
-| `PurposePath.Domain/Events/KpiLinkThresholdUpdatedEvent.cs` | Create |
+| `PurposePath.Domain/Events/MeasureLinkedEvent.cs` | Create (rename from GoalKpiLinkedEvent) |
+| `PurposePath.Domain/Events/MeasureLinkThresholdUpdatedEvent.cs` | Create |
 | `PurposePath.Domain/Repositories/IKpiLinkRepository.cs` | Create |
 
 ---
 
 ## 🧪 Testing
 
-- [ ] KpiLink creation with Person only (personal scorecard)
-- [ ] KpiLink creation with Person + Goal
-- [ ] KpiLink creation with Person + Goal + Strategy
+- [ ] MeasureLink creation with Person only (personal scorecard)
+- [ ] MeasureLink creation with Person + Goal
+- [ ] MeasureLink creation with Person + Goal + Strategy
 - [ ] Validation: Strategy without Goal throws exception
 - [ ] Validation: Threshold must be 0-100
 - [ ] Validation: Weight must be 0-1
@@ -293,14 +293,14 @@ public class KpiLink : FullyAuditableEntity
 
 ## 🔗 Dependencies
 
-- Issue #XXX-1: Domain enums and value objects (for `KpiLinkId`)
+- Issue #XXX-1: Domain enums and value objects (for `MeasureLinkId`)
 - Person entity must be defined (see `people-org-structure-technical-design.md`)
 
 ---
 
 ## ✅ Definition of Done
 
-- [ ] `KpiLink` entity created with all properties and methods
+- [ ] `MeasureLink` entity created with all properties and methods
 - [ ] Repository interface `IKpiLinkRepository` created
 - [ ] Domain events created
 - [ ] Unit tests pass
@@ -316,7 +316,7 @@ public class KpiLink : FullyAuditableEntity
 **Status:** [In Progress / Blocked / Complete]
 
 **Completed:**
-- [ ] Created KpiLink entity
+- [ ] Created MeasureLink entity
 - [ ] Created IKpiLinkRepository interface
 - [ ] Created domain events
 - [ ] Added unit tests

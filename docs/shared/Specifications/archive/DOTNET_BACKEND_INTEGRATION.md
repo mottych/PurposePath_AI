@@ -32,11 +32,11 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 
 ---
 
-### Endpoint 1: Manual KPI Execution
+### Endpoint 1: Manual Measure Execution
 
 **Method**: `POST`  
-**Path**: `/kpi-integrations/{integration_id}/execute`  
-**Purpose**: Manually trigger KPI execution without waiting for scheduled time
+**Path**: `/measure-integrations/{integration_id}/execute`  
+**Purpose**: Manually trigger Measure execution without waiting for scheduled time
 
 #### Request
 **Headers**:
@@ -44,7 +44,7 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 - `Content-Type: application/json`
 
 **Path Parameters**:
-- `integration_id` (string, required): KPI integration identifier
+- `integration_id` (string, required): Measure integration identifier
 
 #### Response (202 Accepted)
 ```json
@@ -192,7 +192,7 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 
 **Method**: `GET`  
 **Path**: `/executions/{execution_id}/status`  
-**Purpose**: Get current status of a KPI execution
+**Purpose**: Get current status of a Measure execution
 
 #### Request
 **Headers**:
@@ -228,7 +228,7 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 | started_at | string | No | ISO8601 datetime when execution started |
 | completed_at | string | No | ISO8601 datetime when execution completed |
 | duration_ms | integer | No | Execution duration in milliseconds |
-| result_value | number | No | KPI value (if successful) |
+| result_value | number | No | Measure value (if successful) |
 | error_message | string | No | Error message (if failed) |
 | metadata | object | No | Execution metadata |
 
@@ -243,7 +243,7 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 
 **Method**: `GET`  
 **Path**: `/llm-models`  
-**Purpose**: Get list of available LLM models for KPI execution
+**Purpose**: Get list of available LLM models for Measure execution
 
 #### Request
 **Headers**:
@@ -286,10 +286,10 @@ JWT token validated against secret in AWS Secrets Manager: `purposepath-jwt-secr
 
 ### Usage Examples
 
-#### Manual KPI Execution
+#### Manual Measure Execution
 ```bash
 curl -X POST \
-  https://integration.dev.purposepath.app/api/v1/kpi-integrations/int-123/execute \
+  https://integration.dev.purposepath.app/api/v1/measure-integrations/int-123/execute \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json"
 ```
@@ -348,11 +348,11 @@ Service token stored in AWS Secrets Manager: `purposepath-backend-api-token-{env
 
 ---
 
-## Endpoint 1: Get KPI Integration Configuration
+## Endpoint 1: Get Measure Integration Configuration
 
 **Method**: `GET`  
-**Path**: `/kpi-integrations/{integration_id}/config`  
-**Purpose**: Retrieve complete configuration for executing a KPI integration
+**Path**: `/measure-integrations/{integration_id}/config`  
+**Purpose**: Retrieve complete configuration for executing a Measure integration
 
 ### Request
 **Headers**:
@@ -360,7 +360,7 @@ Service token stored in AWS Secrets Manager: `purposepath-backend-api-token-{env
 - `Content-Type: application/json`
 
 **Path Parameters**:
-- `integration_id` (string, required): Unique KPI integration identifier
+- `integration_id` (string, required): Unique Measure integration identifier
 
 ### Response (200 OK)
 ```json
@@ -382,8 +382,8 @@ Service token stored in AWS Secrets Manager: `purposepath-backend-api-token-{env
 ### Response Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| integration_id | string | Yes | KPI integration identifier |
-| kpi_id | string | Yes | KPI identifier |
+| integration_id | string | Yes | Measure integration identifier |
+| kpi_id | string | Yes | Measure identifier |
 | connection_id | string | Yes | Connection identifier for retrieving credentials |
 | template_key | string | Yes | Template topic identifier (e.g., "salesforce_revenue") |
 | parameter_values | object | Yes | Key-value pairs for template rendering |
@@ -462,8 +462,8 @@ Returns a dynamic JSON object with system-specific credentials.
 ## Endpoint 3: Get Active Integrations
 
 **Method**: `GET`  
-**Path**: `/kpi-integrations/active`  
-**Purpose**: Retrieve all active KPI integrations for scheduled execution
+**Path**: `/measure-integrations/active`  
+**Purpose**: Retrieve all active Measure integrations for scheduled execution
 
 ### Request
 **Headers**:
@@ -502,7 +502,7 @@ Returns a dynamic JSON object with system-specific credentials.
 |-------|------|----------|-------------|
 | integrations | array | Yes | Array of active integration objects |
 | integration_id | string | Yes | Integration identifier |
-| kpi_id | string | Yes | KPI identifier |
+| kpi_id | string | Yes | Measure identifier |
 | tenant_id | string | Yes | Tenant identifier |
 | frequency | string | Yes | Execution frequency |
 | schedule_time | string | Yes | Time of day to execute (HH:MM:SS) |
@@ -545,10 +545,10 @@ All queues are in `us-east-1` (configurable per environment)
 
 ---
 
-## Queue 1: KPI Results
+## Queue 1: Measure Results
 
-**Queue Name**: `purposepath-kpi-results-{environment}`  
-**Purpose**: Receive successful KPI execution results
+**Queue Name**: `purposepath-measure-results-{environment}`  
+**Purpose**: Receive successful Measure execution results
 
 ### Message Format
 ```json
@@ -570,9 +570,9 @@ All queues are in `us-east-1` (configurable per environment)
 ### Message Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| kpi_id | string | Yes | KPI identifier |
+| kpi_id | string | Yes | Measure identifier |
 | tenant_id | string | Yes | Tenant identifier |
-| value | number | Yes | Calculated KPI value (decimal/float) |
+| value | number | Yes | Calculated Measure value (decimal/float) |
 | execution_id | string | Yes | Unique execution identifier |
 | metadata | object | Yes | Execution metadata |
 | metadata.tokens_used | integer | Yes | LLM tokens consumed |
@@ -582,10 +582,10 @@ All queues are in `us-east-1` (configurable per environment)
 | metadata.tools_called | array | No | List of MCP tools invoked |
 
 ### Processing Requirements
-- Store KPI value with timestamp
-- Associate with tenant and KPI
+- Store Measure value with timestamp
+- Associate with tenant and Measure
 - Track execution metadata for cost analysis
-- Update KPI dashboard/charts
+- Update Measure dashboard/charts
 - Trigger any downstream workflows
 
 ---
@@ -612,7 +612,7 @@ All queues are in `us-east-1` (configurable per environment)
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | tenant_id | string | Yes | Tenant identifier |
-| kpi_id | string | Yes | KPI identifier |
+| kpi_id | string | Yes | Measure identifier |
 | integration_id | string | Yes | Integration identifier |
 | notification_type | string | Yes | Type of notification (see types below) |
 | error_message | string | Yes | Human-readable error message |
@@ -624,7 +624,7 @@ All queues are in `us-east-1` (configurable per environment)
 - `authentication_failed`: Authentication/credentials invalid
 - `token_expired`: OAuth token expired, needs refresh
 - `rate_limit_exceeded`: API rate limit hit
-- `data_extraction_failed`: Failed to extract KPI value
+- `data_extraction_failed`: Failed to extract Measure value
 - `timeout`: Execution exceeded timeout
 - `consecutive_failures`: Multiple consecutive failures
 - `system_error`: Internal system error
@@ -661,7 +661,7 @@ All queues are in `us-east-1` (configurable per environment)
 | integration_id | string | Yes | Integration identifier |
 | status | string | Yes | "success", "failed", "timeout" |
 | duration_ms | integer | No | Execution duration in milliseconds |
-| result_value | number | No | KPI value (if successful) |
+| result_value | number | No | Measure value (if successful) |
 | error_message | string | No | Error message (if failed) |
 
 ### Processing Requirements
@@ -686,7 +686,7 @@ Set appropriate visibility timeout (300 seconds recommended) to prevent duplicat
 
 ### Dead Letter Queues
 Each queue has a corresponding DLQ:
-- `purposepath-kpi-results-{env}-dlq`
+- `purposepath-measure-results-{env}-dlq`
 - `purposepath-notifications-{env}-dlq`
 - `purposepath-execution-status-{env}-dlq`
 
@@ -740,7 +740,7 @@ All API endpoints should return errors in this format:
 ## Testing Checklist
 
 ### Integration Service Endpoints (Consumption)
-- [ ] POST /kpi-integrations/{id}/execute triggers manual execution
+- [ ] POST /measure-integrations/{id}/execute triggers manual execution
 - [ ] POST /connections/validate validates Salesforce credentials
 - [ ] POST /connections/validate validates HubSpot credentials
 - [ ] POST /connections/validate validates QuickBooks credentials
@@ -752,16 +752,16 @@ All API endpoints should return errors in this format:
 - [ ] All Integration Service endpoints return 401 for invalid/missing JWT
 
 ### REST API Endpoints (Implementation)
-- [ ] GET /kpi-integrations/{id}/config returns valid configuration
-- [ ] GET /kpi-integrations/{id}/config returns 404 for non-existent integration
+- [ ] GET /measure-integrations/{id}/config returns valid configuration
+- [ ] GET /measure-integrations/{id}/config returns 404 for non-existent integration
 - [ ] GET /connections/{id}/credentials returns decrypted credentials
 - [ ] GET /connections/{id}/credentials returns 404 for non-existent connection
-- [ ] GET /kpi-integrations/active returns list of active integrations
+- [ ] GET /measure-integrations/active returns list of active integrations
 - [ ] All endpoints require valid authentication
 - [ ] All endpoints return 401 for invalid/missing auth
 
 ### SQS Message Consumers
-- [ ] KPI results queue consumer processes messages correctly
+- [ ] Measure results queue consumer processes messages correctly
 - [ ] Notifications queue consumer creates notifications
 - [ ] Execution status queue consumer updates execution logs
 - [ ] Failed messages are retried appropriately

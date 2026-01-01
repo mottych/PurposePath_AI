@@ -436,7 +436,7 @@ Get enabled features for current user based on subscription tier.
 
 - `goals` - Goals module access
 - `operations` - Operations module access
-- `kpis` - KPIs module access
+- `measures` - KPIs module access
 - `strategies` - Strategic planning module access
 - `reports` - Report generation capability
 - `realtime` - Real-time updates via SSE
@@ -460,7 +460,7 @@ Get user quotas and limits based on subscription tier.
   "success": true,
   "data": {
     "goals": 10,
-    "kpis": 50,
+    "measures": 50,
     "actions": null,
     "strategies": 20
   }
@@ -522,7 +522,7 @@ Get all available subscription tiers with pricing (dynamic).
     "features": ["goals", "operations", "reports"],
     "limits": {
       "goals": 10,
-      "kpis": 50,
+      "measures": 50,
       "actions": null
     },
     "pricing": {
@@ -1834,7 +1834,7 @@ Update the wizard progress state.
 
 ### GET /tenants/settings
 
-Get current tenant settings (KPI configuration, etc).
+Get current tenant settings (Measure configuration, etc).
 
 **Authentication:** Required  
 **Headers:**
@@ -1855,7 +1855,7 @@ Get current tenant settings (KPI configuration, etc).
 ```
 
 **Response Fields:**
-- `targetLineMode` (string): KPI target line configuration
+- `targetLineMode` (string): Measure target line configuration
   - `"single"` - Only expected target line (default)
   - `"three"` - Expected, optimal, and minimal target lines
 
@@ -1909,7 +1909,7 @@ Update current tenant settings.
 - `500` - Server error
 
 **Business Rules:**
-- Mode change does NOT affect existing KPI data
+- Mode change does NOT affect existing Measure data
 - Single mode: UI hides optimal/minimal target inputs
 - Three mode: UI shows all three target inputs
 - Charts always show expected line; optional lines only if data exists

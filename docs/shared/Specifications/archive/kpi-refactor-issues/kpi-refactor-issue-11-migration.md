@@ -1,6 +1,6 @@
 # Issue #XXX-11: Data Migration Scripts
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** Critical  
 **Labels:** `migration`, `data`, `dynamodb`  
@@ -11,10 +11,10 @@
 ## 📋 Description
 
 Create and execute data migration scripts to:
-1. Migrate `GoalKpiLink` data to `KpiLink` table
-2. Migrate `KpiMilestone` data to `KpiData` table (as Targets)
-3. Migrate `KpiActual` data to `KpiData` table (as Actuals)
-4. Migrate `KpiReading` data to `KpiData` table (as Actuals)
+1. Migrate `GoalKpiLink` data to `MeasureLink` table
+2. Migrate `MeasureMilestone` data to `MeasureData` table (as Targets)
+3. Migrate `MeasureActual` data to `MeasureData` table (as Actuals)
+4. Migrate `MeasureReading` data to `MeasureData` table (as Actuals)
 
 ---
 
@@ -33,12 +33,12 @@ Create and execute data migration scripts to:
 ### Phase 1: Create New Tables
 
 Before migration, ensure new DynamoDB tables exist:
-- `purposepath-kpi-links`
-- `purposepath-kpi-data`
+- `purposepath-measure-links`
+- `purposepath-measure-data`
 
-### Phase 2: Migrate GoalKpiLink → KpiLink
+### Phase 2: Migrate GoalKpiLink → MeasureLink
 
-#### Script: `migrate-goal-kpi-links.cs`
+#### Script: `migrate-goal-measure-links.cs`
 
 ```csharp
 public class MigrateGoalKpiLinksScript
@@ -51,14 +51,14 @@ public class MigrateGoalKpiLinksScript
         foreach (var oldLink in oldLinks)
         {
             // 2. Determine PersonId
-            // Strategy: Use the KPI's OwnerId, or the user who created the link
-            var kpi = await _kpiRepo.GetByIdAsync(oldLink.KpiId);
-            var personId = await ResolvePersonId(kpi?.OwnerId ?? oldLink.CreatedBy);
+            // Strategy: Use the Measure's OwnerId, or the user who created the link
+            var measure = await _kpiRepo.GetByIdAsync(oldLink.MeasureId);
+            var personId = await ResolvePersonId(measure?.OwnerId ?? oldLink.CreatedBy);
             
-            // 3. Create new KpiLink
-            var newLink = KpiLink.Create(
+            // 3. Create new MeasureLink
+            var newLink = MeasureLink.Create(
                 tenantId: oldLink.TenantId,
-                kpiId: oldLink.KpiId,
+                measureId: oldLink.MeasureId,
                 personId: personId,
                 createdBy: oldLink.CreatedBy,
                 goalId: oldLink.GoalId,
@@ -71,15 +71,15 @@ public class MigrateGoalKpiLinksScript
             
             // 4. Preserve original ID for reference
             // Use Restore method to set specific ID
-            var restoredLink = KpiLink.Restore(
-                id: KpiLinkId.From(oldLink.Id.ToString()),  // Keep same ID!
+            var restoredLink = MeasureLink.Restore(
+                id: MeasureLinkId.From(oldLink.Id.ToString()),  // Keep same ID!
                 // ... other fields
             );
             
             await _newLinkRepo.CreateAsync(restoredLink);
             
             // 5. Log migration
-            _logger.LogInformation("Migrated GoalKpiLink {OldId} to KpiLink {NewId}",
+            _logger.LogInformation("Migrated GoalKpiLink {OldId} to MeasureLink {NewId}",
                 oldLink.Id, restoredLink.Id);
         }
     }
@@ -98,9 +98,9 @@ public class MigrateGoalKpiLinksScript
 }
 ```
 
-### Phase 3: Migrate KpiMilestone → KpiData (Targets)
+### Phase 3: Migrate MeasureMilestone → MeasureData (Targets)
 
-#### Script: `migrate-kpi-milestones.cs`
+#### Script: `migrate-measure-milestones.cs`
 
 ```csharp
 public class MigrateKpiMilestonesScript
@@ -111,16 +111,16 @@ public class MigrateKpiMilestonesScript
         
         foreach (var milestone in milestones)
         {
-            // 1. Find the KpiLink for this KPI
-            var links = await _newLinkRepo.GetByKpiIdAsync(milestone.KpiId);
+            // 1. Find the MeasureLink for this Measure
+            var links = await _newLinkRepo.GetByKpiIdAsync(milestone.MeasureId);
             
             foreach (var link in links)
             {
-                // 2. Create KpiData as Expected target
-                var target = KpiData.Restore(
-                    id: KpiDataId.From(milestone.Id.ToString()),  // Keep original ID
-                    kpiLinkId: link.Id,
-                    dataCategory: KpiDataCategory.Target,
+                // 2. Create MeasureData as Expected target
+                var target = MeasureData.Restore(
+                    id: MeasureDataId.From(milestone.Id.ToString()),  // Keep original ID
+                    measureLinkId: link.Id,
+                    dataCategory: MeasureDataCategory.Target,
                     targetSubtype: TargetSubtype.Expected,  // Default to Expected
                     actualSubtype: null,
                     postValue: milestone.TargetValue,
@@ -146,7 +146,7 @@ public class MigrateKpiMilestonesScript
                 
                 await _kpiDataRepo.CreateAsync(target);
                 
-                _logger.LogInformation("Migrated KpiMilestone {MilestoneId} to KpiData {DataId} for Link {LinkId}",
+                _logger.LogInformation("Migrated MeasureMilestone {MilestoneId} to MeasureData {DataId} for Link {LinkId}",
                     milestone.Id, target.Id, link.Id);
             }
         }
@@ -154,9 +154,9 @@ public class MigrateKpiMilestonesScript
 }
 ```
 
-### Phase 4: Migrate KpiActual → KpiData (Actuals)
+### Phase 4: Migrate MeasureActual → MeasureData (Actuals)
 
-#### Script: `migrate-kpi-actuals.cs`
+#### Script: `migrate-measure-actuals.cs`
 
 ```csharp
 public class MigrateKpiActualsScript
@@ -167,14 +167,14 @@ public class MigrateKpiActualsScript
         
         foreach (var actual in actuals)
         {
-            var links = await _newLinkRepo.GetByKpiIdAsync(actual.KpiId);
+            var links = await _newLinkRepo.GetByKpiIdAsync(actual.MeasureId);
             
             foreach (var link in links)
             {
-                var data = KpiData.Restore(
-                    id: KpiDataId.From(actual.Id.ToString()),
-                    kpiLinkId: link.Id,
-                    dataCategory: KpiDataCategory.Actual,
+                var data = MeasureData.Restore(
+                    id: MeasureDataId.From(actual.Id.ToString()),
+                    measureLinkId: link.Id,
+                    dataCategory: MeasureDataCategory.Actual,
                     targetSubtype: null,
                     actualSubtype: ActualSubtype.Measured,  // Existing actuals are "Measured"
                     postValue: actual.ActualValue,
@@ -200,7 +200,7 @@ public class MigrateKpiActualsScript
                 
                 await _kpiDataRepo.CreateAsync(data);
                 
-                _logger.LogInformation("Migrated KpiActual {ActualId} to KpiData {DataId}",
+                _logger.LogInformation("Migrated MeasureActual {ActualId} to MeasureData {DataId}",
                     actual.Id, data.Id);
             }
         }
@@ -208,7 +208,7 @@ public class MigrateKpiActualsScript
 }
 ```
 
-### Phase 5: Migrate KpiReading → KpiData (Actuals)
+### Phase 5: Migrate MeasureReading → MeasureData (Actuals)
 
 Similar to Phase 4, but handle the different field names.
 
@@ -242,15 +242,15 @@ public class ValidateMigrationScript
         var sampleLinks = await _oldLinkRepo.GetRandomSampleAsync(100);
         foreach (var oldLink in sampleLinks)
         {
-            var newLink = await _newLinkRepo.GetByIdAsync(KpiLinkId.From(oldLink.Id.ToString()));
+            var newLink = await _newLinkRepo.GetByIdAsync(MeasureLinkId.From(oldLink.Id.ToString()));
             result.AddCheck($"Link {oldLink.Id} exists", newLink != null);
-            result.AddCheck($"Link {oldLink.Id} KpiId matches", 
-                newLink?.KpiId.ToString() == oldLink.KpiId.ToString());
+            result.AddCheck($"Link {oldLink.Id} MeasureId matches", 
+                newLink?.MeasureId.ToString() == oldLink.MeasureId.ToString());
         }
         
         // 3. Orphan check
         var orphanedData = await _kpiDataRepo.FindOrphanedAsync();
-        result.AddCheck("No orphaned KpiData", !orphanedData.Any());
+        result.AddCheck("No orphaned MeasureData", !orphanedData.Any());
         
         return result;
     }
@@ -276,11 +276,11 @@ public class ValidateMigrationScript
 - [ ] Execute Phase 1: Create tables (if not done)
 - [ ] Execute Phase 2: Migrate GoalKpiLink
 - [ ] Validate Phase 2
-- [ ] Execute Phase 3: Migrate KpiMilestone
+- [ ] Execute Phase 3: Migrate MeasureMilestone
 - [ ] Validate Phase 3
-- [ ] Execute Phase 4: Migrate KpiActual
+- [ ] Execute Phase 4: Migrate MeasureActual
 - [ ] Validate Phase 4
-- [ ] Execute Phase 5: Migrate KpiReading
+- [ ] Execute Phase 5: Migrate MeasureReading
 - [ ] Validate Phase 5
 - [ ] Run full validation script
 - [ ] Verify application functionality
@@ -316,9 +316,9 @@ If application issues after migration:
 | File | Purpose |
 |------|---------|
 | `scripts/migration/MigrateGoalKpiLinks.cs` | GoalKpiLink migration |
-| `scripts/migration/MigrateKpiMilestones.cs` | KpiMilestone migration |
-| `scripts/migration/MigrateKpiActuals.cs` | KpiActual migration |
-| `scripts/migration/MigrateKpiReadings.cs` | KpiReading migration |
+| `scripts/migration/MigrateKpiMilestones.cs` | MeasureMilestone migration |
+| `scripts/migration/MigrateKpiActuals.cs` | MeasureActual migration |
+| `scripts/migration/MigrateKpiReadings.cs` | MeasureReading migration |
 | `scripts/migration/ValidateMigration.cs` | Validation script |
 | `scripts/migration/MigrationRunner.cs` | Main runner |
 | `scripts/migration/README.md` | Migration documentation |
@@ -327,8 +327,8 @@ If application issues after migration:
 
 ## 🔗 Dependencies
 
-- Issue #XXX-5: KpiLink infrastructure (new tables/repos)
-- Issue #XXX-6: KpiData infrastructure (new tables/repos)
+- Issue #XXX-5: MeasureLink infrastructure (new tables/repos)
+- Issue #XXX-6: MeasureData infrastructure (new tables/repos)
 
 ---
 
@@ -355,9 +355,9 @@ If application issues after migration:
 
 **Migration Status:**
 - [ ] Phase 2: GoalKpiLink migration - X records
-- [ ] Phase 3: KpiMilestone migration - X records
-- [ ] Phase 4: KpiActual migration - X records
-- [ ] Phase 5: KpiReading migration - X records
+- [ ] Phase 3: MeasureMilestone migration - X records
+- [ ] Phase 4: MeasureActual migration - X records
+- [ ] Phase 5: MeasureReading migration - X records
 
 **Validation Results:**
 - Total checks: X

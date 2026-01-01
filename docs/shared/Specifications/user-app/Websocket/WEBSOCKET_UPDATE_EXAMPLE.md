@@ -334,7 +334,7 @@ multi_replace_string_in_file({
 **16:00** - Task 1.2 Complete
 - ✅ Created \`src/types/realtime.ts\` (250 lines)
 - Defined 15+ event payload types using TypeScript discriminated unions
-- Covers: Goal, Action, KPI, Issue, Decision, Attachment, System events
+- Covers: Goal, Action, Measure, Issue, Decision, Attachment, System events
 - Full type safety for WebSocket message handling
 - Phase 1 now 40% complete (2/5 subtasks)
 

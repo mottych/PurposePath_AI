@@ -117,7 +117,7 @@ A **dashboard-focused experience** for daily execution. Think mission control, n
 ```
 Operations
 ├── 🎯 Command Center (dashboard)
-├── 📊 KPI Tracker (all KPIs, quick entry)
+├── 📊 Measure Tracker (all KPIs, quick entry)
 ├── ✅ Action Board (kanban/list)
 ├── ⚠️ Issues (existing)
 ├── 📈 Personal Scorecard (ALL KPIs user owns - personal + goal + strategy)
@@ -129,7 +129,7 @@ Operations
 > - Goal KPIs where user is the owner
 > - Strategy KPIs where user is the owner
 > 
-> Each KPI displays its association (Personal / Goal / Strategy) for context.
+> Each Measure displays its association (Personal / Goal / Strategy) for context.
 
 ### Command Center (The Hero Screen)
 
@@ -176,7 +176,7 @@ Operations
 │                                                                             │
 │  QUICK ENTRY                                                                │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  [+ Record KPI Actual]   [+ Log Action Progress]   [+ Report Issue]  │  │
+│  │  [+ Record Measure Actual]   [+ Log Action Progress]   [+ Report Issue]  │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -208,7 +208,7 @@ When user clicks "Drill →" on a goal:
 │  │   • Partner Revenue: $450K/$500K (90%) █████████░                    │  │
 │  │                                                                      │  │
 │  │   Actions: 4 complete, 2 in progress, 0 blocked                      │  │
-│  │   [View All Actions] [Record KPI Actual]                             │  │
+│  │   [View All Actions] [Record Measure Actual]                             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
@@ -250,7 +250,7 @@ When user clicks "Drill →" on a goal:
 │                                                                             │
 │  ⚡ Operations                   ← TRACKING MODE                             │
 │     ├── Command Center          (dashboard: what needs attention)           │
-│     ├── KPI Tracker             (all KPIs, quick entry, alerts)             │
+│     ├── Measure Tracker             (all KPIs, quick entry, alerts)             │
 │     ├── Action Board            (kanban/list of all actions)                │
 │     ├── Issues                  (existing issues module)                    │
 │     └── Personal Scorecard      (user's personal KPIs)                      │
@@ -295,7 +295,7 @@ When user clicks "Drill →" on a goal:
 | Current State | Reimagined State |
 |---------------|------------------|
 | Goal Room with tabs | Planning Studio (wizard) + Goal Drill-Down (read view) |
-| KPI tab in Goal Room | KPI Tracker in Operations |
+| Measure tab in Goal Room | Measure Tracker in Operations |
 | Actions tab in Goal Room | Action Board in Operations |
 | No central dashboard | Command Center as Operations home |
 | Mixed planning/tracking | Clear separation |

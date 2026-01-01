@@ -36,15 +36,15 @@ Transform the Strategic Planning experience by separating two distinct user mind
 1. **Planning Studio** - Wizard-based goal creation with 5 guided steps
 2. **Goals Overview** - Visual goal portfolio with status cards
 3. **Command Center** - Operations dashboard showing what needs attention
-4. **KPI Tracker** - Centralized performance monitoring with quick entry
+4. **Measure Tracker** - Centralized performance monitoring with quick entry
 5. **Action Board** - Task management with multiple view options
-6. **Personal Scorecard** - Individual KPI assignments and tracking
+6. **Personal Scorecard** - Individual Measure assignments and tracking
 7. **Goal Drill-Down** - Read-focused deep view via slide-out panels
 
 ### Success Metrics
 
 - Reduce time to create a complete goal from 15+ minutes to <8 minutes
-- Increase daily KPI update frequency by 40%
+- Increase daily Measure update frequency by 40%
 - Reduce clicks to record an actual from 5 to 2
 - Achieve 90%+ user preference for new experience
 
@@ -67,7 +67,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 | Pattern | Usage |
 |---------|-------|
 | **Slide-Out Panels** | Context viewing, quick edits, detail drill-down (from RIGHT) |
-| **Expanding Cards** | Strategy details, KPI details, action details |
+| **Expanding Cards** | Strategy details, Measure details, action details |
 | **Wizard Steps** | Planning Studio goal creation |
 | **Status Pills** | Quick visual scanning of state |
 | **Progress Rings** | Compact progress visualization |
@@ -105,7 +105,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
    
 ⚡ Operations                   ← Teal accent
    ├── Command Center
-   ├── KPI Tracker
+   ├── Measure Tracker
    ├── Action Board
    ├── Issues
    └── Personal Scorecard
@@ -122,7 +122,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 | `/strategic-planning/studio/:goalId` | PlanningStudio (edit) | Strategic Planning |
 | `/strategic-planning/library` | StrategyLibrary | Strategic Planning |
 | `/operations` | CommandCenter | Operations |
-| `/operations/kpis` | KpiTracker | Operations |
+| `/operations/measures` | MeasureTracker | Operations |
 | `/operations/actions` | ActionBoard | Operations |
 | `/operations/issues` | Issues (existing) | Operations |
 | `/operations/scorecard` | PersonalScorecard | Operations |
@@ -329,7 +329,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  GOAL-LEVEL KPIs (measure overall goal progress)                            │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [+ Add Goal KPI]                       [📚 Browse KPI Catalog]     │   │
+│  │  [+ Add Goal Measure]                       [📚 Browse Measure Catalog]     │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -344,7 +344,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  ▼ Strategy 1: Partner Channel Expansion                                    │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [+ Add Strategy KPI]                                               │   │
+│  │  [+ Add Strategy Measure]                                               │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ 📊 Active Partners                                                   │   │
@@ -358,7 +358,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ▶ Strategy 2: Enterprise Sales Team (2 KPIs)                               │
-│  ▶ Strategy 3: Enterprise Product Features (1 KPI)                          │
+│  ▶ Strategy 3: Enterprise Product Features (1 Measure)                          │
 │                                                                             │
 │                                    [← Back: Strategies]   [Next: Actions →] │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -366,10 +366,10 @@ Transform the Strategic Planning experience by separating two distinct user mind
 
 **Features:**
 - Separate goal-level and strategy-level KPIs
-- KPI catalog browser (slide-out panel)
-- Create custom KPI (slide-out panel)
-- Set primary KPI for goal
-- Assign KPI owner (person from organization)
+- Measure catalog browser (slide-out panel)
+- Create custom Measure (slide-out panel)
+- Set primary Measure for goal
+- Assign Measure owner (person from organization)
 - Quick target setting
 
 ---
@@ -467,7 +467,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │  │ ⚠️ BEFORE ACTIVATING                                                 │   │
 │  │                                                                      │   │
 │  │ • All team members will be notified of their assignments            │   │
-│  │ • KPI tracking will begin immediately                               │   │
+│  │ • Measure tracking will begin immediately                               │   │
 │  │ • Goal will appear in Command Center                                │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
@@ -478,7 +478,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 **Features:**
 - Complete goal summary
 - Strategy alignment overview
-- KPI and Action counts
+- Measure and Action counts
 - Warnings/notices before activation
 - Option to save as draft
 - Activate button triggers notifications
@@ -543,7 +543,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  🔴 NEEDS ATTENTION                                         [View All →]    │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
-│  │ Revenue KPI │ │ Pipeline    │ │ 3 Actions   │ │ 1 Issue     │           │
+│  │ Revenue Measure │ │ Pipeline    │ │ 3 Actions   │ │ 1 Issue     │           │
 │  │   -15%      │ │  At Risk    │ │  Past Due   │ │  Critical   │           │
 │  │ [Update →]  │ │ [View →]    │ │ [View →]    │ │ [View →]    │           │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘           │
@@ -577,7 +577,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  QUICK ENTRY                                                                │
 │  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐                  │
-│  │ + Record KPI   │ │ + Log Progress │ │ + Report Issue │                  │
+│  │ + Record Measure   │ │ + Log Progress │ │ + Report Issue │                  │
 │  └────────────────┘ └────────────────┘ └────────────────┘                  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -602,14 +602,14 @@ Transform the Strategic Planning experience by separating two distinct user mind
 
 ---
 
-### 5.2 KPI Tracker
+### 5.2 Measure Tracker
 
-**Purpose:** Centralized KPI monitoring and quick actual entry
+**Purpose:** Centralized Measure monitoring and quick actual entry
 
 **Layout:**
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  KPI TRACKER                                              [+ Add Personal]  │
+│  Measure TRACKER                                              [+ Add Personal]  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -653,14 +653,14 @@ Transform the Strategic Planning experience by separating two distinct user mind
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**KPI Card Features:**
+**Measure Card Features:**
 - Status badge (On Track/At Risk/Behind)
 - Progress bar with variance
 - Sparkline trend chart
 - Quick "Record Actual" button
-- "View Details" opens slide-out panel with full KPI management
+- "View Details" opens slide-out panel with full Measure management
 
-**Slide-Out Panel: KPI Detail**
+**Slide-Out Panel: Measure Detail**
 
 When "View Details" is clicked:
 
@@ -701,7 +701,7 @@ When "View Details" is clicked:
 │                                                                  │
 │  CONTEXT                                                         │
 │  Goal: Increase Enterprise Market Share                          │
-│  Strategy: (Goal-level KPI)                                      │
+│  Strategy: (Goal-level Measure)                                      │
 │  Owner: Sarah Johnson                                            │
 │                                                                  │
 │                                        [Open in Goal Context →]  │
@@ -788,14 +788,14 @@ When "View Details" is clicked:
 
 > **Important:** The Personal Scorecard shows not just KPIs directly linked to the user (personal KPIs), but also includes ALL KPIs where the user is the designated **owner** - including those attached to goals and strategies. This provides a single place for users to track everything they're accountable for.
 
-**KPI Sources:**
+**Measure Sources:**
 1. **Personal KPIs** - KPIs directly linked to the person (personal scorecard items)
-2. **Goal KPIs (as owner)** - KPIs linked to goals where user is the KPI owner
-3. **Strategy KPIs (as owner)** - KPIs linked to strategies where user is the KPI owner
+2. **Goal KPIs (as owner)** - KPIs linked to goals where user is the Measure owner
+3. **Strategy KPIs (as owner)** - KPIs linked to strategies where user is the Measure owner
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  MY SCORECARD                                               [+ Add KPI]     │
+│  MY SCORECARD                                               [+ Add Measure]     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Welcome, Sarah! Here are all metrics you're responsible for.               │
@@ -871,15 +871,15 @@ When "View Details" is clicked:
 
 **Features:**
 - **Unified view** of all KPIs where user is owner (personal + goal + strategy)
-- **Association badges** showing where each KPI is linked (Personal, Goal name, Strategy name)
+- **Association badges** showing where each Measure is linked (Personal, Goal name, Strategy name)
 - **Filter by source** - Personal only, Goal/Strategy only, or All
-- Same KPI card component as KPI Tracker with added context
+- Same Measure card component as Measure Tracker with added context
 - "View Other Scorecards" for managers to see team members' accountability
-- Quick add for new personal KPI
+- Quick add for new personal Measure
 - Click on association badge navigates to the related goal/strategy context
 
 **Association Display:**
-| KPI Source | Badge Display | Navigation |
+| Measure Source | Badge Display | Navigation |
 |------------|---------------|------------|
 | Personal | `[Personal Scorecard]` | No navigation (already here) |
 | Goal-level | `📎 Goal: {goal_title}` | Opens Goal Drill-Down panel |
@@ -891,7 +891,7 @@ When "View Details" is clicked:
 
 **Purpose:** Deep view of a specific goal from Operations context
 
-**Triggered by:** Clicking "Drill →" on Command Center or KPI Tracker
+**Triggered by:** Clicking "Drill →" on Command Center or Measure Tracker
 
 **Panel Width:** 60% of screen (expandable)
 
@@ -952,14 +952,14 @@ When "View Details" is clicked:
 
 ## 6. Shared Components
 
-### 6.1 KPI Card Component
+### 6.1 Measure Card Component
 
-Reusable across: KPI Tracker, Personal Scorecard, Strategy Cards, Goal Drill-Down
+Reusable across: Measure Tracker, Personal Scorecard, Strategy Cards, Goal Drill-Down
 
 **Props:**
 ```typescript
-interface KpiCardProps {
-  kpi: KpiLink;
+interface MeasureCardProps {
+  measure: MeasureLink;
   variant: 'full' | 'compact' | 'mini';
   showChart?: boolean;
   showContext?: boolean;  // Show goal/strategy info
@@ -1038,8 +1038,8 @@ interface QuickEntryProps {
 // Strategy status (renamed from validated)
 type StrategyStatus = 'draft' | 'evaluated' | 'adopted';
 
-// KPI link types
-type KpiLinkType = 'personal' | 'goal' | 'strategy';
+// Measure link types
+type MeasureLinkType = 'personal' | 'goal' | 'strategy';
 
 // Target subtypes (for 3-line charts)
 type TargetSubtype = 'Expected' | 'Optimal' | 'Minimal';
@@ -1051,21 +1051,21 @@ type ActualSubtype = 'Estimate' | 'Measured';
 ### Updated Interfaces
 
 ```typescript
-interface KpiLink {
+interface MeasureLink {
   id: string;
-  kpiId: string;
+  measureId: string;
   personId: string;        // Required - owner
   goalId?: string;         // Optional - goal context
   strategyId?: string;     // Optional - strategy context
-  linkType: KpiLinkType;
+  linkType: MeasureLinkType;
   isPrimary: boolean;
   thresholdPct?: number;
   linkedAt: string;
 }
 
-interface KpiData {
+interface MeasureData {
   id: string;
-  kpiLinkId: string;
+  measureLinkId: string;
   dataCategory: 'Target' | 'Actual';
   targetSubtype?: TargetSubtype;
   actualSubtype?: ActualSubtype;
@@ -1089,16 +1089,16 @@ interface KpiData {
 | Goal lifecycle | `POST /goals/{id}:activate/pause/close` | ✅ Available |
 | Strategies CRUD | `POST/GET/PUT/DELETE /goals/{goalId}/strategies` | ✅ Available |
 | Strategy reorder | `PUT /goals/{goalId}/strategies:reorder` | ✅ Available |
-| KPI CRUD | `POST/GET/PUT/DELETE /kpis` | ✅ Available |
-| List all KPIs | `GET /kpis` | ✅ Available |
-| Goal KPIs | `GET /goals/{goalId}/kpis` | ✅ Available |
-| Link KPI to goal | `POST /goals/{goalId}/kpis:link` | ✅ Available |
-| Personal KPIs | `GET /people/{personId}/kpis` | ✅ Available (v6) |
-| Link personal KPI | `POST /people/{personId}/kpis:link` | ✅ Available (v6) |
-| Strategy KPIs | `GET /strategies/{strategyId}/kpis` | ✅ Available (v6) |
-| KPI targets | `GET/POST /kpi-links/{linkId}/targets` | ✅ Available (v6) |
-| KPI actuals | `GET/POST /kpi-links/{linkId}/actuals` | ✅ Available (v6) |
-| All series | `GET /kpi-links/{linkId}/all-series` | ✅ Available (v6) |
+| Measure CRUD | `POST/GET/PUT/DELETE /measures` | ✅ Available |
+| List all KPIs | `GET /measures` | ✅ Available |
+| Goal KPIs | `GET /goals/{goalId}/measures` | ✅ Available |
+| Link Measure to goal | `POST /goals/{goalId}/measures:link` | ✅ Available |
+| Personal KPIs | `GET /people/{personId}/measures` | ✅ Available (v6) |
+| Link personal Measure | `POST /people/{personId}/measures:link` | ✅ Available (v6) |
+| Strategy KPIs | `GET /strategies/{strategyId}/measures` | ✅ Available (v6) |
+| Measure targets | `GET/POST /measure-links/{linkId}/targets` | ✅ Available (v6) |
+| Measure actuals | `GET/POST /measure-links/{linkId}/actuals` | ✅ Available (v6) |
+| All series | `GET /measure-links/{linkId}/all-series` | ✅ Available (v6) |
 | Actions CRUD | `POST/GET/PUT/DELETE /operations/actions` | ✅ Available |
 | Filter by strategy | `GET /operations/actions?strategyIds=...` | ✅ Available |
 | Alignment check | `POST /ai/execute` (topic: `alignment_check`) | ✅ Available |
@@ -1107,7 +1107,7 @@ interface KpiData {
 
 | Gap | Description | Priority | GitHub Issue |
 |-----|-------------|----------|--------------|
-| **Tenant KPI Settings** | `kpi_target_line_mode` (single/three) | Medium | #376 (PurposePath_Api) |
+| **Tenant Measure Settings** | `kpi_target_line_mode` (single/three) | Medium | #376 (PurposePath_Api) |
 | **Command Center Aggregates** | Dashboard summary endpoint | High | **NEW REQUIRED** |
 | **Strategy Templates** | CRUD for strategy library | Low | Future |
 | **Action Suggestions** | AI topic for action suggestions | Medium | **NEW REQUIRED** |
@@ -1126,7 +1126,7 @@ interface KpiData {
   "success": true,
   "data": {
     "alerts": {
-      "kpisAtRisk": [{ "kpiId": "...", "name": "...", "variance": -15 }],
+      "kpisAtRisk": [{ "measureId": "...", "name": "...", "variance": -15 }],
       "actionsPastDue": [{ "actionId": "...", "title": "...", "daysPastDue": 2 }],
       "criticalIssues": [{ "issueId": "...", "title": "..." }]
     },
@@ -1341,7 +1341,7 @@ interface KpiData {
 
 1. Create shared components:
    - SlideOutPanel
-   - KpiCard (all variants)
+   - MeasureCard (all variants)
    - ActionCard (all variants)
    - StrategyCard
    - ProgressBar / ProgressRing
@@ -1366,7 +1366,7 @@ interface KpiData {
 ### Phase 3: Operations (Week 5-6)
 
 1. Command Center dashboard
-2. KPI Tracker with slide-out detail panel
+2. Measure Tracker with slide-out detail panel
 3. Action Board (list + kanban views)
 4. Personal Scorecard
 

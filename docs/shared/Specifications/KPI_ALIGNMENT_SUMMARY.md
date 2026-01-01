@@ -1,8 +1,8 @@
-# GET /kpis Endpoint Alignment - Executive Summary
+# GET /measures Endpoint Alignment - Executive Summary
 
 **Date:** December 30, 2025  
-**Analyzed Endpoints:** GET /kpis (List KPIs)  
-**Specification:** kpis-api.md v7.0  
+**Analyzed Endpoints:** GET /measures (List KPIs)  
+**Specification:** measures-api.md v7.0  
 **Implementation:** KpisController.cs  
 
 ---
@@ -36,7 +36,7 @@
 
 4. **Response Structure** - ApiResponse<T> wrapper with PaginatedKpisResponse data
 
-5. **All KPI Fields** - 20/20 specification fields present in response
+5. **All Measure Fields** - 20/20 specification fields present in response
 
 6. **Error Handling** - Proper HTTP status codes and error messages
 
@@ -53,14 +53,14 @@
 **Severity:** Low  
 **Impact:** Specification compliance
 
-The specification shows `isDeleted: false` in response examples, but the `KpiResponse` DTO doesn't include this field.
+The specification shows `isDeleted: false` in response examples, but the `MeasureResponse` DTO doesn't include this field.
 
-**Fix:** Add one line to `KpiResponses.cs` (line 31):
+**Fix:** Add one line to `MeasureResponses.cs` (line 31):
 ```csharp
 public bool IsDeleted { get; init; } = false;
 ```
 
-**File:** `Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiResponses.cs`
+**File:** `Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs`
 
 ---
 
@@ -95,11 +95,11 @@ public bool IsDeleted { get; init; } = false;
 }
 ```
 
-**Fix:** Update specification example in `kpis-api.md` (Endpoint 1, Response section):
+**Fix:** Update specification example in `measures-api.md` (Endpoint 1, Response section):
 - Change `"items"` to `"data"`
 - Nest pagination fields under `"pagination"` object
 
-**File:** `docs/shared/Specifications/user-app/traction-service/kpis-api.md`
+**File:** `docs/shared/Specifications/user-app/traction-service/measures-api.md`
 
 ---
 
@@ -107,9 +107,9 @@ public bool IsDeleted { get; init; } = false;
 
 ### Action 1: Add `isDeleted` Field (5 min)
 
-**File:** `Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiResponses.cs`
+**File:** `Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs`
 
-**Change:** Add `isDeleted` property to `KpiResponse` class (line 31)
+**Change:** Add `isDeleted` property to `MeasureResponse` class (line 31)
 ```csharp
 public bool IsDeleted { get; init; } = false;
 ```
@@ -125,7 +125,7 @@ public bool IsDeleted { get; init; } = false;
 
 ### Action 2: Update Specification Example (10 min)
 
-**File:** `docs/shared/Specifications/user-app/traction-service/kpis-api.md`
+**File:** `docs/shared/Specifications/user-app/traction-service/measures-api.md`
 
 **Change:** Update "1. List KPIs" → "Response" section example
 
@@ -162,11 +162,11 @@ To:
 
 ## Implementation Checklist
 
-- [ ] Add `isDeleted` to KpiResponse.cs
+- [ ] Add `isDeleted` to MeasureResponse.cs
 - [ ] Build solution to verify no errors
 - [ ] Run tests to ensure nothing breaks
-- [ ] Update specification example in kpis-api.md
-- [ ] Commit: `docs: Update KPI response structure example to match implementation`
+- [ ] Update specification example in measures-api.md
+- [ ] Commit: `docs: Update Measure response structure example to match implementation`
 - [ ] Push to dev branch
 - [ ] Verify alignment analysis document created
 
@@ -192,10 +192,10 @@ Will continue working without modification.
 
 The following test cases should pass:
 
-✅ GET /kpis returns KPIs owned by current user (no filter)  
-✅ GET /kpis?ownerId=X returns KPIs for user X  
-✅ GET /kpis?goalId=X returns KPIs linked to goal X  
-✅ GET /kpis?strategyId=X returns KPIs linked to strategy X  
+✅ GET /measures returns KPIs owned by current user (no filter)  
+✅ GET /measures?ownerId=X returns KPIs for user X  
+✅ GET /measures?goalId=X returns KPIs linked to goal X  
+✅ GET /measures?strategyId=X returns KPIs linked to strategy X  
 ✅ When multiple filters provided, ownerId takes precedence  
 ✅ Response includes all required fields  
 ✅ Response includes `isDeleted` field  
@@ -209,7 +209,7 @@ The following test cases should pass:
 
 **Status:** ✅ Production Ready with Minor Improvements
 
-The `GET /kpis` endpoint implementation is **highly aligned** with specifications. Only two minor issues identified, both easily resolved:
+The `GET /measures` endpoint implementation is **highly aligned** with specifications. Only two minor issues identified, both easily resolved:
 
 1. Add missing `isDeleted` field to response DTO (1 line of code)
 2. Update specification example to show correct response structure (JSON formatting)
@@ -222,10 +222,10 @@ The `GET /kpis` endpoint implementation is **highly aligned** with specification
 
 ## References
 
-- **Specification:** [docs/shared/Specifications/user-app/traction-service/kpis-api.md](../../user-app/traction-service/kpis-api.md)
+- **Specification:** [docs/shared/Specifications/user-app/traction-service/measures-api.md](../../user-app/traction-service/measures-api.md)
 - **Implementation:** [Services/PurposePath.Traction.Lambda/Controllers/KpisController.cs](../../../Services/PurposePath.Traction.Lambda/Controllers/KpisController.cs)
-- **Request DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Requests/KpiRequests.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Requests/KpiRequests.cs)
-- **Response DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiResponses.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiResponses.cs)
+- **Request DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureRequests.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureRequests.cs)
+- **Response DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs)
 - **Full Analysis:** [ALIGNMENT_ANALYSIS_KPI_ENDPOINT.md](./ALIGNMENT_ANALYSIS_KPI_ENDPOINT.md)
 
 ---

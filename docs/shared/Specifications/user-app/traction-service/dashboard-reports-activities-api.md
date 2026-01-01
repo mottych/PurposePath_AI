@@ -45,7 +45,7 @@ Retrieve aggregated command center dashboard with alerts, goals, tasks, and summ
 interface CommandCenterParams {
   userId?: string;              // Optional user ID (defaults to authenticated user)
   daysAhead?: number;           // Task window in days (default: 7)
-  varianceThreshold?: number;   // KPI variance % to trigger "at risk" (default: 10)
+  varianceThreshold?: number;   // Measure variance % to trigger "at risk" (default: 10)
 }
 ```
 
@@ -55,9 +55,9 @@ interface CommandCenterParams {
 interface CommandCenterDashboardResponse {
   alerts: {
     kpisAtRisk: Array<{
-      kpiLinkId: string;
-      kpiId: string;
-      kpiName: string;
+      measureLinkId: string;
+      measureId: string;
+      measureName: string;
       currentValue: number | null;
       targetValue: number | null;
       variance: number | null;
@@ -113,7 +113,7 @@ interface CommandCenterDashboardResponse {
     }>;
     
     primaryKpi?: {
-      kpiId: string;
+      measureId: string;
       name: string;
       currentValue: number | null;
       targetValue: number | null;
@@ -181,9 +181,9 @@ X-Tenant-Id: {tenantId}
     "alerts": {
       "kpisAtRisk": [
         {
-          "kpiLinkId": "link_abc123",
-          "kpiId": "kpi_revenue",
-          "kpiName": "Monthly Recurring Revenue",
+          "measureLinkId": "link_abc123",
+          "measureId": "kpi_revenue",
+          "measureName": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
           "variance": -15000,
@@ -247,7 +247,7 @@ X-Tenant-Id: {tenantId}
         ],
         
         "primaryKpi": {
-          "kpiId": "kpi_revenue",
+          "measureId": "kpi_revenue",
           "name": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
@@ -347,7 +347,7 @@ interface GenerateCompanyReportParams {
 ### Available Sections
 
 - `goals` - Goals summary and progress
-- `kpis` - KPI performance and trends
+- `measures` - Measure performance and trends
 - `actions` - Action completion rates
 - `issues` - Issue resolution statistics
 - `people` - Team performance metrics
@@ -364,7 +364,7 @@ Returns binary file (PDF or DOCX) with appropriate content-type header.
 ### Example Request
 
 ```bash
-GET /api/reports/company?startDate=2025-11-01&endDate=2025-12-23&format=PDF&includeAnalytics=true&sections=goals,kpis,executive-summary
+GET /api/reports/company?startDate=2025-11-01&endDate=2025-12-23&format=PDF&includeAnalytics=true&sections=goals,measures,executive-summary
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -421,12 +421,12 @@ interface CreateReportRequest {
 
 ```json
 {
-  "title": "Q4 2025 KPI Performance Report",
-  "description": "Detailed analysis of Q4 KPI trends",
+  "title": "Q4 2025 Measure Performance Report",
+  "description": "Detailed analysis of Q4 Measure trends",
   "reportType": "KPIs",
   "startDate": "2025-10-01",
   "endDate": "2025-12-31",
-  "sections": ["kpis", "analytics", "trends"]
+  "sections": ["measures", "analytics", "trends"]
 }
 ```
 
@@ -438,8 +438,8 @@ interface CreateReportRequest {
   "success": true,
   "data": {
     "id": "report_abc123",
-    "title": "Q4 2025 KPI Performance Report",
-    "description": "Detailed analysis of Q4 KPI trends",
+    "title": "Q4 2025 Measure Performance Report",
+    "description": "Detailed analysis of Q4 Measure trends",
     "status": "Pending",
     "reportType": "KPIs",
     "startDate": "2025-10-01T00:00:00Z",
@@ -477,7 +477,7 @@ Retrieve report details and download URL.
   "success": true,
   "data": {
     "id": "report_abc123",
-    "title": "Q4 2025 KPI Performance Report",
+    "title": "Q4 2025 Measure Performance Report",
     "status": "Ready",
     "reportType": "KPIs",
     "startDate": "2025-10-01T00:00:00Z",
@@ -589,7 +589,7 @@ X-Tenant-Id: {tenantId}
       "userId": "user_analyst",
       "userName": "Alice Chen",
       "entityId": "kpi_revenue",
-      "entityType": "kpi",
+      "entityType": "measure",
       "entityTitle": "Monthly Recurring Revenue",
       "description": "Uploaded Q4 revenue analysis spreadsheet",
       "timestamp": "2025-12-22T16:30:00Z"
@@ -674,7 +674,7 @@ setInterval(async () => {
 async function generateCompanyReport(
   startDate: string,
   endDate: string,
-  sections: string[] = ['goals', 'kpis', 'executive-summary']
+  sections: string[] = ['goals', 'measures', 'executive-summary']
 ) {
   const response = await axios.get('/api/reports/company', {
     params: {
@@ -766,7 +766,7 @@ async function createAndDownloadReport(
     reportType,
     startDate,
     endDate,
-    sections: ['goals', 'kpis', 'analytics']
+    sections: ['goals', 'measures', 'analytics']
   }, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -816,7 +816,7 @@ await createAndDownloadReport(
 ## Related APIs
 
 - **[Goals API](./goals-api.md)**: Goal data for dashboard and reports
-- **[KPIs API](./kpis-api.md)**: KPI metrics for dashboard and reports
+- **[KPIs API](./measures-api.md)**: Measure metrics for dashboard and reports
 - **[Actions API](./actions-api.md)**: Action data for task tracking
 - **[Issues API](./issues-api.md)**: Issue data for alerts
 

@@ -192,7 +192,7 @@ Get detailed information for a specific subscriber.
   },
   "usage": {
     "goals": number,
-    "kpis": number,
+    "measures": number,
     "actions": number,
     "strategies": number,
     "attachments": number,
@@ -746,7 +746,7 @@ Get paginated list of subscription plans/tiers.
         "featureCount": number,
         "limits": {
           "goals": number | null,
-          "kpis": number | null,
+          "measures": number | null,
           "actions": number | null,
           "strategies": number | null,
           "attachments": number | null,
@@ -798,7 +798,7 @@ Get plan by ID.
     "featureCount": number,
     "limits": {
       "goals": number | null,
-      "kpis": number | null,
+      "measures": number | null,
       "actions": number | null,
       "strategies": number | null,
       "attachments": number | null,
@@ -836,7 +836,7 @@ Create a new plan.
   "features": ["string"],
   "limits": {
     "goals": number | null,
-    "kpis": number | null,
+    "measures": number | null,
     "actions": number | null,
     "strategies": number | null,
     "attachments": number | null,
@@ -898,7 +898,7 @@ Update an existing plan.
   "features": ["string"],
   "limits": {
     "goals": number | null,
-    "kpis": number | null,
+    "measures": number | null,
     "actions": number | null,
     "strategies": number | null,
     "attachments": number | null,
@@ -1791,7 +1791,7 @@ Get all topics with optional filtering.
 - `page` (number, optional) - Page number
 - `page_size` (number, optional) - Items per page
 - `category` (string, optional) - Filter by category
-- `topic_type` (string, optional) - Filter by type: `coaching`, `assessment`, `analysis`, `kpi`
+- `topic_type` (string, optional) - Filter by type: `coaching`, `assessment`, `analysis`, `measure`
 - `is_active` (boolean, optional) - Filter by active status
 - `search` (string, optional) - Search by topic name or description
 
@@ -1826,7 +1826,7 @@ Get a single topic by ID with full details including prompts.
   "topic_id": "string",
   "topic_name": "string",
   "category": "string",
-  "topic_type": "coaching | assessment | analysis | kpi",
+  "topic_type": "coaching | assessment | analysis | measure",
   "description": "string (optional)",
   "model_code": "string",
   "temperature": number,
@@ -1866,7 +1866,7 @@ Get a single topic by ID with full details including prompts.
 
 ### POST /topics
 
-Create a new topic (only for KPI topics).
+Create a new topic (only for Measure topics).
 
 **Request Body:**
 ```json
@@ -1874,7 +1874,7 @@ Create a new topic (only for KPI topics).
   "topic_id": "string",
   "topic_name": "string",
   "category": "string",
-  "topic_type": "kpi",
+  "topic_type": "measure",
   "description": "string (optional)",
   "model_code": "string",
   "temperature": number,
@@ -1908,7 +1908,7 @@ Create a new topic (only for KPI topics).
 **Note:** Response is returned directly, not wrapped in `ApiResponse`.
 
 **Constraints:**
-- Only `topic_type: "kpi"` topics can be created via API
+- Only `topic_type: "measure"` topics can be created via API
 - `topic_id` must be unique
 - `temperature` must be between 0.0 and 2.0
 - `max_tokens` must be positive
@@ -2118,7 +2118,7 @@ Validate topic configuration before saving.
   "topic_id": "string",
   "topic_name": "string",
   "category": "string",
-  "topic_type": "coaching | assessment | analysis | kpi",
+  "topic_type": "coaching | assessment | analysis | measure",
   "model_code": "string",
   "temperature": number,
   "max_tokens": number,

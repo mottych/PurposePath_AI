@@ -1,6 +1,6 @@
 # Issue #XXX-12: Cleanup - Remove Deprecated Entities and Tables
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** Medium  
 **Labels:** `cleanup`, `deprecation`, `technical-debt`  
@@ -10,7 +10,7 @@
 
 ## 📋 Description
 
-After successful migration and verification period, remove deprecated entities, tables, and code related to the old KPI linking and data model.
+After successful migration and verification period, remove deprecated entities, tables, and code related to the old Measure linking and data model.
 
 ---
 
@@ -21,7 +21,7 @@ Before executing this cleanup:
 - [ ] Migration completed successfully (Issue #XXX-11)
 - [ ] All validation checks pass
 - [ ] Application running on new code for at least 7 days
-- [ ] No errors related to KPI functionality in production
+- [ ] No errors related to Measure functionality in production
 - [ ] Stakeholder approval for cleanup
 
 ---
@@ -32,24 +32,24 @@ Before executing this cleanup:
 
 | Entity | File | Notes |
 |--------|------|-------|
-| `GoalKpiLink` | `PurposePath.Domain/Entities/GoalKpiLink.cs` | Replaced by KpiLink |
-| `KpiMilestone` | `PurposePath.Domain/Entities/KpiMilestone.cs` | Replaced by KpiData |
-| `KpiActual` | `PurposePath.Domain/Entities/KpiActual.cs` | Replaced by KpiData |
-| `KpiReading` | `PurposePath.Domain/Entities/KpiReading.cs` | Replaced by KpiData |
-| `GoalKpiLinkId` | `PurposePath.Domain/ValueObjects/GoalKpiLinkId.cs` | Replaced by KpiLinkId |
-| `KpiMilestoneId` | `PurposePath.Domain/ValueObjects/KpiMilestoneId.cs` | Replaced by KpiDataId |
-| `KpiActualId` | `PurposePath.Domain/ValueObjects/KpiActualId.cs` | Replaced by KpiDataId |
-| `KpiReadingId` | `PurposePath.Domain/ValueObjects/KpiReadingId.cs` | Replaced by KpiDataId |
+| `GoalKpiLink` | `PurposePath.Domain/Entities/GoalKpiLink.cs` | Replaced by MeasureLink |
+| `MeasureMilestone` | `PurposePath.Domain/Entities/MeasureMilestone.cs` | Replaced by MeasureData |
+| `MeasureActual` | `PurposePath.Domain/Entities/MeasureActual.cs` | Replaced by MeasureData |
+| `MeasureReading` | `PurposePath.Domain/Entities/MeasureReading.cs` | Replaced by MeasureData |
+| `GoalKpiLinkId` | `PurposePath.Domain/ValueObjects/GoalKpiLinkId.cs` | Replaced by MeasureLinkId |
+| `MeasureMilestoneId` | `PurposePath.Domain/ValueObjects/MeasureMilestoneId.cs` | Replaced by MeasureDataId |
+| `MeasureActualId` | `PurposePath.Domain/ValueObjects/MeasureActualId.cs` | Replaced by MeasureDataId |
+| `MeasureReadingId` | `PurposePath.Domain/ValueObjects/MeasureReadingId.cs` | Replaced by MeasureDataId |
 
 ### Domain Events
 
 | Event | File | Notes |
 |-------|------|-------|
-| `GoalKpiLinkedEvent` | `PurposePath.Domain/Events/GoalKpiLinkedEvent.cs` | Replaced by KpiLinkedEvent |
-| `KpiThresholdUpdatedEvent` | Keep or update | May need to update to use KpiLinkId |
-| `KpiMilestoneCreatedEvent` | `PurposePath.Domain/Events/KpiMilestoneEvents.cs` | Replaced |
-| `KpiMilestoneUpdatedEvent` | `PurposePath.Domain/Events/KpiMilestoneEvents.cs` | Replaced |
-| `KpiActualRecordedEvent` | `PurposePath.Domain/Events/KpiActualEvents.cs` | Update for new model |
+| `GoalKpiLinkedEvent` | `PurposePath.Domain/Events/GoalKpiLinkedEvent.cs` | Replaced by MeasureLinkedEvent |
+| `MeasureThresholdUpdatedEvent` | Keep or update | May need to update to use MeasureLinkId |
+| `MeasureMilestoneCreatedEvent` | `PurposePath.Domain/Events/MeasureMilestoneEvents.cs` | Replaced |
+| `MeasureMilestoneUpdatedEvent` | `PurposePath.Domain/Events/MeasureMilestoneEvents.cs` | Replaced |
+| `MeasureActualRecordedEvent` | `PurposePath.Domain/Events/MeasureActualEvents.cs` | Update for new model |
 
 ### Repository Interfaces
 
@@ -69,18 +69,18 @@ Before executing this cleanup:
 | Data Model | File |
 |------------|------|
 | `GoalKpiLinkDataModel` | `PurposePath.Infrastructure/DataModels/GoalKpiLinkDataModel.cs` |
-| `KpiMilestoneDataModel` | `PurposePath.Infrastructure/DataModels/KpiMilestoneDataModel.cs` |
-| `KpiActualDataModel` | `PurposePath.Infrastructure/DataModels/KpiActualDataModel.cs` |
-| `KpiReadingDataModel` | `PurposePath.Infrastructure/DataModels/KpiReadingDataModel.cs` |
+| `MeasureMilestoneDataModel` | `PurposePath.Infrastructure/DataModels/MeasureMilestoneDataModel.cs` |
+| `MeasureActualDataModel` | `PurposePath.Infrastructure/DataModels/MeasureActualDataModel.cs` |
+| `MeasureReadingDataModel` | `PurposePath.Infrastructure/DataModels/MeasureReadingDataModel.cs` |
 
 ### Mappers
 
 | Mapper | File |
 |--------|------|
 | `GoalKpiLinkMappingProfile` | `PurposePath.Infrastructure/Mappers/GoalKpiLinkMappingProfile.cs` |
-| `KpiMilestoneMapper` | `PurposePath.Infrastructure/Mappers/KpiMilestoneMapper.cs` |
-| `KpiActualMapper` | `PurposePath.Infrastructure/Mappers/KpiActualMapper.cs` |
-| `KpiReadingMappingProfile` | `PurposePath.Infrastructure/Mappers/KpiReadingMappingProfile.cs` |
+| `MeasureMilestoneMapper` | `PurposePath.Infrastructure/Mappers/MeasureMilestoneMapper.cs` |
+| `MeasureActualMapper` | `PurposePath.Infrastructure/Mappers/MeasureActualMapper.cs` |
+| `MeasureReadingMappingProfile` | `PurposePath.Infrastructure/Mappers/MeasureReadingMappingProfile.cs` |
 
 ### Repositories
 
@@ -100,14 +100,14 @@ Before executing this cleanup:
 | Controller | Action |
 |------------|--------|
 | `GoalKpiController` | Remove deprecated endpoints |
-| `KpiPlanningController` | Remove deprecated endpoints |
+| `MeasurePlanningController` | Remove deprecated endpoints |
 
 ### DTOs to Remove
 
 | DTO | Notes |
 |-----|-------|
-| Old milestone request/response DTOs | Replaced by KpiData DTOs |
-| Old actual request/response DTOs | Replaced by KpiData DTOs |
+| Old milestone request/response DTOs | Replaced by MeasureData DTOs |
+| Old actual request/response DTOs | Replaced by MeasureData DTOs |
 
 ---
 
@@ -117,10 +117,10 @@ Before executing this cleanup:
 
 | Table Name | Notes |
 |------------|-------|
-| `purposepath-goal-kpi-links` | Replaced by `purposepath-kpi-links` |
-| `purposepath-kpi-milestones` | Replaced by `purposepath-kpi-data` |
-| `purposepath-kpi-actuals` | Replaced by `purposepath-kpi-data` |
-| `purposepath-kpi-readings` | Replaced by `purposepath-kpi-data` |
+| `purposepath-goal-measure-links` | Replaced by `purposepath-measure-links` |
+| `purposepath-measure-milestones` | Replaced by `purposepath-measure-data` |
+| `purposepath-measure-actuals` | Replaced by `purposepath-measure-data` |
+| `purposepath-measure-readings` | Replaced by `purposepath-measure-data` |
 
 ---
 
@@ -160,10 +160,10 @@ Before executing this cleanup:
 ### Phase 4: Database Cleanup (After verification period)
 
 - [ ] Final backup of old tables
-- [ ] Delete `purposepath-goal-kpi-links` table
-- [ ] Delete `purposepath-kpi-milestones` table
-- [ ] Delete `purposepath-kpi-actuals` table
-- [ ] Delete `purposepath-kpi-readings` table
+- [ ] Delete `purposepath-goal-measure-links` table
+- [ ] Delete `purposepath-measure-milestones` table
+- [ ] Delete `purposepath-measure-actuals` table
+- [ ] Delete `purposepath-measure-readings` table
 - [ ] Update Pulumi/CloudFormation to remove old table definitions
 
 ---
@@ -176,20 +176,20 @@ Use these grep patterns to find remaining references:
 # Find GoalKpiLink references
 grep -r "GoalKpiLink" --include="*.cs" .
 
-# Find KpiMilestone references
-grep -r "KpiMilestone" --include="*.cs" .
+# Find MeasureMilestone references
+grep -r "MeasureMilestone" --include="*.cs" .
 
-# Find KpiActual references
-grep -r "KpiActual" --include="*.cs" .
+# Find MeasureActual references
+grep -r "MeasureActual" --include="*.cs" .
 
-# Find KpiReading references
-grep -r "KpiReading" --include="*.cs" .
+# Find MeasureReading references
+grep -r "MeasureReading" --include="*.cs" .
 
 # Find old table names
-grep -r "goal-kpi-links" --include="*.cs" .
-grep -r "kpi-milestones" --include="*.cs" .
-grep -r "kpi-actuals" --include="*.cs" .
-grep -r "kpi-readings" --include="*.cs" .
+grep -r "goal-measure-links" --include="*.cs" .
+grep -r "measure-milestones" --include="*.cs" .
+grep -r "measure-actuals" --include="*.cs" .
+grep -r "measure-readings" --include="*.cs" .
 ```
 
 ---

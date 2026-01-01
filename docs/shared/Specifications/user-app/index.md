@@ -42,7 +42,7 @@ This specification is split into multiple documents for efficient AI assistant c
 
 6. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
-   - Goals, KPIs, KPI Links, KPI Data, Actions, Issues, People, Dashboard
+   - Goals, KPIs, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
 7. **[Common Patterns & Data Models](./common-patterns.md)**
@@ -149,7 +149,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 - All AI/ML operations
 - Goal alignment calculations
 - Strategy suggestions
-- KPI recommendations
+- Measure recommendations
 - Business insights generation
 - Root cause analysis
 - Action prioritization and scheduling
@@ -160,7 +160,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 - Goals CRUD operations
 - Strategies and KPIs management
 - Operations (Actions and Issues)
-- Goal-Strategy-KPI relationships
+- Goal-Strategy-Measure relationships
 - Activity feeds
 - Company reports
 - Real-time updates via SSE
@@ -175,8 +175,8 @@ PurposePath frontend integrates with three backend microservices through RESTful
 | Business Foundation | `business-foundation-service.ts` → `accountClient` | `src/services/business-foundation-service.ts`, `src/types/business-foundation.ts` |
 | People | TBD | TBD |
 | Org Structure | TBD | TBD |
-| Coaching | `api.ts` → `coachingClient` | `src/services/api.ts`, `src/services/alignment-engine-service.ts`, `src/services/strategy-suggestion-service.ts`, `src/services/kpi-recommendation-service.ts`, `src/services/operations-ai-service.ts` |
-| Traction | `traction.ts` → `traction` | `src/services/traction.ts`, `src/services/goal-service.ts`, `src/services/action-service.ts`, `src/services/issue-service.ts`, `src/services/operations-traction-service.ts`, `src/services/kpi-planning-service.ts`, `src/services/realtime.ts` |
+| Coaching | `api.ts` → `coachingClient` | `src/services/api.ts`, `src/services/alignment-engine-service.ts`, `src/services/strategy-suggestion-service.ts`, `src/services/measure-recommendation-service.ts`, `src/services/operations-ai-service.ts` |
+| Traction | `traction.ts` → `traction` | `src/services/traction.ts`, `src/services/goal-service.ts`, `src/services/action-service.ts`, `src/services/issue-service.ts`, `src/services/operations-traction-service.ts`, `src/services/measure-planning-service.ts`, `src/services/realtime.ts` |
 
 ### Authentication Flow
 

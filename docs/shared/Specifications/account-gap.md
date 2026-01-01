@@ -69,7 +69,7 @@ Get all available subscription tiers with pricing (dynamic).
       "features": ["goals", "operations", "reports"],
       "limits": {
         "goals": 10,
-        "kpis": 50,
+        "measures": 50,
         "actions": null
       },
       "pricing": {
@@ -799,7 +799,7 @@ Get a specific core value by ID.
 
 ### GET /tenants/settings
 
-Get current tenant settings (KPI configuration, etc).
+Get current tenant settings (Measure configuration, etc).
 
 **Headers Required:**
 
@@ -818,7 +818,7 @@ Get current tenant settings (KPI configuration, etc).
 ```
 
 **Response Fields:**
-- `targetLineMode` (string): KPI target line configuration
+- `targetLineMode` (string): Measure target line configuration
   - `"single"` - Only expected target line (default)
   - `"three"` - Expected, optimal, and minimal target lines
 
@@ -864,7 +864,7 @@ Update current tenant settings.
 ```
 
 **Business Rules:**
-- Mode change does NOT affect existing KPI data
+- Mode change does NOT affect existing Measure data
 - Single mode: UI hides optimal/minimal target inputs
 - Three mode: UI shows all three target inputs
 - Charts always show expected line; optional lines only if data exists

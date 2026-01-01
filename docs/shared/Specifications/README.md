@@ -23,9 +23,9 @@ Specifications/
 │   └── traction-service/        # Traction feature APIs
 │       ├── README.md            # Traction service index
 │       ├── goals-api.md
-│       ├── kpis-api.md
-│       ├── kpi-links-api.md
-│       ├── kpi-data-api.md
+│       ├── measures-api.md
+│       ├── measure-links-api.md
+│       ├── measure-data-api.md
 │       ├── actions-api.md
 │       ├── issues-api.md
 │       └── dashboard-reports-activities-api.md
@@ -36,7 +36,7 @@ Specifications/
 └── archive/                     # Obsolete/Reference Documents
     ├── README.md                # Archive index
     ├── admin-integration/       # Old admin docs (19 files)
-    ├── kpi-refactor-issues/     # KPI refactoring issue specs
+    ├── measure-refactor-issues/     # Measure refactoring issue specs
     └── *.md                     # Various archived specs
 ```
 
@@ -140,7 +140,7 @@ Specification shoud **not** include version history or audit and revision commen
 | Dec 30, 2025 | 1.0 | Account Service split into User & Tenant Management and Business Foundation. Removed deprecated onboarding/admin/people endpoints. Standardized to camelCase throughout. Specifications now reflect actual implementation. |
 | Dec 23, 2025 | 7.0 | Documentation reorganization, v7 traction specs |
 | Dec 22, 2025 | 1.1 | People/Org endpoints migrated to Account service |
-| Dec 21, 2025 | 7.0 | KPI Link/Data refactoring, modular traction specs |
+| Dec 21, 2025 | 7.0 | Measure Link/Data refactoring, modular traction specs |
 
 ---
 

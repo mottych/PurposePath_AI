@@ -24,7 +24,7 @@ The base URL already includes `/coaching/api/v1`, so endpoints should not repeat
 
 ## Overview
 
-The Coaching Service handles all AI/ML operations, including goal alignment calculations, strategy suggestions, KPI recommendations, business insights, coaching conversations, and operations AI assistance.
+The Coaching Service handles all AI/ML operations, including goal alignment calculations, strategy suggestions, Measure recommendations, business insights, coaching conversations, and operations AI assistance.
 
 ### Frontend Implementation
 
@@ -33,7 +33,7 @@ The Coaching Service handles all AI/ML operations, including goal alignment calc
   - `src/services/api.ts` - Main ApiClient class with coachingClient
   - `src/services/alignment-engine-service.ts` - Alignment calculations
   - `src/services/strategy-suggestion-service.ts` - Strategy AI
-  - `src/services/kpi-recommendation-service.ts` - KPI AI
+  - `src/services/measure-recommendation-service.ts` - Measure AI
   - `src/services/operations-ai-service.ts` - Operations AI helpers
   - `src/services/business-data.ts` - Business metrics
 
@@ -53,7 +53,7 @@ Calculate alignment score for a goal against business foundation.
 {
   "goalIntent": "string",
   "strategies": ["string"],
-  "kpis": ["string"],
+  "measures": ["string"],
   "businessFoundation": {
     "vision": "string",
     "purpose": "string",
@@ -80,7 +80,7 @@ Calculate alignment score for a goal against business foundation.
     "componentScores": {
       "intentAlignment": 90,
       "strategyAlignment": 85,
-      "kpiRelevance": 80
+      "measureRelevance": 80
     },
     "breakdown": {
       "visionAlignment": 88,
@@ -115,7 +115,7 @@ Get detailed AI explanation for goal alignment (more verbose than alignment-chec
   "goal": {
     "intent": "string",
     "strategies": [{"description": "string"}],
-    "kpis": [{"sharedKpiId": "string", "name": "string"}]
+    "measures": [{"sharedKpiId": "string", "name": "string"}]
   },
   "businessFoundation": {
     "vision": "string",
@@ -161,7 +161,7 @@ Get AI-generated suggestions for improving goal alignment.
   "goal": {
     "intent": "string",
     "strategies": [{"description": "string"}],
-    "kpis": [{"sharedKpiId": "string"}]
+    "measures": [{"sharedKpiId": "string"}]
   },
   "businessFoundation": {
     "vision": "string",
@@ -253,11 +253,11 @@ Get AI-generated strategy recommendations for a goal.
 
 ---
 
-### POST /coaching/kpi-recommendations
+### POST /coaching/measure-recommendations
 
 Get AI-recommended KPIs for a goal and strategies.
 
-**Note:** Full URL: `{BASE_URL}/coaching/kpi-recommendations`
+**Note:** Full URL: `{BASE_URL}/coaching/measure-recommendations`
 
 **Request:**
 
@@ -317,7 +317,7 @@ Get AI-recommended KPIs for a goal and strategies.
 - `isLeading`: true for predictive metrics, false for historical
 - `difficulty`: how hard to measure/track
 
-**Implementation:** `src/services/kpi-recommendation-service.ts` → `getKPIRecommendations()`
+**Implementation:** `src/services/measure-recommendation-service.ts` → `getKPIRecommendations()`
 
 ---
 

@@ -688,7 +688,7 @@ When deactivating a person:
 **Phase 3: Assignment Updates**
 1. Update Action.AssignedPersonId to reference Person (currently references User)
 2. Update Issue.OwnerId to reference Person
-3. Update Kpi.OwnerId to reference Person
+3. Update Measure.OwnerId to reference Person
 4. (Any other entities with user assignments)
 
 **Phase 4: Cleanup**

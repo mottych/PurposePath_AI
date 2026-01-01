@@ -1,10 +1,10 @@
-# KPI Integration System - Final Data Model
+# Measure Integration System - Final Data Model
 
 ## Document Control
 - **Version:** 5.0 (Final - With Seeded Metadata)
 - **Date:** November 10, 2025
 - **Key Changes:** 
-  - System/KPI/Parameters are SEEDED (reference data)
+  - System/Measure/Parameters are SEEDED (reference data)
   - Templates stored in S3
   - Dates auto-calculated by orchestration engine
   - Simplified admin role
@@ -16,12 +16,12 @@
 ### Architecture Principle: Reference Data + Instance Data
 
 **Reference Data (SEEDED by Developers):**
-- Systems, KpiCatalog, SystemKpiConfig, Parameters
+- Systems, MeasureCatalog, SystemKpiConfig, Parameters
 - These are predefined in code and seeded during deployment
-- Admin can VIEW but generally cannot create/modify (except adding manual-only KpiCatalog entries)
+- Admin can VIEW but generally cannot create/modify (except adding manual-only MeasureCatalog entries)
 
 **Instance Data (User-Managed):**
-- Connections, Kpis, KpiIntegrations, Readings
+- Connections, Kpis, MeasureIntegrations, Readings
 - Users create and manage these through the UI
 
 ---
@@ -152,9 +152,9 @@ public static class SystemSeed
 }
 ```
 
-### 2.3 KpiCatalog
+### 2.3 MeasureCatalog
 
-**Purpose:** Generic KPI definitions
+**Purpose:** Generic Measure definitions
 
 **Managed By:** 
 - Developers seed initial catalog
@@ -163,7 +163,7 @@ public static class SystemSeed
 **Admin Can:** View all, Add (manual-only KPIs)
 
 ```sql
-CREATE TABLE KpiCatalog (
+CREATE TABLE MeasureCatalog (
     Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     CatalogKey NVARCHAR(100) NOT NULL UNIQUE, -- Code constant: 'revenue-by-category'
     Name NVARCHAR(200) NOT NULL,
@@ -199,8 +199,8 @@ CREATE TABLE KpiCatalog (
 
 **Seeded Data:**
 ```csharp
-// KPI keys are CODE CONSTANTS
-public static class KpiCatalogKeys
+// Measure keys are CODE CONSTANTS
+public static class MeasureCatalogKeys
 {
     public const string Revenue = "revenue";
     public const string RevenueByCategory = "revenue-by-category";
@@ -209,13 +209,13 @@ public static class KpiCatalogKeys
     public const string GrossProfitMargin = "gross-profit-margin";
 }
 
-public static class KpiCatalogSeed
+public static class MeasureCatalogSeed
 {
-    public static List<KpiCatalog> GetSeedData() => new()
+    public static List<MeasureCatalog> GetSeedData() => new()
     {
         new() 
         { 
-            CatalogKey = KpiCatalogKeys.RevenueByCategory,
+            CatalogKey = MeasureCatalogKeys.RevenueByCategory,
             Name = "Revenue by Category",
             Description = "Total revenue from sales filtered by product/service category",
             Category = "financial",
@@ -226,7 +226,7 @@ public static class KpiCatalogSeed
         },
         new() 
         { 
-            CatalogKey = KpiCatalogKeys.AvgTimeToResolve,
+            CatalogKey = MeasureCatalogKeys.AvgTimeToResolve,
             Name = "Average Time to Resolve",
             Description = "Average time to close support tickets",
             Category = "support",
@@ -282,13 +282,13 @@ CREATE TABLE TemplateMetadata (
 
 **Template File in S3 (JSON format):**
 ```json
-// s3://kpi-templates/quickbooks/revenue-by-category/v1.0.0.json
+// s3://measure-templates/quickbooks/revenue-by-category/v1.0.0.json
 {
   "templateKey": "qb-revenue-by-category",
   "version": "1.0.0",
   "systemKey": "quickbooks",
   
-  "systemPrompt": "You are a KPI data retrieval assistant connected to QuickBooks Online via MCP. Use the available MCP tools to retrieve invoice data and calculate the requested revenue.",
+  "systemPrompt": "You are a Measure data retrieval assistant connected to QuickBooks Online via MCP. Use the available MCP tools to retrieve invoice data and calculate the requested revenue.",
   
   "userPromptTemplate": "Get all invoices between {{fromDate}} and {{toDate}} where the item category equals '{{itemCategory}}'. {{#if clientType}}Also filter by client type '{{clientType}}'.{{/if}} Calculate the sum of all invoice line item amounts. Return the result as JSON with the format: {\"value\": <number>, \"currency\": \"USD\", \"invoiceCount\": <number>, \"itemCount\": <number>}",
   
@@ -352,7 +352,7 @@ public static class TemplateMetadataSeed
             TemplateKey = TemplateKeys.QbRevenueByCategory,
             Name = "QuickBooks Revenue by Category",
             SystemKey = SystemKeys.QuickBooks,
-            S3Bucket = "kpi-integration-templates",
+            S3Bucket = "measure-integration-templates",
             S3Key = "templates/quickbooks/revenue-by-category/v1.0.0.json",
             Version = "1.0.0",
             IsActive = true
@@ -364,7 +364,7 @@ public static class TemplateMetadataSeed
 
 ### 2.5 SystemKpiConfig
 
-**Purpose:** Links System + KpiCatalog + Template (one per combination)
+**Purpose:** Links System + MeasureCatalog + Template (one per combination)
 
 **Managed By:** Developers (seeded in code)
 
@@ -374,7 +374,7 @@ public static class TemplateMetadataSeed
 CREATE TABLE SystemKpiConfig (
     Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     SystemKey NVARCHAR(50) NOT NULL,
-    KpiCatalogId UNIQUEIDENTIFIER NOT NULL,
+    MeasureCatalogId UNIQUEIDENTIFIER NOT NULL,
     TemplateKey NVARCHAR(100) NOT NULL, -- References TemplateMetadata
     
     -- Display
@@ -397,18 +397,18 @@ CREATE TABLE SystemKpiConfig (
         FOREIGN KEY (SystemKey) 
         REFERENCES System(SystemKey),
     CONSTRAINT FK_SystemKpiConfig_KpiCatalog 
-        FOREIGN KEY (KpiCatalogId) 
-        REFERENCES KpiCatalog(Id),
+        FOREIGN KEY (MeasureCatalogId) 
+        REFERENCES MeasureCatalog(Id),
     CONSTRAINT FK_SystemKpiConfig_Template 
         FOREIGN KEY (TemplateKey) 
         REFERENCES TemplateMetadata(TemplateKey),
     
-    -- ONE template per System-KPI combination
+    -- ONE template per System-Measure combination
     CONSTRAINT UQ_SystemKpiConfig_SystemKpi 
-        UNIQUE (SystemKey, KpiCatalogId),
+        UNIQUE (SystemKey, MeasureCatalogId),
     
     INDEX IX_SystemKpiConfig_System (SystemKey, IsActive),
-    INDEX IX_SystemKpiConfig_KpiCatalog (KpiCatalogId, IsActive),
+    INDEX IX_SystemKpiConfig_KpiCatalog (MeasureCatalogId, IsActive),
     INDEX IX_SystemKpiConfig_Template (TemplateKey)
 );
 ```
@@ -422,14 +422,14 @@ public static class SystemKpiConfigSeed
         new() 
         { 
             SystemKey = SystemKeys.QuickBooks,
-            KpiCatalogId = GetKpiCatalogId(KpiCatalogKeys.RevenueByCategory),
+            MeasureCatalogId = GetKpiCatalogId(MeasureCatalogKeys.RevenueByCategory),
             TemplateKey = TemplateKeys.QbRevenueByCategory,
             IsActive = true
         },
         new() 
         { 
             SystemKey = SystemKeys.Salesforce,
-            KpiCatalogId = GetKpiCatalogId(KpiCatalogKeys.CustomerAcquisitionCost),
+            MeasureCatalogId = GetKpiCatalogId(MeasureCatalogKeys.CustomerAcquisitionCost),
             TemplateKey = TemplateKeys.SfCustomerAcquisitionCost,
             IsActive = true
         },
@@ -510,7 +510,7 @@ public static class SystemKpiParameterConfigSeed
         // QuickBooks Revenue by Category parameters
         new() 
         { 
-            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, KpiCatalogKeys.RevenueByCategory),
+            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
             ParameterSeq = 1,
             ParameterKey = ParameterKeys.ItemCategory,
             DisplayName = "Item Category",
@@ -523,7 +523,7 @@ public static class SystemKpiParameterConfigSeed
         },
         new() 
         { 
-            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, KpiCatalogKeys.RevenueByCategory),
+            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
             ParameterSeq = 2,
             ParameterKey = ParameterKeys.ClientType,
             DisplayName = "Client Type",
@@ -548,13 +548,13 @@ public static class SystemKpiParameterConfigSeed
 ```sql
 -- EXISTING TABLE - Add these columns:
 ALTER TABLE Kpis
-ADD KpiCatalogId UNIQUEIDENTIFIER NULL,
+ADD MeasureCatalogId UNIQUEIDENTIFIER NULL,
     IsCustom BIT NOT NULL DEFAULT 1,
     CONSTRAINT FK_Kpi_KpiCatalog 
-        FOREIGN KEY (KpiCatalogId) 
-        REFERENCES KpiCatalog(Id);
+        FOREIGN KEY (MeasureCatalogId) 
+        REFERENCES MeasureCatalog(Id);
 
-CREATE INDEX IX_Kpi_Catalog ON Kpis(KpiCatalogId) WHERE KpiCatalogId IS NOT NULL;
+CREATE INDEX IX_Kpi_Catalog ON Kpis(MeasureCatalogId) WHERE MeasureCatalogId IS NOT NULL;
 ```
 
 ### 3.2 ConnectionConfiguration (NEW)
@@ -615,9 +615,9 @@ CREATE TABLE ConnectionConfiguration (
 
 **Note:** User CAN have multiple connections to same system (e.g., "QuickBooks Company A", "QuickBooks Company B")
 
-### 3.3 KpiIntegration (NEW)
+### 3.3 MeasureIntegration (NEW)
 
-**Purpose:** Links a Kpi to a Connection with parameter values and schedule
+**Purpose:** Links a Measure to a Connection with parameter values and schedule
 
 **Managed By:** Users
 
@@ -627,10 +627,10 @@ CREATE TABLE ConnectionConfiguration (
 - Frequency determines how dates are calculated
 
 ```sql
-CREATE TABLE KpiIntegration (
+CREATE TABLE MeasureIntegration (
     Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     TenantId UNIQUEIDENTIFIER NOT NULL,
-    KpiId UNIQUEIDENTIFIER NOT NULL,
+    MeasureId UNIQUEIDENTIFIER NOT NULL,
     ConnectionId UNIQUEIDENTIFIER NOT NULL,
     SystemKpiConfigId UNIQUEIDENTIFIER NOT NULL,
     
@@ -676,7 +676,7 @@ CREATE TABLE KpiIntegration (
         FOREIGN KEY (TenantId) 
         REFERENCES Tenants(Id),
     CONSTRAINT FK_KpiIntegration_Kpi 
-        FOREIGN KEY (KpiId) 
+        FOREIGN KEY (MeasureId) 
         REFERENCES Kpis(Id),
     CONSTRAINT FK_KpiIntegration_Connection 
         FOREIGN KEY (ConnectionId) 
@@ -685,9 +685,9 @@ CREATE TABLE KpiIntegration (
         FOREIGN KEY (SystemKpiConfigId) 
         REFERENCES SystemKpiConfig(Id),
     
-    -- A KPI can only have one active integration
+    -- A Measure can only have one active integration
     CONSTRAINT UQ_KpiIntegration_Kpi 
-        UNIQUE (KpiId),
+        UNIQUE (MeasureId),
     
     INDEX IX_KpiIntegration_Tenant (TenantId),
     INDEX IX_KpiIntegration_Schedule (NextScheduledRun, IsEnabled),
@@ -708,10 +708,10 @@ public enum IntegrationFrequency
 }
 ```
 
-### 3.4 KpiReadings (EXISTING - Minor Updates)
+### 3.4 MeasureReadings (EXISTING - Minor Updates)
 
 ```sql
-ALTER TABLE KpiReadings
+ALTER TABLE MeasureReadings
 ADD IntegrationId UNIQUEIDENTIFIER NULL,
     DataSource NVARCHAR(50) NOT NULL DEFAULT 'manual', -- 'manual', 'integration', 'import', 'api'
     ExecutionId NVARCHAR(100) NULL, -- Links to Integration Service execution log
@@ -719,10 +719,10 @@ ADD IntegrationId UNIQUEIDENTIFIER NULL,
     DataQuality NVARCHAR(20) NULL,
     CONSTRAINT FK_KpiReading_Integration 
         FOREIGN KEY (IntegrationId) 
-        REFERENCES KpiIntegration(Id);
+        REFERENCES MeasureIntegration(Id);
 
-CREATE INDEX IX_KpiReading_Integration ON KpiReadings(IntegrationId) WHERE IntegrationId IS NOT NULL;
-CREATE INDEX IX_KpiReading_ExecutionId ON KpiReadings(ExecutionId) WHERE ExecutionId IS NOT NULL;
+CREATE INDEX IX_KpiReading_Integration ON MeasureReadings(IntegrationId) WHERE IntegrationId IS NOT NULL;
+CREATE INDEX IX_KpiReading_ExecutionId ON MeasureReadings(ExecutionId) WHERE ExecutionId IS NOT NULL;
 ```
 
 ---
@@ -817,7 +817,7 @@ public class PromptBuilder
 {
     public async Task<string> BuildPrompt(
         string templateContent, 
-        KpiIntegration integration,
+        MeasureIntegration integration,
         DateTime executionDate)
     {
         // 1. Load template from S3
@@ -895,7 +895,7 @@ public class Seeder
         // 2. Seed systems
         await SeedSystems();
         
-        // 3. Seed KPI catalog
+        // 3. Seed Measure catalog
         await SeedKpiCatalog();
         
         // 4. Upload templates to S3
@@ -904,7 +904,7 @@ public class Seeder
         // 5. Seed template metadata
         await SeedTemplateMetadata();
         
-        // 6. Seed system-KPI configurations
+        // 6. Seed system-Measure configurations
         await SeedSystemKpiConfigs();
         
         // 7. Seed parameter configurations
@@ -927,7 +927,7 @@ public class Seeder
         {
             await _s3Client.PutObjectAsync(new PutObjectRequest
             {
-                BucketName = "kpi-integration-templates",
+                BucketName = "measure-integration-templates",
                 Key = $"templates/{template.Key}/v1.0.0.json",
                 ContentBody = template.Content,
                 ContentType = "application/json"
@@ -944,30 +944,30 @@ public class Seeder
    POST /api/v1/connections
    → Creates ConnectionConfiguration
 
-2. User creates KPI "Machinery Revenue"
-   POST /api/v1/kpis
+2. User creates Measure "Machinery Revenue"
+   POST /api/v1/measures
    {
      "name": "Machinery Revenue",
-     "kpiCatalogId": "{revenue-by-category-id}",
+     "measureCatalogId": "{revenue-by-category-id}",
      "isCustom": false
    }
-   → Creates Kpi record
+   → Creates Measure record
 
 3. User views available integrations
-   GET /api/v1/kpis/{kpiId}/available-integrations
+   GET /api/v1/measures/{measureId}/available-integrations
    
    Backend queries:
    SELECT skc.*
    FROM SystemKpiConfig skc
    JOIN ConnectionConfiguration cc ON cc.SystemKey = skc.SystemKey
    WHERE cc.TenantId = @tenantId
-   AND skc.KpiCatalogId = @kpiCatalogId
+   AND skc.MeasureCatalogId = @measureCatalogId
    AND skc.IsActive = 1
    
-   Returns: "QuickBooks supports this KPI"
+   Returns: "QuickBooks supports this Measure"
 
 4. User clicks "Enable Integration"
-   GET /api/v1/system-kpi-configs/{id}/parameters
+   GET /api/v1/system-measure-configs/{id}/parameters
    
    Returns:
    [
@@ -1004,9 +1004,9 @@ public class Seeder
    - Time: 06:00
 
 7. User saves integration
-   POST /api/v1/kpi-integrations
+   POST /api/v1/measure-integrations
    {
-     "kpiId": "...",
+     "measureId": "...",
      "connectionId": "...",
      "systemKpiConfigId": "...",
      "parameterValues": {
@@ -1018,7 +1018,7 @@ public class Seeder
      "scheduleTime": "06:00"
    }
    
-   Backend creates KpiIntegration
+   Backend creates MeasureIntegration
    Backend calculates NextScheduledRun: Dec 1, 2025 at 06:00
    Backend creates EventBridge schedule
 ```
@@ -1032,7 +1032,7 @@ public class Seeder
 2. Integration Service receives message
    → Loads full configuration:
    
-   GET /internal/kpi-integrations/{id}/full-config
+   GET /internal/measure-integrations/{id}/full-config
    
    Backend returns:
    {
@@ -1072,19 +1072,19 @@ public class Seeder
    → Returns: {"value": 45000.50, "currency": "USD"}
 
 7. Integration Service stores result
-   POST /internal/kpi-readings
+   POST /internal/measure-readings
    {
-     "kpiId": "...",
+     "measureId": "...",
      "value": 45000.50,
      "integrationId": "...",
      "dataSource": "integration"
    }
 
 8. Backend processes
-   → Creates KpiReading
-   → Updates Kpi.CurrentValue = 45000.50
-   → Updates KpiIntegration.LastExecutionFromDate = Nov 1
-   → Updates KpiIntegration.LastExecutionToDate = Nov 30
+   → Creates MeasureReading
+   → Updates Measure.CurrentValue = 45000.50
+   → Updates MeasureIntegration.LastExecutionFromDate = Nov 1
+   → Updates MeasureIntegration.LastExecutionToDate = Nov 30
    → Calculates next run: Jan 1, 2026 at 06:00
 ```
 
@@ -1096,12 +1096,12 @@ public class Seeder
 
 **View Reference Data:**
 - View all Systems
-- View all KPI Catalog entries
-- View System-KPI mappings
-- View Parameters per System-KPI
+- View all Measure Catalog entries
+- View System-Measure mappings
+- View Parameters per System-Measure
 
 **Add Manual KPIs:**
-- Create KpiCatalog entries for manual data entry
+- Create MeasureCatalog entries for manual data entry
 - These won't have SystemKpiConfig links
 - Users can create Kpis based on these but without integration
 
@@ -1126,9 +1126,9 @@ CRM
   ✓ HubSpot                     [3 KPIs supported]  [View]
 ```
 
-**Screen 2: KPI Catalog**
+**Screen 2: Measure Catalog**
 ```
-KPI Catalog                                        [+] Add Manual KPI
+Measure Catalog                                        [+] Add Manual Measure
 
 System-Integrated KPIs:
 ✓ Revenue by Category          [5 systems]  [View Details]
@@ -1140,12 +1140,12 @@ Manual-Only KPIs:
 ○ Customer Satisfaction        [Manual]     [Edit] [Delete]
 ```
 
-**Screen 3: System KPI Details (Read-Only)**
+**Screen 3: System Measure Details (Read-Only)**
 ```
 QuickBooks Online > Revenue by Category
 
 Template: qb-revenue-by-category (v1.0.0)
-Template Location: s3://kpi-templates/templates/quickbooks/revenue-by-category/v1.0.0.json
+Template Location: s3://measure-templates/templates/quickbooks/revenue-by-category/v1.0.0.json
 Status: Active
 
 User-Configurable Parameters:
@@ -1169,7 +1169,7 @@ System-Generated Parameters:
 ### What Changed from Previous Version
 
 **BEFORE:**
-- Admin could create/modify systems and KPI configs via UI
+- Admin could create/modify systems and Measure configs via UI
 - Templates stored in database
 - Dates were user parameters
 
@@ -1193,7 +1193,7 @@ System-Generated Parameters:
 ```
 1. Developer defines new system integration:
    - Add to SystemSeed
-   - Add to KpiCatalogSeed
+   - Add to MeasureCatalogSeed
    - Create template JSON file
    - Upload to S3 during deployment
    - Add to TemplateMetadataSeed
@@ -1219,15 +1219,15 @@ System-Generated Parameters:
 |-------|------------|----------|-----------|--------|
 | SystemCategory | Developers | View | View | Seeded |
 | System | Developers | View | View | Seeded |
-| KpiCatalog | Developers + Admin | View | View + Add manual | Seeded + DB |
+| MeasureCatalog | Developers + Admin | View | View + Add manual | Seeded + DB |
 | TemplateMetadata | Developers | View | View | Seeded |
 | Templates (S3) | Developers | - | View | S3 Files |
 | SystemKpiConfig | Developers | View | View | Seeded |
 | SystemKpiParameterConfig | Developers | View | View | Seeded |
 | ConnectionConfiguration | Users | CRUD | View | DB |
-| KpiIntegration | Users | CRUD | View | DB |
+| MeasureIntegration | Users | CRUD | View | DB |
 | Kpis | Users | CRUD | View | DB |
-| KpiReadings | Users + System | View | View | DB |
+| MeasureReadings | Users + System | View | View | DB |
 
 ---
 

@@ -61,7 +61,7 @@ GET /api/v1/admin/topics
 |-----------|------|----------|---------|-------------|----------------|
 | `page` | integer | No | 1 | Page number | >= 1 |
 | `page_size` | integer | No | 50 | Items per page (max 100) | 1-100 |
-| `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
+| `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
 | `topic_type` | string | No | - | Filter by type | `conversation_coaching`, `single_shot`, `kpi_system` |
 | `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
 | `search` | string | No | - | Search in name/description | Max 100 chars |
@@ -371,7 +371,7 @@ POST /api/v1/admin/topics
 |-------|-------|------------------------|
 | `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
 | `topic_name` | Required, 3-100 chars | Any printable characters |
-| `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `kpi`, `custom` |
+| `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
 | `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `kpi_system` |
 | `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
 | `temperature` | Required, float | 0.0-2.0 |
@@ -402,14 +402,14 @@ POST /api/v1/admin/topics
 - `vision`: Future vision and aspiration setting
 - `goals`: Goal setting and achievement planning
 - `strategy`: Strategic planning and decision making
-- `kpi`: Key performance indicators and metrics
+- `measure`: Key performance indicators and metrics
 - `custom`: Custom topics not fitting standard categories
 
 **Topic Type Descriptions:**
 
 - `conversation_coaching`: Interactive conversational coaching sessions (multi-turn)
 - `single_shot`: One-shot evaluations, assessments, and analysis
-- `kpi_system`: KPI calculation and tracking
+- `kpi_system`: Measure calculation and tracking
 
 **Prompt Types by Topic Type:**
 

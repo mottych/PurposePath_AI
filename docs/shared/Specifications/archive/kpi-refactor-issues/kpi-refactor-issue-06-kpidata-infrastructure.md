@@ -1,16 +1,16 @@
-# Issue #XXX-6: Infrastructure - KpiData Data Model, Mapper, Repository
+# Issue #XXX-6: Infrastructure - MeasureData Data Model, Mapper, Repository
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
-**Labels:** `infrastructure`, `data-model`, `repository`, `kpi-data`  
+**Labels:** `infrastructure`, `data-model`, `repository`, `measure-data`  
 **Estimated Effort:** 8-10 hours
 
 ---
 
 ## 📋 Description
 
-Implement the infrastructure layer components for the new `KpiData` entity, including DynamoDB data model, mapper, and repository.
+Implement the infrastructure layer components for the new `MeasureData` entity, including DynamoDB data model, mapper, and repository.
 
 ---
 
@@ -18,22 +18,22 @@ Implement the infrastructure layer components for the new `KpiData` entity, incl
 
 ### 1. Data Model
 
-Location: `PurposePath.Infrastructure/DataModels/KpiDataDataModel.cs`
+Location: `PurposePath.Infrastructure/DataModels/MeasureDataDataModel.cs`
 
 ```csharp
 using Amazon.DynamoDBv2.DataModel;
 
 namespace PurposePath.Infrastructure.DataModels;
 
-[DynamoDBTable("purposepath-kpi-data")]
-public class KpiDataDataModel : BaseDataModel
+[DynamoDBTable("purposepath-measure-data")]
+public class MeasureDataDataModel : BaseDataModel
 {
     [DynamoDBHashKey("id")]
     public string Id { get; set; } = string.Empty;
 
     [DynamoDBProperty("kpi_link_id")]
-    [DynamoDBGlobalSecondaryIndexHashKey("kpi-link-index")]
-    public string KpiLinkId { get; set; } = string.Empty;
+    [DynamoDBGlobalSecondaryIndexHashKey("measure-link-index")]
+    public string MeasureLinkId { get; set; } = string.Empty;
 
     // Data classification
     [DynamoDBProperty("data_category")]
@@ -50,7 +50,7 @@ public class KpiDataDataModel : BaseDataModel
     public decimal PostValue { get; set; }
 
     [DynamoDBProperty("post_date")]
-    [DynamoDBGlobalSecondaryIndexRangeKey("kpi-link-index")]
+    [DynamoDBGlobalSecondaryIndexRangeKey("measure-link-index")]
     public string PostDate { get; set; } = string.Empty;
 
     [DynamoDBProperty("measured_period_start_date")]
@@ -113,12 +113,12 @@ public class KpiDataDataModel : BaseDataModel
     public string? UpdatedAt { get; set; }
 
     // Composite index for querying by category
-    [DynamoDBGlobalSecondaryIndexHashKey("kpi-link-category-index")]
-    public string KpiLinkCategoryKey => $"{KpiLinkId}#{DataCategory}";
+    [DynamoDBGlobalSecondaryIndexHashKey("measure-link-category-index")]
+    public string MeasureLinkCategoryKey => $"{MeasureLinkId}#{DataCategory}";
 
     // Composite index for querying targets by subtype
     [DynamoDBGlobalSecondaryIndexHashKey("target-subtype-index")]
-    public string? TargetKey => DataCategory == "Target" ? $"{KpiLinkId}#{TargetSubtype}" : null;
+    public string? TargetKey => DataCategory == "Target" ? $"{MeasureLinkId}#{TargetSubtype}" : null;
 }
 ```
 
@@ -126,13 +126,13 @@ public class KpiDataDataModel : BaseDataModel
 
 | GSI Name | Partition Key | Sort Key | Purpose |
 |----------|---------------|----------|---------|
-| `kpi-link-index` | kpi_link_id | post_date | Get all data for a link, sorted by date |
-| `kpi-link-category-index` | kpi_link_id#data_category | - | Get targets or actuals for a link |
+| `measure-link-index` | kpi_link_id | post_date | Get all data for a link, sorted by date |
+| `measure-link-category-index` | kpi_link_id#data_category | - | Get targets or actuals for a link |
 | `target-subtype-index` | kpi_link_id#target_subtype | - | Get specific target type (Expected, Optimal, Minimal) |
 
 ### 3. Mapper
 
-Location: `PurposePath.Infrastructure/Mappers/KpiDataMapper.cs`
+Location: `PurposePath.Infrastructure/Mappers/MeasureDataMapper.cs`
 
 ```csharp
 using PurposePath.Domain.Common;
@@ -142,14 +142,14 @@ using PurposePath.Infrastructure.DataModels;
 
 namespace PurposePath.Infrastructure.Mappers;
 
-public static class KpiDataMapper
+public static class MeasureDataMapper
 {
-    public static KpiDataDataModel ToDataModel(KpiData entity)
+    public static MeasureDataDataModel ToDataModel(MeasureData entity)
     {
-        return new KpiDataDataModel
+        return new MeasureDataDataModel
         {
             Id = entity.Id.ToString(),
-            KpiLinkId = entity.KpiLinkId.ToString(),
+            MeasureLinkId = entity.MeasureLinkId.ToString(),
             DataCategory = entity.DataCategory.ToString(),
             TargetSubtype = entity.TargetSubtype?.ToString(),
             ActualSubtype = entity.ActualSubtype?.ToString(),
@@ -176,12 +176,12 @@ public static class KpiDataMapper
         };
     }
 
-    public static KpiData ToDomain(KpiDataDataModel dataModel)
+    public static MeasureData ToDomain(MeasureDataDataModel dataModel)
     {
-        return KpiData.Restore(
-            id: KpiDataId.From(dataModel.Id),
-            kpiLinkId: KpiLinkId.From(dataModel.KpiLinkId),
-            dataCategory: Enum.Parse<KpiDataCategory>(dataModel.DataCategory),
+        return MeasureData.Restore(
+            id: MeasureDataId.From(dataModel.Id),
+            measureLinkId: MeasureLinkId.From(dataModel.MeasureLinkId),
+            dataCategory: Enum.Parse<MeasureDataCategory>(dataModel.DataCategory),
             targetSubtype: string.IsNullOrEmpty(dataModel.TargetSubtype) 
                 ? null 
                 : Enum.Parse<TargetSubtype>(dataModel.TargetSubtype),
@@ -226,50 +226,50 @@ namespace PurposePath.Domain.Repositories;
 
 public interface IKpiDataRepository
 {
-    Task<KpiData?> GetByIdAsync(KpiDataId id, CancellationToken ct = default);
+    Task<MeasureData?> GetByIdAsync(MeasureDataId id, CancellationToken ct = default);
     
     // Get all data for a link
-    Task<IEnumerable<KpiData>> GetByKpiLinkIdAsync(KpiLinkId kpiLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetByKpiLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
     
     // Get targets for a link
-    Task<IEnumerable<KpiData>> GetTargetsAsync(KpiLinkId kpiLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetTargetsAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
     
     // Get specific target type
-    Task<IEnumerable<KpiData>> GetTargetsBySubtypeAsync(
-        KpiLinkId kpiLinkId, 
+    Task<IEnumerable<MeasureData>> GetTargetsBySubtypeAsync(
+        MeasureLinkId measureLinkId, 
         TargetSubtype subtype, 
         CancellationToken ct = default);
     
     // Get actuals for a link
-    Task<IEnumerable<KpiData>> GetActualsAsync(KpiLinkId kpiLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetActualsAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
     
     // Get actuals by subtype (Estimate or Measured)
-    Task<IEnumerable<KpiData>> GetActualsBySubtypeAsync(
-        KpiLinkId kpiLinkId, 
+    Task<IEnumerable<MeasureData>> GetActualsBySubtypeAsync(
+        MeasureLinkId measureLinkId, 
         ActualSubtype subtype, 
         CancellationToken ct = default);
     
     // Get data within date range
-    Task<IEnumerable<KpiData>> GetByDateRangeAsync(
-        KpiLinkId kpiLinkId, 
+    Task<IEnumerable<MeasureData>> GetByDateRangeAsync(
+        MeasureLinkId measureLinkId, 
         DateTime startDate, 
         DateTime endDate, 
         CancellationToken ct = default);
     
     // Get latest actual (Measured wins over Estimate for same date)
-    Task<KpiData?> GetLatestActualAsync(KpiLinkId kpiLinkId, CancellationToken ct = default);
+    Task<MeasureData?> GetLatestActualAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
     
     // Get target for specific date
-    Task<KpiData?> GetTargetForDateAsync(
-        KpiLinkId kpiLinkId, 
+    Task<MeasureData?> GetTargetForDateAsync(
+        MeasureLinkId measureLinkId, 
         TargetSubtype subtype, 
         string postDate, 
         CancellationToken ct = default);
     
-    Task CreateAsync(KpiData data, CancellationToken ct = default);
-    Task UpdateAsync(KpiData data, CancellationToken ct = default);
-    Task DeleteAsync(KpiDataId id, CancellationToken ct = default);
-    Task DeleteByKpiLinkIdAsync(KpiLinkId kpiLinkId, CancellationToken ct = default);
+    Task CreateAsync(MeasureData data, CancellationToken ct = default);
+    Task UpdateAsync(MeasureData data, CancellationToken ct = default);
+    Task DeleteAsync(MeasureDataId id, CancellationToken ct = default);
+    Task DeleteByKpiLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
 }
 ```
 
@@ -285,8 +285,8 @@ Implement all methods from the interface using DynamoDB queries with the defined
 
 | File | Action |
 |------|--------|
-| `PurposePath.Infrastructure/DataModels/KpiDataDataModel.cs` | Create |
-| `PurposePath.Infrastructure/Mappers/KpiDataMapper.cs` | Create |
+| `PurposePath.Infrastructure/DataModels/MeasureDataDataModel.cs` | Create |
+| `PurposePath.Infrastructure/Mappers/MeasureDataMapper.cs` | Create |
 | `PurposePath.Infrastructure/Repositories/DynamoDbKpiDataRepository.cs` | Create |
 | `PurposePath.Domain/Repositories/IKpiDataRepository.cs` | Create |
 | `PurposePath.Infrastructure/Configuration/DynamoDbSettings.cs` | Modify |
@@ -305,7 +305,7 @@ Implement all methods from the interface using DynamoDB queries with the defined
 - [ ] Delete data point
 
 ### Query Tests
-- [ ] Get all data for KpiLink
+- [ ] Get all data for MeasureLink
 - [ ] Get only targets
 - [ ] Get only actuals
 - [ ] Get targets by subtype (Expected, Optimal, Minimal)
@@ -323,8 +323,8 @@ Implement all methods from the interface using DynamoDB queries with the defined
 
 ## 🔗 Dependencies
 
-- Issue #XXX-3: KpiData domain entity
-- Issue #XXX-5: KpiLink infrastructure (for KpiLinkId)
+- Issue #XXX-3: MeasureData domain entity
+- Issue #XXX-5: MeasureLink infrastructure (for MeasureLinkId)
 
 ---
 
@@ -348,8 +348,8 @@ Implement all methods from the interface using DynamoDB queries with the defined
 **Status:** [In Progress / Blocked / Complete]
 
 **Completed:**
-- [ ] Created KpiDataDataModel
-- [ ] Created KpiDataMapper
+- [ ] Created MeasureDataDataModel
+- [ ] Created MeasureDataMapper
 - [ ] Created IKpiDataRepository interface
 - [ ] Created DynamoDbKpiDataRepository
 - [ ] Added table configuration

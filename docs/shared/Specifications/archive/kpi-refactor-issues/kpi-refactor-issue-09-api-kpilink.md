@@ -1,16 +1,16 @@
-# Issue #XXX-9: API - Update KPI Linking Endpoints
+# Issue #XXX-9: API - Update Measure Linking Endpoints
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
-**Labels:** `api`, `controllers`, `kpi-link`  
+**Labels:** `api`, `controllers`, `measure-link`  
 **Estimated Effort:** 6-8 hours
 
 ---
 
 ## 📋 Description
 
-Update the Traction Lambda API controllers and DTOs to support the new KpiLink functionality, including linking to Person, Goal, and Strategy.
+Update the Traction Lambda API controllers and DTOs to support the new MeasureLink functionality, including linking to Person, Goal, and Strategy.
 
 ---
 
@@ -20,22 +20,22 @@ Update the Traction Lambda API controllers and DTOs to support the new KpiLink f
 
 | Method | Endpoint | Description | Change |
 |--------|----------|-------------|--------|
-| POST | `/kpi-links` | Create KPI link | New endpoint |
-| GET | `/kpi-links` | List KPI links with filters | New endpoint |
-| GET | `/kpi-links/{id}` | Get link details | New endpoint |
-| PUT | `/kpi-links/{id}` | Update link metadata | New endpoint |
-| DELETE | `/kpi-links/{id}` | Remove link | New endpoint |
-| GET | `/goals/{goalId}/kpi-links` | Get links for goal | New endpoint |
-| GET | `/strategies/{strategyId}/kpi-links` | Get links for strategy | New endpoint |
-| GET | `/people/{personId}/kpi-links` | Get personal scorecards | New endpoint |
+| POST | `/measure-links` | Create Measure link | New endpoint |
+| GET | `/measure-links` | List Measure links with filters | New endpoint |
+| GET | `/measure-links/{id}` | Get link details | New endpoint |
+| PUT | `/measure-links/{id}` | Update link metadata | New endpoint |
+| DELETE | `/measure-links/{id}` | Remove link | New endpoint |
+| GET | `/goals/{goalId}/measure-links` | Get links for goal | New endpoint |
+| GET | `/strategies/{strategyId}/measure-links` | Get links for strategy | New endpoint |
+| GET | `/people/{personId}/measure-links` | Get personal scorecards | New endpoint |
 
 ### Deprecated Endpoints (redirect to new)
 
 | Old Endpoint | New Endpoint | Notes |
 |--------------|--------------|-------|
-| POST `/goals/{goalId}/kpis:link` | POST `/kpi-links` | Add goalId in body |
-| POST `/goals/{goalId}/kpis:unlink` | DELETE `/kpi-links/{id}` | Use link ID |
-| GET `/goals/{goalId}/kpis` | GET `/goals/{goalId}/kpi-links` | Returns links with KPI data |
+| POST `/goals/{goalId}/measures:link` | POST `/measure-links` | Add goalId in body |
+| POST `/goals/{goalId}/measures:unlink` | DELETE `/measure-links/{id}` | Use link ID |
+| GET `/goals/{goalId}/measures` | GET `/goals/{goalId}/measure-links` | Returns links with Measure data |
 
 ---
 
@@ -43,16 +43,16 @@ Update the Traction Lambda API controllers and DTOs to support the new KpiLink f
 
 ### CreateKpiLinkRequest
 
-Location: `Services/PurposePath.Traction.Lambda/DTOs/Requests/KpiLink/CreateKpiLinkRequest.cs`
+Location: `Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureLink/CreateKpiLinkRequest.cs`
 
 ```csharp
 public record CreateKpiLinkRequest
 {
     /// <summary>
-    /// ID of the KPI to link
+    /// ID of the Measure to link
     /// </summary>
     [Required]
-    public string KpiId { get; init; } = string.Empty;
+    public string MeasureId { get; init; } = string.Empty;
     
     /// <summary>
     /// ID of the person responsible for values on this link
@@ -87,7 +87,7 @@ public record CreateKpiLinkRequest
     public int? DisplayOrder { get; init; }
     
     /// <summary>
-    /// Whether this is the primary KPI for the goal
+    /// Whether this is the primary Measure for the goal
     /// </summary>
     public bool IsPrimary { get; init; }
     
@@ -99,18 +99,18 @@ public record CreateKpiLinkRequest
 }
 ```
 
-### KpiLinkResponse
+### MeasureLinkResponse
 
-Location: `Services/PurposePath.Traction.Lambda/DTOs/Responses/KpiLink/KpiLinkResponse.cs`
+Location: `Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureLink/MeasureLinkResponse.cs`
 
 ```csharp
-public record KpiLinkResponse
+public record MeasureLinkResponse
 {
     public string Id { get; init; } = string.Empty;
-    public string KpiId { get; init; } = string.Empty;
-    public string KpiName { get; init; } = string.Empty;
-    public string KpiUnit { get; init; } = string.Empty;
-    public string KpiDirection { get; init; } = string.Empty;
+    public string MeasureId { get; init; } = string.Empty;
+    public string MeasureName { get; init; } = string.Empty;
+    public string MeasureUnit { get; init; } = string.Empty;
+    public string MeasureDirection { get; init; } = string.Empty;
     
     public string PersonId { get; init; } = string.Empty;
     public string PersonName { get; init; } = string.Empty;
@@ -138,12 +138,12 @@ public record KpiLinkResponse
 }
 ```
 
-### KpiLinkListResponse
+### MeasureLinkListResponse
 
 ```csharp
-public record KpiLinkListResponse
+public record MeasureLinkListResponse
 {
-    public IEnumerable<KpiLinkResponse> Items { get; init; } = Array.Empty<KpiLinkResponse>();
+    public IEnumerable<MeasureLinkResponse> Items { get; init; } = Array.Empty<MeasureLinkResponse>();
     public int TotalCount { get; init; }
 }
 ```
@@ -152,25 +152,25 @@ public record KpiLinkListResponse
 
 ## 🎮 Controller Implementation
 
-Location: `Services/PurposePath.Traction.Lambda/Controllers/KpiLinksController.cs`
+Location: `Services/PurposePath.Traction.Lambda/Controllers/MeasureLinksController.cs`
 
 ```csharp
 [ApiController]
-[Route("kpi-links")]
-public class KpiLinksController : ControllerBase
+[Route("measure-links")]
+public class MeasureLinksController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public KpiLinksController(IMediator mediator)
+    public MeasureLinksController(IMediator mediator)
     {
         _mediator = mediator;
     }
 
     /// <summary>
-    /// Create a new KPI link
+    /// Create a new Measure link
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(ApiResponse<KpiLinkResponse>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureLinkResponse>), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> CreateLink(
@@ -181,12 +181,12 @@ public class KpiLinksController : ControllerBase
     }
 
     /// <summary>
-    /// Get KPI links with optional filtering
+    /// Get Measure links with optional filtering
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<KpiLinkListResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureLinkListResponse>), 200)]
     public async Task<IActionResult> GetLinks(
-        [FromQuery] string? kpiId,
+        [FromQuery] string? measureId,
         [FromQuery] string? goalId,
         [FromQuery] string? strategyId,
         [FromQuery] string? personId,
@@ -197,10 +197,10 @@ public class KpiLinksController : ControllerBase
     }
 
     /// <summary>
-    /// Get a specific KPI link
+    /// Get a specific Measure link
     /// </summary>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(ApiResponse<KpiLinkResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureLinkResponse>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> GetLink(string id, CancellationToken ct)
     {
@@ -208,10 +208,10 @@ public class KpiLinksController : ControllerBase
     }
 
     /// <summary>
-    /// Update KPI link metadata
+    /// Update Measure link metadata
     /// </summary>
     [HttpPut("{id}")]
-    [ProducesResponseType(typeof(ApiResponse<KpiLinkResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureLinkResponse>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> UpdateLink(
         string id,
@@ -222,7 +222,7 @@ public class KpiLinksController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a KPI link
+    /// Delete a Measure link
     /// </summary>
     [HttpDelete("{id}")]
     [ProducesResponseType(204)]
@@ -241,46 +241,46 @@ public class KpiLinksController : ControllerBase
 ### DTOs
 | File | Action |
 |------|--------|
-| `DTOs/Requests/KpiLink/CreateKpiLinkRequest.cs` | Create |
-| `DTOs/Requests/KpiLink/UpdateKpiLinkRequest.cs` | Create |
-| `DTOs/Responses/KpiLink/KpiLinkResponse.cs` | Create |
-| `DTOs/Responses/KpiLink/KpiLinkListResponse.cs` | Create |
+| `DTOs/Requests/MeasureLink/CreateKpiLinkRequest.cs` | Create |
+| `DTOs/Requests/MeasureLink/UpdateKpiLinkRequest.cs` | Create |
+| `DTOs/Responses/MeasureLink/MeasureLinkResponse.cs` | Create |
+| `DTOs/Responses/MeasureLink/MeasureLinkListResponse.cs` | Create |
 
 ### Controllers
 | File | Action |
 |------|--------|
-| `Controllers/KpiLinksController.cs` | Create |
+| `Controllers/MeasureLinksController.cs` | Create |
 | `Controllers/GoalKpiController.cs` | Modify - add deprecation notices |
 
 ### Validators
 | File | Action |
 |------|--------|
-| `Validators/KpiLink/CreateKpiLinkRequestValidator.cs` | Create |
-| `Validators/KpiLink/UpdateKpiLinkRequestValidator.cs` | Create |
+| `Validators/MeasureLink/CreateKpiLinkRequestValidator.cs` | Create |
+| `Validators/MeasureLink/UpdateKpiLinkRequestValidator.cs` | Create |
 
 ### Mappers
 | File | Action |
 |------|--------|
-| `Mappers/TractionLambdaMappingProfile.cs` | Modify - add KpiLink mappings |
+| `Mappers/TractionLambdaMappingProfile.cs` | Modify - add MeasureLink mappings |
 
 ---
 
 ## 🧪 Testing
 
 ### API Tests
-- [ ] POST /kpi-links - create with Person only
-- [ ] POST /kpi-links - create with Person + Goal
-- [ ] POST /kpi-links - create with Person + Goal + Strategy
-- [ ] POST /kpi-links - validation error for Strategy without Goal
-- [ ] POST /kpi-links - conflict for duplicate Goal link
-- [ ] GET /kpi-links - filter by kpiId
-- [ ] GET /kpi-links - filter by goalId
-- [ ] GET /kpi-links - filter by personId
-- [ ] GET /kpi-links - filter personalOnly=true
-- [ ] GET /kpi-links/{id} - success
-- [ ] GET /kpi-links/{id} - not found
-- [ ] PUT /kpi-links/{id} - update metadata
-- [ ] DELETE /kpi-links/{id} - success
+- [ ] POST /measure-links - create with Person only
+- [ ] POST /measure-links - create with Person + Goal
+- [ ] POST /measure-links - create with Person + Goal + Strategy
+- [ ] POST /measure-links - validation error for Strategy without Goal
+- [ ] POST /measure-links - conflict for duplicate Goal link
+- [ ] GET /measure-links - filter by measureId
+- [ ] GET /measure-links - filter by goalId
+- [ ] GET /measure-links - filter by personId
+- [ ] GET /measure-links - filter personalOnly=true
+- [ ] GET /measure-links/{id} - success
+- [ ] GET /measure-links/{id} - not found
+- [ ] PUT /measure-links/{id} - update metadata
+- [ ] DELETE /measure-links/{id} - success
 
 ### Backward Compatibility
 - [ ] Old endpoints still work (with deprecation warning)
@@ -289,7 +289,7 @@ public class KpiLinksController : ControllerBase
 
 ## 🔗 Dependencies
 
-- Issue #XXX-7: KpiLink application layer
+- Issue #XXX-7: MeasureLink application layer
 
 ---
 
@@ -316,7 +316,7 @@ public class KpiLinksController : ControllerBase
 **Completed:**
 - [ ] Created request DTOs
 - [ ] Created response DTOs
-- [ ] Created KpiLinksController
+- [ ] Created MeasureLinksController
 - [ ] Created validators
 - [ ] Updated mapper profiles
 - [ ] Added API tests
