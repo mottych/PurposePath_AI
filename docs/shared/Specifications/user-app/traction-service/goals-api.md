@@ -898,6 +898,7 @@ Each Measure includes usage statistics showing how many goals are currently usin
 - Only returns Measures accessible to the tenant
 - Catalog Measures are read-only; tenant custom Measures can be modified
 - Use [Measure Links API](./measure-links-api.md) to actually link a Measure to the goal
+- For new (unpersisted) goals, use `GET /goals/available-measures` (see Measures API) to fetch the catalog without a goalId
 
 ---
 

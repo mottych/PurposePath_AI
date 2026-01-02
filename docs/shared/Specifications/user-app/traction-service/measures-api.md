@@ -1,7 +1,7 @@
 # Measures API Specification
 
-**Version:** 7.0  
-**Last Updated:** December 23, 2025  
+**Version:** 7.1  
+**Last Updated:** January 2, 2026  
 **Base Path:** `/measures`  
 **Controller:** `MeasuresController.cs`
 
@@ -15,6 +15,8 @@ The Measures API manages Key Performance Indicators (Measures) within the Purpos
 - Update Measure details or current values
 - Soft delete Measures (preserves historical data)
 - Query Measure-goal relationships
+- Retrieve Measures catalog for designing a new goal (no goalId required)
+- Retrieve Measure catalog for new (unpersisted) goals
 
 ---
 
@@ -27,6 +29,76 @@ All endpoints require:
 ---
 
 ## Endpoints
+
+### 0. Get Available Measures For New Goal (No goalId)
+
+Retrieve the Measures catalog (catalog + tenant custom) when designing a goal that is not yet persisted. This mirrors the goal-scoped available-measures payload but does not require a `goalId`; `usageInfo.isUsedByThisGoal` is always `false`.
+
+**Endpoint:** `GET /goals/available-measures`
+
+**Headers:**
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "catalogMeasures": [
+      {
+        "id": "catalog-001",
+        "name": "Monthly Recurring Revenue",
+        "description": "Total predictable revenue from subscriptions",
+        "category": "Financial",
+        "unit": "USD",
+        "direction": "increase",
+        "type": "leading",
+        "valueType": "currency",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Sum of all active subscription values",
+        "isIntegrationEnabled": true,
+        "usageInfo": {
+          "goalCount": 3,
+          "isUsedByThisGoal": false
+        }
+      }
+    ],
+    "tenantCustomMeasures": [
+      {
+        "id": "custom-measure-001",
+        "name": "Customer Satisfaction Score",
+        "description": "Average CSAT from post-purchase surveys",
+        "category": "Customer Experience",
+        "unit": "score",
+        "direction": "increase",
+        "type": "lagging",
+        "valueType": "percentage",
+        "aggregationType": "average",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Average of all survey responses",
+        "measureCatalogId": null,
+        "isIntegrationEnabled": false,
+        "createdAt": "2025-01-15T10:00:00.000Z",
+        "createdBy": "user-123",
+        "usageInfo": {
+          "goalCount": 1,
+          "isUsedByThisGoal": false
+        }
+      }
+    ]
+  },
+  "error": null,
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+**Notes**
+- Same schema as goal-scoped available-measures but without validating goal existence.
+- `usageInfo.isUsedByThisGoal` is always `false` for this endpoint; `goalCount` still reflects usage across persisted goals.
+- Use [Measure Links API](./measure-links-api.md) to link a Measure once the goal is created.
 
 ### 1. List Measures
 
@@ -543,7 +615,76 @@ X-Tenant-Id: {tenantId}
 
 ---
 
-### 7. Get Measure Linked Goals (Deprecated)
+### 7. Get Available Measures for New Goals
+
+Retrieve the Measure catalog for a tenant when designing a new goal that is not yet persisted. Returns the same payload as `GET /goals/{goalId}/available-measures` but does not require a `goalId`. Usage data reflects existing goal links across the tenant; `usageInfo.isUsedByThisGoal` is always `false` because no goal is supplied.
+
+**Endpoint:** `GET /goals/available-measures`
+
+#### Response 200
+
+```json
+{
+  "success": true,
+  "data": {
+    "catalogMeasures": [
+      {
+        "id": "catalog-001",
+        "name": "Monthly Recurring Revenue",
+        "description": "Total predictable revenue from subscriptions",
+        "category": "Financial",
+        "unit": "USD",
+        "direction": "increase",
+        "type": "leading",
+        "valueType": "currency",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Sum of all active subscription values",
+        "isIntegrationEnabled": true,
+        "usageInfo": {
+          "goalCount": 3,
+          "isUsedByThisGoal": false
+        }
+      }
+    ],
+    "tenantCustomMeasures": [
+      {
+        "id": "custom-measure-001",
+        "name": "Customer Satisfaction Score",
+        "description": "Average CSAT from post-purchase surveys",
+        "category": "Customer Experience",
+        "unit": "score",
+        "direction": "increase",
+        "type": "lagging",
+        "valueType": "percentage",
+        "aggregationType": "average",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Average of all survey responses",
+        "measureCatalogId": null,
+        "isIntegrationEnabled": false,
+        "createdAt": "2025-01-15T10:00:00.000Z",
+        "createdBy": "user-123",
+        "usageInfo": {
+          "goalCount": 1,
+          "isUsedByThisGoal": false
+        }
+      }
+    ]
+  },
+  "error": null,
+  "timestamp": "2026-01-02T00:00:00.000Z"
+}
+```
+
+#### Notes
+
+- Use when the frontend constructs a goal in-memory and needs the catalog before persisting the goal.
+- Usage counts still reflect existing goal links in the tenant; `isUsedByThisGoal` remains `false`.
+- Response shape matches `GET /goals/{goalId}/available-measures` for compatibility.
+
+---
+
+### 8. Get Measure Linked Goals (Deprecated)
 
 ⚠️ **DEPRECATED (Issue #374):** This endpoint is being migrated to the new MeasureLink design.
 
@@ -680,6 +821,10 @@ await traction.delete(`/measures/${measureId}`);
 ---
 
 ## Changelog
+
+### v7.1 (January 2, 2026)
+- ✨ Added `GET /goals/available-measures` for new (unpersisted) goals
+- 📝 Renamed spec files to `measures-*` for consistency
 
 ### v7.0 (December 23, 2025)
 - ✅ Documented all 7 endpoints with complete examples
