@@ -295,12 +295,12 @@ multi_replace_string_in_file({
       oldString: `- [ ] **Task 1.2:** Create \`src/types/realtime.ts\`
   - [ ] \`ConnectionStatus\` type
   - [ ] \`WebSocketMessage<T>\` interface
-  - [ ] All event payload types (goals, actions, KPIs, issues)
+  - [ ] All event payload types (goals, actions, Measures, issues)
   - [ ] Event handler types`,
       newString: `- [x] **Task 1.2:** Create \`src/types/realtime.ts\` ✅ **Completed:** Oct 5, 2025 16:00
   - [x] \`ConnectionStatus\` type
   - [x] \`WebSocketMessage<T>\` interface
-  - [x] All event payload types (goals, actions, KPIs, issues)
+  - [x] All event payload types (goals, actions, Measures, issues)
   - [x] Event handler types
   
   **Notes:** Defined 15+ event types covering all backend events. Used TypeScript discriminated unions for type safety.`

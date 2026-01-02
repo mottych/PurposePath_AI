@@ -28,7 +28,7 @@ The v7 specifications have been reorganized into **controller-based modular docu
 ## Key Changes from v6 to v7
 
 ### Deprecated Entities Removed (15,902 lines)
-- ❌ `GoalKpiLink` → ✅ `MeasureLink` (unified linking model)
+- ❌ `GoalMeasureLink` → ✅ `MeasureLink` (unified linking model)
 - ❌ `MeasureMilestone` → ✅ `MeasureData` (unified target/actual model)
 - ❌ `MeasureActual` → ✅ `MeasureData`
 - ❌ `MeasureReading` → ✅ `MeasureData`

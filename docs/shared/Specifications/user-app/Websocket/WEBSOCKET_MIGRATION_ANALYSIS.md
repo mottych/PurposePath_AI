@@ -52,7 +52,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - ✅ Status callbacks (`connecting`, `open`, `closed`, `error`, `reconnecting`)
 
 **Limitations:**
-- ❌ Only supports **goal activity** events (not actions, KPIs, issues)
+- ❌ Only supports **goal activity** events (not actions, Measures, issues)
 - ❌ Uses **EventSource** (SSE) instead of WebSocket
 - ❌ No support for tenant-wide subscriptions
 - ❌ No ping/pong heartbeat handling
@@ -210,10 +210,10 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
 
 **Existing Types (`src/types/strategic-planning.ts`):**
 ```typescript
-✅ Goal, GoalStatus, GoalKPI
+✅ Goal, GoalStatus, GoalMeasure
 ✅ Action, ActionStatus, ActionPriority
 ✅ Issue, IssueStatus, IssueImpact
-✅ SharedKPI, TimeHorizon, KPIReading
+✅ SharedMeasure, TimeHorizon, MeasureReading
 ✅ Strategy, Decision
 ```
 
@@ -281,7 +281,7 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
 **Tasks:**
 
 1. **Expand Event Types**
-   - Add all backend event types (goals, actions, KPIs, issues, decisions, attachments)
+   - Add all backend event types (goals, actions, Measures, issues, decisions, attachments)
    - Normalize event payloads (snake_case → camelCase)
    - Add event validation/parsing
 

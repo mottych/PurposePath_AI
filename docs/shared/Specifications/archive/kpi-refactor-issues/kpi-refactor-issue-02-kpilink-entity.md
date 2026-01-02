@@ -10,7 +10,7 @@
 
 ## 📋 Description
 
-Create the new `MeasureLink` entity by renaming and enhancing `GoalKpiLink` to support linking KPIs to Goals, Strategies, and Persons.
+Create the new `MeasureLink` entity by renaming and enhancing `GoalMeasureLink` to support linking Measures to Goals, Strategies, and Persons.
 
 ---
 
@@ -187,7 +187,7 @@ public class MeasureLink : FullyAuditableEntity
     // Query methods
     public bool BelongsToGoal(GoalId goalId) => GoalId == goalId;
     public bool BelongsToStrategy(StrategyId strategyId) => StrategyId == strategyId;
-    public bool BelongsToKpi(MeasureId measureId) => MeasureId == measureId;
+    public bool BelongsToMeasure(MeasureId measureId) => MeasureId == measureId;
     public bool BelongsToPerson(PersonId personId) => PersonId == personId;
     public bool IsPersonOnly => GoalId == null && StrategyId == null;
     public bool IsGoalLevel => GoalId != null && StrategyId == null;
@@ -271,10 +271,10 @@ public class MeasureLink : FullyAuditableEntity
 | File | Action |
 |------|--------|
 | `PurposePath.Domain/Entities/MeasureLink.cs` | Create |
-| `PurposePath.Domain/Entities/GoalKpiLink.cs` | Keep for now (mark deprecated) |
-| `PurposePath.Domain/Events/MeasureLinkedEvent.cs` | Create (rename from GoalKpiLinkedEvent) |
+| `PurposePath.Domain/Entities/GoalMeasureLink.cs` | Keep for now (mark deprecated) |
+| `PurposePath.Domain/Events/MeasureLinkedEvent.cs` | Create (rename from GoalMeasureLinkedEvent) |
 | `PurposePath.Domain/Events/MeasureLinkThresholdUpdatedEvent.cs` | Create |
-| `PurposePath.Domain/Repositories/IKpiLinkRepository.cs` | Create |
+| `PurposePath.Domain/Repositories/IMeasureLinkRepository.cs` | Create |
 
 ---
 
@@ -301,10 +301,10 @@ public class MeasureLink : FullyAuditableEntity
 ## ✅ Definition of Done
 
 - [ ] `MeasureLink` entity created with all properties and methods
-- [ ] Repository interface `IKpiLinkRepository` created
+- [ ] Repository interface `IMeasureLinkRepository` created
 - [ ] Domain events created
 - [ ] Unit tests pass
-- [ ] `GoalKpiLink` marked as deprecated (not removed yet)
+- [ ] `GoalMeasureLink` marked as deprecated (not removed yet)
 
 ---
 
@@ -317,10 +317,10 @@ public class MeasureLink : FullyAuditableEntity
 
 **Completed:**
 - [ ] Created MeasureLink entity
-- [ ] Created IKpiLinkRepository interface
+- [ ] Created IMeasureLinkRepository interface
 - [ ] Created domain events
 - [ ] Added unit tests
-- [ ] Marked GoalKpiLink as deprecated
+- [ ] Marked GoalMeasureLink as deprecated
 
 **Blockers:** [e.g., Waiting for Person entity]
 

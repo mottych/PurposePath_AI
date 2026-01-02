@@ -42,7 +42,7 @@ This specification is split into multiple documents for efficient AI assistant c
 
 6. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
-   - Goals, KPIs, Measure Links, Measure Data, Actions, Issues, People, Dashboard
+   - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
 7. **[Common Patterns & Data Models](./common-patterns.md)**
@@ -96,7 +96,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 │  Account   │  │ Coaching │  │   Traction   │
 │  Service   │  │ Service  │  │   Service    │
 └────────────┘  └──────────┘  └──────────────┘
-  Auth/Users    AI/ML/Insights  Goals/Ops/KPIs
+  Auth/Users    AI/ML/Insights  Goals/Ops/Measures
   Billing                       Real-time
 ```
 
@@ -158,7 +158,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 #### Traction Service
 
 - Goals CRUD operations
-- Strategies and KPIs management
+- Strategies and Measures management
 - Operations (Actions and Issues)
 - Goal-Strategy-Measure relationships
 - Activity feeds

@@ -19,7 +19,7 @@ The Goals API manages the complete lifecycle of business goals, including creati
 - 2 activity endpoints (Get activity, Add activity)
 - 1 notes endpoint
 - 1 statistics endpoint
-- 2 Measure endpoints (Set Measure threshold, Get available KPIs)
+- 2 Measure endpoints (Set Measure threshold, Get available Measures)
 - 2 strategy endpoints (Create strategy, Update strategy)
 
 ---
@@ -77,7 +77,7 @@ Retrieve a filtered, paginated list of goals.
           "email": "john@example.com"
         },
         "strategiesCount": 3,
-        "kpisCount": 5,
+        "measuresCount": 5,
         "actionsCount": 12,
         "issuesCount": 2,
         "createdAt": "2025-01-01T00:00:00.000Z",
@@ -180,7 +180,7 @@ Create a new goal.
 
 **GET** `/goals/{id}`
 
-Retrieve detailed information about a specific goal, including strategies, KPIs, and metrics.
+Retrieve detailed information about a specific goal, including strategies, Measures, and metrics.
 
 #### Path Parameters
 
@@ -218,7 +218,7 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
         "order": 1,
         "status": "active",
         "progress": 60,
-        "kpisCount": 3,
+        "measuresCount": 3,
         "createdAt": "2025-01-15T00:00:00.000Z"
       }
     ],
@@ -236,7 +236,7 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
     ],
     "statistics": {
       "strategiesCount": 3,
-      "kpisCount": 5,
+      "measuresCount": 5,
       "actionsCount": 12,
       "openIssuesCount": 2,
       "completedActionsCount": 8,
@@ -245,7 +245,7 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
     "recentActivity": [
       {
         "id": "act-001",
-        "type": "kpi_updated",
+        "type": "measure_updated",
         "description": "MRR updated to $125,000",
         "createdAt": "2025-12-22T15:30:00.000Z",
         "createdBy": {
@@ -512,7 +512,7 @@ Retrieve activity feed for a goal (updates, changes, comments).
 **Activity Types:**
 - `goal_created`, `goal_updated`, `goal_status_changed`
 - `strategy_added`, `strategy_updated`, `strategy_removed`
-- `kpi_linked`, `kpi_unlinked`, `kpi_updated`
+- `measure_linked`, `measure_unlinked`, `measure_updated`
 - `comment_added`, `note_added`
 
 #### Response 200
@@ -524,7 +524,7 @@ Retrieve activity feed for a goal (updates, changes, comments).
     "items": [
       {
         "id": "activity-001",
-        "type": "kpi_updated",
+        "type": "measure_updated",
         "entityType": "measure",
         "entityId": "measure-001",
         "description": "MRR updated from $120,000 to $125,000",
@@ -697,7 +697,7 @@ Get aggregated statistics across all goals for the tenant.
     "onTrackCount": 25,
     "atRiskCount": 8,
     "offTrackCount": 2,
-    "totalKpis": 125,
+    "totalMeasures": 125,
     "totalStrategies": 89,
     "totalActions": 456
   },
@@ -758,13 +758,13 @@ Set a threshold percentage for a Measure linked to a goal.
 
 ---
 
-### 14. Get Available KPIs
+### 14. Get Available Measures
 
 **GET** `/goals/{goalId}/available-measures`
 
-Retrieve all KPIs available for linking to a specific goal, including:
-- Catalog KPIs (predefined industry-standard KPIs)
-- Tenant custom KPIs (organization-specific KPIs)
+Retrieve all Measures available for linking to a specific goal, including:
+- Catalog Measures (predefined industry-standard Measures)
+- Tenant custom Measures (organization-specific Measures)
 
 Each Measure includes usage statistics showing how many goals are currently using it and whether the specified goal is already using it.
 
@@ -780,7 +780,7 @@ Each Measure includes usage statistics showing how many goals are currently usin
 {
   "success": true,
   "data": {
-    "catalogKpis": [
+    "catalogMeasures": [
       {
         "id": "catalog-001",
         "name": "Monthly Recurring Revenue",
@@ -800,7 +800,7 @@ Each Measure includes usage statistics showing how many goals are currently usin
         }
       }
     ],
-    "tenantCustomKpis": [
+    "tenantCustomMeasures": [
       {
         "id": "custom-measure-001",
         "name": "Customer Satisfaction Score",
@@ -864,10 +864,10 @@ Each Measure includes usage statistics showing how many goals are currently usin
 
 #### Use Cases
 
-1. **Measure Selection Dialog**: Display available KPIs when user wants to link Measure to goal
+1. **Measure Selection Dialog**: Display available Measures when user wants to link Measure to goal
 2. **Prevent Duplicates**: Show `isUsedByThisGoal` to prevent linking same Measure twice
-3. **Popular KPIs**: Sort by `goalCount` to show most commonly used KPIs
-4. **Filter by Category**: Group KPIs by category for better UX
+3. **Popular Measures**: Sort by `goalCount` to show most commonly used Measures
+4. **Filter by Category**: Group Measures by category for better UX
 
 #### Error Responses
 
@@ -893,10 +893,10 @@ Each Measure includes usage statistics showing how many goals are currently usin
 
 #### Notes
 
-- Returns both catalog KPIs (predefined) and tenant custom KPIs
+- Returns both catalog Measures (predefined) and tenant custom Measures
 - Usage statistics updated in real-time
-- Only returns KPIs accessible to the tenant
-- Catalog KPIs are read-only; tenant custom KPIs can be modified
+- Only returns Measures accessible to the tenant
+- Catalog Measures are read-only; tenant custom Measures can be modified
 - Use [Measure Links API](./measure-links-api.md) to actually link a Measure to the goal
 
 ---
@@ -951,10 +951,10 @@ Valid transitions:
 
 ### Deletion Rules
 
-- Cannot delete goal with active linked KPIs
+- Cannot delete goal with active linked Measures
 - Cannot delete goal with open issues
 - Deleting goal also deletes: strategies, activity history, notes
-- Deleting goal unlinks: KPIs (Measure instances remain), actions, people
+- Deleting goal unlinks: Measures (Measure instances remain), actions, people
 
 ### Validation Rules
 
@@ -1004,7 +1004,7 @@ await traction.post(`/goals/${goalId}:close`, {
 ## Related APIs
 
 - [Strategies API](./strategies-api.md) - Manage goal strategies
-- [Measure Links API](./measure-links-api.md) - Link KPIs to goals
+- [Measure Links API](./measure-links-api.md) - Link Measures to goals
 - [Actions API](./actions-api.md) - Link actions to goals
 - [Activities API](./activities-api.md) - Activity feeds
 
@@ -1014,7 +1014,7 @@ await traction.post(`/goals/${goalId}:close`, {
 
 ### v7.1 (December 27, 2025)
 - **Restored** `/goals/{goalId}/available-measures` endpoint (Issue #413)
-- Updated to work with new `IKpiLinkRepository` architecture
+- Updated to work with new `IMeasureLinkRepository` architecture
 - Added comprehensive documentation with usage examples
 - Endpoint now supports unified Measure linking for Goals, Strategies, and People
 

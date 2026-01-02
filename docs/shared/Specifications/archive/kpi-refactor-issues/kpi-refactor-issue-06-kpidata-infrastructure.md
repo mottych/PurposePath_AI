@@ -31,7 +31,7 @@ public class MeasureDataDataModel : BaseDataModel
     [DynamoDBHashKey("id")]
     public string Id { get; set; } = string.Empty;
 
-    [DynamoDBProperty("kpi_link_id")]
+    [DynamoDBProperty("measure_link_id")]
     [DynamoDBGlobalSecondaryIndexHashKey("measure-link-index")]
     public string MeasureLinkId { get; set; } = string.Empty;
 
@@ -126,9 +126,9 @@ public class MeasureDataDataModel : BaseDataModel
 
 | GSI Name | Partition Key | Sort Key | Purpose |
 |----------|---------------|----------|---------|
-| `measure-link-index` | kpi_link_id | post_date | Get all data for a link, sorted by date |
-| `measure-link-category-index` | kpi_link_id#data_category | - | Get targets or actuals for a link |
-| `target-subtype-index` | kpi_link_id#target_subtype | - | Get specific target type (Expected, Optimal, Minimal) |
+| `measure-link-index` | measure_link_id | post_date | Get all data for a link, sorted by date |
+| `measure-link-category-index` | measure_link_id#data_category | - | Get targets or actuals for a link |
+| `target-subtype-index` | measure_link_id#target_subtype | - | Get specific target type (Expected, Optimal, Minimal) |
 
 ### 3. Mapper
 
@@ -216,7 +216,7 @@ public static class MeasureDataMapper
 
 ### 4. Repository Interface
 
-Location: `PurposePath.Domain/Repositories/IKpiDataRepository.cs`
+Location: `PurposePath.Domain/Repositories/IMeasureDataRepository.cs`
 
 ```csharp
 using PurposePath.Domain.Entities;
@@ -224,12 +224,12 @@ using PurposePath.Domain.ValueObjects;
 
 namespace PurposePath.Domain.Repositories;
 
-public interface IKpiDataRepository
+public interface IMeasureDataRepository
 {
     Task<MeasureData?> GetByIdAsync(MeasureDataId id, CancellationToken ct = default);
     
     // Get all data for a link
-    Task<IEnumerable<MeasureData>> GetByKpiLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetByMeasureLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
     
     // Get targets for a link
     Task<IEnumerable<MeasureData>> GetTargetsAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
@@ -269,13 +269,13 @@ public interface IKpiDataRepository
     Task CreateAsync(MeasureData data, CancellationToken ct = default);
     Task UpdateAsync(MeasureData data, CancellationToken ct = default);
     Task DeleteAsync(MeasureDataId id, CancellationToken ct = default);
-    Task DeleteByKpiLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task DeleteByMeasureLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
 }
 ```
 
 ### 5. Repository Implementation
 
-Location: `PurposePath.Infrastructure/Repositories/DynamoDbKpiDataRepository.cs`
+Location: `PurposePath.Infrastructure/Repositories/DynamoDbMeasureDataRepository.cs`
 
 Implement all methods from the interface using DynamoDB queries with the defined GSIs.
 
@@ -287,8 +287,8 @@ Implement all methods from the interface using DynamoDB queries with the defined
 |------|--------|
 | `PurposePath.Infrastructure/DataModels/MeasureDataDataModel.cs` | Create |
 | `PurposePath.Infrastructure/Mappers/MeasureDataMapper.cs` | Create |
-| `PurposePath.Infrastructure/Repositories/DynamoDbKpiDataRepository.cs` | Create |
-| `PurposePath.Domain/Repositories/IKpiDataRepository.cs` | Create |
+| `PurposePath.Infrastructure/Repositories/DynamoDbMeasureDataRepository.cs` | Create |
+| `PurposePath.Domain/Repositories/IMeasureDataRepository.cs` | Create |
 | `PurposePath.Infrastructure/Configuration/DynamoDbSettings.cs` | Modify |
 | `PurposePath.Infrastructure/ServiceCollectionExtensions.cs` | Modify |
 | `Pulumi/DynamoDbStack.cs` | Modify - add table and GSIs |
@@ -350,8 +350,8 @@ Implement all methods from the interface using DynamoDB queries with the defined
 **Completed:**
 - [ ] Created MeasureDataDataModel
 - [ ] Created MeasureDataMapper
-- [ ] Created IKpiDataRepository interface
-- [ ] Created DynamoDbKpiDataRepository
+- [ ] Created IMeasureDataRepository interface
+- [ ] Created DynamoDbMeasureDataRepository
 - [ ] Added table configuration
 - [ ] Registered repository in DI
 - [ ] Added Pulumi table definition

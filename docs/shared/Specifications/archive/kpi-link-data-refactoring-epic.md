@@ -12,7 +12,7 @@
 
 This epic covers a comprehensive refactoring of the Measure linking and data tracking system to:
 
-1. **Rename and enhance `GoalKpiLink`** → `MeasureLink` with support for linking to Person, Goal, and Strategy
+1. **Rename and enhance `GoalMeasureLink`** → `MeasureLink` with support for linking to Person, Goal, and Strategy
 2. **Consolidate data tables** - Merge `MeasureActual`, `MeasureMilestone`, and `MeasureReading` into a unified `MeasureData` entity
 3. **Add support for multiple target types** - Expected, Optimal, Minimal
 4. **Add support for actual value types** - Estimate vs Measured
@@ -25,7 +25,7 @@ This epic covers a comprehensive refactoring of the Measure linking and data tra
 | Document | Purpose |
 |----------|---------|
 | `docs/Specifications/people-org-structure-technical-design.md` | Person entity specification |
-| `docs/guides/KPI_PLANNING_REQUIREMENTS.md` | Current Measure planning requirements |
+| `docs/guides/Measure_PLANNING_REQUIREMENTS.md` | Current Measure planning requirements |
 | `docs/Specifications/archive/backend-integration-traction-service-v5.md` | Archived v5 API specifications |
 | `docs/Specifications/traction-service/` | Current v7 modular API specifications |
 
@@ -33,7 +33,7 @@ This epic covers a comprehensive refactoring of the Measure linking and data tra
 
 ## 🎯 Business Goals
 
-1. **Flexible Measure Assignment**: Allow KPIs to be linked to Goals, Strategies within Goals, or Persons directly (personal scorecards)
+1. **Flexible Measure Assignment**: Allow Measures to be linked to Goals, Strategies within Goals, or Persons directly (personal scorecards)
 2. **Unified Data Model**: Single source for all Measure target and actual values
 3. **Multiple Target Types**: Support Expected (main), Optimal (stretch), and Minimal (floor) targets for visual tracking
 4. **Actual Value Types**: Distinguish between Estimated (forecasted) and Measured (actual) values
@@ -46,7 +46,7 @@ This epic covers a comprehensive refactoring of the Measure linking and data tra
 ### Current State
 
 ```
-Goal (1) ────< GoalKpiLink >──── (1) Measure
+Goal (1) ────< GoalMeasureLink >──── (1) Measure
                                      │
                  ┌───────────────────┼───────────────────┐
                  │                   │                   │
@@ -120,7 +120,7 @@ public class MeasureData : FullyAuditableEntity
     // Core values (renamed from ActualValue/MeasurementDate)
     public decimal PostValue { get; private set; }
     public string PostDate { get; private set; }  // ISO 8601
-    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate KPIs
+    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate Measures
     
     // From MeasureMilestone
     public string? Label { get; private set; }
@@ -193,7 +193,7 @@ public int? AggregationPeriodCount { get; private set; }  // NEW: e.g., 2 for "2
 | Issue | Title | Dependencies |
 |-------|-------|--------------|
 | #XXX-1 | **Domain: Add new enums and value objects** | None |
-| #XXX-2 | **Domain: Create MeasureLink entity (rename GoalKpiLink)** | #XXX-1 |
+| #XXX-2 | **Domain: Create MeasureLink entity (rename GoalMeasureLink)** | #XXX-1 |
 | #XXX-3 | **Domain: Create MeasureData entity** | #XXX-1, #XXX-2 |
 | #XXX-4 | **Domain: Add AggregationPeriodCount to Measure** | None |
 
@@ -259,7 +259,7 @@ Update this section as work progresses:
 
 ## ⚠️ Breaking Changes
 
-1. **GoalKpiLink renamed to MeasureLink** - All references must be updated
+1. **GoalMeasureLink renamed to MeasureLink** - All references must be updated
 2. **MeasureActual, MeasureMilestone, MeasureReading tables deprecated** - Data migrated to MeasureData
 3. **Calculated fields removed** - Frontend must calculate variance on-the-fly
 4. **New required field PersonId on MeasureLink** - Migration will use current Measure.OwnerId or user who created the link
@@ -279,7 +279,7 @@ Update this section as work progresses:
 
 ## ✅ Acceptance Criteria
 
-- [ ] KPIs can be linked to Goals, Strategies, or Persons
+- [ ] Measures can be linked to Goals, Strategies, or Persons
 - [ ] Personal scorecards work (Measure linked only to Person)
 - [ ] Goal-level Measure links enforce uniqueness per Goal
 - [ ] Strategy-level Measure links enforce uniqueness per Strategy

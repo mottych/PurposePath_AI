@@ -436,7 +436,7 @@ Get enabled features for current user based on subscription tier.
 
 - `goals` - Goals module access
 - `operations` - Operations module access
-- `measures` - KPIs module access
+- `measures` - Measures module access
 - `strategies` - Strategic planning module access
 - `reports` - Report generation capability
 - `realtime` - Real-time updates via SSE

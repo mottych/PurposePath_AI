@@ -41,12 +41,12 @@ Update the Traction Lambda API controllers and DTOs to support the new MeasureDa
 
 ## 📋 Request/Response DTOs
 
-### CreateKpiTargetRequest
+### CreateMeasureTargetRequest
 
-Location: `DTOs/Requests/MeasureData/CreateKpiTargetRequest.cs`
+Location: `DTOs/Requests/MeasureData/CreateMeasureTargetRequest.cs`
 
 ```csharp
-public record CreateKpiTargetRequest
+public record CreateMeasureTargetRequest
 {
     /// <summary>
     /// Target subtype: Expected, Optimal, or Minimal
@@ -67,7 +67,7 @@ public record CreateKpiTargetRequest
     public string TargetDate { get; init; } = string.Empty;
     
     /// <summary>
-    /// Start date of measurement period (for aggregate KPIs)
+    /// Start date of measurement period (for aggregate Measures)
     /// </summary>
     public string? PeriodStartDate { get; init; }
     
@@ -160,7 +160,7 @@ public record RecordActualRequest
     public string MeasurementDate { get; init; } = string.Empty;
     
     /// <summary>
-    /// Start date of measurement period (for aggregate KPIs)
+    /// Start date of measurement period (for aggregate Measures)
     /// </summary>
     public string? PeriodStartDate { get; init; }
     
@@ -303,7 +303,7 @@ public class MeasureDataController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<MeasureTargetResponse>), 201)]
     public async Task<IActionResult> CreateTarget(
         string linkId,
-        [FromBody] CreateKpiTargetRequest request,
+        [FromBody] CreateMeasureTargetRequest request,
         CancellationToken ct)
     {
         // Implementation
@@ -373,7 +373,7 @@ public class MeasureDataController : ControllerBase
 ### DTOs
 | File | Action |
 |------|--------|
-| `DTOs/Requests/MeasureData/CreateKpiTargetRequest.cs` | Create |
+| `DTOs/Requests/MeasureData/CreateMeasureTargetRequest.cs` | Create |
 | `DTOs/Requests/MeasureData/BatchUpdateTargetsRequest.cs` | Create |
 | `DTOs/Requests/MeasureData/RecordActualRequest.cs` | Create |
 | `DTOs/Responses/MeasureData/MeasureTargetResponse.cs` | Create |
@@ -389,7 +389,7 @@ public class MeasureDataController : ControllerBase
 ### Validators
 | File | Action |
 |------|--------|
-| `Validators/MeasureData/CreateKpiTargetRequestValidator.cs` | Create |
+| `Validators/MeasureData/CreateMeasureTargetRequestValidator.cs` | Create |
 | `Validators/MeasureData/RecordActualRequestValidator.cs` | Create |
 | `Validators/MeasureData/BatchUpdateTargetsRequestValidator.cs` | Create |
 

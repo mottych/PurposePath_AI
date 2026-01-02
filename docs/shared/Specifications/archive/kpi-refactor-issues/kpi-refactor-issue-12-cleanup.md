@@ -32,11 +32,11 @@ Before executing this cleanup:
 
 | Entity | File | Notes |
 |--------|------|-------|
-| `GoalKpiLink` | `PurposePath.Domain/Entities/GoalKpiLink.cs` | Replaced by MeasureLink |
+| `GoalMeasureLink` | `PurposePath.Domain/Entities/GoalMeasureLink.cs` | Replaced by MeasureLink |
 | `MeasureMilestone` | `PurposePath.Domain/Entities/MeasureMilestone.cs` | Replaced by MeasureData |
 | `MeasureActual` | `PurposePath.Domain/Entities/MeasureActual.cs` | Replaced by MeasureData |
 | `MeasureReading` | `PurposePath.Domain/Entities/MeasureReading.cs` | Replaced by MeasureData |
-| `GoalKpiLinkId` | `PurposePath.Domain/ValueObjects/GoalKpiLinkId.cs` | Replaced by MeasureLinkId |
+| `GoalMeasureLinkId` | `PurposePath.Domain/ValueObjects/GoalMeasureLinkId.cs` | Replaced by MeasureLinkId |
 | `MeasureMilestoneId` | `PurposePath.Domain/ValueObjects/MeasureMilestoneId.cs` | Replaced by MeasureDataId |
 | `MeasureActualId` | `PurposePath.Domain/ValueObjects/MeasureActualId.cs` | Replaced by MeasureDataId |
 | `MeasureReadingId` | `PurposePath.Domain/ValueObjects/MeasureReadingId.cs` | Replaced by MeasureDataId |
@@ -45,7 +45,7 @@ Before executing this cleanup:
 
 | Event | File | Notes |
 |-------|------|-------|
-| `GoalKpiLinkedEvent` | `PurposePath.Domain/Events/GoalKpiLinkedEvent.cs` | Replaced by MeasureLinkedEvent |
+| `GoalMeasureLinkedEvent` | `PurposePath.Domain/Events/GoalMeasureLinkedEvent.cs` | Replaced by MeasureLinkedEvent |
 | `MeasureThresholdUpdatedEvent` | Keep or update | May need to update to use MeasureLinkId |
 | `MeasureMilestoneCreatedEvent` | `PurposePath.Domain/Events/MeasureMilestoneEvents.cs` | Replaced |
 | `MeasureMilestoneUpdatedEvent` | `PurposePath.Domain/Events/MeasureMilestoneEvents.cs` | Replaced |
@@ -55,10 +55,10 @@ Before executing this cleanup:
 
 | Interface | File | Notes |
 |-----------|------|-------|
-| `IGoalKpiLinkRepository` | `PurposePath.Domain/Repositories/IGoalKpiLinkRepository.cs` | Replaced by IKpiLinkRepository |
-| `IKpiMilestoneRepository` | `PurposePath.Domain/Repositories/IKpiMilestoneRepository.cs` | Replaced by IKpiDataRepository |
-| `IKpiActualRepository` | `PurposePath.Domain/Repositories/IKpiActualRepository.cs` | Replaced by IKpiDataRepository |
-| `IKpiReadingRepository` | `PurposePath.Domain/Repositories/IKpiReadingRepository.cs` | Replaced by IKpiDataRepository |
+| `IGoalMeasureLinkRepository` | `PurposePath.Domain/Repositories/IGoalMeasureLinkRepository.cs` | Replaced by IMeasureLinkRepository |
+| `IMeasureMilestoneRepository` | `PurposePath.Domain/Repositories/IMeasureMilestoneRepository.cs` | Replaced by IMeasureDataRepository |
+| `IMeasureActualRepository` | `PurposePath.Domain/Repositories/IMeasureActualRepository.cs` | Replaced by IMeasureDataRepository |
+| `IMeasureReadingRepository` | `PurposePath.Domain/Repositories/IMeasureReadingRepository.cs` | Replaced by IMeasureDataRepository |
 
 ---
 
@@ -68,7 +68,7 @@ Before executing this cleanup:
 
 | Data Model | File |
 |------------|------|
-| `GoalKpiLinkDataModel` | `PurposePath.Infrastructure/DataModels/GoalKpiLinkDataModel.cs` |
+| `GoalMeasureLinkDataModel` | `PurposePath.Infrastructure/DataModels/GoalMeasureLinkDataModel.cs` |
 | `MeasureMilestoneDataModel` | `PurposePath.Infrastructure/DataModels/MeasureMilestoneDataModel.cs` |
 | `MeasureActualDataModel` | `PurposePath.Infrastructure/DataModels/MeasureActualDataModel.cs` |
 | `MeasureReadingDataModel` | `PurposePath.Infrastructure/DataModels/MeasureReadingDataModel.cs` |
@@ -77,7 +77,7 @@ Before executing this cleanup:
 
 | Mapper | File |
 |--------|------|
-| `GoalKpiLinkMappingProfile` | `PurposePath.Infrastructure/Mappers/GoalKpiLinkMappingProfile.cs` |
+| `GoalMeasureLinkMappingProfile` | `PurposePath.Infrastructure/Mappers/GoalMeasureLinkMappingProfile.cs` |
 | `MeasureMilestoneMapper` | `PurposePath.Infrastructure/Mappers/MeasureMilestoneMapper.cs` |
 | `MeasureActualMapper` | `PurposePath.Infrastructure/Mappers/MeasureActualMapper.cs` |
 | `MeasureReadingMappingProfile` | `PurposePath.Infrastructure/Mappers/MeasureReadingMappingProfile.cs` |
@@ -86,10 +86,10 @@ Before executing this cleanup:
 
 | Repository | File |
 |------------|------|
-| `DynamoDbGoalKpiLinkRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbGoalKpiLinkRepository.cs` |
-| `DynamoDbKpiMilestoneRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbKpiMilestoneRepository.cs` |
-| `DynamoDbKpiActualRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbKpiActualRepository.cs` |
-| `DynamoDbKpiReadingRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbKpiReadingRepository.cs` |
+| `DynamoDbGoalMeasureLinkRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbGoalMeasureLinkRepository.cs` |
+| `DynamoDbMeasureMilestoneRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbMeasureMilestoneRepository.cs` |
+| `DynamoDbMeasureActualRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbMeasureActualRepository.cs` |
+| `DynamoDbMeasureReadingRepository` | `PurposePath.Infrastructure/Repositories/DynamoDbMeasureReadingRepository.cs` |
 
 ---
 
@@ -99,7 +99,7 @@ Before executing this cleanup:
 
 | Controller | Action |
 |------------|--------|
-| `GoalKpiController` | Remove deprecated endpoints |
+| `GoalMeasureController` | Remove deprecated endpoints |
 | `MeasurePlanningController` | Remove deprecated endpoints |
 
 ### DTOs to Remove
@@ -173,8 +173,8 @@ Before executing this cleanup:
 Use these grep patterns to find remaining references:
 
 ```bash
-# Find GoalKpiLink references
-grep -r "GoalKpiLink" --include="*.cs" .
+# Find GoalMeasureLink references
+grep -r "GoalMeasureLink" --include="*.cs" .
 
 # Find MeasureMilestone references
 grep -r "MeasureMilestone" --include="*.cs" .

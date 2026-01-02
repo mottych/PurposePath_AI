@@ -14,7 +14,7 @@
 This directory contains detailed API specifications for the Traction Service, organized by controller/feature area for easier maintenance and reference.
 
 **Version 7 Changes:**
-- Removed all deprecated GoalKpiLink, MeasureMilestone, MeasureActual, and MeasureReading endpoints
+- Removed all deprecated GoalMeasureLink, MeasureMilestone, MeasureActual, and MeasureReading endpoints
 - Documented only actively implemented endpoints
 - Split large specification into maintainable controller-based documents
 - Updated to reflect MeasureLink and MeasureData design (Epic #362)
@@ -40,8 +40,8 @@ This directory contains detailed API specifications for the Traction Service, or
 |----------|------------|-----------|-------------|
 | [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management |
 | [Strategies API](./strategies-api.md) | StrategiesController | 6 endpoints | Strategy management and alignment |
-| [KPIs API](./measures-api.md) | KpisController | 5 endpoints | Measure instance management |
-| [Measure Links API](./measure-links-api.md) | MeasureLinksController | 6 endpoints | Link KPIs to goals, people, strategies |
+| [Measures API](./measures-api.md) | MeasuresController | 5 endpoints | Measure instance management |
+| [Measure Links API](./measure-links-api.md) | MeasureLinksController | 6 endpoints | Link Measures to goals, people, strategies |
 | [Measure Data API](./measure-data-api.md) | MeasureDataController | 8 endpoints | Targets, actuals, projections |
 | [Actions API](./actions-api.md) | ActionsController | 7 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
@@ -141,7 +141,7 @@ Example: `"2025-12-23T15:30:00.000Z"`
 | Create goal | POST | `/goals` |
 | Get goal details | GET | `/goals/{id}` |
 | Update goal | PUT | `/goals/{id}` |
-| List KPIs | GET | `/measures` |
+| List Measures | GET | `/measures` |
 | Create Measure | POST | `/measures` |
 | Link Measure to goal | POST | `/measure-links` |
 | Record Measure data | POST | `/measure-data` |
@@ -201,7 +201,7 @@ Example: `"2025-12-23T15:30:00.000Z"`
 ## Version History
 
 ### v7.0 (December 23, 2025)
-- Removed deprecated Measure endpoints (GoalKpiLink, MeasureMilestone, MeasureActual, MeasureReading)
+- Removed deprecated Measure endpoints (GoalMeasureLink, MeasureMilestone, MeasureActual, MeasureReading)
 - Split monolithic spec into controller-based documents
 - Updated to reflect MeasureLink and MeasureData design
 - 121 files changed, 15,902 lines of deprecated code removed

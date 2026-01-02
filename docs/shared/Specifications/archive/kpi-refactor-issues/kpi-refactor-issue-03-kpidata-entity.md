@@ -44,7 +44,7 @@ public class MeasureData : FullyAuditableEntity
     // Core values
     public decimal PostValue { get; private set; }
     public string PostDate { get; private set; }  // ISO 8601 date string
-    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate KPIs
+    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate Measures
     
     // Target metadata (from MeasureMilestone)
     public string? Label { get; private set; }
@@ -413,7 +413,7 @@ public class MeasureData : FullyAuditableEntity
 | `PurposePath.Domain/Events/MeasureTargetCreatedEvent.cs` | Create |
 | `PurposePath.Domain/Events/MeasureTargetUpdatedEvent.cs` | Create |
 | `PurposePath.Domain/Events/MeasureActualRecordedEvent.cs` | Update (add ActualSubtype) |
-| `PurposePath.Domain/Repositories/IKpiDataRepository.cs` | Create |
+| `PurposePath.Domain/Repositories/IMeasureDataRepository.cs` | Create |
 
 ---
 
@@ -452,7 +452,7 @@ public class MeasureData : FullyAuditableEntity
 
 - [ ] `MeasureData` entity created with all properties and methods
 - [ ] Factory methods for all target and actual types
-- [ ] Repository interface `IKpiDataRepository` created
+- [ ] Repository interface `IMeasureDataRepository` created
 - [ ] Domain events created/updated
 - [ ] Unit tests pass
 - [ ] Code compiles without errors
@@ -470,7 +470,7 @@ public class MeasureData : FullyAuditableEntity
 - [ ] Created MeasureData entity
 - [ ] Created target factory methods
 - [ ] Created actual factory methods
-- [ ] Created IKpiDataRepository interface
+- [ ] Created IMeasureDataRepository interface
 - [ ] Created/updated domain events
 - [ ] Added unit tests
 

@@ -19,7 +19,7 @@
 
 ## Overview
 
-The PurposePath WebSocket real-time system provides bidirectional communication between the frontend and backend for instant updates on goals, actions, issues, and KPIs.
+The PurposePath WebSocket real-time system provides bidirectional communication between the frontend and backend for instant updates on goals, actions, issues, and Measures.
 
 ### Key Features
 
@@ -169,7 +169,7 @@ interface WebSocketMessage<T = any> {
 
 | Event Type | Description | Payload |
 |-----------|-------------|---------|
-| `measure.reading_created` | New Measure reading recorded | `KPIReadingCreatedEventData` |
+| `measure.reading_created` | New Measure reading recorded | `MeasureReadingCreatedEventData` |
 
 ### Authentication Events
 

@@ -30,7 +30,7 @@ This module introduces a comprehensive system for managing **all people related 
 - Track employees, consultants, vendors, and other stakeholders
 - Define organizational structure with roles and reporting lines
 - Establish cross-functional relationships between roles
-- Assign work items (actions, KPIs, issues) to appropriate people
+- Assign work items (actions, Measures, issues) to appropriate people
 - Visualize the organization through an interactive org chart
 
 ### 1.2 Key Changes
@@ -51,7 +51,7 @@ This module introduces a comprehensive system for managing **all people related 
 - Role relationships (dotted lines, support relationships, etc.)
 - Role templates for quick organizational setup
 - User-to-Person linking
-- Assignment system updates (Actions, KPIs, Issues)
+- Assignment system updates (Actions, Measures, Issues)
 - Data migration for existing users
 - Person-Role assignment history with effective dating
 
@@ -185,7 +185,7 @@ Role templates provide quick organizational setup:
 ### 2.6 Assignment System
 
 #### BR-2.6.1 Assignable People List
-When assigning work items (Actions, KPIs, Issues):
+When assigning work items (Actions, Measures, Issues):
 - Show all people where Assignable = true AND Status = Active
 - Display person's name, title, and primary role
 - Indicate which person is the current logged-in user ("Me")
@@ -463,7 +463,7 @@ When assigning work items (Actions, KPIs, Issues):
 5. A Person can only be linked to one User (and vice versa)
 6. Deleting a Person with a linked User is not allowed
 7. Deleting a Person with active role assignments is not allowed
-8. Deleting a Person requires reassigning or completing all active work items (Actions, Issues, KPIs)
+8. Deleting a Person requires reassigning or completing all active work items (Actions, Issues, Measures)
 9. When a Person is deactivated:
    - All active role assignments are terminated (with current date)
    - Work items remain assigned for historical purposes
@@ -584,7 +584,7 @@ When deactivating a person:
    - Clear primary role designation
 
 2. **Check for assigned work items**
-   - Query all Actions, KPIs, Issues assigned to this person
+   - Query all Actions, Measures, Issues assigned to this person
    - Return count of affected items to frontend
 
 3. **Work item handling options**:

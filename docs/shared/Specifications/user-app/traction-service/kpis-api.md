@@ -1,19 +1,19 @@
-# KPIs API Specification
+# Measures API Specification
 
 **Version:** 7.0  
 **Last Updated:** December 23, 2025  
 **Base Path:** `/measures`  
-**Controller:** `KpisController.cs`
+**Controller:** `MeasuresController.cs`
 
 ## Overview
 
-The KPIs API manages Key Performance Indicators (KPIs) within the PurposePath system. KPIs measure progress toward strategies and goals, supporting both catalog-based KPIs (from the Measure library) and custom user-defined KPIs.
+The Measures API manages Key Performance Indicators (Measures) within the PurposePath system. Measures measure progress toward strategies and goals, supporting both catalog-based Measures (from the Measure library) and custom user-defined Measures.
 
 ### Key Features
-- List KPIs with filtering by owner, goal, or strategy
-- Create catalog-based or custom KPIs
+- List Measures with filtering by owner, goal, or strategy
+- Create catalog-based or custom Measures
 - Update Measure details or current values
-- Soft delete KPIs (preserves historical data)
+- Soft delete Measures (preserves historical data)
 - Query Measure-goal relationships
 
 ---
@@ -28,9 +28,9 @@ All endpoints require:
 
 ## Endpoints
 
-### 1. List KPIs
+### 1. List Measures
 
-Retrieve KPIs with optional filtering.
+Retrieve Measures with optional filtering.
 
 **Endpoint:** `GET /measures`
 
@@ -42,7 +42,7 @@ Retrieve KPIs with optional filtering.
 | `goalId` | string (GUID) | No | Filter by linked goal |
 | `strategyId` | string (GUID) | No | Filter by linked strategy |
 
-**Default Behavior:** If no filter is provided, returns KPIs owned by the current user.
+**Default Behavior:** If no filter is provided, returns Measures owned by the current user.
 
 #### Request Example
 
@@ -123,9 +123,9 @@ X-Tenant-Id: {tenantId}
   1. `ownerId` takes precedence
   2. Then `goalId`
   3. Then `strategyId`
-  4. Default: Current user's KPIs
-- **Multi-tenancy:** Only returns KPIs for the specified tenant
-- **Soft Deletes:** Deleted KPIs (`isDeleted: true`) are excluded by default
+  4. Default: Current user's Measures
+- **Multi-tenancy:** Only returns Measures for the specified tenant
+- **Soft Deletes:** Deleted Measures (`isDeleted: true`) are excluded by default
 
 ---
 
@@ -176,7 +176,7 @@ Create a new Measure (catalog-based or custom).
 | `dataSource` | string | No | Data source identifier |
 | `ownerId` | string (GUID) | No | Person responsible (defaults to creator) |
 | `strategyId` | string (GUID) | No | Linked strategy |
-| `catalogId` | string | No | Measure catalog entry (for library KPIs) |
+| `catalogId` | string | No | Measure catalog entry (for library Measures) |
 | `aggregationType` | string | No | How data is aggregated (e.g., "Sum", "Average") |
 | `aggregationPeriod` | string | No | Time period for aggregation |
 | `valueType` | string | No | Data type (e.g., "Number", "Percentage", "Currency") |
@@ -222,7 +222,7 @@ Create a new Measure (catalog-based or custom).
 - **Catalog vs Custom:** If `catalogId` is provided, Measure is linked to library entry; otherwise, it's custom
 - **Owner Assignment:** If `ownerId` is not provided, defaults to the current user (creator)
 - **Tenant Isolation:** Measure is automatically associated with the current tenant
-- **⚠️ Goal Linking Deprecated:** The `goalId` field in request is deprecated. Use `/measure-links` endpoint to link KPIs to goals
+- **⚠️ Goal Linking Deprecated:** The `goalId` field in request is deprecated. Use `/measure-links` endpoint to link Measures to goals
 
 #### Validation Rules
 
@@ -537,7 +537,7 @@ X-Tenant-Id: {tenantId}
 
 - **Soft Delete:** Measure is marked as deleted (`isDeleted: true`) but not physically removed
 - **Historical Data:** All historical values and links are preserved
-- **List Queries:** Deleted KPIs are excluded from list results by default
+- **List Queries:** Deleted Measures are excluded from list results by default
 - **Restoration:** Can be restored by admin/support team
 - **Cascade:** Measure links to goals are also soft deleted
 
@@ -638,13 +638,13 @@ Standard Measure categories (not enforced, but commonly used):
 ```typescript
 import { traction } from './traction';
 
-// List KPIs for a goal
-const measures = await traction.get<PaginatedKpisResponse>('/measures', {
+// List Measures for a goal
+const measures = await traction.get<PaginatedMeasuresResponse>('/measures', {
   params: { goalId: 'goal-123' }
 });
 
 // Create catalog-based Measure
-const newKpi = await traction.post<MeasureResponse>('/measures', {
+const newMeasure = await traction.post<MeasureResponse>('/measures', {
   name: 'Customer Acquisition Cost',
   catalogId: 'measure-catalog-003',
   targetValue: 100.00,
@@ -672,10 +672,10 @@ await traction.delete(`/measures/${measureId}`);
 
 ## Related APIs
 
-- **[Measure Links API](./measure-links-api.md)** - Link KPIs to goals
+- **[Measure Links API](./measure-links-api.md)** - Link Measures to goals
 - **[Measure Data API](./measure-data-api.md)** - Record targets, actuals, projections
-- **[Goals API](./goals-api.md)** - Manage goals that KPIs measure
-- **[Strategies API](./strategies-api.md)** - Strategies that KPIs support
+- **[Goals API](./goals-api.md)** - Manage goals that Measures measure
+- **[Strategies API](./strategies-api.md)** - Strategies that Measures support
 
 ---
 

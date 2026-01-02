@@ -714,7 +714,7 @@ Content-Type: application/json
   "data": {
     "goals": "number|null (max goals, null = unlimited)",
     "strategies": "number|null (max strategies per goal)",
-    "measures": "number|null (max KPIs per strategy)",
+    "measures": "number|null (max Measures per strategy)",
     "actions": "number|null (max actions)",
     "insights": "number|null (max coaching insights)",
     "storage": "number|null (max storage in bytes)"

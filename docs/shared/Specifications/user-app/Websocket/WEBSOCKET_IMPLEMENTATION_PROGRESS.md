@@ -67,7 +67,7 @@
 - [ ] **Task 1.2:** Create `src/types/realtime.ts`
   - [ ] `ConnectionStatus` type
   - [ ] `WebSocketMessage<T>` interface
-  - [ ] All event payload types (goals, actions, KPIs, issues)
+  - [ ] All event payload types (goals, actions, Measures, issues)
   - [ ] Event handler types
   
 - [ ] **Task 1.3:** Update environment configuration

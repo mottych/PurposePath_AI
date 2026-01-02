@@ -1045,7 +1045,7 @@ export interface ActionCreatedEventData {
   createdBy: string;
 }
 
-export interface KPIReadingCreatedEventData {
+export interface MeasureReadingCreatedEventData {
   readingId: string;
   measureId: string;
   tenantId: string;

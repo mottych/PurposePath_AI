@@ -421,7 +421,7 @@ The following topics are registered in the system and will be documented as they
 - `alignment_explanation` - Get detailed alignment explanation
 - `alignment_suggestions` - Get suggestions to improve alignment
 - `strategy_suggestions` - AI suggestions for strategies
-- `kpi_recommendations` - AI recommendations for KPIs
+- `measure_recommendations` - AI recommendations for Measures
 
 ### Operations AI
 - `root_cause_suggestions` - Root cause analysis suggestions

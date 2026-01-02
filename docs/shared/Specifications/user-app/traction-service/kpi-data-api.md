@@ -783,7 +783,7 @@ await traction.put(`/measure-links/${linkId}/actuals/${actualId}/override`, {
 });
 
 // Get all data (targets + actuals) for charts
-const allData = await traction.get<AllKpiDataResponse>(
+const allData = await traction.get<AllMeasureDataResponse>(
   `/measure-links/${linkId}/all-series`
 );
 
@@ -835,8 +835,8 @@ renderChart({
 
 ## Related APIs
 
-- **[Measure Links API](./measure-links-api.md)** - Link KPIs to goals/persons/strategies
-- **[KPIs API](./measures-api.md)** - Manage KPIs
+- **[Measure Links API](./measure-links-api.md)** - Link Measures to goals/persons/strategies
+- **[Measures API](./measures-api.md)** - Manage Measures
 - **[Goals API](./goals-api.md)** - Manage goals
 
 ---

@@ -41,12 +41,12 @@ Update the Traction Lambda API controllers and DTOs to support the new MeasureLi
 
 ## 📋 Request/Response DTOs
 
-### CreateKpiLinkRequest
+### CreateMeasureLinkRequest
 
-Location: `Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureLink/CreateKpiLinkRequest.cs`
+Location: `Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureLink/CreateMeasureLinkRequest.cs`
 
 ```csharp
-public record CreateKpiLinkRequest
+public record CreateMeasureLinkRequest
 {
     /// <summary>
     /// ID of the Measure to link
@@ -174,7 +174,7 @@ public class MeasureLinksController : ControllerBase
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> CreateLink(
-        [FromBody] CreateKpiLinkRequest request,
+        [FromBody] CreateMeasureLinkRequest request,
         CancellationToken ct)
     {
         // Implementation
@@ -215,7 +215,7 @@ public class MeasureLinksController : ControllerBase
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> UpdateLink(
         string id,
-        [FromBody] UpdateKpiLinkRequest request,
+        [FromBody] UpdateMeasureLinkRequest request,
         CancellationToken ct)
     {
         // Implementation
@@ -241,8 +241,8 @@ public class MeasureLinksController : ControllerBase
 ### DTOs
 | File | Action |
 |------|--------|
-| `DTOs/Requests/MeasureLink/CreateKpiLinkRequest.cs` | Create |
-| `DTOs/Requests/MeasureLink/UpdateKpiLinkRequest.cs` | Create |
+| `DTOs/Requests/MeasureLink/CreateMeasureLinkRequest.cs` | Create |
+| `DTOs/Requests/MeasureLink/UpdateMeasureLinkRequest.cs` | Create |
 | `DTOs/Responses/MeasureLink/MeasureLinkResponse.cs` | Create |
 | `DTOs/Responses/MeasureLink/MeasureLinkListResponse.cs` | Create |
 
@@ -250,13 +250,13 @@ public class MeasureLinksController : ControllerBase
 | File | Action |
 |------|--------|
 | `Controllers/MeasureLinksController.cs` | Create |
-| `Controllers/GoalKpiController.cs` | Modify - add deprecation notices |
+| `Controllers/GoalMeasureController.cs` | Modify - add deprecation notices |
 
 ### Validators
 | File | Action |
 |------|--------|
-| `Validators/MeasureLink/CreateKpiLinkRequestValidator.cs` | Create |
-| `Validators/MeasureLink/UpdateKpiLinkRequestValidator.cs` | Create |
+| `Validators/MeasureLink/CreateMeasureLinkRequestValidator.cs` | Create |
+| `Validators/MeasureLink/UpdateMeasureLinkRequestValidator.cs` | Create |
 
 ### Mappers
 | File | Action |

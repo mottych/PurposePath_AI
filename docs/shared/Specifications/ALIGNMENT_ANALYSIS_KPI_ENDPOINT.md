@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The `GET /measures` endpoint implementation in `KpisController.cs` is **well-aligned** with the specification defined in `measures-api.md (v7.0)`. The controller correctly implements all required query parameters, filtering logic, response structure, and error handling as specified.
+The `GET /measures` endpoint implementation in `MeasuresController.cs` is **well-aligned** with the specification defined in `measures-api.md (v7.0)`. The controller correctly implements all required query parameters, filtering logic, response structure, and error handling as specified.
 
 **Alignment Score:** 95/100
 
@@ -17,7 +17,7 @@ The `GET /measures` endpoint implementation in `KpisController.cs` is **well-ali
 - ✅ All query parameters implemented (ownerId, goalId, strategyId)
 - ✅ Filtering priority correctly implemented (ownerId > goalId > strategyId > default)
 - ✅ Response wrapper structure matches specification
-- ✅ Default behavior (current user's KPIs) implemented correctly
+- ✅ Default behavior (current user's Measures) implemented correctly
 - ✅ Error handling follows specification patterns
 - ✅ HTTP status codes match specification
 - ⚠️ **Minor Gap:** Response pagination fields not explicitly validated in spec vs. implementation
@@ -34,7 +34,7 @@ The `GET /measures` endpoint implementation in `KpisController.cs` is **well-ali
 | **Route** | `GET /measures` | `[HttpGet]` at route `measures` | ✅ Aligned |
 | **HTTP Method** | GET | `[HttpGet]` | ✅ Aligned |
 | **Authentication Required** | Yes (Bearer + X-Tenant-Id) | Inherited from `BaseApiController` | ✅ Aligned |
-| **Response Wrapper** | `ApiResponse<PaginatedKpisResponse>` | `ApiResponse<PaginatedKpisResponse>` | ✅ Aligned |
+| **Response Wrapper** | `ApiResponse<PaginatedMeasuresResponse>` | `ApiResponse<PaginatedMeasuresResponse>` | ✅ Aligned |
 
 ### 2. Query Parameters
 
@@ -48,7 +48,7 @@ strategyId (string, optional) - Filter by linked strategy
 **Implementation Analysis:**
 
 ```csharp
-[FromQuery] GetKpisRequest request
+[FromQuery] GetMeasuresRequest request
 {
     public int Page { get; init; } = 1;
     public int Size { get; init; } = 10;
@@ -86,7 +86,7 @@ Filtering Priority:
 1. ownerId (takes precedence)
 2. goalId
 3. strategyId
-4. Default: Current user's KPIs (if no filter provided)
+4. Default: Current user's Measures (if no filter provided)
 ```
 
 **Implementation Code (Lines 38-84):**
@@ -94,22 +94,22 @@ Filtering Priority:
 ```csharp
 if (!string.IsNullOrEmpty(request.OwnerId))
 {
-    query = new GetKpisByOwnerQuery { /* ... */ };
+    query = new GetMeasuresByOwnerQuery { /* ... */ };
 }
 else if (!string.IsNullOrEmpty(request.GoalId))
 {
-    var goalQuery = new GetKpisByGoalQuery(/* ... */);
+    var goalQuery = new GetMeasuresByGoalQuery(/* ... */);
     // ... execute and return early
 }
 else if (!string.IsNullOrEmpty(request.StrategyId))
 {
-    var strategyQuery = new GetKpisByStrategyQuery { /* ... */ };
+    var strategyQuery = new GetMeasuresByStrategyQuery { /* ... */ };
     // ... execute and return early
 }
 else
 {
     // Default: get by owner (current user)
-    query = new GetKpisByOwnerQuery
+    query = new GetMeasuresByOwnerQuery
     {
         OwnerId = GetCurrentUserId(),
         TenantId: GetCurrentTenantId()
@@ -147,7 +147,7 @@ else
 **Implementation Response DTO (MeasureResponses.cs, Lines 100-103):**
 
 ```csharp
-public record PaginatedKpisResponse
+public record PaginatedMeasuresResponse
 {
     public MeasureResponse[] Data { get; init; } = Array.Empty<MeasureResponse>();
     public PaginationInfo Pagination { get; init; } = new();
@@ -156,18 +156,18 @@ public record PaginatedKpisResponse
 
 **Analysis:**
 
-The implementation uses `PaginatedKpisResponse` which contains:
+The implementation uses `PaginatedMeasuresResponse` which contains:
 - `Data` - Array of `MeasureResponse` objects (equivalent to `items`)
 - `Pagination` - Contains pagination metadata
 
 This is wrapped in the `ApiResponse<T>` generic wrapper:
 ```csharp
-ApiResponse<PaginatedKpisResponse>.SuccessResponse(kpisResponse)
+ApiResponse<PaginatedMeasuresResponse>.SuccessResponse(measuresResponse)
 ```
 
 Which provides:
 - `success: true`
-- `data: PaginatedKpisResponse`
+- `data: PaginatedMeasuresResponse`
 - `error: null`
 
 **⚠️ Minor Discrepancy Found:**
@@ -299,7 +299,7 @@ The specification explicitly shows `isDeleted` in the response example:
 
 However, the `MeasureResponse` DTO does not include this field. 
 
-**Impact:** When soft-deleted KPIs are excluded from list queries, this field is not needed in the response, but the specification includes it, so frontend code may expect it.
+**Impact:** When soft-deleted Measures are excluded from list queries, this field is not needed in the response, but the specification includes it, so frontend code may expect it.
 
 **Recommendation:** Add `isDeleted` boolean field to `MeasureResponse` for specification compliance, even though it will typically be `false` for all list results.
 
@@ -327,17 +327,17 @@ try
     
     if (!result.IsSuccess)
     {
-        Logger.LogWarning("Failed to retrieve KPIs: {Error}", result.Error);
-        return BadRequest(ApiResponse<PaginatedKpisResponse>.ErrorResponse(
-            result.Error ?? "Failed to retrieve KPIs"));
+        Logger.LogWarning("Failed to retrieve Measures: {Error}", result.Error);
+        return BadRequest(ApiResponse<PaginatedMeasuresResponse>.ErrorResponse(
+            result.Error ?? "Failed to retrieve Measures"));
     }
     
-    return Ok(ApiResponse<PaginatedKpisResponse>.SuccessResponse(kpisResponse));
+    return Ok(ApiResponse<PaginatedMeasuresResponse>.SuccessResponse(measuresResponse));
 }
 catch (Exception ex)
 {
-    Logger.LogError(ex, "Error retrieving KPIs");
-    return StatusCode(500, ApiResponse<PaginatedKpisResponse>.ErrorResponse("Internal server error"));
+    Logger.LogError(ex, "Error retrieving Measures");
+    return StatusCode(500, ApiResponse<PaginatedMeasuresResponse>.ErrorResponse("Internal server error"));
 }
 ```
 
@@ -358,7 +358,7 @@ catch (Exception ex)
 ### 7. Default Behavior (Current User)
 
 **Specification Requirement:**
-> "If no filter is provided, returns KPIs owned by the current user."
+> "If no filter is provided, returns Measures owned by the current user."
 
 **Implementation (Lines 78-83):**
 
@@ -366,7 +366,7 @@ catch (Exception ex)
 else
 {
     // Default: get by owner (current user)
-    query = new GetKpisByOwnerQuery
+    query = new GetMeasuresByOwnerQuery
     {
         OwnerId = GetCurrentUserId(),  // ← Current user
         TenantId = GetCurrentTenantId()
@@ -379,7 +379,7 @@ else
 ### 8. Tenant Isolation
 
 **Specification Requirement:**
-> "Multi-tenancy: Only returns KPIs for the specified tenant"
+> "Multi-tenancy: Only returns Measures for the specified tenant"
 
 **Implementation (Multiple Locations):**
 
@@ -387,18 +387,18 @@ else
 TenantId: GetCurrentTenantId()  // Line 45, 60, 64, 84
 ```
 
-All three filtering queries include `TenantId: GetCurrentTenantId()`, ensuring KPIs are filtered by tenant.
+All three filtering queries include `TenantId: GetCurrentTenantId()`, ensuring Measures are filtered by tenant.
 
 **Conclusion:** ✅ **FULLY ALIGNED** - Tenant isolation properly implemented.
 
 ### 9. Soft Delete Handling
 
 **Specification Requirement:**
-> "Soft Deletes: Deleted KPIs (isDeleted: true) are excluded by default"
+> "Soft Deletes: Deleted Measures (isDeleted: true) are excluded by default"
 
 **Implementation Analysis:**
 
-The controller delegates to `GetKpisByOwnerQuery`, `GetKpisByGoalQuery`, and `GetKpisByStrategyQuery` handlers. The implementation doesn't explicitly show the soft delete filtering, but it's expected to be handled in the query handlers themselves.
+The controller delegates to `GetMeasuresByOwnerQuery`, `GetMeasuresByGoalQuery`, and `GetMeasuresByStrategyQuery` handlers. The implementation doesn't explicitly show the soft delete filtering, but it's expected to be handled in the query handlers themselves.
 
 **Conclusion:** ✅ **LIKELY ALIGNED** - Soft delete handling should be in query handlers (not visible in controller).
 
@@ -412,7 +412,7 @@ The controller delegates to `GetKpisByOwnerQuery`, `GetKpisByGoalQuery`, and `Ge
 2. ✅ Authentication inheritance from BaseApiController
 3. ✅ All required query parameters present (ownerId, goalId, strategyId)
 4. ✅ Filtering priority correctly implemented
-5. ✅ Default behavior (current user's KPIs)
+5. ✅ Default behavior (current user's Measures)
 6. ✅ Response wrapper structure (ApiResponse<T>)
 7. ✅ Response includes all core Measure fields
 8. ✅ Tenant isolation implemented
@@ -438,7 +438,7 @@ The controller delegates to `GetKpisByOwnerQuery`, `GetKpisByGoalQuery`, and `Ge
 2. **Missing `isDeleted` Field** - Not in MeasureResponse DTO
    - Specification includes `isDeleted: false` in response
    - Implementation MeasureResponse doesn't include this field
-   - Impact: Low (soft-deleted KPIs excluded from list results anyway)
+   - Impact: Low (soft-deleted Measures excluded from list results anyway)
    - Recommendation: Add `isDeleted: boolean` field to MeasureResponse for spec compliance
 
 ### ❌ Breaking Misalignments
@@ -461,7 +461,7 @@ None identified. No breaking specification violations found.
 
 2. **Update Specification Example for Response Structure**
    - File: `docs/shared/Specifications/user-app/traction-service/measures-api.md`
-   - Section: "Endpoint 1: List KPIs - Response"
+   - Section: "Endpoint 1: List Measures - Response"
    - Action: Modify example to show nested pagination structure:
      ```json
      {
@@ -499,10 +499,10 @@ None identified. No breaking specification violations found.
    - When goalId and strategyId provided, goalId takes precedence
 
 2. **Test default behavior:**
-   - When no filters provided, returns current user's KPIs
+   - When no filters provided, returns current user's Measures
 
 3. **Test response structure:**
-   - Verify `ApiResponse<PaginatedKpisResponse>` wrapper present
+   - Verify `ApiResponse<PaginatedMeasuresResponse>` wrapper present
    - Verify `data`, `pagination` structure matches implementation
 
 4. **Test error cases:**
@@ -511,8 +511,8 @@ None identified. No breaking specification violations found.
    - Measure not found returns 404 (if applicable)
 
 5. **Test tenant isolation:**
-   - Results only include KPIs for current tenant
-   - Other tenants' KPIs not returned
+   - Results only include Measures for current tenant
+   - Other tenants' Measures not returned
 
 ---
 

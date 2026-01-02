@@ -16,12 +16,12 @@
 ### Architecture Principle: Reference Data + Instance Data
 
 **Reference Data (SEEDED by Developers):**
-- Systems, MeasureCatalog, SystemKpiConfig, Parameters
+- Systems, MeasureCatalog, SystemMeasureConfig, Parameters
 - These are predefined in code and seeded during deployment
 - Admin can VIEW but generally cannot create/modify (except adding manual-only MeasureCatalog entries)
 
 **Instance Data (User-Managed):**
-- Connections, Kpis, MeasureIntegrations, Readings
+- Connections, Measures, MeasureIntegrations, Readings
 - Users create and manage these through the UI
 
 ---
@@ -158,9 +158,9 @@ public static class SystemSeed
 
 **Managed By:** 
 - Developers seed initial catalog
-- Admin CAN add manual-only KPIs (not linked to systems)
+- Admin CAN add manual-only Measures (not linked to systems)
 
-**Admin Can:** View all, Add (manual-only KPIs)
+**Admin Can:** View all, Add (manual-only Measures)
 
 ```sql
 CREATE TABLE MeasureCatalog (
@@ -191,9 +191,9 @@ CREATE TABLE MeasureCatalog (
     UpdatedAt DATETIME2,
     UpdatedBy NVARCHAR(200),
     
-    INDEX IX_KpiCatalog_Key (CatalogKey),
-    INDEX IX_KpiCatalog_Category (Category, IsActive),
-    INDEX IX_KpiCatalog_SystemDefined (IsSystemDefined, IsActive)
+    INDEX IX_MeasureCatalog_Key (CatalogKey),
+    INDEX IX_MeasureCatalog_Category (Category, IsActive),
+    INDEX IX_MeasureCatalog_SystemDefined (IsSystemDefined, IsActive)
 );
 ```
 
@@ -235,7 +235,7 @@ public static class MeasureCatalogSeed
             DefaultDataType = "duration",
             IsSystemDefined = true
         },
-        // ... more KPIs
+        // ... more Measures
     };
 }
 ```
@@ -362,7 +362,7 @@ public static class TemplateMetadataSeed
 }
 ```
 
-### 2.5 SystemKpiConfig
+### 2.5 SystemMeasureConfig
 
 **Purpose:** Links System + MeasureCatalog + Template (one per combination)
 
@@ -371,7 +371,7 @@ public static class TemplateMetadataSeed
 **Admin Can:** View only
 
 ```sql
-CREATE TABLE SystemKpiConfig (
+CREATE TABLE SystemMeasureConfig (
     Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     SystemKey NVARCHAR(50) NOT NULL,
     MeasureCatalogId UNIQUEIDENTIFIER NOT NULL,
@@ -393,43 +393,43 @@ CREATE TABLE SystemKpiConfig (
     CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     UpdatedAt DATETIME2,
     
-    CONSTRAINT FK_SystemKpiConfig_System 
+    CONSTRAINT FK_SystemMeasureConfig_System 
         FOREIGN KEY (SystemKey) 
         REFERENCES System(SystemKey),
-    CONSTRAINT FK_SystemKpiConfig_KpiCatalog 
+    CONSTRAINT FK_SystemMeasureConfig_MeasureCatalog 
         FOREIGN KEY (MeasureCatalogId) 
         REFERENCES MeasureCatalog(Id),
-    CONSTRAINT FK_SystemKpiConfig_Template 
+    CONSTRAINT FK_SystemMeasureConfig_Template 
         FOREIGN KEY (TemplateKey) 
         REFERENCES TemplateMetadata(TemplateKey),
     
     -- ONE template per System-Measure combination
-    CONSTRAINT UQ_SystemKpiConfig_SystemKpi 
+    CONSTRAINT UQ_SystemMeasureConfig_SystemMeasure 
         UNIQUE (SystemKey, MeasureCatalogId),
     
-    INDEX IX_SystemKpiConfig_System (SystemKey, IsActive),
-    INDEX IX_SystemKpiConfig_KpiCatalog (MeasureCatalogId, IsActive),
-    INDEX IX_SystemKpiConfig_Template (TemplateKey)
+    INDEX IX_SystemMeasureConfig_System (SystemKey, IsActive),
+    INDEX IX_SystemMeasureConfig_MeasureCatalog (MeasureCatalogId, IsActive),
+    INDEX IX_SystemMeasureConfig_Template (TemplateKey)
 );
 ```
 
 **Seeded Data:**
 ```csharp
-public static class SystemKpiConfigSeed
+public static class SystemMeasureConfigSeed
 {
-    public static List<SystemKpiConfig> GetSeedData() => new()
+    public static List<SystemMeasureConfig> GetSeedData() => new()
     {
         new() 
         { 
             SystemKey = SystemKeys.QuickBooks,
-            MeasureCatalogId = GetKpiCatalogId(MeasureCatalogKeys.RevenueByCategory),
+            MeasureCatalogId = GetMeasureCatalogId(MeasureCatalogKeys.RevenueByCategory),
             TemplateKey = TemplateKeys.QbRevenueByCategory,
             IsActive = true
         },
         new() 
         { 
             SystemKey = SystemKeys.Salesforce,
-            MeasureCatalogId = GetKpiCatalogId(MeasureCatalogKeys.CustomerAcquisitionCost),
+            MeasureCatalogId = GetMeasureCatalogId(MeasureCatalogKeys.CustomerAcquisitionCost),
             TemplateKey = TemplateKeys.SfCustomerAcquisitionCost,
             IsActive = true
         },
@@ -438,7 +438,7 @@ public static class SystemKpiConfigSeed
 }
 ```
 
-### 2.6 SystemKpiParameterConfig
+### 2.6 SystemMeasureParameterConfig
 
 **Purpose:** Defines USER-CONFIGURABLE parameters (excludes system-generated dates)
 
@@ -449,9 +449,9 @@ public static class SystemKpiConfigSeed
 **Important:** Does NOT include fromDate/toDate - those are auto-calculated
 
 ```sql
-CREATE TABLE SystemKpiParameterConfig (
+CREATE TABLE SystemMeasureParameterConfig (
     Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    SystemKpiConfigId UNIQUEIDENTIFIER NOT NULL,
+    SystemMeasureConfigId UNIQUEIDENTIFIER NOT NULL,
     ParameterSeq INT NOT NULL, -- Display order
     ParameterKey NVARCHAR(100) NOT NULL, -- Code constant: 'itemCategory', 'clientType'
     DisplayName NVARCHAR(200) NOT NULL,
@@ -479,14 +479,14 @@ CREATE TABLE SystemKpiParameterConfig (
     CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     UpdatedAt DATETIME2,
     
-    CONSTRAINT FK_ParamConfig_SystemKpiConfig 
-        FOREIGN KEY (SystemKpiConfigId) 
-        REFERENCES SystemKpiConfig(Id) ON DELETE CASCADE,
+    CONSTRAINT FK_ParamConfig_SystemMeasureConfig 
+        FOREIGN KEY (SystemMeasureConfigId) 
+        REFERENCES SystemMeasureConfig(Id) ON DELETE CASCADE,
     
     CONSTRAINT UQ_ParamConfig_SeqPerConfig 
-        UNIQUE (SystemKpiConfigId, ParameterSeq),
+        UNIQUE (SystemMeasureConfigId, ParameterSeq),
     
-    INDEX IX_ParamConfig_SystemKpiConfig (SystemKpiConfigId, ParameterSeq)
+    INDEX IX_ParamConfig_SystemMeasureConfig (SystemMeasureConfigId, ParameterSeq)
 );
 ```
 
@@ -503,14 +503,14 @@ public static class ParameterKeys
     // NOTE: fromDate and toDate are NOT here - they're system-generated
 }
 
-public static class SystemKpiParameterConfigSeed
+public static class SystemMeasureParameterConfigSeed
 {
-    public static List<SystemKpiParameterConfig> GetSeedData() => new()
+    public static List<SystemMeasureParameterConfig> GetSeedData() => new()
     {
         // QuickBooks Revenue by Category parameters
         new() 
         { 
-            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
+            SystemMeasureConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
             ParameterSeq = 1,
             ParameterKey = ParameterKeys.ItemCategory,
             DisplayName = "Item Category",
@@ -523,7 +523,7 @@ public static class SystemKpiParameterConfigSeed
         },
         new() 
         { 
-            SystemKpiConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
+            SystemMeasureConfigId = GetConfigId(SystemKeys.QuickBooks, MeasureCatalogKeys.RevenueByCategory),
             ParameterSeq = 2,
             ParameterKey = ParameterKeys.ClientType,
             DisplayName = "Client Type",
@@ -543,18 +543,18 @@ public static class SystemKpiParameterConfigSeed
 
 ## 3. Instance Data Tables (User-Managed)
 
-### 3.1 Kpis (EXISTING - Minor Updates)
+### 3.1 Measures (EXISTING - Minor Updates)
 
 ```sql
 -- EXISTING TABLE - Add these columns:
-ALTER TABLE Kpis
+ALTER TABLE Measures
 ADD MeasureCatalogId UNIQUEIDENTIFIER NULL,
     IsCustom BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_Kpi_KpiCatalog 
+    CONSTRAINT FK_Measure_MeasureCatalog 
         FOREIGN KEY (MeasureCatalogId) 
         REFERENCES MeasureCatalog(Id);
 
-CREATE INDEX IX_Kpi_Catalog ON Kpis(MeasureCatalogId) WHERE MeasureCatalogId IS NOT NULL;
+CREATE INDEX IX_Measure_Catalog ON Measures(MeasureCatalogId) WHERE MeasureCatalogId IS NOT NULL;
 ```
 
 ### 3.2 ConnectionConfiguration (NEW)
@@ -632,7 +632,7 @@ CREATE TABLE MeasureIntegration (
     TenantId UNIQUEIDENTIFIER NOT NULL,
     MeasureId UNIQUEIDENTIFIER NOT NULL,
     ConnectionId UNIQUEIDENTIFIER NOT NULL,
-    SystemKpiConfigId UNIQUEIDENTIFIER NOT NULL,
+    SystemMeasureConfigId UNIQUEIDENTIFIER NOT NULL,
     
     -- User-configured parameters (EXCLUDES dates)
     ParameterValues NVARCHAR(MAX) NOT NULL, -- JSON: {"itemCategory": "Machinery", "clientType": null}
@@ -672,27 +672,27 @@ CREATE TABLE MeasureIntegration (
     UpdatedAt DATETIME2,
     UpdatedBy UNIQUEIDENTIFIER,
     
-    CONSTRAINT FK_KpiIntegration_Tenant 
+    CONSTRAINT FK_MeasureIntegration_Tenant 
         FOREIGN KEY (TenantId) 
         REFERENCES Tenants(Id),
-    CONSTRAINT FK_KpiIntegration_Kpi 
+    CONSTRAINT FK_MeasureIntegration_Measure 
         FOREIGN KEY (MeasureId) 
-        REFERENCES Kpis(Id),
-    CONSTRAINT FK_KpiIntegration_Connection 
+        REFERENCES Measures(Id),
+    CONSTRAINT FK_MeasureIntegration_Connection 
         FOREIGN KEY (ConnectionId) 
         REFERENCES ConnectionConfiguration(Id),
-    CONSTRAINT FK_KpiIntegration_SystemKpiConfig 
-        FOREIGN KEY (SystemKpiConfigId) 
-        REFERENCES SystemKpiConfig(Id),
+    CONSTRAINT FK_MeasureIntegration_SystemMeasureConfig 
+        FOREIGN KEY (SystemMeasureConfigId) 
+        REFERENCES SystemMeasureConfig(Id),
     
     -- A Measure can only have one active integration
-    CONSTRAINT UQ_KpiIntegration_Kpi 
+    CONSTRAINT UQ_MeasureIntegration_Measure 
         UNIQUE (MeasureId),
     
-    INDEX IX_KpiIntegration_Tenant (TenantId),
-    INDEX IX_KpiIntegration_Schedule (NextScheduledRun, IsEnabled),
-    INDEX IX_KpiIntegration_Connection (ConnectionId),
-    INDEX IX_KpiIntegration_Status (LastExecutionStatus, IsEnabled)
+    INDEX IX_MeasureIntegration_Tenant (TenantId),
+    INDEX IX_MeasureIntegration_Schedule (NextScheduledRun, IsEnabled),
+    INDEX IX_MeasureIntegration_Connection (ConnectionId),
+    INDEX IX_MeasureIntegration_Status (LastExecutionStatus, IsEnabled)
 );
 ```
 
@@ -717,12 +717,12 @@ ADD IntegrationId UNIQUEIDENTIFIER NULL,
     ExecutionId NVARCHAR(100) NULL, -- Links to Integration Service execution log
     ConfidenceScore DECIMAL(3, 2) NULL,
     DataQuality NVARCHAR(20) NULL,
-    CONSTRAINT FK_KpiReading_Integration 
+    CONSTRAINT FK_MeasureReading_Integration 
         FOREIGN KEY (IntegrationId) 
         REFERENCES MeasureIntegration(Id);
 
-CREATE INDEX IX_KpiReading_Integration ON MeasureReadings(IntegrationId) WHERE IntegrationId IS NOT NULL;
-CREATE INDEX IX_KpiReading_ExecutionId ON MeasureReadings(ExecutionId) WHERE ExecutionId IS NOT NULL;
+CREATE INDEX IX_MeasureReading_Integration ON MeasureReadings(IntegrationId) WHERE IntegrationId IS NOT NULL;
+CREATE INDEX IX_MeasureReading_ExecutionId ON MeasureReadings(ExecutionId) WHERE ExecutionId IS NOT NULL;
 ```
 
 ---
@@ -896,7 +896,7 @@ public class Seeder
         await SeedSystems();
         
         // 3. Seed Measure catalog
-        await SeedKpiCatalog();
+        await SeedMeasureCatalog();
         
         // 4. Upload templates to S3
         await UploadTemplatesToS3();
@@ -905,10 +905,10 @@ public class Seeder
         await SeedTemplateMetadata();
         
         // 6. Seed system-Measure configurations
-        await SeedSystemKpiConfigs();
+        await SeedSystemMeasureConfigs();
         
         // 7. Seed parameter configurations
-        await SeedSystemKpiParameterConfigs();
+        await SeedSystemMeasureParameterConfigs();
     }
     
     private async Task UploadTemplatesToS3()
@@ -958,7 +958,7 @@ public class Seeder
    
    Backend queries:
    SELECT skc.*
-   FROM SystemKpiConfig skc
+   FROM SystemMeasureConfig skc
    JOIN ConnectionConfiguration cc ON cc.SystemKey = skc.SystemKey
    WHERE cc.TenantId = @tenantId
    AND skc.MeasureCatalogId = @measureCatalogId
@@ -1008,7 +1008,7 @@ public class Seeder
    {
      "measureId": "...",
      "connectionId": "...",
-     "systemKpiConfigId": "...",
+     "systemMeasureConfigId": "...",
      "parameterValues": {
        "itemCategory": "Machinery",
        "clientType": null
@@ -1041,7 +1041,7 @@ public class Seeder
        "frequency": "monthly",
        "parameterValues": {"itemCategory": "Machinery"}
      },
-     "systemKpiConfig": {
+     "systemMeasureConfig": {
        "templateKey": "qb-revenue-by-category"
      },
      "connection": {
@@ -1100,14 +1100,14 @@ public class Seeder
 - View System-Measure mappings
 - View Parameters per System-Measure
 
-**Add Manual KPIs:**
+**Add Manual Measures:**
 - Create MeasureCatalog entries for manual data entry
-- These won't have SystemKpiConfig links
-- Users can create Kpis based on these but without integration
+- These won't have SystemMeasureConfig links
+- Users can create Measures based on these but without integration
 
 **NOT Allowed:**
 - Modify seeded Systems (read-only)
-- Modify SystemKpiConfig links (code-managed)
+- Modify SystemMeasureConfig links (code-managed)
 - Modify Parameters (code-managed)
 - Modify templates (S3-managed)
 
@@ -1118,24 +1118,24 @@ public class Seeder
 Systems
 
 Finance
-  ✓ QuickBooks Online          [5 KPIs supported]  [View]
-  ✓ Xero                        [3 KPIs supported]  [View]
+  ✓ QuickBooks Online          [5 Measures supported]  [View]
+  ✓ Xero                        [3 Measures supported]  [View]
   
 CRM
-  ✓ Salesforce                  [4 KPIs supported]  [View]
-  ✓ HubSpot                     [3 KPIs supported]  [View]
+  ✓ Salesforce                  [4 Measures supported]  [View]
+  ✓ HubSpot                     [3 Measures supported]  [View]
 ```
 
 **Screen 2: Measure Catalog**
 ```
 Measure Catalog                                        [+] Add Manual Measure
 
-System-Integrated KPIs:
+System-Integrated Measures:
 ✓ Revenue by Category          [5 systems]  [View Details]
 ✓ Gross Profit Margin          [2 systems]  [View Details]
 ✓ Customer Acquisition Cost    [3 systems]  [View Details]
 
-Manual-Only KPIs:
+Manual-Only Measures:
 ○ Employee Engagement Score    [Manual]     [Edit] [Delete]
 ○ Customer Satisfaction        [Manual]     [Edit] [Delete]
 ```
@@ -1174,14 +1174,14 @@ System-Generated Parameters:
 - Dates were user parameters
 
 **AFTER:**
-- Systems, KPIs, SystemKpiConfigs are **SEEDED** (code-managed)
+- Systems, Measures, SystemMeasureConfigs are **SEEDED** (code-managed)
 - Templates stored in **S3** with metadata in DB
 - Dates are **AUTO-CALCULATED** by orchestration engine
-- Admin can only **VIEW** reference data (and add manual-only KPIs)
+- Admin can only **VIEW** reference data (and add manual-only Measures)
 
 ### Benefits of This Approach
 
-1. **Code-Managed Configuration:** Systems and KPIs defined in version-controlled code
+1. **Code-Managed Configuration:** Systems and Measures defined in version-controlled code
 2. **S3 Template Storage:** Templates can be versioned and deployed independently
 3. **Automated Date Handling:** No user confusion about date ranges
 4. **Simplified Admin UI:** Admin doesn't need to manage complex configurations
@@ -1197,8 +1197,8 @@ System-Generated Parameters:
    - Create template JSON file
    - Upload to S3 during deployment
    - Add to TemplateMetadataSeed
-   - Add to SystemKpiConfigSeed
-   - Add to SystemKpiParameterConfigSeed
+   - Add to SystemMeasureConfigSeed
+   - Add to SystemMeasureParameterConfigSeed
 
 2. Run migration/seed:
    - Tables populated
@@ -1222,11 +1222,11 @@ System-Generated Parameters:
 | MeasureCatalog | Developers + Admin | View | View + Add manual | Seeded + DB |
 | TemplateMetadata | Developers | View | View | Seeded |
 | Templates (S3) | Developers | - | View | S3 Files |
-| SystemKpiConfig | Developers | View | View | Seeded |
-| SystemKpiParameterConfig | Developers | View | View | Seeded |
+| SystemMeasureConfig | Developers | View | View | Seeded |
+| SystemMeasureParameterConfig | Developers | View | View | Seeded |
 | ConnectionConfiguration | Users | CRUD | View | DB |
 | MeasureIntegration | Users | CRUD | View | DB |
-| Kpis | Users | CRUD | View | DB |
+| Measures | Users | CRUD | View | DB |
 | MeasureReadings | Users + System | View | View | DB |
 
 ---

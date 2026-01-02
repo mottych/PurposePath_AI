@@ -366,7 +366,7 @@ Service token stored in AWS Secrets Manager: `purposepath-backend-api-token-{env
 ```json
 {
   "integration_id": "string",
-  "kpi_id": "string",
+  "measure_id": "string",
   "connection_id": "string",
   "template_key": "string",
   "parameter_values": {
@@ -383,7 +383,7 @@ Service token stored in AWS Secrets Manager: `purposepath-backend-api-token-{env
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | integration_id | string | Yes | Measure integration identifier |
-| kpi_id | string | Yes | Measure identifier |
+| measure_id | string | Yes | Measure identifier |
 | connection_id | string | Yes | Connection identifier for retrieving credentials |
 | template_key | string | Yes | Template topic identifier (e.g., "salesforce_revenue") |
 | parameter_values | object | Yes | Key-value pairs for template rendering |
@@ -482,7 +482,7 @@ Returns a dynamic JSON object with system-specific credentials.
   "integrations": [
     {
       "integration_id": "string",
-      "kpi_id": "string",
+      "measure_id": "string",
       "tenant_id": "string",
       "frequency": "string",
       "schedule_time": "HH:MM:SS",
@@ -502,7 +502,7 @@ Returns a dynamic JSON object with system-specific credentials.
 |-------|------|----------|-------------|
 | integrations | array | Yes | Array of active integration objects |
 | integration_id | string | Yes | Integration identifier |
-| kpi_id | string | Yes | Measure identifier |
+| measure_id | string | Yes | Measure identifier |
 | tenant_id | string | Yes | Tenant identifier |
 | frequency | string | Yes | Execution frequency |
 | schedule_time | string | Yes | Time of day to execute (HH:MM:SS) |
@@ -553,7 +553,7 @@ All queues are in `us-east-1` (configurable per environment)
 ### Message Format
 ```json
 {
-  "kpi_id": "string",
+  "measure_id": "string",
   "tenant_id": "string",
   "value": number,
   "execution_id": "string",
@@ -570,7 +570,7 @@ All queues are in `us-east-1` (configurable per environment)
 ### Message Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| kpi_id | string | Yes | Measure identifier |
+| measure_id | string | Yes | Measure identifier |
 | tenant_id | string | Yes | Tenant identifier |
 | value | number | Yes | Calculated Measure value (decimal/float) |
 | execution_id | string | Yes | Unique execution identifier |
@@ -599,7 +599,7 @@ All queues are in `us-east-1` (configurable per environment)
 ```json
 {
   "tenant_id": "string",
-  "kpi_id": "string",
+  "measure_id": "string",
   "integration_id": "string",
   "notification_type": "string",
   "error_message": "string",
@@ -612,7 +612,7 @@ All queues are in `us-east-1` (configurable per environment)
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | tenant_id | string | Yes | Tenant identifier |
-| kpi_id | string | Yes | Measure identifier |
+| measure_id | string | Yes | Measure identifier |
 | integration_id | string | Yes | Integration identifier |
 | notification_type | string | Yes | Type of notification (see types below) |
 | error_message | string | Yes | Human-readable error message |

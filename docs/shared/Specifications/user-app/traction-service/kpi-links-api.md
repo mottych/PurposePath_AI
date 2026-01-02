@@ -7,15 +7,15 @@
 
 ## Overview
 
-The Measure Links API manages relationships between KPIs and entities (persons, goals, strategies). Every Measure link requires a person (owner/responsible party) and can optionally be associated with a goal and/or strategy.
+The Measure Links API manages relationships between Measures and entities (persons, goals, strategies). Every Measure link requires a person (owner/responsible party) and can optionally be associated with a goal and/or strategy.
 
 ### Key Features
-- Link KPIs to persons (required), with optional goal and strategy associations
+- Link Measures to persons (required), with optional goal and strategy associations
 - Configure thresholds, weights, and display order for each link
-- Mark primary KPIs for goals
+- Mark primary Measures for goals
 - Query Measure links with flexible filtering (by person, goal, strategy, or Measure)
 - Update or remove links
-- Automatic cascade delete when tenant-specific KPIs are deleted
+- Automatic cascade delete when tenant-specific Measures are deleted
 
 ### Design Philosophy
 - **Unified resource-based API:** All Measure link operations through `/measure-links` endpoints
@@ -185,7 +185,7 @@ Create a new link between a Measure and person, optionally associating with a go
 - **Entity Validation:** All referenced entities (Measure, person, goal, strategy) must exist in tenant
 - **Duplicate Prevention:** Cannot create duplicate links (same Measure + person + goal + strategy combination)
 - **Auto linkType:** Calculated automatically: `personal` (no goal/strategy), `goal` (has goalId), `strategy` (has goalId + strategyId)
-- **Primary Measure:** Setting isPrimary=true may unset other primary KPIs for the same goal
+- **Primary Measure:** Setting isPrimary=true may unset other primary Measures for the same goal
 
 ---
 
@@ -254,7 +254,7 @@ All fields are optional. Only provided fields will be updated.
 #### Business Rules
 
 - **Partial Updates:** Only provided fields are updated
-- **Primary Measure:** Setting `isPrimary: true` may unset other primary KPIs for the same goal
+- **Primary Measure:** Setting `isPrimary: true` may unset other primary Measures for the same goal
 - **Threshold Range:** Must be between 0 and 100 if provided
 - **Display Order:** Used for UI sorting, can be any positive integer
 - **Calculated linkType:** Automatically derived - cannot be set via API
@@ -344,41 +344,41 @@ GET /measure-links?measureId={measureId}
 ```
 Returns all links for this Measure (all persons/goals/strategies where it's used).
 
-**By Person (personal KPIs only):**
+**By Person (personal Measures only):**
 ```http
 GET /measure-links?personId={personId}
 ```
-Returns only personal KPIs for this person (no goal or strategy associations).
+Returns only personal Measures for this person (no goal or strategy associations).
 
-**By Person (all KPIs):**
+**By Person (all Measures):**
 ```http
 GET /measure-links?personId={personId}&includeAll=true
 ```
-Returns all KPIs assigned to this person (personal + goal + strategy).
+Returns all Measures assigned to this person (personal + goal + strategy).
 
-**By Goal (goal-level KPIs only):**
+**By Goal (goal-level Measures only):**
 ```http
 GET /measure-links?goalId={goalId}
 ```
-Returns only goal-level KPIs (no strategy associations).
+Returns only goal-level Measures (no strategy associations).
 
-**By Goal (all KPIs including strategies):**
+**By Goal (all Measures including strategies):**
 ```http
 GET /measure-links?goalId={goalId}&includeAll=true
 ```
-Returns goal-level KPIs AND strategy KPIs for this goal.
+Returns goal-level Measures AND strategy Measures for this goal.
 
 **By Strategy:**
 ```http
 GET /measure-links?strategyId={strategyId}
 ```
-Returns all KPIs linked to this strategy.
+Returns all Measures linked to this strategy.
 
 **By Person + Goal (intersection):**
 ```http
 GET /measure-links?personId={personId}&goalId={goalId}
 ```
-Returns KPIs where this person is assigned to work on this specific goal.
+Returns Measures where this person is assigned to work on this specific goal.
 
 #### Response
 
@@ -421,12 +421,12 @@ Returns KPIs where this person is assigned to work on this specific goal.
 
 #### Use Cases
 
-- **Personal scorecards:** `?personId={id}` - Show person's personal KPIs
-- **Person workload:** `?personId={id}&includeAll=true` - All KPIs assigned to person
-- **Goal tracking:** `?goalId={id}` - Goal-level KPIs only
-- **Goal cascade:** `?goalId={id}&includeAll=true` - Goal + strategy KPIs
-- **Strategy metrics:** `?strategyId={id}` - All KPIs for a strategy
-- **Cross-functional KPIs:** `?measureId={id}` - Where is this Measure used?
+- **Personal scorecards:** `?personId={id}` - Show person's personal Measures
+- **Person workload:** `?personId={id}&includeAll=true` - All Measures assigned to person
+- **Goal tracking:** `?goalId={id}` - Goal-level Measures only
+- **Goal cascade:** `?goalId={id}&includeAll=true` - Goal + strategy Measures
+- **Strategy metrics:** `?strategyId={id}` - All Measures for a strategy
+- **Cross-functional Measures:** `?measureId={id}` - Where is this Measure used?
 - **Person-goal assignment:** `?personId={id}&goalId={id}` - Person's work on specific goal
 
 ---
@@ -439,9 +439,9 @@ When a tenant-specific Measure is deleted via `DELETE /measures/{measureId}`, th
 2. **Measure Targets:** All target data for this Measure is deleted
 3. **Measure Actuals:** All actual measurement data for this Measure is deleted
 
-**Note:** This cascade only applies to tenant-specific KPIs. Catalog KPIs cannot be deleted by users.
+**Note:** This cascade only applies to tenant-specific Measures. Catalog Measures cannot be deleted by users.
 
-**Warning:** Cascade delete is permanent and cannot be undone. Ensure proper confirmation before deleting KPIs.
+**Warning:** Cascade delete is permanent and cannot be undone. Ensure proper confirmation before deleting Measures.
 
 ---
 
@@ -471,13 +471,13 @@ type LinkType = "personal" | "goal" | "strategy";
 - **Range:** Any positive decimal
 - **Meaning:** Relative importance for weighted calculations
 - **Default:** 1.0
-- **Usage:** When calculating weighted averages of multiple KPIs
+- **Usage:** When calculating weighted averages of multiple Measures
 
 ### Display Order
 
 - **Range:** Any positive integer
 - **Meaning:** Sort order in UI (ascending)
-- **Usage:** Controls how KPIs are listed on scorecards/dashboards
+- **Usage:** Controls how Measures are listed on scorecards/dashboards
 
 ---
 
@@ -562,23 +562,23 @@ await traction.post('/measure-links', {
   thresholdPct: 75.0
 });
 
-// Query personal KPIs
-const personalKpis = await traction.get('/measure-links', {
+// Query personal Measures
+const personalMeasures = await traction.get('/measure-links', {
   params: { personId: 'person-456' }
 });
 
-// Query all KPIs for person (including goals/strategies)
-const allKpis = await traction.get('/measure-links', {
+// Query all Measures for person (including goals/strategies)
+const allMeasures = await traction.get('/measure-links', {
   params: { personId: 'person-456', includeAll: true }
 });
 
-// Query goal KPIs
-const goalKpis = await traction.get('/measure-links', {
+// Query goal Measures
+const goalMeasures = await traction.get('/measure-links', {
   params: { goalId: 'goal-789' }
 });
 
-// Query goal + strategy KPIs
-const goalAllKpis = await traction.get('/measure-links', {
+// Query goal + strategy Measures
+const goalAllMeasures = await traction.get('/measure-links', {
   params: { goalId: 'goal-789', includeAll: true }
 });
 
@@ -597,7 +597,7 @@ await traction.delete(`/measure-links/${linkId}`);
 
 ## Related APIs
 
-- **[KPIs API](./measures-api.md)** - Manage KPIs
+- **[Measures API](./measures-api.md)** - Manage Measures
 - **[Measure Data API](./measure-data-api.md)** - Record Measure values, targets, actuals
 - **[Goals API](./goals-api.md)** - Manage goals
 - **[Strategies API](./strategies-api.md)** - Manage strategies
@@ -609,18 +609,18 @@ await traction.delete(`/measure-links/${linkId}`);
 
 ### v8.0 (December 26, 2025)
 - 🔄 **BREAKING:** Unified Measure Links API - removed separate controllers
-- ❌ **Removed:** `PersonalKpisController` endpoints (`POST /people/{personId}/measures:link`, `POST /people/{personId}/measures:unlink`, `GET /people/{personId}/measures`)
-- ❌ **Removed:** `StrategyKpisController` endpoints (`GET /strategies/{strategyId}/measures`)
+- ❌ **Removed:** `PersonalMeasuresController` endpoints (`POST /people/{personId}/measures:link`, `POST /people/{personId}/measures:unlink`, `GET /people/{personId}/measures`)
+- ❌ **Removed:** `StrategyMeasuresController` endpoints (`GET /strategies/{strategyId}/measures`)
 - ✨ **Added:** `POST /measure-links` - unified endpoint for creating all link types
 - ✨ **Added:** `GET /measure-links` with query parameters - flexible filtering by measureId, personId, goalId, strategyId
 - ✨ **Added:** `includeAll` query parameter for nested link retrieval
 - 🔄 **Changed:** `linkType` is now a calculated/derived field (not persisted, not accepted in requests)
-- ✨ **Added:** Cascade delete behavior when KPIs are deleted
+- ✨ **Added:** Cascade delete behavior when Measures are deleted
 - ✨ **Added:** Orphaned Measure warning when last link is deleted
 - 📝 **Documentation:** Complete v8 specification with 5 unified endpoints
 
 ### v7.0 (December 23, 2025)
-- ✨ New MeasureLink design replacing GoalKpiLink (Issue #374)
+- ✨ New MeasureLink design replacing GoalMeasureLink (Issue #374)
 - ✅ Documented 8 endpoints across 3 controllers
 - ✨ Added personal scorecard endpoints (`/people/{personId}/measures`)
 - ✨ Added strategy Measure endpoints (`/strategies/{strategyId}/measures`)

@@ -54,7 +54,7 @@ interface CommandCenterParams {
 ```typescript
 interface CommandCenterDashboardResponse {
   alerts: {
-    kpisAtRisk: Array<{
+    measuresAtRisk: Array<{
       measureLinkId: string;
       measureId: string;
       measureName: string;
@@ -112,7 +112,7 @@ interface CommandCenterDashboardResponse {
       atRisk: boolean;
     }>;
     
-    primaryKpi?: {
+    primaryMeasure?: {
       measureId: string;
       name: string;
       currentValue: number | null;
@@ -122,7 +122,7 @@ interface CommandCenterDashboardResponse {
     
     stats: {
       totalStrategies: number;
-      totalKpis: number;
+      totalMeasures: number;
       totalActions: number;
       activeActions: number;
       completedActions: number;
@@ -149,10 +149,10 @@ interface CommandCenterDashboardResponse {
     goalsOnTrack: number;
     goalsAtRisk: number;
     goalsBehind: number;
-    totalKpis: number;
-    kpisOnTrack: number;
-    kpisAtRisk: number;
-    kpisBehind: number;
+    totalMeasures: number;
+    measuresOnTrack: number;
+    measuresAtRisk: number;
+    measuresBehind: number;
     totalActiveActions: number;
     actionsPastDue: number;
     actionsThisWeek: number;
@@ -179,10 +179,10 @@ X-Tenant-Id: {tenantId}
   "success": true,
   "data": {
     "alerts": {
-      "kpisAtRisk": [
+      "measuresAtRisk": [
         {
           "measureLinkId": "link_abc123",
-          "measureId": "kpi_revenue",
+          "measureId": "measure_revenue",
           "measureName": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
@@ -246,8 +246,8 @@ X-Tenant-Id: {tenantId}
           }
         ],
         
-        "primaryKpi": {
-          "measureId": "kpi_revenue",
+        "primaryMeasure": {
+          "measureId": "measure_revenue",
           "name": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
@@ -256,7 +256,7 @@ X-Tenant-Id: {tenantId}
         
         "stats": {
           "totalStrategies": 2,
-          "totalKpis": 5,
+          "totalMeasures": 5,
           "totalActions": 12,
           "activeActions": 8,
           "completedActions": 4,
@@ -286,10 +286,10 @@ X-Tenant-Id: {tenantId}
       "goalsOnTrack": 3,
       "goalsAtRisk": 1,
       "goalsBehind": 1,
-      "totalKpis": 18,
-      "kpisOnTrack": 12,
-      "kpisAtRisk": 4,
-      "kpisBehind": 2,
+      "totalMeasures": 18,
+      "measuresOnTrack": 12,
+      "measuresAtRisk": 4,
+      "measuresBehind": 2,
       "totalActiveActions": 34,
       "actionsPastDue": 3,
       "actionsThisWeek": 12,
@@ -305,7 +305,7 @@ X-Tenant-Id: {tenantId}
 ### Business Rules
 
 - **Default User**: If `userId` not provided, uses authenticated user
-- **At-Risk KPIs**: KPIs with `variance >= varianceThreshold`
+- **At-Risk Measures**: Measures with `variance >= varianceThreshold`
 - **Past Due Actions**: Actions with `dueDate < now` and status != completed
 - **Critical Issues**: Issues with impact = "critical" or "high"
 - **Task Window**: `myTasks` includes actions due within next `daysAhead` days
@@ -323,13 +323,13 @@ X-Tenant-Id: {tenantId}
 
 **Base Path:** `/reports`
 
-Generate and retrieve PDF/DOCX reports for goals, KPIs, and company-wide analytics.
+Generate and retrieve PDF/DOCX reports for goals, Measures, and company-wide analytics.
 
 ## Generate Company Report
 
 **GET** `/reports/company`
 
-Generate a company-wide PDF or DOCX report with goals, KPIs, actions, and analytics.
+Generate a company-wide PDF or DOCX report with goals, Measures, actions, and analytics.
 
 ### Query Parameters
 
@@ -409,7 +409,7 @@ Create a custom report configuration (asynchronous generation).
 interface CreateReportRequest {
   title: string;                // Report title
   description?: string;         // Optional description
-  reportType: string;           // "Company" | "Goals" | "KPIs" | "Actions" | "Custom"
+  reportType: string;           // "Company" | "Goals" | "Measures" | "Actions" | "Custom"
   startDate?: string;           // ISO 8601 date
   endDate?: string;             // ISO 8601 date
   filters?: Record<string, any>; // Custom filters
@@ -423,7 +423,7 @@ interface CreateReportRequest {
 {
   "title": "Q4 2025 Measure Performance Report",
   "description": "Detailed analysis of Q4 Measure trends",
-  "reportType": "KPIs",
+  "reportType": "Measures",
   "startDate": "2025-10-01",
   "endDate": "2025-12-31",
   "sections": ["measures", "analytics", "trends"]
@@ -441,7 +441,7 @@ interface CreateReportRequest {
     "title": "Q4 2025 Measure Performance Report",
     "description": "Detailed analysis of Q4 Measure trends",
     "status": "Pending",
-    "reportType": "KPIs",
+    "reportType": "Measures",
     "startDate": "2025-10-01T00:00:00Z",
     "endDate": "2025-12-31T23:59:59Z",
     "createdAt": "2025-12-23T10:30:00Z",
@@ -479,7 +479,7 @@ Retrieve report details and download URL.
     "id": "report_abc123",
     "title": "Q4 2025 Measure Performance Report",
     "status": "Ready",
-    "reportType": "KPIs",
+    "reportType": "Measures",
     "startDate": "2025-10-01T00:00:00Z",
     "endDate": "2025-12-31T23:59:59Z",
     "createdAt": "2025-12-23T10:30:00Z",
@@ -588,7 +588,7 @@ X-Tenant-Id: {tenantId}
       "type": "attachment",
       "userId": "user_analyst",
       "userName": "Alice Chen",
-      "entityId": "kpi_revenue",
+      "entityId": "measure_revenue",
       "entityType": "measure",
       "entityTitle": "Monthly Recurring Revenue",
       "description": "Uploaded Q4 revenue analysis spreadsheet",
@@ -654,7 +654,7 @@ async function getCommandCenter(
   const { alerts, summaryStats, myTasks } = response.data.data;
   
   console.log(`Critical Alerts: ${alerts.criticalIssues.length}`);
-  console.log(`KPIs At Risk: ${alerts.kpisAtRisk.length}`);
+  console.log(`Measures At Risk: ${alerts.measuresAtRisk.length}`);
   console.log(`Past Due Actions: ${alerts.actionsPastDue.length}`);
   console.log(`My Tasks This Week: ${myTasks.length}`);
   
@@ -816,7 +816,7 @@ await createAndDownloadReport(
 ## Related APIs
 
 - **[Goals API](./goals-api.md)**: Goal data for dashboard and reports
-- **[KPIs API](./measures-api.md)**: Measure metrics for dashboard and reports
+- **[Measures API](./measures-api.md)**: Measure metrics for dashboard and reports
 - **[Actions API](./actions-api.md)**: Action data for task tracking
 - **[Issues API](./issues-api.md)**: Issue data for alerts
 

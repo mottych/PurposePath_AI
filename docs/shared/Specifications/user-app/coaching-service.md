@@ -75,7 +75,7 @@ Calculate alignment score for a goal against business foundation.
     "explanation": "This goal strongly aligns with your business vision...",
     "suggestions": [
       "Consider adding a strategy focused on...",
-      "Your KPIs could be more specific about..."
+      "Your Measures could be more specific about..."
     ],
     "componentScores": {
       "intentAlignment": 90,
@@ -95,7 +95,7 @@ Calculate alignment score for a goal against business foundation.
 **Notes:**
 
 - Scores are 0-100 percentages
-- Called automatically when goal, strategies, or KPIs change
+- Called automatically when goal, strategies, or Measures change
 - Results cached to reduce API calls
 
 **Implementation:** `src/services/alignment-engine-service.ts` → `calculateAlignment()`
@@ -115,7 +115,7 @@ Get detailed AI explanation for goal alignment (more verbose than alignment-chec
   "goal": {
     "intent": "string",
     "strategies": [{"description": "string"}],
-    "measures": [{"sharedKpiId": "string", "name": "string"}]
+    "measures": [{"sharedMeasureId": "string", "name": "string"}]
   },
   "businessFoundation": {
     "vision": "string",
@@ -161,7 +161,7 @@ Get AI-generated suggestions for improving goal alignment.
   "goal": {
     "intent": "string",
     "strategies": [{"description": "string"}],
-    "measures": [{"sharedKpiId": "string"}]
+    "measures": [{"sharedMeasureId": "string"}]
   },
   "businessFoundation": {
     "vision": "string",
@@ -180,7 +180,7 @@ Get AI-generated suggestions for improving goal alignment.
     "suggestions": [
       "Consider reframing your goal to more explicitly connect with your core value of 'Innovation'",
       "Add a strategy that addresses the gap between current state and vision",
-      "Include KPIs that measure progress toward your long-term purpose"
+      "Include Measures that measure progress toward your long-term purpose"
     ]
   }
 }
@@ -255,7 +255,7 @@ Get AI-generated strategy recommendations for a goal.
 
 ### POST /coaching/measure-recommendations
 
-Get AI-recommended KPIs for a goal and strategies.
+Get AI-recommended Measures for a goal and strategies.
 
 **Note:** Full URL: `{BASE_URL}/coaching/measure-recommendations`
 
@@ -271,7 +271,7 @@ Get AI-recommended KPIs for a goal and strategies.
   "businessContext": {
     "industry": "string",
     "businessType": "string",
-    "currentKPIs": ["string"]
+    "currentMeasures": ["string"]
   },
   "preferences": {
     "quantitative": true,
@@ -306,7 +306,7 @@ Get AI-recommended KPIs for a goal and strategies.
       "dataSource": "CRM system"
     }],
     "confidence": 0.90,
-    "reasoning": "These KPIs align with your goal and provide actionable metrics..."
+    "reasoning": "These Measures align with your goal and provide actionable metrics..."
   }
 }
 ```
@@ -317,7 +317,7 @@ Get AI-recommended KPIs for a goal and strategies.
 - `isLeading`: true for predictive metrics, false for historical
 - `difficulty`: how hard to measure/track
 
-**Implementation:** `src/services/measure-recommendation-service.ts` → `getKPIRecommendations()`
+**Implementation:** `src/services/measure-recommendation-service.ts` → `getMeasureRecommendations()`
 
 ---
 

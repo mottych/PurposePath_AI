@@ -36,7 +36,7 @@ public class MeasureLinkDataModel : BaseDataModel
     [DynamoDBGlobalSecondaryIndexHashKey("tenant-index")]
     public string TenantId { get; set; } = string.Empty;
 
-    [DynamoDBProperty("kpi_id")]
+    [DynamoDBProperty("measure_id")]
     [DynamoDBGlobalSecondaryIndexHashKey("measure-index")]
     public string MeasureId { get; set; } = string.Empty;
 
@@ -71,7 +71,7 @@ public class MeasureLinkDataModel : BaseDataModel
     public decimal? ThresholdPct { get; set; }
 
     // Composite index for uniqueness enforcement
-    // Format: "kpi_id#goal_id" or "kpi_id#strategy_id" or "kpi_id#person_id#PERSONAL"
+    // Format: "measure_id#goal_id" or "measure_id#strategy_id" or "measure_id#person_id#PERSONAL"
     [DynamoDBGlobalSecondaryIndexHashKey("uniqueness-index")]
     public string UniquenessKey { get; set; } = string.Empty;
 
@@ -100,7 +100,7 @@ public const string MeasureLinksTableName = "purposepath-measure-links";
 | GSI Name | Partition Key | Purpose |
 |----------|---------------|---------|
 | `tenant-index` | tenant_id | List links by tenant |
-| `measure-index` | kpi_id | Get all links for a Measure |
+| `measure-index` | measure_id | Get all links for a Measure |
 | `person-index` | person_id | Get all links for a person |
 | `goal-index` | goal_id | Get all links for a goal |
 | `strategy-index` | strategy_id | Get all links for a strategy |
@@ -183,7 +183,7 @@ Already defined in Issue #XXX-2. Implementation here.
 
 ### 6. Repository Implementation
 
-Location: `PurposePath.Infrastructure/Repositories/DynamoDbKpiLinkRepository.cs`
+Location: `PurposePath.Infrastructure/Repositories/DynamoDbMeasureLinkRepository.cs`
 
 ```csharp
 using Amazon.DynamoDBv2.DataModel;
@@ -196,11 +196,11 @@ using PurposePath.Infrastructure.Mappers;
 
 namespace PurposePath.Infrastructure.Repositories;
 
-public class DynamoDbKpiLinkRepository : IKpiLinkRepository
+public class DynamoDbMeasureLinkRepository : IMeasureLinkRepository
 {
     private readonly IDynamoDBContext _context;
 
-    public DynamoDbKpiLinkRepository(IDynamoDBContext context)
+    public DynamoDbMeasureLinkRepository(IDynamoDBContext context)
     {
         _context = context;
     }
@@ -211,7 +211,7 @@ public class DynamoDbKpiLinkRepository : IKpiLinkRepository
         return dataModel == null ? null : MeasureLinkMapper.ToDomain(dataModel);
     }
 
-    public async Task<IEnumerable<MeasureLink>> GetByKpiIdAsync(MeasureId measureId, CancellationToken ct = default)
+    public async Task<IEnumerable<MeasureLink>> GetByMeasureIdAsync(MeasureId measureId, CancellationToken ct = default)
     {
         var query = _context.QueryAsync<MeasureLinkDataModel>(
             measureId.ToString(),
@@ -251,13 +251,13 @@ public class DynamoDbKpiLinkRepository : IKpiLinkRepository
         return results.Select(MeasureLinkMapper.ToDomain);
     }
 
-    public async Task<MeasureLink?> GetByGoalAndKpiAsync(GoalId goalId, MeasureId measureId, CancellationToken ct = default)
+    public async Task<MeasureLink?> GetByGoalAndMeasureAsync(GoalId goalId, MeasureId measureId, CancellationToken ct = default)
     {
         var links = await GetByGoalIdAsync(goalId, ct);
         return links.FirstOrDefault(l => l.MeasureId == measureId && l.StrategyId == null);
     }
 
-    public async Task<MeasureLink?> GetByStrategyAndKpiAsync(StrategyId strategyId, MeasureId measureId, CancellationToken ct = default)
+    public async Task<MeasureLink?> GetByStrategyAndMeasureAsync(StrategyId strategyId, MeasureId measureId, CancellationToken ct = default)
     {
         var links = await GetByStrategyIdAsync(strategyId, ct);
         return links.FirstOrDefault(l => l.MeasureId == measureId);
@@ -282,13 +282,13 @@ public class DynamoDbKpiLinkRepository : IKpiLinkRepository
 
     public async Task<bool> ExistsForGoalAsync(MeasureId measureId, GoalId goalId, CancellationToken ct = default)
     {
-        var link = await GetByGoalAndKpiAsync(goalId, measureId, ct);
+        var link = await GetByGoalAndMeasureAsync(goalId, measureId, ct);
         return link != null;
     }
 
     public async Task<bool> ExistsForStrategyAsync(MeasureId measureId, StrategyId strategyId, CancellationToken ct = default)
     {
-        var link = await GetByStrategyAndKpiAsync(strategyId, measureId, ct);
+        var link = await GetByStrategyAndMeasureAsync(strategyId, measureId, ct);
         return link != null;
     }
 }
@@ -302,7 +302,7 @@ public class DynamoDbKpiLinkRepository : IKpiLinkRepository
 |------|--------|
 | `PurposePath.Infrastructure/DataModels/MeasureLinkDataModel.cs` | Create |
 | `PurposePath.Infrastructure/Mappers/MeasureLinkMapper.cs` | Create |
-| `PurposePath.Infrastructure/Repositories/DynamoDbKpiLinkRepository.cs` | Create |
+| `PurposePath.Infrastructure/Repositories/DynamoDbMeasureLinkRepository.cs` | Create |
 | `PurposePath.Infrastructure/Configuration/DynamoDbSettings.cs` | Modify |
 | `PurposePath.Infrastructure/ServiceCollectionExtensions.cs` | Modify - register repository |
 | `Pulumi/DynamoDbStack.cs` or equivalent | Modify - add table and GSIs |
@@ -351,7 +351,7 @@ public class DynamoDbKpiLinkRepository : IKpiLinkRepository
 **Completed:**
 - [ ] Created MeasureLinkDataModel
 - [ ] Created MeasureLinkMapper
-- [ ] Created DynamoDbKpiLinkRepository
+- [ ] Created DynamoDbMeasureLinkRepository
 - [ ] Added table configuration
 - [ ] Registered repository in DI
 - [ ] Added Pulumi table definition

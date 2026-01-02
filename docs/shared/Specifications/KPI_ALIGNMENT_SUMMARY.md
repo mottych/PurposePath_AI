@@ -1,9 +1,9 @@
 # GET /measures Endpoint Alignment - Executive Summary
 
 **Date:** December 30, 2025  
-**Analyzed Endpoints:** GET /measures (List KPIs)  
+**Analyzed Endpoints:** GET /measures (List Measures)  
 **Specification:** measures-api.md v7.0  
-**Implementation:** KpisController.cs  
+**Implementation:** MeasuresController.cs  
 
 ---
 
@@ -32,9 +32,9 @@
    - ownerId > goalId > strategyId > default (current user)
    - Implemented as if-else-if chain (lines 38-84)
 
-3. **Default Behavior** - Correctly returns current user's KPIs when no filter provided
+3. **Default Behavior** - Correctly returns current user's Measures when no filter provided
 
-4. **Response Structure** - ApiResponse<T> wrapper with PaginatedKpisResponse data
+4. **Response Structure** - ApiResponse<T> wrapper with PaginatedMeasuresResponse data
 
 5. **All Measure Fields** - 20/20 specification fields present in response
 
@@ -127,7 +127,7 @@ public bool IsDeleted { get; init; } = false;
 
 **File:** `docs/shared/Specifications/user-app/traction-service/measures-api.md`
 
-**Change:** Update "1. List KPIs" → "Response" section example
+**Change:** Update "1. List Measures" → "Response" section example
 
 From:
 ```json
@@ -192,10 +192,10 @@ Will continue working without modification.
 
 The following test cases should pass:
 
-✅ GET /measures returns KPIs owned by current user (no filter)  
-✅ GET /measures?ownerId=X returns KPIs for user X  
-✅ GET /measures?goalId=X returns KPIs linked to goal X  
-✅ GET /measures?strategyId=X returns KPIs linked to strategy X  
+✅ GET /measures returns Measures owned by current user (no filter)  
+✅ GET /measures?ownerId=X returns Measures for user X  
+✅ GET /measures?goalId=X returns Measures linked to goal X  
+✅ GET /measures?strategyId=X returns Measures linked to strategy X  
 ✅ When multiple filters provided, ownerId takes precedence  
 ✅ Response includes all required fields  
 ✅ Response includes `isDeleted` field  
@@ -223,10 +223,10 @@ The `GET /measures` endpoint implementation is **highly aligned** with specifica
 ## References
 
 - **Specification:** [docs/shared/Specifications/user-app/traction-service/measures-api.md](../../user-app/traction-service/measures-api.md)
-- **Implementation:** [Services/PurposePath.Traction.Lambda/Controllers/KpisController.cs](../../../Services/PurposePath.Traction.Lambda/Controllers/KpisController.cs)
+- **Implementation:** [Services/PurposePath.Traction.Lambda/Controllers/MeasuresController.cs](../../../Services/PurposePath.Traction.Lambda/Controllers/MeasuresController.cs)
 - **Request DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureRequests.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Requests/MeasureRequests.cs)
 - **Response DTO:** [Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs](../../../Services/PurposePath.Traction.Lambda/DTOs/Responses/MeasureResponses.cs)
-- **Full Analysis:** [ALIGNMENT_ANALYSIS_KPI_ENDPOINT.md](./ALIGNMENT_ANALYSIS_KPI_ENDPOINT.md)
+- **Full Analysis:** [ALIGNMENT_ANALYSIS_Measure_ENDPOINT.md](./ALIGNMENT_ANALYSIS_Measure_ENDPOINT.md)
 
 ---
 

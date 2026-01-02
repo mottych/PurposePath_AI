@@ -171,7 +171,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 **Goal Card Features:**
 - Color-coded left border based on status (emerald/amber/rose/slate)
 - Progress ring or bar
-- Quick stats (strategies, actions, KPIs)
+- Quick stats (strategies, actions, Measures)
 - "Open" opens slide-out panel; "Continue" goes to Planning Studio
 - Hover shows alignment score and owner
 
@@ -316,7 +316,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 
 ---
 
-#### Step 3: Success Measures (KPIs)
+#### Step 3: Success Measures (Measures)
 
 **Purpose:** Define how you'll measure success
 
@@ -327,7 +327,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │  Define how you'll know your strategies are working                         │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
-│  GOAL-LEVEL KPIs (measure overall goal progress)                            │
+│  GOAL-LEVEL Measures (measure overall goal progress)                            │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  [+ Add Goal Measure]                       [📚 Browse Measure Catalog]     │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -340,7 +340,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
-│  STRATEGY KPIs (measure each strategy's effectiveness)                      │
+│  STRATEGY Measures (measure each strategy's effectiveness)                      │
 │                                                                             │
 │  ▼ Strategy 1: Partner Channel Expansion                                    │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -357,7 +357,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │  │                                                    [Edit] [Remove]  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  ▶ Strategy 2: Enterprise Sales Team (2 KPIs)                               │
+│  ▶ Strategy 2: Enterprise Sales Team (2 Measures)                               │
 │  ▶ Strategy 3: Enterprise Product Features (1 Measure)                          │
 │                                                                             │
 │                                    [← Back: Strategies]   [Next: Actions →] │
@@ -365,7 +365,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 ```
 
 **Features:**
-- Separate goal-level and strategy-level KPIs
+- Separate goal-level and strategy-level Measures
 - Measure catalog browser (slide-out panel)
 - Create custom Measure (slide-out panel)
 - Set primary Measure for goal
@@ -452,15 +452,15 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │                                                                             │
 │  SUMMARY                                                                    │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
-│  │   3 Strategies   │ │     6 KPIs       │ │    12 Actions    │            │
+│  │   3 Strategies   │ │     6 Measures       │ │    12 Actions    │            │
 │  │   ✓ All aligned  │ │   1 Primary      │ │   4 High priority│            │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘            │
 │                                                                             │
 │  STRATEGIES                                                                 │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ 1. Partner Channel Expansion     ████░░ 85%  │ 2 KPIs │ 3 Actions   │   │
-│  │ 2. Enterprise Sales Team         ████░░ 80%  │ 2 KPIs │ 4 Actions   │   │
-│  │ 3. Enterprise Product Features   ████░░ 78%  │ 2 KPIs │ 5 Actions   │   │
+│  │ 1. Partner Channel Expansion     ████░░ 85%  │ 2 Measures │ 3 Actions   │   │
+│  │ 2. Enterprise Sales Team         ████░░ 80%  │ 2 Measures │ 4 Actions   │   │
+│  │ 3. Enterprise Product Features   ████░░ 78%  │ 2 Measures │ 5 Actions   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -508,14 +508,14 @@ Transform the Strategic Planning experience by separating two distinct user mind
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ 📋 Customer Loyalty Program                           [Use This →]  │   │
 │  │    Used in: Improve Customer Retention (Completed, 92% success)     │   │
-│  │    3 KPIs • 5 Actions • "Highly effective for reducing churn"       │   │
+│  │    3 Measures • 5 Actions • "Highly effective for reducing churn"       │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  TEMPLATES                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ 📋 Channel Partner Expansion                          [Use This →]  │   │
 │  │    Category: Growth • Source: PurposePath Library                   │   │
-│  │    Recommended KPIs, suggested actions, best practices included     │   │
+│  │    Recommended Measures, suggested actions, best practices included     │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -584,7 +584,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 ```
 
 **Needs Attention Alerts:**
-- KPIs behind by >10%
+- Measures behind by >10%
 - Actions past due
 - Critical issues
 - Strategies at risk
@@ -613,7 +613,7 @@ Transform the Strategic Planning experience by separating two distinct user mind
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ [All KPIs ▾] [Status ▾] [Category ▾] [Owner ▾]     🔍 Search...    │   │
+│  │ [All Measures ▾] [Status ▾] [Category ▾] [Owner ▾]     🔍 Search...    │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  QUICK STATS                                                                │
@@ -784,14 +784,14 @@ When "View Details" is clicked:
 
 ### 5.4 Personal Scorecard
 
-**Purpose:** Comprehensive view of ALL KPIs the user is responsible for
+**Purpose:** Comprehensive view of ALL Measures the user is responsible for
 
-> **Important:** The Personal Scorecard shows not just KPIs directly linked to the user (personal KPIs), but also includes ALL KPIs where the user is the designated **owner** - including those attached to goals and strategies. This provides a single place for users to track everything they're accountable for.
+> **Important:** The Personal Scorecard shows not just Measures directly linked to the user (personal Measures), but also includes ALL Measures where the user is the designated **owner** - including those attached to goals and strategies. This provides a single place for users to track everything they're accountable for.
 
 **Measure Sources:**
-1. **Personal KPIs** - KPIs directly linked to the person (personal scorecard items)
-2. **Goal KPIs (as owner)** - KPIs linked to goals where user is the Measure owner
-3. **Strategy KPIs (as owner)** - KPIs linked to strategies where user is the Measure owner
+1. **Personal Measures** - Measures directly linked to the person (personal scorecard items)
+2. **Goal Measures (as owner)** - Measures linked to goals where user is the Measure owner
+3. **Strategy Measures (as owner)** - Measures linked to strategies where user is the Measure owner
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -803,19 +803,19 @@ When "View Details" is clicked:
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ MY PERFORMANCE OVERVIEW                                              │   │
 │  │ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐         │   │
-│  │ │ 8 KPIs     │ │ 5 On Track │ │ 2 At Risk  │ │ 1 Behind   │         │   │
+│  │ │ 8 Measures     │ │ 5 On Track │ │ 2 At Risk  │ │ 1 Behind   │         │   │
 │  │ │  Total     │ │    🟢      │ │    🟡      │ │    🔴      │         │   │
 │  │ └────────────┘ └────────────┘ └────────────┘ └────────────┘         │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  FILTER: [All My KPIs ▾] [Status ▾] [Category ▾]                            │
-│          └─ All My KPIs                                                     │
-│             Personal KPIs Only                                              │
-│             Goal/Strategy KPIs Only                                         │
+│  FILTER: [All My Measures ▾] [Status ▾] [Category ▾]                            │
+│          └─ All My Measures                                                     │
+│             Personal Measures Only                                              │
+│             Goal/Strategy Measures Only                                         │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
-│  PERSONAL KPIs (3)                                                          │
+│  PERSONAL Measures (3)                                                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ 📊 Quarterly Sales Target                      ████████░░ 80%        │   │
 │  │    Target: $500K │ Current: $400K │ Variance: +$50K ahead           │   │
@@ -832,7 +832,7 @@ When "View Details" is clicked:
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
-│  GOAL & STRATEGY KPIs I OWN (5)                                             │
+│  GOAL & STRATEGY Measures I OWN (5)                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ 📊 Enterprise Revenue Share                    ████████░░ 85%        │   │
 │  │    Target: 40% │ Current: 34% │ Variance: +6%                       │   │
@@ -870,7 +870,7 @@ When "View Details" is clicked:
 ```
 
 **Features:**
-- **Unified view** of all KPIs where user is owner (personal + goal + strategy)
+- **Unified view** of all Measures where user is owner (personal + goal + strategy)
 - **Association badges** showing where each Measure is linked (Personal, Goal name, Strategy name)
 - **Filter by source** - Personal only, Goal/Strategy only, or All
 - Same Measure card component as Measure Tracker with added context
@@ -904,7 +904,7 @@ When "View Details" is clicked:
 │     ████████░░ 78%    Status: Active    Due: Q4 2025                    │
 │                                                                          │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │ [Overview] [Strategies] [KPIs] [Actions] [Activity]              │   │
+│  │ [Overview] [Strategies] [Measures] [Actions] [Activity]              │   │
 │  └──────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
 │  ══════════════════════════════════════════════════════════════════════ │
@@ -922,9 +922,9 @@ When "View Details" is clicked:
 │  STRATEGIES                                                              │
 │  ┌────────────────────────────────────────────────────────────────┐    │
 │  │ ▼ Partner Channel Expansion           ██████████ 95%  Adopted   │    │
-│  │   2 KPIs │ 3 Actions (1 complete)                               │    │
+│  │   2 Measures │ 3 Actions (1 complete)                               │    │
 │  │   ─────────────────────────────────────────────────────────────│    │
-│  │   KPIs:                                                         │    │
+│  │   Measures:                                                         │    │
 │  │   • Active Partners: 15/20 (75%)                                │    │
 │  │   • Partner Revenue: $450K/$500K (90%)                          │    │
 │  │                                                                  │    │
@@ -936,12 +936,12 @@ When "View Details" is clicked:
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────┐    │
 │  │ ▶ Enterprise Sales Team               ████░░░░ 60%  Evaluated   │    │
-│  │   2 KPIs │ 4 Actions │ At Risk                                   │    │
+│  │   2 Measures │ 4 Actions │ At Risk                                   │    │
 │  └────────────────────────────────────────────────────────────────┘    │
 │                                                                          │
 │  ─────────────────────────────────────────────────────────────────────  │
 │                                                                          │
-│  GOAL-LEVEL KPIs                                                         │
+│  GOAL-LEVEL Measures                                                         │
 │  • Enterprise Revenue Share: 34%/40% (85%)   [+ Record]                  │
 │                                                                          │
 │                                          [✏️ Edit Goal in Studio]        │
@@ -993,7 +993,7 @@ interface StrategyCardProps {
   strategy: Strategy;
   variant: 'planning' | 'tracking';
   expanded: boolean;
-  showKpis?: boolean;
+  showMeasures?: boolean;
   showActions?: boolean;
   onToggleExpand: () => void;
 }
@@ -1090,12 +1090,12 @@ interface MeasureData {
 | Strategies CRUD | `POST/GET/PUT/DELETE /goals/{goalId}/strategies` | ✅ Available |
 | Strategy reorder | `PUT /goals/{goalId}/strategies:reorder` | ✅ Available |
 | Measure CRUD | `POST/GET/PUT/DELETE /measures` | ✅ Available |
-| List all KPIs | `GET /measures` | ✅ Available |
-| Goal KPIs | `GET /goals/{goalId}/measures` | ✅ Available |
+| List all Measures | `GET /measures` | ✅ Available |
+| Goal Measures | `GET /goals/{goalId}/measures` | ✅ Available |
 | Link Measure to goal | `POST /goals/{goalId}/measures:link` | ✅ Available |
-| Personal KPIs | `GET /people/{personId}/measures` | ✅ Available (v6) |
+| Personal Measures | `GET /people/{personId}/measures` | ✅ Available (v6) |
 | Link personal Measure | `POST /people/{personId}/measures:link` | ✅ Available (v6) |
-| Strategy KPIs | `GET /strategies/{strategyId}/measures` | ✅ Available (v6) |
+| Strategy Measures | `GET /strategies/{strategyId}/measures` | ✅ Available (v6) |
 | Measure targets | `GET/POST /measure-links/{linkId}/targets` | ✅ Available (v6) |
 | Measure actuals | `GET/POST /measure-links/{linkId}/actuals` | ✅ Available (v6) |
 | All series | `GET /measure-links/{linkId}/all-series` | ✅ Available (v6) |
@@ -1107,7 +1107,7 @@ interface MeasureData {
 
 | Gap | Description | Priority | GitHub Issue |
 |-----|-------------|----------|--------------|
-| **Tenant Measure Settings** | `kpi_target_line_mode` (single/three) | Medium | #376 (PurposePath_Api) |
+| **Tenant Measure Settings** | `measure_target_line_mode` (single/three) | Medium | #376 (PurposePath_Api) |
 | **Command Center Aggregates** | Dashboard summary endpoint | High | **NEW REQUIRED** |
 | **Strategy Templates** | CRUD for strategy library | Low | Future |
 | **Action Suggestions** | AI topic for action suggestions | Medium | **NEW REQUIRED** |
@@ -1126,7 +1126,7 @@ interface MeasureData {
   "success": true,
   "data": {
     "alerts": {
-      "kpisAtRisk": [{ "measureId": "...", "name": "...", "variance": -15 }],
+      "measuresAtRisk": [{ "measureId": "...", "name": "...", "variance": -15 }],
       "actionsPastDue": [{ "actionId": "...", "title": "...", "daysPastDue": 2 }],
       "criticalIssues": [{ "issueId": "...", "title": "..." }]
     },
@@ -1390,7 +1390,7 @@ interface MeasureData {
 
 **Description:**
 Create a new endpoint `GET /dashboard/command-center` that returns aggregated data for the Operations Command Center including:
-- KPIs at risk (variance > threshold)
+- Measures at risk (variance > threshold)
 - Actions past due
 - Critical issues
 - Active goals with strategy progress

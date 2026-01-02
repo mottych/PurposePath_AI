@@ -62,7 +62,7 @@ GET /api/v1/admin/topics
 | `page` | integer | No | 1 | Page number | >= 1 |
 | `page_size` | integer | No | 50 | Items per page (max 100) | 1-100 |
 | `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
-| `topic_type` | string | No | - | Filter by type | `conversation_coaching`, `single_shot`, `kpi_system` |
+| `topic_type` | string | No | - | Filter by type | `conversation_coaching`, `single_shot`, `measure_system` |
 | `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
 | `search` | string | No | - | Search in name/description | Max 100 chars |
 
@@ -372,7 +372,7 @@ POST /api/v1/admin/topics
 | `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
 | `topic_name` | Required, 3-100 chars | Any printable characters |
 | `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
-| `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `kpi_system` |
+| `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `measure_system` |
 | `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
 | `temperature` | Required, float | 0.0-2.0 |
 | `max_tokens` | Required, integer | 1-100000 (model dependent) |
@@ -409,7 +409,7 @@ POST /api/v1/admin/topics
 
 - `conversation_coaching`: Interactive conversational coaching sessions (multi-turn)
 - `single_shot`: One-shot evaluations, assessments, and analysis
-- `kpi_system`: Measure calculation and tracking
+- `measure_system`: Measure calculation and tracking
 
 **Prompt Types by Topic Type:**
 
@@ -417,7 +417,7 @@ POST /api/v1/admin/topics
 |------------|-----------------|-------------|
 | `conversation_coaching` | `system`, `initiation`, `resume`, `extraction` | System defines coach behavior; initiation starts new sessions; resume continues paused sessions; extraction captures results |
 | `single_shot` | `system`, `user` | System defines behavior; user template with parameters |
-| `kpi_system` | `system`, `user` | System defines calculation behavior; user template for input |
+| `measure_system` | `system`, `user` | System defines calculation behavior; user template for input |
 
 **Response:**
 

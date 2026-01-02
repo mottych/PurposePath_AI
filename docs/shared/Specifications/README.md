@@ -53,7 +53,7 @@ Specifications/
 | [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
 | [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
 | [Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~15 |
-| [Traction Service](./user-app/traction-service/README.md) | Goals, KPIs, Actions, Issues | 66 |
+| [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | 66 |
 
 **Total User App Endpoints:** ~167
 

@@ -18,12 +18,12 @@ Implement the application layer commands and queries for MeasureData operations,
 
 ### Commands to Create
 
-#### 1. CreateKpiTargetCommand
+#### 1. CreateMeasureTargetCommand
 
-Location: `PurposePath.Application/Commands/MeasureData/CreateKpiTargetCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureData/CreateMeasureTargetCommand.cs`
 
 ```csharp
-public record CreateKpiTargetCommand : IRequest<CreateKpiTargetResult>
+public record CreateMeasureTargetCommand : IRequest<CreateMeasureTargetResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public TargetSubtype Subtype { get; init; }  // Expected, Optimal, Minimal
@@ -38,7 +38,7 @@ public record CreateKpiTargetCommand : IRequest<CreateKpiTargetResult>
     public string? Rationale { get; init; }
 }
 
-public record CreateKpiTargetResult
+public record CreateMeasureTargetResult
 {
     public MeasureDataId Id { get; init; } = null!;
     public bool Success { get; init; }
@@ -46,12 +46,12 @@ public record CreateKpiTargetResult
 }
 ```
 
-#### 2. CreateKpiActualCommand
+#### 2. CreateMeasureActualCommand
 
-Location: `PurposePath.Application/Commands/MeasureData/CreateKpiActualCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureData/CreateMeasureActualCommand.cs`
 
 ```csharp
-public record CreateKpiActualCommand : IRequest<CreateKpiActualResult>
+public record CreateMeasureActualCommand : IRequest<CreateMeasureActualResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public ActualSubtype Subtype { get; init; }  // Estimate, Measured
@@ -65,7 +65,7 @@ public record CreateKpiActualCommand : IRequest<CreateKpiActualResult>
     public string? SourceReferenceId { get; init; }
 }
 
-public record CreateKpiActualResult
+public record CreateMeasureActualResult
 {
     public MeasureDataId Id { get; init; } = null!;
     public bool Success { get; init; }
@@ -78,12 +78,12 @@ public record CreateKpiActualResult
 }
 ```
 
-#### 3. UpdateKpiTargetsCommand (Batch update)
+#### 3. UpdateMeasureTargetsCommand (Batch update)
 
-Location: `PurposePath.Application/Commands/MeasureData/UpdateKpiTargetsCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureData/UpdateMeasureTargetsCommand.cs`
 
 ```csharp
-public record UpdateKpiTargetsCommand : IRequest<UpdateKpiTargetsResult>
+public record UpdateMeasureTargetsCommand : IRequest<UpdateMeasureTargetsResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public IEnumerable<TargetUpdateItem> Targets { get; init; } = Array.Empty<TargetUpdateItem>();
@@ -117,12 +117,12 @@ public record MarkActualAsReplanTriggerCommand : IRequest<Unit>
 
 ### Queries to Create
 
-#### 1. GetKpiTargetsQuery
+#### 1. GetMeasureTargetsQuery
 
-Location: `PurposePath.Application/Queries/MeasureData/GetKpiTargetsQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureData/GetMeasureTargetsQuery.cs`
 
 ```csharp
-public record GetKpiTargetsQuery : IRequest<GetKpiTargetsResult>
+public record GetMeasureTargetsQuery : IRequest<GetMeasureTargetsResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public TargetSubtype? Subtype { get; init; }  // Filter by subtype (optional)
@@ -130,7 +130,7 @@ public record GetKpiTargetsQuery : IRequest<GetKpiTargetsResult>
     public DateTime? EndDate { get; init; }
 }
 
-public record GetKpiTargetsResult
+public record GetMeasureTargetsResult
 {
     public IEnumerable<MeasureTargetDto> Targets { get; init; } = Array.Empty<MeasureTargetDto>();
 }
@@ -150,12 +150,12 @@ public record MeasureTargetDto
 }
 ```
 
-#### 2. GetKpiActualsQuery
+#### 2. GetMeasureActualsQuery
 
-Location: `PurposePath.Application/Queries/MeasureData/GetKpiActualsQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureData/GetMeasureActualsQuery.cs`
 
 ```csharp
-public record GetKpiActualsQuery : IRequest<GetKpiActualsResult>
+public record GetMeasureActualsQuery : IRequest<GetMeasureActualsResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public ActualSubtype? Subtype { get; init; }  // Filter by subtype (optional)
@@ -164,7 +164,7 @@ public record GetKpiActualsQuery : IRequest<GetKpiActualsResult>
     public bool IncludeCalculatedFields { get; init; } = true;
 }
 
-public record GetKpiActualsResult
+public record GetMeasureActualsResult
 {
     public IEnumerable<MeasureActualDto> Actuals { get; init; } = Array.Empty<MeasureActualDto>();
 }
@@ -198,19 +198,19 @@ public record MeasureActualDto
 }
 ```
 
-#### 3. GetKpiPlanningDataQuery (Combined targets + actuals)
+#### 3. GetMeasurePlanningDataQuery (Combined targets + actuals)
 
-Location: `PurposePath.Application/Queries/MeasureData/GetKpiPlanningDataQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureData/GetMeasurePlanningDataQuery.cs`
 
 ```csharp
-public record GetKpiPlanningDataQuery : IRequest<GetKpiPlanningDataResult>
+public record GetMeasurePlanningDataQuery : IRequest<GetMeasurePlanningDataResult>
 {
     public MeasureLinkId MeasureLinkId { get; init; } = null!;
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }
 }
 
-public record GetKpiPlanningDataResult
+public record GetMeasurePlanningDataResult
 {
     public MeasureLinkDto Link { get; init; } = null!;
     
@@ -236,7 +236,7 @@ public record GetKpiPlanningDataResult
 Location: `PurposePath.Application/Services/MeasureVarianceCalculationService.cs`
 
 ```csharp
-public interface IKpiVarianceCalculationService
+public interface IMeasureVarianceCalculationService
 {
     /// <summary>
     /// Calculate expected value at a given date based on targets
@@ -270,11 +270,11 @@ public interface IKpiVarianceCalculationService
 ### Commands
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Commands/MeasureData/CreateKpiTargetCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureData/CreateKpiActualCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureData/UpdateKpiTargetsCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureData/UpdateKpiActualCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureData/DeleteKpiDataCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureData/CreateMeasureTargetCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureData/CreateMeasureActualCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureData/UpdateMeasureTargetsCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureData/UpdateMeasureActualCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureData/DeleteMeasureDataCommand.cs` | Create |
 | `PurposePath.Application/Commands/MeasureData/MarkActualAsReplanTriggerCommand.cs` | Create |
 
 ### Handlers
@@ -285,9 +285,9 @@ public interface IKpiVarianceCalculationService
 ### Queries
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Queries/MeasureData/GetKpiTargetsQuery.cs` | Create |
-| `PurposePath.Application/Queries/MeasureData/GetKpiActualsQuery.cs` | Create |
-| `PurposePath.Application/Queries/MeasureData/GetKpiPlanningDataQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureData/GetMeasureTargetsQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureData/GetMeasureActualsQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureData/GetMeasurePlanningDataQuery.cs` | Create |
 | `PurposePath.Application/Queries/MeasureData/GetLatestActualQuery.cs` | Create |
 
 ### Query Handlers
@@ -298,7 +298,7 @@ public interface IKpiVarianceCalculationService
 ### Services
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Services/IKpiVarianceCalculationService.cs` | Create |
+| `PurposePath.Application/Services/IMeasureVarianceCalculationService.cs` | Create |
 | `PurposePath.Application/Services/MeasureVarianceCalculationService.cs` | Create |
 
 ### Validators

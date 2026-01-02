@@ -29,7 +29,7 @@ This document outlines the requirements for refactoring the Measure linking and 
 
 ### Current Limitations
 
-1. **Measure Linking is Goal-only**: The `GoalKpiLink` entity only supports linking KPIs to Goals, not to individual Persons or specific Strategies within a Goal.
+1. **Measure Linking is Goal-only**: The `GoalMeasureLink` entity only supports linking Measures to Goals, not to individual Persons or specific Strategies within a Goal.
 
 2. **Fragmented Data Storage**: Target values (milestones) and actual values are stored in separate tables (`MeasureMilestone`, `MeasureActual`, `MeasureReading`), making unified queries difficult.
 
@@ -41,7 +41,7 @@ This document outlines the requirements for refactoring the Measure linking and 
 
 ### Goals of This Refactoring
 
-1. Allow KPIs to be linked to **Persons** (personal scorecards), **Goals**, and **Strategies**
+1. Allow Measures to be linked to **Persons** (personal scorecards), **Goals**, and **Strategies**
 2. Unify target and actual data into a single `MeasureData` entity
 3. Support **three target lines** (Expected, Optimal, Minimal) for richer planning visualization
 4. Distinguish between **Estimated** and **Measured** actual values
@@ -52,11 +52,11 @@ This document outlines the requirements for refactoring the Measure linking and 
 
 ## Key Concept Changes
 
-### 1. Measure Linking Model (GoalKpiLink → MeasureLink)
+### 1. Measure Linking Model (GoalMeasureLink → MeasureLink)
 
 **Before:**
 - Measure linked only to Goals
-- One `GoalKpiLink` record per Goal-Measure pair
+- One `GoalMeasureLink` record per Goal-Measure pair
 
 **After:**
 - Measure linked to Person (required) + optional Goal + optional Strategy
@@ -113,7 +113,7 @@ This document outlines the requirements for refactoring the Measure linking and 
 | `ActualValue` | `PostValue` | The recorded value (target or actual) |
 | `MeasurementDate` | `PostDate` | The date of the data point |
 | `MilestoneDate` | `PostDate` | Unified with actual dates |
-| (new) | `MeasuredPeriodStartDate` | Start of measurement window for aggregate KPIs |
+| (new) | `MeasuredPeriodStartDate` | Start of measurement window for aggregate Measures |
 
 ### 6. Removed Calculated Fields
 
@@ -175,7 +175,7 @@ MeasureData
 ├── ActualSubtype (Estimate | Measured) ← only for Actuals
 ├── PostValue (decimal)
 ├── PostDate (DateTime)
-├── MeasuredPeriodStartDate (DateTime, nullable) ← for aggregate KPIs
+├── MeasuredPeriodStartDate (DateTime, nullable) ← for aggregate Measures
 ├── Label (optional)
 ├── ConfidenceLevel (1-5, optional)
 ├── Rationale (optional)
@@ -211,22 +211,22 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 | # | Endpoint | Current | Change Required |
 |---|----------|---------|-----------------|
-| 18 | `GET /goals/{goalId}/measures` | Lists goal KPIs | Add `personId` filter, include `PersonId` in response |
+| 18 | `GET /goals/{goalId}/measures` | Lists goal Measures | Add `personId` filter, include `PersonId` in response |
 | 19 | `PUT /goals/{goalId}/measures/{measureId}:setPrimary` | Set primary | No change needed |
 | 20 | `POST /goals/{goalId}/measures:link` | Link to goal | Add `personId` to request, support Strategy linking |
 | 21 | `POST /goals/{goalId}/measures:unlink` | Unlink from goal | No structural change |
 | 22 | `POST /goals/{goalId}/measures/{measureId}:setThreshold` | Set threshold | No change needed |
 | 23 | `GET /goals/{goalId}/measures/{measureId}:link` | Get link details | Include `PersonId`, `StrategyId` in response |
-| 24 | `GET /goals/{goalId}/available-measures` | Available KPIs | No change needed |
+| 24 | `GET /goals/{goalId}/available-measures` | Available Measures | No change needed |
 
 #### New Endpoints Needed (Person-based Measure Linking)
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /people/{personId}/measures` | List all KPIs linked to a person (personal scorecard) |
+| `GET /people/{personId}/measures` | List all Measures linked to a person (personal scorecard) |
 | `POST /people/{personId}/measures:link` | Link Measure to person (personal scorecard) |
 | `POST /people/{personId}/measures:unlink` | Unlink Measure from person |
-| `GET /strategies/{strategyId}/measures` | List KPIs linked to a strategy |
+| `GET /strategies/{strategyId}/measures` | List Measures linked to a strategy |
 
 #### Measure Planning Endpoints (Milestones → MeasureData with Subtypes)
 
@@ -256,8 +256,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "id": "kpilink_123",
-  "measureId": "kpi_456",
+  "id": "measurelink_123",
+  "measureId": "measure_456",
   "personId": "person_789",
   "personName": "John Doe",
   "goalId": "goal_101",
@@ -274,8 +274,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "id": "kpidata_123",
-  "measureLinkId": "kpilink_456",
+  "id": "measuredata_123",
+  "measureLinkId": "measurelink_456",
   "dataCategory": "Target" | "Actual",
   "targetSubtype": "Expected" | "Optimal" | "Minimal",
   "actualSubtype": "Estimate" | "Measured",
@@ -292,8 +292,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "measureId": "kpi_123",
-  "measureLinkId": "kpilink_456",
+  "measureId": "measure_123",
+  "measureLinkId": "measurelink_456",
   "currentValue": 42000,
   "targets": {
     "expected": [
@@ -325,12 +325,12 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ### 1. Personal Scorecard View
 
-**New Feature:** Users should be able to view and manage KPIs linked only to themselves (no Goal/Strategy).
+**New Feature:** Users should be able to view and manage Measures linked only to themselves (no Goal/Strategy).
 
 **Displays:**
-- List of personal KPIs
+- List of personal Measures
 - Targets (three lines) and actuals for each
-- Ability to add new personal KPIs
+- Ability to add new personal Measures
 
 ### 2. Goal Measure View (Updated)
 
@@ -373,8 +373,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ### Migration Strategy
 
-1. **GoalKpiLink → MeasureLink**
-   - Map existing `GoalKpiLink` records to new `MeasureLink` table
+1. **GoalMeasureLink → MeasureLink**
+   - Map existing `GoalMeasureLink` records to new `MeasureLink` table
    - Set `PersonId` to the Goal's owner (or a system default)
    - Set `GoalId` from existing link
    - Set `StrategyId` to null (existing links are Goal-level)
@@ -421,7 +421,7 @@ During transition:
 | **Measured** | Actual recorded value from data or observation |
 | **PostValue** | The numeric value being recorded (new name for ActualValue/TargetValue) |
 | **PostDate** | The date of the data point (new name for MeasurementDate/MilestoneDate) |
-| **MeasuredPeriodStartDate** | For aggregate KPIs, the start of the measurement window |
+| **MeasuredPeriodStartDate** | For aggregate Measures, the start of the measurement window |
 | **AggregationPeriodCount** | How many periods to aggregate (e.g., 2 for bi-weekly) |
 
 ---

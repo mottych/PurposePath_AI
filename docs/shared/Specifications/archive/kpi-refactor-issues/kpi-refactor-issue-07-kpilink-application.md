@@ -10,7 +10,7 @@
 
 ## 📋 Description
 
-Implement the application layer commands and queries for MeasureLink operations, including linking KPIs to Goals, Strategies, and Persons.
+Implement the application layer commands and queries for MeasureLink operations, including linking Measures to Goals, Strategies, and Persons.
 
 ---
 
@@ -18,9 +18,9 @@ Implement the application layer commands and queries for MeasureLink operations,
 
 ### Commands to Create/Update
 
-#### 1. LinkKpiCommand (replaces LinkKpiToGoalCommand)
+#### 1. LinkMeasureCommand (replaces LinkMeasureToGoalCommand)
 
-Location: `PurposePath.Application/Commands/MeasureLink/LinkKpiCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureLink/LinkMeasureCommand.cs`
 
 ```csharp
 using MediatR;
@@ -31,7 +31,7 @@ namespace PurposePath.Application.Commands.MeasureLink;
 /// <summary>
 /// Command to link a Measure to a Person, Goal, or Strategy
 /// </summary>
-public record LinkKpiCommand : IRequest<LinkKpiResult>
+public record LinkMeasureCommand : IRequest<LinkMeasureResult>
 {
     public TenantId TenantId { get; init; } = null!;
     public MeasureId MeasureId { get; init; } = null!;
@@ -48,7 +48,7 @@ public record LinkKpiCommand : IRequest<LinkKpiResult>
     public bool IsPrimary { get; init; }
 }
 
-public record LinkKpiResult
+public record LinkMeasureResult
 {
     public MeasureLinkId LinkId { get; init; } = null!;
     public bool Success { get; init; }
@@ -56,12 +56,12 @@ public record LinkKpiResult
 }
 ```
 
-#### 2. UnlinkKpiCommand
+#### 2. UnlinkMeasureCommand
 
-Location: `PurposePath.Application/Commands/MeasureLink/UnlinkKpiCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureLink/UnlinkMeasureCommand.cs`
 
 ```csharp
-public record UnlinkKpiCommand : IRequest<UnlinkKpiResult>
+public record UnlinkMeasureCommand : IRequest<UnlinkMeasureResult>
 {
     public MeasureLinkId LinkId { get; init; } = null!;
     public TenantId TenantId { get; init; } = null!;
@@ -69,12 +69,12 @@ public record UnlinkKpiCommand : IRequest<UnlinkKpiResult>
 }
 ```
 
-#### 3. UpdateKpiLinkCommand
+#### 3. UpdateMeasureLinkCommand
 
-Location: `PurposePath.Application/Commands/MeasureLink/UpdateKpiLinkCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureLink/UpdateMeasureLinkCommand.cs`
 
 ```csharp
-public record UpdateKpiLinkCommand : IRequest<UpdateKpiLinkResult>
+public record UpdateMeasureLinkCommand : IRequest<UpdateMeasureLinkResult>
 {
     public MeasureLinkId LinkId { get; init; } = null!;
     public TenantId TenantId { get; init; } = null!;
@@ -87,12 +87,12 @@ public record UpdateKpiLinkCommand : IRequest<UpdateKpiLinkResult>
 }
 ```
 
-#### 4. SetPrimaryKpiLinkCommand
+#### 4. SetPrimaryMeasureLinkCommand
 
-Location: `PurposePath.Application/Commands/MeasureLink/SetPrimaryKpiLinkCommand.cs`
+Location: `PurposePath.Application/Commands/MeasureLink/SetPrimaryMeasureLinkCommand.cs`
 
 ```csharp
-public record SetPrimaryKpiLinkCommand : IRequest<SetPrimaryKpiLinkResult>
+public record SetPrimaryMeasureLinkCommand : IRequest<SetPrimaryMeasureLinkResult>
 {
     public MeasureLinkId LinkId { get; init; } = null!;
     public GoalId GoalId { get; init; } = null!;  // Context for primary status
@@ -103,12 +103,12 @@ public record SetPrimaryKpiLinkCommand : IRequest<SetPrimaryKpiLinkResult>
 
 ### Queries to Create/Update
 
-#### 1. GetKpiLinksQuery
+#### 1. GetMeasureLinksQuery
 
-Location: `PurposePath.Application/Queries/MeasureLink/GetKpiLinksQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureLink/GetMeasureLinksQuery.cs`
 
 ```csharp
-public record GetKpiLinksQuery : IRequest<GetKpiLinksResult>
+public record GetMeasureLinksQuery : IRequest<GetMeasureLinksResult>
 {
     public TenantId TenantId { get; init; } = null!;
     
@@ -120,7 +120,7 @@ public record GetKpiLinksQuery : IRequest<GetKpiLinksResult>
     public bool? PersonalOnly { get; init; }  // Only person-level links (no goal/strategy)
 }
 
-public record GetKpiLinksResult
+public record GetMeasureLinksResult
 {
     public IEnumerable<MeasureLinkDto> Links { get; init; } = Array.Empty<MeasureLinkDto>();
 }
@@ -145,12 +145,12 @@ public record MeasureLinkDto
 }
 ```
 
-#### 2. GetKpiLinkDetailsQuery
+#### 2. GetMeasureLinkDetailsQuery
 
-Location: `PurposePath.Application/Queries/MeasureLink/GetKpiLinkDetailsQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureLink/GetMeasureLinkDetailsQuery.cs`
 
 ```csharp
-public record GetKpiLinkDetailsQuery : IRequest<MeasureLinkDetailsResult?>
+public record GetMeasureLinkDetailsQuery : IRequest<MeasureLinkDetailsResult?>
 {
     public MeasureLinkId LinkId { get; init; } = null!;
     public TenantId TenantId { get; init; } = null!;
@@ -165,22 +165,22 @@ public record MeasureLinkDetailsResult
 }
 ```
 
-#### 3. GetAvailableKpisForLinkingQuery
+#### 3. GetAvailableMeasuresForLinkingQuery
 
-Location: `PurposePath.Application/Queries/MeasureLink/GetAvailableKpisForLinkingQuery.cs`
+Location: `PurposePath.Application/Queries/MeasureLink/GetAvailableMeasuresForLinkingQuery.cs`
 
 ```csharp
-public record GetAvailableKpisForLinkingQuery : IRequest<GetAvailableKpisResult>
+public record GetAvailableMeasuresForLinkingQuery : IRequest<GetAvailableMeasuresResult>
 {
     public TenantId TenantId { get; init; } = null!;
-    public GoalId? GoalId { get; init; }  // If provided, exclude already linked KPIs
-    public StrategyId? StrategyId { get; init; }  // If provided, exclude already linked KPIs
+    public GoalId? GoalId { get; init; }  // If provided, exclude already linked Measures
+    public StrategyId? StrategyId { get; init; }  // If provided, exclude already linked Measures
 }
 ```
 
 ### Command Handlers
 
-#### LinkKpiCommandHandler
+#### LinkMeasureCommandHandler
 
 Key validation logic:
 ```csharp
@@ -191,7 +191,7 @@ if (command.StrategyId != null && command.GoalId == null)
 // Check uniqueness for Goal-level link
 if (command.GoalId != null && command.StrategyId == null)
 {
-    var exists = await _kpiLinkRepository.ExistsForGoalAsync(command.MeasureId, command.GoalId, ct);
+    var exists = await _measureLinkRepository.ExistsForGoalAsync(command.MeasureId, command.GoalId, ct);
     if (exists)
         throw new ConflictException($"Measure {command.MeasureId} is already linked to Goal {command.GoalId}");
 }
@@ -199,7 +199,7 @@ if (command.GoalId != null && command.StrategyId == null)
 // Check uniqueness for Strategy-level link
 if (command.StrategyId != null)
 {
-    var exists = await _kpiLinkRepository.ExistsForStrategyAsync(command.MeasureId, command.StrategyId, ct);
+    var exists = await _measureLinkRepository.ExistsForStrategyAsync(command.MeasureId, command.StrategyId, ct);
     if (exists)
         throw new ConflictException($"Measure {command.MeasureId} is already linked to Strategy {command.StrategyId}");
 }
@@ -212,38 +212,38 @@ if (command.StrategyId != null)
 ### Commands
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Commands/MeasureLink/LinkKpiCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureLink/UnlinkKpiCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureLink/UpdateKpiLinkCommand.cs` | Create |
-| `PurposePath.Application/Commands/MeasureLink/SetPrimaryKpiLinkCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureLink/LinkMeasureCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureLink/UnlinkMeasureCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureLink/UpdateMeasureLinkCommand.cs` | Create |
+| `PurposePath.Application/Commands/MeasureLink/SetPrimaryMeasureLinkCommand.cs` | Create |
 
 ### Handlers
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Handlers/Commands/MeasureLink/LinkKpiCommandHandler.cs` | Create |
-| `PurposePath.Application/Handlers/Commands/MeasureLink/UnlinkKpiCommandHandler.cs` | Create |
-| `PurposePath.Application/Handlers/Commands/MeasureLink/UpdateKpiLinkCommandHandler.cs` | Create |
-| `PurposePath.Application/Handlers/Commands/MeasureLink/SetPrimaryKpiLinkCommandHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Commands/MeasureLink/LinkMeasureCommandHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Commands/MeasureLink/UnlinkMeasureCommandHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Commands/MeasureLink/UpdateMeasureLinkCommandHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Commands/MeasureLink/SetPrimaryMeasureLinkCommandHandler.cs` | Create |
 
 ### Queries
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Queries/MeasureLink/GetKpiLinksQuery.cs` | Create |
-| `PurposePath.Application/Queries/MeasureLink/GetKpiLinkDetailsQuery.cs` | Create |
-| `PurposePath.Application/Queries/MeasureLink/GetAvailableKpisForLinkingQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureLink/GetMeasureLinksQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureLink/GetMeasureLinkDetailsQuery.cs` | Create |
+| `PurposePath.Application/Queries/MeasureLink/GetAvailableMeasuresForLinkingQuery.cs` | Create |
 
 ### Query Handlers
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Handlers/Queries/MeasureLink/GetKpiLinksQueryHandler.cs` | Create |
-| `PurposePath.Application/Handlers/Queries/MeasureLink/GetKpiLinkDetailsQueryHandler.cs` | Create |
-| `PurposePath.Application/Handlers/Queries/MeasureLink/GetAvailableKpisForLinkingQueryHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Queries/MeasureLink/GetMeasureLinksQueryHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Queries/MeasureLink/GetMeasureLinkDetailsQueryHandler.cs` | Create |
+| `PurposePath.Application/Handlers/Queries/MeasureLink/GetAvailableMeasuresForLinkingQueryHandler.cs` | Create |
 
 ### Validators
 | File | Action |
 |------|--------|
-| `PurposePath.Application/Validators/MeasureLink/LinkKpiCommandValidator.cs` | Create |
-| `PurposePath.Application/Validators/MeasureLink/UpdateKpiLinkCommandValidator.cs` | Create |
+| `PurposePath.Application/Validators/MeasureLink/LinkMeasureCommandValidator.cs` | Create |
+| `PurposePath.Application/Validators/MeasureLink/UpdateMeasureLinkCommandValidator.cs` | Create |
 
 ---
 
@@ -266,7 +266,7 @@ if (command.StrategyId != null)
 - [ ] Get links by Strategy
 - [ ] Get links by Person
 - [ ] Get personal-only links
-- [ ] Get available KPIs excludes already linked
+- [ ] Get available Measures excludes already linked
 
 ---
 
@@ -296,13 +296,13 @@ if (command.StrategyId != null)
 **Status:** [In Progress / Blocked / Complete]
 
 **Completed:**
-- [ ] Created LinkKpiCommand and handler
-- [ ] Created UnlinkKpiCommand and handler
-- [ ] Created UpdateKpiLinkCommand and handler
-- [ ] Created SetPrimaryKpiLinkCommand and handler
-- [ ] Created GetKpiLinksQuery and handler
-- [ ] Created GetKpiLinkDetailsQuery and handler
-- [ ] Created GetAvailableKpisForLinkingQuery and handler
+- [ ] Created LinkMeasureCommand and handler
+- [ ] Created UnlinkMeasureCommand and handler
+- [ ] Created UpdateMeasureLinkCommand and handler
+- [ ] Created SetPrimaryMeasureLinkCommand and handler
+- [ ] Created GetMeasureLinksQuery and handler
+- [ ] Created GetMeasureLinkDetailsQuery and handler
+- [ ] Created GetAvailableMeasuresForLinkingQuery and handler
 - [ ] Created validators
 - [ ] Added unit tests
 
