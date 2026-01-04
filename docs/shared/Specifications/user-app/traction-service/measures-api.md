@@ -1,7 +1,7 @@
 # Measures API Specification
 
-**Version:** 7.1  
-**Last Updated:** January 2, 2026  
+**Version:** 7.2  
+**Last Updated:** January 8, 2026  
 **Base Path:** `/measures`  
 **Controller:** `MeasuresController.cs`
 
@@ -712,6 +712,233 @@ See [Measure Links API](./measure-links-api.md) for details.
 
 ---
 
+### 9. Get Measure Options (Issue #469)
+
+Retrieve options for a Qualitative measure. Returns measure-owned options if they exist, otherwise returns inherited options from the linked catalog.
+
+**Endpoint:** `GET /measures/{id}/options`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (GUID) | **Yes** | Measure identifier |
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "options": [
+      {
+        "id": "opt-001",
+        "measureId": "measure-123",
+        "catalogId": null,
+        "numericValue": 1,
+        "label": "Not Met",
+        "description": "Performance below 50% of target",
+        "sortOrder": 1
+      },
+      {
+        "id": "opt-002",
+        "measureId": "measure-123",
+        "catalogId": null,
+        "numericValue": 2,
+        "label": "Partially Met",
+        "description": "Performance at 50-80% of target",
+        "sortOrder": 2
+      },
+      {
+        "id": "opt-003",
+        "measureId": "measure-123",
+        "catalogId": null,
+        "numericValue": 3,
+        "label": "Met",
+        "description": "Performance at or above target",
+        "sortOrder": 3
+      }
+    ],
+    "isInherited": false,
+    "sourceCatalogId": null
+  },
+  "error": null
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `options` | array | List of option objects |
+| `options[].id` | string (GUID) | Unique option identifier |
+| `options[].measureId` | string (GUID) | Measure ID (null if inherited) |
+| `options[].catalogId` | string (GUID) | Catalog ID (null if measure-owned) |
+| `options[].numericValue` | integer | Numeric value for aggregation |
+| `options[].label` | string | Display label shown to users |
+| `options[].description` | string | Optional explanation |
+| `options[].sortOrder` | integer | Display order |
+| `isInherited` | boolean | True if options come from catalog |
+| `sourceCatalogId` | string (GUID) | Catalog ID if inherited |
+
+#### Business Rules
+
+- Returns empty array for Quantitative measures
+- Measure-owned options take precedence over catalog options
+- Options are sorted by `sortOrder`
+
+---
+
+### 10. Set Measure Options (Issue #469)
+
+Set or replace all options for a Qualitative measure. This creates measure-owned options.
+
+**Endpoint:** `PUT /measures/{id}/options`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (GUID) | **Yes** | Measure identifier |
+
+#### Request Body
+
+```json
+{
+  "options": [
+    {
+      "numericValue": 1,
+      "label": "Not Met",
+      "description": "Performance below 50% of target",
+      "sortOrder": 1
+    },
+    {
+      "numericValue": 2,
+      "label": "Partially Met",
+      "description": "Performance at 50-80% of target",
+      "sortOrder": 2
+    },
+    {
+      "numericValue": 3,
+      "label": "Met",
+      "description": "Performance at or above target",
+      "sortOrder": 3
+    }
+  ]
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `options` | array | **Yes** | Options to set (minimum 2) |
+| `options[].numericValue` | integer | **Yes** | Unique numeric value for aggregation |
+| `options[].label` | string | **Yes** | Display label (max 100 chars) |
+| `options[].description` | string | No | Explanation text |
+| `options[].sortOrder` | integer | No | Display order (defaults to numericValue) |
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "options": [...],
+    "isInherited": false,
+    "sourceCatalogId": null
+  },
+  "error": null
+}
+```
+
+#### Validation Rules
+
+- Minimum 2 options required
+- `numericValue` must be unique within the measure
+- `label` is required and max 100 characters
+- Replaces all existing measure-owned options
+
+---
+
+### 11. Delete Measure Options (Issue #469)
+
+Delete all measure-owned options. After deletion, the measure will inherit options from its linked catalog (if any).
+
+**Endpoint:** `DELETE /measures/{id}/options`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (GUID) | **Yes** | Measure identifier |
+
+#### Response
+
+**Status:** `204 No Content`
+
+(No response body on success)
+
+#### Business Rules
+
+- Only deletes measure-owned options
+- Does not affect catalog options
+- After deletion, measure inherits from catalog (if linked)
+
+---
+
+### 12. Copy Options from Catalog (Issue #469)
+
+Copy options from a catalog entry to create measure-owned options. Use this to "detach" a measure from its catalog's options for customization.
+
+**Endpoint:** `POST /measures/{id}/options/copy-from-catalog/{catalogId}`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (GUID) | **Yes** | Measure identifier |
+| `catalogId` | string (GUID) | **Yes** | Catalog identifier to copy from |
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "options": [
+      {
+        "id": "new-opt-001",
+        "measureId": "measure-123",
+        "catalogId": null,
+        "numericValue": 1,
+        "label": "Not Met",
+        "description": "Performance below target",
+        "sortOrder": 1
+      },
+      ...
+    ],
+    "isInherited": false,
+    "sourceCatalogId": null
+  },
+  "error": null
+}
+```
+
+#### Business Rules
+
+- Creates new option records owned by the measure
+- Copied options are independent of catalog (future catalog changes don't affect them)
+- If measure already has options, they are replaced
+
+---
+
 ## Data Models
 
 ### MeasureDirection Enum
@@ -725,12 +952,21 @@ enum MeasureDirection {
 
 ### MeasureType Enum
 
+> **Note:** MeasureType describes how values are **represented and input** (Quantitative = direct number, Qualitative = select from options). This is different from indicator classification (leading/lagging) which may be tracked separately.
+
 ```typescript
 enum MeasureType {
-  Leading = "Leading",   // Predictive indicator (e.g., leads generated)
-  Lagging = "Lagging"    // Historical indicator (e.g., revenue achieved)
+  Quantitative = "Quantitative",  // Direct numeric input (e.g., $50,000 revenue)
+  Qualitative = "Qualitative",    // Select from labeled options (e.g., "Excellent" = 5)
+  Binary = "Binary"               // DEPRECATED: Use Qualitative with 2 options instead
 }
 ```
+
+**Examples:**
+- **Quantitative:** Revenue ($50,000), Temperature (72°F), Customer Count (1,500)
+- **Qualitative:** Satisfaction (Excellent/Good/Fair/Poor → 4/3/2/1), Risk Level (High/Medium/Low → 3/2/1)
+- **Binary (deprecated):** Complete (Yes/No) - migrate to Qualitative with options Yes=1, No=0
+
 
 ### Common Categories
 
@@ -821,6 +1057,15 @@ await traction.delete(`/measures/${measureId}`);
 ---
 
 ## Changelog
+
+### v7.2 (January 8, 2026) - Issue #469: Streamline Measure Terminology
+- ✨ Added `GET /measures/{id}/options` - Get options for Qualitative measures
+- ✨ Added `PUT /measures/{id}/options` - Set/replace measure options
+- ✨ Added `DELETE /measures/{id}/options` - Delete measure-owned options
+- ✨ Added `POST /measures/{id}/options/copy-from-catalog/{catalogId}` - Copy catalog options
+- 📝 **Fixed MeasureType enum documentation** - Changed from Leading/Lagging to Quantitative/Qualitative/Binary
+- ⚠️ Deprecated `Binary` MeasureType - Use Qualitative with 2 options instead
+- 📝 Clarified Type vs ValueType terminology (Type = input method, ValueType = data nature)
 
 ### v7.1 (January 2, 2026)
 - ✨ Added `GET /goals/available-measures` for new (unpersisted) goals
