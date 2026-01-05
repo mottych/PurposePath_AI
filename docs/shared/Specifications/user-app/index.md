@@ -17,35 +17,41 @@ This specification is split into multiple documents for efficient AI assistant c
    - Subscription & Billing Integration
    - User Features & Limits
 
-2. **[Business Foundation Service](./business-foundation-service.md)** ⭐ NEW (v1.0)
+2. **[Account API (Auth/Billing/Subscriptions)](./account-api.md)** ⭐ Consolidated (v2.0)
+   - Auth flows, profile, tenant endpoints
+   - Subscription tiers, user subscriptions
+   - Billing portal, payment intents, provider webhooks
+   - Health endpoints
+
+3. **[Business Foundation Service](./business-foundation-service.md)** ⭐ NEW (v1.0)
    - Business Profile, Identity, Market, Proposition, Model
    - Core Values Management
    - Ideal Customer Avatars (ICAs)
    - Products & Services Inventory
    - Wizard Progress Tracking
 
-3. **[People Service](./people-service.md)**
+4. **[People Service](./people-service.md)**
    - Person CRUD operations
    - Person tags and types
    - User-person relationships
 
-4. **[Org Structure Service](./org-structure-service.md)**
+5. **[Org Structure Service](./org-structure-service.md)**
    - Organization roles and permissions
    - Organization chart and relationships
    - User org structure endpoints
 
-5. **[Coaching Service](./coaching-service.md)**
+6. **[Coaching Service](./coaching-service.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
    - Strategic Planning AI
 
-6. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
+7. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
    - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
-7. **[Common Patterns & Data Models](./common-patterns.md)**
+8. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations

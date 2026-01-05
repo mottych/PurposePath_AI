@@ -4,6 +4,13 @@ This folder contains obsolete API specification documents that have been superse
 
 ## Archived Files
 
+### Account Service Specifications
+
+| File | Version | Date Archived | Superseded By | Notes |
+|------|---------|---------------|---------------|-------|
+| `account-service-v5.2.md` | v5.2 | February 3, 2026 | `../user-app/account-api.md` | Monolithic account spec (auth, users, subscriptions, billing) replaced by consolidated camelCase doc |
+| `account-api-v1.0.md` | v1.0 | February 3, 2026 | `../user-app/account-api.md` | Early account API draft (mixed casing) replaced by consolidated camelCase doc |
+
 ### Traction Service Specifications
 
 | File | Version | Date Archived | Superseded By | Notes |

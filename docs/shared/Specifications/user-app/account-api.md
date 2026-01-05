@@ -1,1005 +1,243 @@
 # Account API Specification
 
-**Version:** 1.0  
-**Status:** Verified Against Implementation  
-**Last Updated:** December 30, 2025  
-**Base URL:** Account Service (typically `/auth` and `/user` paths)
+**Version:** 2.0  
+**Last Updated:** January 4, 2026  
+**Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
----
+## Scope
 
-## Overview
+Consolidated account endpoints implemented by the Account Lambda controllers: `Auth`, `Users`, `Tenants`, `SubscriptionTiers`, `UserSubscription`, `Billing`, `Subscriptions`, `BillingWebhook`, `Health`.
 
-The Account API handles all user authentication, profile management, subscription features, and billing operations. This includes:
+## Conventions
 
-1. **Authentication** - Login, registration, password reset, email verification, Google OAuth
-2. **User Profile** - Get and update user details, preferences
-3. **Subscription** - Features, limits, subscription updates
-4. **Billing** - Billing portal access
+- JSON uses camelCase. Legacy snake_case inputs remain backwards compatible only where noted (logout refresh token).
+- Response envelope (`ApiResponse<T>`): `{ "success": true|false, "data": {}, "message": "?", "error": "?", "code": "?" }`.
+- Paginated responses use `PaginatedResponse<T>`: same envelope plus `pagination: { page, limit, total, totalPages }`.
+- Authenticated endpoints require headers: `Authorization: Bearer {accessToken}`, `X-Tenant-Id: {tenantId}`. Public endpoints are marked.
+- Optional headers: `X-Frontend-Base-Url` (used for auth emails), `X-E2E-Test: true` (DEV only to bypass email verification on register).
 
----
+## Authentication
 
-## Authentication & Headers
-
-Most endpoints require authentication headers:
-
-```
-Authorization: Bearer {accessToken}
-X-Tenant-Id: {tenantId}
-Content-Type: application/json
-```
-
-**Exceptions:** Auth endpoints (`/auth/login`, `/auth/register`, `/auth/google`, `/auth/forgot-password`, `/auth/forgot-username`, `/auth/reset-password`) do not require authentication.
-
----
-
-## Authentication Endpoints
-
-### 1. POST /auth/login
-
-**Description:** Authenticate user with username and password.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-- X-Frontend-Base-Url: {origin} (optional, for email links)
-
-**Request Body:**
-
-```json
-{
-  "username": "string (required, email or username)",
-  "password": "string (required, min 8 characters)"
-}
-```
-
-**Response:** 200 OK
-
+### POST /auth/login
+- Body: `{ "username": "string", "password": "string" }` (username may be email-style; 3-50 chars).
+- Response `AuthResponse`:
 ```json
 {
   "success": true,
   "data": {
-    "accessToken": "string (JWT token)",
-    "refreshToken": "string (refresh token)",
+    "accessToken": "jwt",
+    "refreshToken": "jwt",
     "user": {
-      "id": "string (UUID)",
+      "id": "uuid",
       "email": "string",
-      "fullName": "string",
-      "phone": "string|null",
-      "profileImage": "string (URL)|null",
-      "createdAt": "string (ISO 8601 datetime)",
-      "updatedAt": "string (ISO 8601 datetime)",
-      "isActive": "boolean",
-      "emailVerified": "boolean",
-      "phoneVerified": "boolean",
-      "preferences": {
-        "notifications": {
-          "email": "boolean",
-          "push": "boolean",
-          "sms": "boolean",
-          "marketing": "boolean"
-        },
-        "timezone": "string (e.g., UTC, America/New_York)",
-        "language": "string (e.g., en, es)",
-        "theme": "light|dark|auto"
-      },
-      "subscription": {
-        "id": "string (UUID)",
-        "userId": "string (UUID)",
-        "plan": "monthly|yearly",
-        "status": "active|inactive|cancelled|past_due|trialing",
-        "currentPeriodStart": "string (ISO 8601 datetime)",
-        "currentPeriodEnd": "string (ISO 8601 datetime)",
-        "cancelAtPeriodEnd": "boolean",
-        "price": "number (cents)",
-        "currency": "string (e.g., USD)"
-      }
+      "firstName": "string",
+      "lastName": "string",
+      "personId": "uuid|null",
+      "tenantId": "uuid",
+      "status": "string",
+      "isEmailVerified": true,
+      "createdAt": "2025-12-29T00:00:00Z",
+      "updatedAt": "2025-12-29T00:00:00Z"
     },
-    "tenant": {
-      "id": "string (UUID)"
-    }
+    "person": { "id": "uuid", "firstName": "string", "lastName": "string", "email": "string|null", "phone": "string|null", "title": "string|null" },
+    "tenant": { "id": "uuid", "name": "string", "status": "string" }
   }
 }
 ```
+- Errors: 401 invalid credentials, 403 `EMAIL_NOT_VERIFIED`.
 
-**Validation:**
-- `username` - Required, must be valid email or username
-- `password` - Required, min 8 characters
+### POST /auth/google
+- Body: `{ "token": "string" }`.
+- Response: same as login.
 
-**Error Responses:**
+### POST /auth/register
+- Body: `{ "username": "string", "email": "string", "password": "string", "firstName": "string", "lastName": "string", "phone": "string|null" }`.
+- DEV-only bypass: `X-E2E-Test: true` skips email verification.
+- Response: `AuthResponse` (auto-login path) or validation error. Email verification links use `X-Frontend-Base-Url` if provided.
 
-```json
-{
-  "success": false,
-  "error": "string (error message)",
-  "code": "string|null (error code, e.g., EMAIL_NOT_VERIFIED)"
-}
-```
+### POST /auth/forgot-password
+- Body: `{ "email": "string" }`.
+- Response: `{ "success": true, "message": "Password reset email sent" }`.
 
-- 400 Bad Request - Missing or invalid credentials
-- 401 Unauthorized - Invalid username/password
-- 403 Forbidden - Account not verified or disabled
+### POST /auth/reset-password
+- Body: `{ "token": "string", "newPassword": "string" }`.
+- Response: `{ "success": true, "message": "Password reset successfully" }`.
 
-**Field Mapping Notes:**
-- Backend may return `access_token` or `accessToken` (both supported)
-- Backend may return `refresh_token` or `refreshToken` (both supported)
-- Backend user object uses `first_name`/`last_name` or `firstName`/`lastName` (both supported)
-- Frontend combines firstName/lastName into `fullName`
-- Backend `avatar_url` maps to frontend `profileImage`
+### POST /auth/refresh
+- Body: `{ "refreshToken": "string" }`.
+- Response: `{ "success": true, "data": { "accessToken": "string", "refreshToken": "string" } }`.
 
----
+### POST /auth/confirm-email
+- Body: `{ "token": "string" }`.
+- Response: `{ "success": true, "message": "Email confirmed successfully" }`.
 
-### 2. POST /auth/register
+### GET /auth/confirm-email/validate
+- Query: `token`.
+- Response: `{ "success": true, "data": { "status": "valid|used|expired|not_found|error" } }`.
 
-**Description:** Register a new user account.
+### POST /auth/resend-confirmation
+- Query: `email`; optional `X-Frontend-Base-Url` for link generation.
+- Response: `{ "success": true, "message": "Confirmation email resent" }`.
 
-**HTTP Method:** POST
+### POST /auth/logout
+- Query: `refreshToken` (camelCase). Legacy `refresh_token` still accepted.
+- Response: `{ "success": true }`.
 
-**Headers:**
-- Content-Type: application/json
-- X-Frontend-Base-Url: {origin} (required for email verification links)
+## Users
 
-**Request Body:**
+### GET /users/{id}
+- Path: user ID (GUID). Public auth required.
+- Response: `{ "success": true, "data": { "userId": "uuid", "email": "string", "firstName": "string", "lastName": "string", "avatarUrl": "string|null" } }`.
 
-```json
-{
-  "email": "string (required, valid email)",
-  "username": "string (required, min 3, max 50 chars)",
-  "password": "string (required, min 8 chars)",
-  "firstName": "string (required, max 50 chars)",
-  "lastName": "string (required, max 50 chars)",
-  "phone": "string|null (optional, phone number)"
-}
-```
+### GET /user/profile
+- Response `UserProfileDetailResponse`: user info with preferences and `personId`.
 
-**Response:** 201 Created
+### PUT /user/profile
+- Body (all optional): `{ "firstName": "string|null", "lastName": "string|null", "phone": "string|null", "avatarUrl": "string|null", "preferences": { "theme": "string", "language": "string", "timezone": "string", "dateFormat": "string", "timeFormat": "string", "currency": "string", "notifications": { "email": true, "push": true, "sms": true, "marketing": true, "coachingReminders": true, "teamUpdates": true, "systemNotifications": true }, "coaching": { "preferredSessionLength": 60, "reminderFrequency": "weekly", "coachingStyle": "directive" } } }`.
+- Response: updated `UserProfileDetailResponse`.
 
-**Case 1: Email verification required**
+### PUT /user/preferences
+- Body: `UserPreferencesRequest` (same shape as `preferences` above).
+- Response: `{ "success": true, "data": UserPreferencesResponse }`.
 
-```json
-{
-  "success": true,
-  "data": {
-    "requiresEmailVerification": true,
-    "tenantId": "string (UUID)"
-  }
-}
-```
+### GET /user/features
+- Response: `{ "success": true, "data": ["goals", "operations", ...] }`.
 
-**Case 2: Auto-login (email verification not required)**
+### GET /user/limits
+- Response `UserLimitsResponse`: `{ "goals": 10, "users": null, "projects": null, "apiCallsPerMonth": 10000, "storageMb": 1024 }` (null = unlimited).
 
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "string (JWT token)",
-    "refreshToken": "string (refresh token)",
-    "user": {...},
-    "tenant": {...}
-  }
-}
-```
+## Tenants
 
-**Validation:**
-- `email` - Required, valid email format, unique
-- `username` - Required, min 3 chars, max 50 chars, unique, alphanumeric + underscores
-- `password` - Required, min 8 chars, must include uppercase, lowercase, number
-- `firstName` - Required, max 50 chars
-- `lastName` - Required, max 50 chars
-- `phone` - Optional, digits only (automatically stripped of formatting)
+### GET /tenants/{id}
+- Response: `TenantResponse` `{ id, name, status, subscriptionTier, createdAt, updatedAt, userCount, isActive }`.
 
-**Error Responses:**
+### GET /tenants/current
+- Response: `TenantResponse`.
 
-```json
-{
-  "success": false,
-  "error": "Email already registered" | "Username already taken" | "Password too weak"
-}
-```
+### PUT /tenants/current
+- Body: `{ "name": "string|null", "status": "string|null" }`.
+- Response: updated `TenantResponse`.
 
-- 400 Bad Request - Validation failed
-- 409 Conflict - Email or username already exists
-- 422 Unprocessable Entity
+### GET /tenants/settings
+- Response: `{ "success": true, "data": { "targetLineMode": "single|three" } }`.
 
-**Notes:**
-- Frontend strips non-digit characters from phone before sending
-- Backend creates tenant automatically for new user
-- Email verification link sent to provided email address
+### PUT /tenants/settings
+- Body: `{ "targetLineMode": "single|three" }`.
+- Response: updated settings.
 
----
+## Subscription Tiers
 
-### 3. POST /auth/google
-
-**Description:** Authenticate user with Google OAuth token.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "token": "string (required, Google OAuth token)"
-}
-```
-
-**Response:** 200 OK (same structure as `/auth/login` response)
-
-**Error Responses:**
-- 400 Bad Request - Invalid token
-- 401 Unauthorized - Token expired or invalid
-
-**Notes:**
-- Creates user account automatically if not exists
-- Uses Google profile information for firstName/lastName
-- Tenant created automatically for new users
-
----
-
-### 4. POST /auth/forgot-password
-
-**Description:** Request password reset email.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "email": "string (required, valid email)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "If an account exists with that email, a reset link has been sent."
-}
-```
-
-**Notes:**
-- Always returns success to prevent email enumeration
-- Reset link sent to email if account exists
-- Link expires after configurable time (typically 1-24 hours)
-
-**Error Responses:**
-- 400 Bad Request - Invalid email format
-- 500 Internal Server Error
-
----
-
-### 5. POST /auth/forgot-username
-
-**Description:** Request username reminder email.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "email": "string (required, valid email)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true
-}
-```
-
-**Notes:**
-- Always returns success to prevent email enumeration
-- Username sent to email if account exists
-- Frontend implementation explicitly handles this security requirement
-
-**Error Responses:**
-- 400 Bad Request - Invalid email format
-- 500 Internal Server Error
-
----
-
-### 6. POST /auth/reset-password
-
-**Description:** Reset password using token from email.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "token": "string (required, reset token from email)",
-  "new_password": "string (required, min 8 chars)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "Password reset successfully"
-}
-```
-
-**Validation:**
-- `token` - Required, must be valid and not expired
-- `new_password` - Required, min 8 chars, must meet password strength requirements
-
-**Error Responses:**
-- 400 Bad Request - Invalid or expired token
-- 422 Unprocessable Entity - Password too weak
-
-**Field Naming Note:**
-- Backend expects `new_password` (snake_case), not `newPassword`
-- This is an exception to the general camelCase convention
-
----
-
-### 7. POST /auth/refresh
-
-**Description:** Refresh access token using refresh token.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "refresh_token": "string (required)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "string (new JWT token)",
-    "refreshToken": "string (new refresh token)"
-  }
-}
-```
-
-**Error Responses:**
-- 400 Bad Request - Invalid refresh token
-- 401 Unauthorized - Refresh token expired
-- 403 Forbidden - Refresh token revoked
-
-**Field Naming Note:**
-- Backend expects `refresh_token` (snake_case)
-- Backend may return `access_token` or `accessToken` (both handled)
-
-**Client Behavior:**
-- Frontend automatically calls this when receiving 401 on authenticated requests
-- New tokens stored in localStorage
-- Failed refresh triggers logout and redirect to login
-
----
-
-### 8. POST /auth/resend-confirmation
-
-**Description:** Resend email verification link.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-- X-Frontend-Base-Url: {origin} (required for verification link)
-
-**Query Parameters:**
-- `email` - User email address (required)
-
-**Request Body:** None (email sent as query parameter)
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "Verification email sent"
-}
-```
-
-**Error Responses:**
-- 400 Bad Request - Invalid email or already verified
-- 404 Not Found - Email not found
-- 429 Too Many Requests - Rate limit exceeded
-
----
-
-### 9. POST /auth/confirm-email
-
-**Description:** Confirm email address using token from verification email.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "token": "string (required, verification token from email)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "Email confirmed successfully"
-}
-```
-
-**Error Responses:**
-- 400 Bad Request - Invalid or expired token
-- 410 Gone - Token already used
-
----
-
-### 10. GET /auth/confirm-email/validate
-
-**Description:** Validate email verification token without consuming it.
-
-**HTTP Method:** GET
-
-**Query Parameters:**
-- `token` - Verification token (required)
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": {
-    "status": "valid|used|expired|not_found"
-  }
-}
-```
-
-**Status Values:**
-- `valid` - Token is valid and can be used
-- `used` - Token was already used
-- `expired` - Token has expired
-- `not_found` - Token does not exist
-
-**Error Responses:**
-- 400 Bad Request - Missing token parameter
-
----
-
-### 11. POST /auth/logout
-
-**Description:** Logout user and invalidate refresh token.
-
-**HTTP Method:** POST
-
-**Headers:**
-- Authorization: Bearer {token} (optional)
-
-**Query Parameters:**
-- `refresh_token` - Refresh token to revoke (optional)
-
-**Request Body:** None
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
-**Client Behavior:**
-- Clears accessToken, refreshToken, and tenantId from localStorage
-- Always succeeds even if backend call fails
-- Redirects to login page
-
-**Error Responses:** None (frontend always clears tokens)
-
----
-
-## User Profile Endpoints
-
-### 12. GET /user/profile
-
-**Description:** Get current user profile.
-
-**HTTP Method:** GET
-
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-
-**Request Parameters:** None
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string (UUID)",
-    "email": "string",
-    "fullName": "string",
-    "phone": "string|null",
-    "profileImage": "string (URL)|null",
-    "createdAt": "string (ISO 8601 datetime)",
-    "updatedAt": "string (ISO 8601 datetime)",
-    "isActive": "boolean",
-    "emailVerified": "boolean",
-    "phoneVerified": "boolean",
-    "preferences": {
-      "notifications": {
-        "email": "boolean",
-        "push": "boolean",
-        "sms": "boolean",
-        "marketing": "boolean"
-      },
-      "timezone": "string",
-      "language": "string",
-      "theme": "light|dark|auto"
-    },
-    "subscription": {
-      "id": "string (UUID)",
-      "userId": "string (UUID)",
-      "plan": "monthly|yearly",
-      "status": "active|inactive|cancelled|past_due|trialing",
-      "currentPeriodStart": "string (ISO 8601 datetime)",
-      "currentPeriodEnd": "string (ISO 8601 datetime)",
-      "cancelAtPeriodEnd": "boolean",
-      "price": "number (cents)",
-      "currency": "string"
-    }
-  }
-}
-```
-
-**Error Responses:**
-- 401 Unauthorized - Missing or invalid token
-- 403 Forbidden - Invalid tenant
-- 404 Not Found - User not found
-
-**Field Mapping:**
-- Backend `first_name`/`last_name` or `firstName`/`lastName` → Frontend `fullName`
-- Backend `avatar_url` → Frontend `profileImage`
-- Backend `user_id` or `userId` or `id` → Frontend `id`
-
----
-
-### 13. PUT /user/profile
-
-**Description:** Update user profile (partial updates supported).
-
-**HTTP Method:** PUT
-
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-- Content-Type: application/json
-
-**Request Body:** (all fields optional)
-
-```json
-{
-  "firstName": "string|null (max 50 chars)",
-  "lastName": "string|null (max 50 chars)",
-  "phone": "string|null (phone number)",
-  "avatar_url": "string|null (profile image URL)",
-  "preferences": {
-    "notifications": {
-      "email": "boolean",
-      "push": "boolean",
-      "sms": "boolean",
-      "marketing": "boolean"
-    },
-    "timezone": "string",
-    "language": "string",
-    "theme": "light|dark|auto"
-  }
-}
-```
-
-**Response:** 200 OK (same structure as GET /user/profile)
-
-**Validation:**
-- `firstName` - Optional, max 50 chars
-- `lastName` - Optional, max 50 chars
-- `phone` - Optional, valid phone format
-- `avatar_url` - Optional, valid URL
-- `preferences` - Optional object, partial updates supported
-
-**Error Responses:**
-- 400 Bad Request - Invalid data
-- 401 Unauthorized
-- 403 Forbidden
-- 422 Unprocessable Entity
-
-**Field Mapping Notes:**
-- Frontend sends `firstName`/`lastName` (not first_name/last_name)
-- Frontend sends `avatar_url` for profile image
-- Backend may accept both snake_case and camelCase
-- Frontend `fullName` is split into firstName/lastName before sending
-- If `fullName` provided without firstName/lastName, it's automatically split
-
----
-
-## Subscription & Features Endpoints
-
-### 14. GET /user/features
-
-**Description:** Get list of enabled features for current user's subscription.
-
-**HTTP Method:** GET
-
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-
-**Request Parameters:** None
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": ["string (feature name)", ...]
-}
-```
-
-**Example:**
+### GET /subscription/tiers (public)
+- Response: list of `TierResponse` items:
 ```json
 {
   "success": true,
   "data": [
-    "goals_advanced",
-    "coaching_unlimited",
-    "export_pdf",
-    "api_access"
+    {
+      "id": "uuid",
+      "name": "Starter",
+      "description": "...",
+      "features": ["goals", "operations"],
+      "limits": {"goals": 10, "measures": 50, "actions": null},
+      "pricing": {"monthly": 29.99, "yearly": 299.99},
+      "supportedFrequencies": ["monthly", "yearly"],
+      "isActive": true
+    }
   ]
 }
 ```
 
-**Fallback Behavior:**
-- If endpoint returns 400 or 404, returns empty array `[]`
-- Allows UI to function with default free tier features
+## User Subscription (self-serve)
 
-**Error Responses:**
-- 401 Unauthorized
-- 403 Forbidden
+### GET /user/subscription
+- Returns current tenant subscription with embedded tier, or `data: null` if none.
 
----
+### POST /user/subscription
+- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null", "paymentMethodId": "string|null" }`.
+- Response `CreateUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "requiresPaymentConfirmation": true|false, "clientSecret": "string|null" }`.
 
-### 15. GET /user/limits
+### PUT /user/subscription
+- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null" }`.
+- Response `UpdateUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "effectiveDate": "ISO-8601" }` (changes take effect end of period).
 
-**Description:** Get usage limits for current user's subscription.
+### DELETE /user/subscription
+- Body: `{ "reason": "string|null", "cancelAtPeriodEnd": true|false }`.
+- Response `CancelUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "cancelEffectiveDate": "ISO-8601" }`.
 
-**HTTP Method:** GET
+### PUT /user/subscription/auto-renewal
+- Body: `{ "autoRenewal": true|false }`.
+- Response: updated `UserSubscriptionResponse`.
 
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
+## Billing (tenant-scoped)
 
-**Request Parameters:** None
+### PUT /billing/subscription
+- Body: `{ "newTier": "Starter|Professional|Enterprise", "effectiveDate": "ISO-8601|null", "prorateBilling": true|false }`.
+- Response: `SubscriptionResponse`.
 
-**Response:** 200 OK
+### POST /billing/payment-intent
+- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null" }`.
+- Response: `{ "success": true, "data": { "clientSecret": "string", "amount": 2999, "currency": "usd" } }`.
 
-```json
-{
-  "success": true,
-  "data": {
-    "goals": "number|null (max goals, null = unlimited)",
-    "strategies": "number|null (max strategies per goal)",
-    "measures": "number|null (max Measures per strategy)",
-    "actions": "number|null (max actions)",
-    "insights": "number|null (max coaching insights)",
-    "storage": "number|null (max storage in bytes)"
-  }
-}
-```
+### POST /billing/portal
+- Body: `{ "returnUrl": "string|null" }` (defaults to frontend base URL when omitted).
+- Response: `{ "success": true, "data": { "url": "https://billing.stripe.com/..." } }`.
 
-**Fallback Behavior:**
-- If endpoint returns 400 or 404, returns `{ goals: null }` (unlimited)
-- Allows UI to function without enforcing limits
+## Subscriptions (admin/ops)
 
-**Error Responses:**
-- 401 Unauthorized
-- 403 Forbidden
+### GET /subscriptions
+- Query: `page`, `pageSize`, `tenantId`, `status`, `tier`, `isTrialing`, `isActive`, `sortBy` (default `CreatedAt`), `sortOrder` (`asc|desc`).
+- Response: `PaginatedResponse<SubscriptionSummaryResponse>` with `data` list and `pagination` metadata.
 
----
+### GET /subscriptions/{id}
+- Path: subscription ID (GUID). Response: `ApiResponse<SubscriptionResponse>`.
 
-### 16. PUT /user/subscription
+### GET /subscriptions/tenant/{tenantId}
+- Path: tenant ID (GUID). Response: `ApiResponse<SubscriptionResponse>`.
 
-**Description:** Update subscription plan or tier.
+### POST /subscriptions
+- Body: `{ "tenantId": "uuid", "ownerId": "uuid", "tier": "Starter|Professional|Enterprise", "currentPeriodStart": "ISO-8601|null", "currentPeriodEnd": "ISO-8601|null", "startTrial": true|false, "trialEndsAt": "ISO-8601|null" }`.
+- Response: `ApiResponse<SubscriptionResponse>` (201 Created on success).
 
-**HTTP Method:** PUT
+### PUT /subscriptions/{id}/tier
+- Body: `{ "newTier": "Starter|Professional|Enterprise", "effectiveDate": "ISO-8601|null", "prorateBilling": true|false }`.
+- Response: updated `SubscriptionResponse`.
 
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-- Content-Type: application/json
+### POST /subscriptions/{id}/cancel
+- Response: `ApiResponse<SubscriptionResponse>` (subscription cancelled immediately).
 
-**Request Body:**
+### POST /subscriptions/{id}/trial
+- Body: `{ "trialEndsAt": "ISO-8601" }`. Response: updated `SubscriptionResponse`.
 
-```json
-{
-  "plan": "monthly|yearly|null",
-  "tier": "string|null (tier name, e.g., pro, enterprise)"
-}
-```
+### PUT /subscriptions/{id}/billing-provider
+- Body: `{ "billingProviderId": "string", "providerSubscriptionId": "string", "providerCustomerId": "string" }`.
+- Response: updated `SubscriptionResponse` (links provider IDs).
 
-**Response:** 200 OK
+### POST /subscriptions/promo/validate (public)
+- Body: `{ "promoCode": "string", "tierId": "uuid", "frequency": "monthly|yearly" }`.
+- Response: `{ "success": true, "data": { "isValid": true|false, "discount": { "type": "percentage|fixed", "value": 20, "duration": "once", "durationInMonths": 6 }, "newPrice": null, "errorMessage": "string|null" } }`.
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string (UUID)",
-    "email": "string",
-    "fullName": "string",
-    ...
-  }
-}
-```
+### POST /subscriptions/create-payment
+- Body: `{ "subscriptionId": "uuid", "paymentProvider": "stripe|paypal|square", "paymentMethodId": "string", "tier": "Starter|Professional|Enterprise", "frequency": "monthly|yearly", "promoCode": "string|null", "metadata": { "key": "value" } }`.
+- Response `PaymentSubscriptionResponse`: `{ "providerSubscriptionId": "string", "providerCustomerId": "string", "status": "active|incomplete|trialing|past_due", "clientSecret": "string|null", "requiresAction": true|false, "errorMessage": "string|null" }`.
 
-**Validation:**
-- `plan` - Optional, must be "monthly" or "yearly"
-- `tier` - Optional, string
+## Billing Webhook
 
-**Error Responses:**
-- 400 Bad Request - Invalid plan or tier
-- 401 Unauthorized
-- 403 Forbidden
-- 402 Payment Required - Payment method required
+### POST /billing/webhook/{providerId}
+- Path: `providerId` (e.g., `stripe`, `paypal`).
+- Headers: signature header varies by provider (`Stripe-Signature`, `PayPal-Signature`, or `X-Webhook-Signature`).
+- Body: raw webhook payload from provider.
+- Response: `{ "success": true, "data": { "received": true } }` (400 on signature/body validation failure).
 
----
+## Health
 
-## Billing Endpoints
+### GET /health
+- Response: `{ "success": true, "data": { "status": "Healthy", "service": "PurposePath Account Lambda", "version": "x.y.z", "timestamp": "ISO-8601", "environment": "string" } }`.
 
-### 17. POST /billing/portal
+### GET /health/detailed
+- Response includes `checks` array with component-level statuses; returns 503 when any check fails.
 
-**Description:** Get URL to customer billing portal (Stripe).
+### GET /health/ready
+- Response: `{ "success": true, "data": { "status": "Ready", "timestamp": "ISO-8601", "message": "Service is ready to accept requests" } }`.
 
-**HTTP Method:** POST
-
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-- Content-Type: application/json
-
-**Request Body:**
-
-```json
-{
-  "return_url": "string|null (URL to return to after portal session)"
-}
-```
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": {
-    "url": "string (billing portal URL)"
-  }
-}
-```
-
-**Usage:**
-- Returns Stripe Customer Portal URL
-- User can manage payment methods, view invoices, cancel subscription
-- Expires after session timeout (typically 1 hour)
-
-**Error Responses:**
-- 400 Bad Request - Invalid return URL
-- 401 Unauthorized
-- 403 Forbidden
-- 404 Not Found - No billing account
-
-**Field Naming Note:**
-- Backend expects `return_url` (snake_case)
-
----
-
-## Additional User Endpoints
-
-### 18. GET /users/{userId}
-
-**Description:** Get user by ID (minimal fields).
-
-**HTTP Method:** GET
-
-**Headers:**
-- Authorization: Bearer {token} (required)
-- X-Tenant-Id: {tenantId} (required)
-
-**Path Parameters:**
-- `userId` - User UUID (required)
-
-**Request Parameters:** None
-
-**Response:** 200 OK
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string (UUID)",
-    "email": "string|null",
-    "firstName": "string|null (or first_name)",
-    "lastName": "string|null (or last_name)"
-  }
-}
-```
-
-**Error Responses:**
-- 400 Bad Request - Missing user ID
-- 401 Unauthorized
-- 403 Forbidden
-- 404 Not Found - User not found
-
-**Notes:**
-- Used for fetching details of other users (e.g., assignees, collaborators)
-- Limited fields returned for privacy
-- Backend may return snake_case or camelCase field names
-
----
-
-## Error Handling
-
-All error responses follow this format:
-
-```json
-{
-  "success": false,
-  "error": "string (error message)",
-  "code": "string|null (error code)"
-}
-```
-
-**Common HTTP Status Codes:**
-- 400 - Bad Request (validation failed, malformed JSON)
-- 401 - Unauthorized (missing/invalid token)
-- 403 - Forbidden (invalid tenant, insufficient permissions)
-- 404 - Not Found (resource not found, endpoint not implemented)
-- 409 - Conflict (duplicate email/username)
-- 422 - Unprocessable Entity (semantic validation failed)
-- 429 - Too Many Requests (rate limit exceeded)
-- 500 - Internal Server Error
-
-**Error Codes (code field):**
-- `EMAIL_NOT_VERIFIED` - Email verification required
-- `INVALID_CREDENTIALS` - Username/password incorrect
-- `TOKEN_EXPIRED` - Token has expired
-- `RATE_LIMIT_EXCEEDED` - Too many requests
-
-**Client Handling:**
-- Always check `success` field first
-- On 401, attempt token refresh via `/auth/refresh`
-- On refresh failure, clear tokens and redirect to login
-- On 4xx client errors, display user-friendly error message
-- On 500, retry with exponential backoff or display error
-
----
-
-## Token Management
-
-### Access Token
-- JWT format
-- Expires after configurable time (typically 15 minutes to 1 hour)
-- Stored in localStorage as `accessToken`
-- Included in Authorization header: `Bearer {token}`
-
-### Refresh Token
-- Opaque token format
-- Expires after longer period (typically 7-30 days)
-- Stored in localStorage as `refreshToken`
-- Used to obtain new access token via `/auth/refresh`
-- Invalidated on logout
-
-### Tenant ID
-- UUID format
-- Stored in localStorage as `tenantId`
-- Included in X-Tenant-Id header
-- Obtained from login/register response
-- Cleared on logout
-
-### Auto-Refresh Behavior
-- Frontend intercepts 401 responses on authenticated requests
-- Automatically calls `/auth/refresh` with refresh token
-- If refresh succeeds, retries original request with new token
-- If refresh fails, triggers logout and redirect
-- Implements deduplication to prevent multiple concurrent refresh attempts
-- Queues requests during refresh to retry after completion
-
----
-
-## Field Naming Conventions
-
-### Backend to Frontend Mapping
-
-**User Fields:**
-- `first_name` or `firstName` → `fullName` (combined)
-- `last_name` or `lastName` → `fullName` (combined)
-- `avatar_url` → `profileImage`
-- `user_id` or `userId` or `id` → `id`
-- `created_at` → `createdAt`
-- `updated_at` → `updatedAt`
-- `email_verified` → `emailVerified`
-
-**Token Fields:**
-- `access_token` or `accessToken` → `accessToken`
-- `refresh_token` or `refreshToken` → `refreshToken`
-
-**General Rule:**
-- Backend accepts both snake_case and camelCase in most endpoints
-- Frontend sends camelCase in request bodies
-- Frontend accepts both from backend and normalizes to camelCase
-- Exception: `/auth/reset-password` requires `new_password` (snake_case)
-- Exception: `/auth/refresh` requires `refresh_token` (snake_case)
-- Exception: `/billing/portal` requires `return_url` (snake_case)
-
----
-
-## Implementation Notes
-
-### Phone Number Handling
-- Frontend strips all non-digit characters before sending to backend
-- Backend stores digits only
-- Frontend re-formats for display (e.g., (555) 123-4567)
-
-### Email Enumeration Prevention
-- `/auth/forgot-password` always returns success
-- `/auth/forgot-username` always returns success
-- Prevents attackers from determining valid email addresses
-
-### Password Requirements
-- Minimum 8 characters
-- Must include uppercase letter
-- Must include lowercase letter
-- Must include number
-- Special characters recommended but not required
-
-### Security Headers
-- `X-Frontend-Base-Url` header used for email link generation
-- Helps backend construct correct verification/reset links
-- Should match the origin where frontend is hosted
-
-### Rate Limiting
-- Not explicitly documented in this version
-- Backend may implement rate limiting on sensitive endpoints
-- Frontend should handle 429 Too Many Requests appropriately
-
----
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | December 30, 2025 | Initial specification verified against complete implementation. All 18+ endpoints documented with full request/response payloads, validation rules, field mapping, and special handling notes. Technology-agnostic format. |
-
+### GET /health/live
+- Response: `{ "success": true, "data": { "status": "Alive", "timestamp": "ISO-8601", "message": "Service is running" } }`.
