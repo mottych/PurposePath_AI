@@ -1,7 +1,7 @@
 # Organizational Structure Service - API Specification
 
-**Version:** 3.0  
-**Last Updated:** January 8, 2025  
+**Version:** 3.1  
+**Last Updated:** January 4, 2026  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
@@ -1583,6 +1583,89 @@ Deactivate an organization unit.
 
 ---
 
+### GET /api/organization-units/dropdown
+
+Get simplified organization unit list for dropdowns.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| typeId | GUID | - | Filter by organization unit type |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "name": "string",
+      "typeCode": "string",
+      "typeName": "string",
+      "parentId": "string (GUID)?",
+      "parentName": "string?",
+      "depth": "number"
+    }
+  ]
+}
+```
+
+---
+
+### PUT /api/organization-units/{id}/status
+
+Update organization unit status (activate/deactivate).
+
+**Path Parameters:**
+
+- `id` - OrganizationUnit ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Request:**
+
+```json
+{
+  "status": "active | inactive"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "name": "string",
+    "status": "active | inactive",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot deactivate organization unit with active child units",
+  "code": "BUSINESS_RULE_VIOLATION"
+}
+```
+
+---
+
 ## Positions Endpoints
 
 Positions represent instances of roles within organization units, optionally filled by persons.
@@ -1848,6 +1931,88 @@ Deactivate a position.
   "details": {
     "directReportsCount": 3
   }
+}
+```
+
+---
+
+### GET /api/positions/dropdown
+
+Get simplified position list for dropdowns.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| organizationUnitId | GUID | - | Filter by organization unit |
+| vacantOnly | boolean | false | Show only vacant positions |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "title": "string",
+      "roleTypeCode": "string",
+      "roleTypeName": "string",
+      "organizationUnitId": "string (GUID)?",
+      "organizationUnitName": "string?",
+      "status": "active | inactive | vacant",
+      "personId": "string (GUID)?",
+      "personName": "string?"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/positions/tree
+
+Get hierarchical position tree.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| rootPositionId | GUID | - | Start tree from specific position |
+| organizationUnitId | GUID | - | Filter by organization unit |
+| includeInactive | boolean | false | Include inactive positions |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "title": "string",
+      "roleTypeCode": "string",
+      "roleTypeName": "string",
+      "organizationUnitId": "string (GUID)?",
+      "organizationUnitName": "string?",
+      "status": "active | inactive | vacant",
+      "personId": "string (GUID)?",
+      "personName": "string?",
+      "reportsToId": "string (GUID)?",
+      "depth": "number",
+      "children": [/* recursive PositionTreeNode */]
+    }
+  ]
 }
 ```
 
@@ -2796,9 +2961,11 @@ The following real-time events will be supported:
 |--------|----------|-------------|
 | GET | `/api/organization-units` | List organization units |
 | GET | `/api/organization-units/tree` | Get org unit hierarchy tree |
+| GET | `/api/organization-units/dropdown` | Get simplified list for dropdowns |
 | GET | `/api/organization-units/{id}` | Get organization unit details |
 | POST | `/api/organization-units` | Create organization unit |
 | PUT | `/api/organization-units/{id}` | Update organization unit |
+| PUT | `/api/organization-units/{id}/status` | Update organization unit status |
 | DELETE | `/api/organization-units/{id}` | Delete organization unit |
 
 #### Organization Unit Types
@@ -2816,6 +2983,8 @@ The following real-time events will be supported:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/positions` | List positions |
+| GET | `/api/positions/dropdown` | Get simplified list for dropdowns |
+| GET | `/api/positions/tree` | Get hierarchical position tree |
 | GET | `/api/positions/{id}` | Get position details |
 | POST | `/api/positions` | Create position |
 | PUT | `/api/positions/{id}` | Update position |
