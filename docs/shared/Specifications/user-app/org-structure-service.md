@@ -1884,17 +1884,18 @@ Update a position.
 
 ```json
 {
-  "name": "string?",
+  "name": "string",
+  "roleId": "string (GUID)",
+  "organizationUnitId": "string (GUID)",
   "description": "string?",
   "specificAccountability": "string?",
-  "organizationUnitId": "string (GUID)?",
   "reportsToPositionId": "string (GUID)?"
 }
 ```
 
 **Notes:**
 
-- `roleId` cannot be changed after creation
+- `roleId` may be changed via this endpoint
 - To change the person, use the assign/unassign endpoints
 
 **Error Responses:**
