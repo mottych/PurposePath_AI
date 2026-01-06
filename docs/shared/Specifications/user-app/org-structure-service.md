@@ -71,7 +71,7 @@ The org structure is built on these key entities:
 
 ## Roles Endpoints
 
-### GET /api/roles
+### GET /roles
 
 List all roles with filtering and pagination.
 
@@ -137,7 +137,7 @@ List all roles with filtering and pagination.
 
 ---
 
-### GET /api/roles/dropdown
+### GET /roles/dropdown
 
 Get simplified role list for dropdowns.
 
@@ -172,7 +172,7 @@ Get simplified role list for dropdowns.
 
 ---
 
-### GET /api/roles/{id}
+### GET /roles/{id}
 
 Get detailed role information.
 
@@ -275,7 +275,7 @@ Get detailed role information.
 
 ---
 
-### POST /api/roles
+### POST /roles
 
 Create a new role.
 
@@ -350,7 +350,7 @@ Create a new role.
 
 ---
 
-### PUT /api/roles/{id}
+### PUT /roles/{id}
 
 Update an existing role.
 
@@ -396,7 +396,7 @@ Update an existing role.
 
 ---
 
-### DELETE /api/roles/{id}
+### DELETE /roles/{id}
 
 Soft delete a role.
 
@@ -444,7 +444,7 @@ Soft delete a role.
 
 ---
 
-### POST /api/roles/{id}/activate
+### POST /roles/{id}/activate
 
 Reactivate a deactivated role.
 
@@ -466,7 +466,7 @@ Reactivate a deactivated role.
 
 ---
 
-### POST /api/roles/{id}/deactivate
+### POST /roles/{id}/deactivate
 
 Deactivate a role (unassigns person, removes from hierarchy).
 
@@ -517,7 +517,7 @@ Deactivate a role (unassigns person, removes from hierarchy).
 
 ## Role Relationships Endpoints
 
-### GET /api/role-relationships
+### GET /role-relationships
 
 List all role relationships.
 
@@ -567,7 +567,7 @@ List all role relationships.
 
 ---
 
-### POST /api/role-relationships
+### POST /role-relationships
 
 Create a role relationship.
 
@@ -651,7 +651,7 @@ Create a role relationship.
 
 ---
 
-### PUT /api/role-relationships/{id}
+### PUT /role-relationships/{id}
 
 Update a relationship (description only).
 
@@ -678,7 +678,7 @@ Update a relationship (description only).
 
 ---
 
-### DELETE /api/role-relationships/{id}
+### DELETE /role-relationships/{id}
 
 Delete a role relationship.
 
@@ -701,7 +701,7 @@ Delete a role relationship.
 
 ---
 
-### GET /api/role-relationship-types
+### GET /role-relationship-types
 
 List available relationship types.
 
@@ -774,7 +774,7 @@ List available relationship types.
 
 ---
 
-### GET /api/role-relationship-types/{id}
+### GET /role-relationship-types/{id}
 
 Get relationship type details.
 
@@ -810,7 +810,7 @@ Get relationship type details.
 
 ---
 
-### POST /api/role-relationship-types
+### POST /role-relationship-types
 
 Create a custom relationship type.
 
@@ -875,7 +875,7 @@ Create a custom relationship type.
 
 ---
 
-### PUT /api/role-relationship-types/{id}
+### PUT /role-relationship-types/{id}
 
 Update a relationship type.
 
@@ -915,7 +915,7 @@ Update a relationship type.
 
 ---
 
-### DELETE /api/role-relationship-types/{id}
+### DELETE /role-relationship-types/{id}
 
 Deactivate a relationship type.
 
@@ -966,7 +966,7 @@ Deactivate a relationship type.
 
 Role Types provide classification categories for roles (Executive, Management, Professional, Associate).
 
-### GET /api/role-types
+### GET /role-types
 
 List available role types.
 
@@ -1039,7 +1039,7 @@ List available role types.
 
 ---
 
-### GET /api/role-types/{id}
+### GET /role-types/{id}
 
 Get role type details.
 
@@ -1075,7 +1075,7 @@ Get role type details.
 
 ---
 
-### POST /api/role-types
+### POST /role-types
 
 Create a custom role type.
 
@@ -1127,7 +1127,7 @@ Create a custom role type.
 
 ---
 
-### PUT /api/role-types/{id}
+### PUT /role-types/{id}
 
 Update a role type.
 
@@ -1153,7 +1153,7 @@ Update a role type.
 
 ---
 
-### DELETE /api/role-types/{id}
+### DELETE /role-types/{id}
 
 Deactivate a role type.
 
@@ -1188,7 +1188,7 @@ Deactivate a role type.
 
 Organization Unit Types classify organizational units (Company, Division, Department, Team, Project).
 
-### GET /api/organization-unit-types
+### GET /organization-unit-types
 
 List available organization unit types.
 
@@ -1260,7 +1260,7 @@ List available organization unit types.
 
 ---
 
-### GET /api/organization-unit-types/{id}
+### GET /organization-unit-types/{id}
 
 Get organization unit type details.
 
@@ -1290,7 +1290,7 @@ Get organization unit type details.
 
 ---
 
-### POST /api/organization-unit-types
+### POST /organization-unit-types
 
 Create a custom organization unit type.
 
@@ -1316,7 +1316,7 @@ Create a custom organization unit type.
 
 ---
 
-### PUT /api/organization-unit-types/{id}
+### PUT /organization-unit-types/{id}
 
 Update an organization unit type.
 
@@ -1332,7 +1332,7 @@ Update an organization unit type.
 
 ---
 
-### DELETE /api/organization-unit-types/{id}
+### DELETE /organization-unit-types/{id}
 
 Deactivate an organization unit type.
 
@@ -1352,7 +1352,7 @@ Deactivate an organization unit type.
 
 Organization Units represent the logical structure of the organization (companies, divisions, departments, teams).
 
-### GET /api/organization-units
+### GET /organization-units
 
 List all organization units.
 
@@ -1410,7 +1410,7 @@ List all organization units.
 
 ---
 
-### GET /api/organization-units/tree
+### GET /organization-units/tree
 
 Get hierarchical tree of organization units.
 
@@ -1441,7 +1441,7 @@ Get hierarchical tree of organization units.
 
 ---
 
-### GET /api/organization-units/{id}
+### GET /organization-units/{id}
 
 Get organization unit details.
 
@@ -1497,7 +1497,7 @@ Get organization unit details.
 
 ---
 
-### POST /api/organization-units
+### POST /organization-units
 
 Create an organization unit.
 
@@ -1525,7 +1525,7 @@ Create an organization unit.
 
 ---
 
-### PUT /api/organization-units/{id}
+### PUT /organization-units/{id}
 
 Update an organization unit.
 
@@ -1553,7 +1553,7 @@ Update an organization unit.
 
 ---
 
-### DELETE /api/organization-units/{id}
+### DELETE /organization-units/{id}
 
 Deactivate an organization unit.
 
@@ -1583,7 +1583,7 @@ Deactivate an organization unit.
 
 ---
 
-### GET /api/organization-units/dropdown
+### GET /organization-units/dropdown
 
 Get simplified organization unit list for dropdowns.
 
@@ -1619,7 +1619,7 @@ Get simplified organization unit list for dropdowns.
 
 ---
 
-### PUT /api/organization-units/{id}/status
+### PUT /organization-units/{id}/status
 
 Update organization unit status (activate/deactivate).
 
@@ -1670,7 +1670,7 @@ Update organization unit status (activate/deactivate).
 
 Positions represent instances of roles within organization units, optionally filled by persons.
 
-### GET /api/positions
+### GET /positions
 
 List all positions.
 
@@ -1742,7 +1742,7 @@ List all positions.
 
 ---
 
-### GET /api/positions/{id}
+### GET /positions/{id}
 
 Get position details.
 
@@ -1826,7 +1826,7 @@ Get position details.
 
 ---
 
-### POST /api/positions
+### POST /positions
 
 Create a position.
 
@@ -1876,7 +1876,7 @@ Create a position.
 
 ---
 
-### PUT /api/positions/{id}
+### PUT /positions/{id}
 
 Update a position.
 
@@ -1918,7 +1918,7 @@ Update a position.
 
 ---
 
-### DELETE /api/positions/{id}
+### DELETE /positions/{id}
 
 Deactivate a position.
 
@@ -1937,7 +1937,7 @@ Deactivate a position.
 
 ---
 
-### GET /api/positions/dropdown
+### GET /positions/dropdown
 
 Get simplified position list for dropdowns.
 
@@ -1976,7 +1976,7 @@ Get simplified position list for dropdowns.
 
 ---
 
-### GET /api/positions/tree
+### GET /positions/tree
 
 Get hierarchical position tree.
 
@@ -2019,7 +2019,7 @@ Get hierarchical position tree.
 
 ---
 
-### POST /api/positions/{id}/assign
+### POST /positions/{id}/assign
 
 Assign a person to a position.
 
@@ -2052,7 +2052,7 @@ Assign a person to a position.
 
 ---
 
-### POST /api/positions/{id}/unassign
+### POST /positions/{id}/unassign
 
 Remove person from a position.
 
@@ -2075,7 +2075,7 @@ Remove person from a position.
 
 ---
 
-### PUT /api/positions/{id}/status
+### PUT /positions/{id}/status
 
 Update position status.
 
@@ -2098,7 +2098,7 @@ Update position status.
 
 Position Relationships define non-hierarchical connections between positions (Support, Advise, Collaborate, Mentor).
 
-### GET /api/position-relationships
+### GET /position-relationships
 
 List all position relationships.
 
@@ -2145,7 +2145,7 @@ List all position relationships.
 
 ---
 
-### POST /api/position-relationships
+### POST /position-relationships
 
 Create a position relationship.
 
@@ -2171,7 +2171,7 @@ Create a position relationship.
 
 ---
 
-### PUT /api/position-relationships/{id}
+### PUT /position-relationships/{id}
 
 Update a position relationship.
 
@@ -2185,7 +2185,7 @@ Update a position relationship.
 
 ---
 
-### DELETE /api/position-relationships/{id}
+### DELETE /position-relationships/{id}
 
 Delete a position relationship.
 
@@ -2201,7 +2201,7 @@ Delete a position relationship.
 
 ## Organization Chart Endpoints
 
-### GET /api/org-chart
+### GET /org-chart
 
 Get complete org chart tree structure.
 
@@ -2267,7 +2267,7 @@ Get complete org chart tree structure.
 
 ---
 
-### GET /api/org-chart/flat
+### GET /org-chart/flat
 
 Get flat list for table/grid display.
 
@@ -2313,7 +2313,7 @@ Get flat list for table/grid display.
 
 ---
 
-### GET /api/org-chart/role/{id}/subtree
+### GET /org-chart/role/{id}/subtree
 
 Get subtree under a specific role.
 
@@ -2348,7 +2348,7 @@ Get subtree under a specific role.
 
 ---
 
-### GET /api/org-chart/layouts/active
+### GET /org-chart/layouts/active
 
 Get the current user's active org chart layout (node positions).
 
@@ -2386,7 +2386,7 @@ Get the current user's active org chart layout (node positions).
 
 ---
 
-### GET /api/org-chart/layouts
+### GET /org-chart/layouts
 
 Get all org chart layouts for the current user.
 
@@ -2417,7 +2417,7 @@ Get all org chart layouts for the current user.
 
 ---
 
-### POST /api/org-chart/layouts
+### POST /org-chart/layouts
 
 Create a new layout or update an existing layout with node positions.
 
@@ -2494,7 +2494,7 @@ Create a new layout or update an existing layout with node positions.
 
 ---
 
-### PUT /api/org-chart/layouts/{layoutId}/activate
+### PUT /org-chart/layouts/{layoutId}/activate
 
 Set a specific layout as the active layout for the current user.
 
@@ -2542,7 +2542,7 @@ Set a specific layout as the active layout for the current user.
 
 ---
 
-### DELETE /api/org-chart/layouts/{layoutId}
+### DELETE /org-chart/layouts/{layoutId}
 
 Delete a layout. Cannot delete the active layout.
 
@@ -2886,31 +2886,31 @@ The following real-time events will be supported:
 | POST | `/auth/login` | Login with username/password |
 | POST | `/auth/forgot-username` | Request username reminder |
 | PUT | `/user/username` | Change username |
-| GET | `/api/people` | List people |
-| GET | `/api/people/assignable` | Get assignable people for dropdowns |
-| GET | `/api/people/{id}` | Get person details |
-| POST | `/api/people` | Create person |
-| PUT | `/api/people/{id}` | Update person |
-| DELETE | `/api/people/{id}` | Delete person |
-| POST | `/api/people/{id}/activate` | Activate person |
-| POST | `/api/people/{id}/deactivate` | Deactivate person |
-| POST | `/api/people/{id}/link-user` | Link person to user |
-| POST | `/api/people/{id}/tags` | Add tags |
-| DELETE | `/api/people/{id}/tags/{tagId}` | Remove tag |
-| GET | `/api/people/{id}/roles` | Get person's roles |
-| GET | `/api/people/{id}/roles/history` | Get role history |
-| POST | `/api/people/{id}/roles` | Assign role |
-| PUT | `/api/people/{id}/roles/{roleId}/primary` | Set primary role |
-| DELETE | `/api/people/{id}/roles/{roleId}` | Unassign role |
-| GET | `/api/person-types` | List person types |
-| GET | `/api/person-types/{id}` | Get person type |
-| POST | `/api/person-types` | Create person type |
-| PUT | `/api/person-types/{id}` | Update person type |
-| DELETE | `/api/person-types/{id}` | Delete person type |
-| GET | `/api/person-tags` | List tags |
-| POST | `/api/person-tags` | Create tag |
-| PUT | `/api/person-tags/{id}` | Update tag |
-| DELETE | `/api/person-tags/{id}` | Delete tag |
+| GET | `/people` | List people |
+| GET | `/people/assignable` | Get assignable people for dropdowns |
+| GET | `/people/{id}` | Get person details |
+| POST | `/people` | Create person |
+| PUT | `/people/{id}` | Update person |
+| DELETE | `/people/{id}` | Delete person |
+| POST | `/people/{id}/activate` | Activate person |
+| POST | `/people/{id}/deactivate` | Deactivate person |
+| POST | `/people/{id}/link-user` | Link person to user |
+| POST | `/people/{id}/tags` | Add tags |
+| DELETE | `/people/{id}/tags/{tagId}` | Remove tag |
+| GET | `/people/{id}/roles` | Get person's roles |
+| GET | `/people/{id}/roles/history` | Get role history |
+| POST | `/people/{id}/roles` | Assign role |
+| PUT | `/people/{id}/roles/{roleId}/primary` | Set primary role |
+| DELETE | `/people/{id}/roles/{roleId}` | Unassign role |
+| GET | `/person-types` | List person types |
+| GET | `/person-types/{id}` | Get person type |
+| POST | `/person-types` | Create person type |
+| PUT | `/person-types/{id}` | Update person type |
+| DELETE | `/person-types/{id}` | Delete person type |
+| GET | `/person-tags` | List tags |
+| POST | `/person-tags` | Create tag |
+| PUT | `/person-tags/{id}` | Update tag |
+| DELETE | `/person-tags/{id}` | Delete tag |
 
 ### Organizational Structure (Part 2)
 
@@ -2918,100 +2918,100 @@ The following real-time events will be supported:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/roles` | List roles |
-| GET | `/api/roles/dropdown` | Get roles for dropdown |
-| GET | `/api/roles/{id}` | Get role details |
-| POST | `/api/roles` | Create role |
-| PUT | `/api/roles/{id}` | Update role |
-| DELETE | `/api/roles/{id}` | Delete role |
-| POST | `/api/roles/{id}/activate` | Activate role |
-| POST | `/api/roles/{id}/deactivate` | Deactivate role |
+| GET | `/roles` | List roles |
+| GET | `/roles/dropdown` | Get roles for dropdown |
+| GET | `/roles/{id}` | Get role details |
+| POST | `/roles` | Create role |
+| PUT | `/roles/{id}` | Update role |
+| DELETE | `/roles/{id}` | Delete role |
+| POST | `/roles/{id}/activate` | Activate role |
+| POST | `/roles/{id}/deactivate` | Deactivate role |
 
 #### Role Types
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/role-types` | List role types |
-| GET | `/api/role-types/{id}` | Get role type details |
-| POST | `/api/role-types` | Create role type |
-| PUT | `/api/role-types/{id}` | Update role type |
-| DELETE | `/api/role-types/{id}` | Delete role type |
+| GET | `/role-types` | List role types |
+| GET | `/role-types/{id}` | Get role type details |
+| POST | `/role-types` | Create role type |
+| PUT | `/role-types/{id}` | Update role type |
+| DELETE | `/role-types/{id}` | Delete role type |
 
 #### Role Relationships
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/role-relationships` | List relationships |
-| POST | `/api/role-relationships` | Create relationship |
-| PUT | `/api/role-relationships/{id}` | Update relationship |
-| DELETE | `/api/role-relationships/{id}` | Delete relationship |
+| GET | `/role-relationships` | List relationships |
+| POST | `/role-relationships` | Create relationship |
+| PUT | `/role-relationships/{id}` | Update relationship |
+| DELETE | `/role-relationships/{id}` | Delete relationship |
 
 #### Role Relationship Types
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/role-relationship-types` | List relationship types |
-| GET | `/api/role-relationship-types/{id}` | Get relationship type details |
-| POST | `/api/role-relationship-types` | Create relationship type |
-| PUT | `/api/role-relationship-types/{id}` | Update relationship type |
-| DELETE | `/api/role-relationship-types/{id}` | Delete relationship type |
+| GET | `/role-relationship-types` | List relationship types |
+| GET | `/role-relationship-types/{id}` | Get relationship type details |
+| POST | `/role-relationship-types` | Create relationship type |
+| PUT | `/role-relationship-types/{id}` | Update relationship type |
+| DELETE | `/role-relationship-types/{id}` | Delete relationship type |
 
 #### Organization Units
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/organization-units` | List organization units |
-| GET | `/api/organization-units/tree` | Get org unit hierarchy tree |
-| GET | `/api/organization-units/dropdown` | Get simplified list for dropdowns |
-| GET | `/api/organization-units/{id}` | Get organization unit details |
-| POST | `/api/organization-units` | Create organization unit |
-| PUT | `/api/organization-units/{id}` | Update organization unit |
-| PUT | `/api/organization-units/{id}/status` | Update organization unit status |
-| DELETE | `/api/organization-units/{id}` | Delete organization unit |
+| GET | `/organization-units` | List organization units |
+| GET | `/organization-units/tree` | Get org unit hierarchy tree |
+| GET | `/organization-units/dropdown` | Get simplified list for dropdowns |
+| GET | `/organization-units/{id}` | Get organization unit details |
+| POST | `/organization-units` | Create organization unit |
+| PUT | `/organization-units/{id}` | Update organization unit |
+| PUT | `/organization-units/{id}/status` | Update organization unit status |
+| DELETE | `/organization-units/{id}` | Delete organization unit |
 
 #### Organization Unit Types
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/organization-unit-types` | List org unit types |
-| GET | `/api/organization-unit-types/{id}` | Get org unit type details |
-| POST | `/api/organization-unit-types` | Create org unit type |
-| PUT | `/api/organization-unit-types/{id}` | Update org unit type |
-| DELETE | `/api/organization-unit-types/{id}` | Delete org unit type |
+| GET | `/organization-unit-types` | List org unit types |
+| GET | `/organization-unit-types/{id}` | Get org unit type details |
+| POST | `/organization-unit-types` | Create org unit type |
+| PUT | `/organization-unit-types/{id}` | Update org unit type |
+| DELETE | `/organization-unit-types/{id}` | Delete org unit type |
 
 #### Positions
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/positions` | List positions |
-| GET | `/api/positions/dropdown` | Get simplified list for dropdowns |
-| GET | `/api/positions/tree` | Get hierarchical position tree |
-| GET | `/api/positions/{id}` | Get position details |
-| POST | `/api/positions` | Create position |
-| PUT | `/api/positions/{id}` | Update position |
-| DELETE | `/api/positions/{id}` | Delete position |
-| POST | `/api/positions/{id}/assign` | Assign person to position |
-| POST | `/api/positions/{id}/unassign` | Remove person from position |
-| PUT | `/api/positions/{id}/status` | Update position status |
+| GET | `/positions` | List positions |
+| GET | `/positions/dropdown` | Get simplified list for dropdowns |
+| GET | `/positions/tree` | Get hierarchical position tree |
+| GET | `/positions/{id}` | Get position details |
+| POST | `/positions` | Create position |
+| PUT | `/positions/{id}` | Update position |
+| DELETE | `/positions/{id}` | Delete position |
+| POST | `/positions/{id}/assign` | Assign person to position |
+| POST | `/positions/{id}/unassign` | Remove person from position |
+| PUT | `/positions/{id}/status` | Update position status |
 
 #### Position Relationships
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/position-relationships` | List position relationships |
-| POST | `/api/position-relationships` | Create position relationship |
-| PUT | `/api/position-relationships/{id}` | Update position relationship |
-| DELETE | `/api/position-relationships/{id}` | Delete position relationship |
+| GET | `/position-relationships` | List position relationships |
+| POST | `/position-relationships` | Create position relationship |
+| PUT | `/position-relationships/{id}` | Update position relationship |
+| DELETE | `/position-relationships/{id}` | Delete position relationship |
 
 #### Org Chart
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/org-chart` | Get org chart tree |
-| GET | `/api/org-chart/flat` | Get flat org chart |
-| GET | `/api/org-chart/role/{id}/subtree` | Get role subtree |
-| POST | `/api/roles/preview-template` | Preview template application |
-| POST | `/api/roles/apply-template` | Apply template |
+| GET | `/org-chart` | Get org chart tree |
+| GET | `/org-chart/flat` | Get flat org chart |
+| GET | `/org-chart/role/{id}/subtree` | Get role subtree |
+| POST | `/roles/preview-template` | Preview template application |
+| POST | `/roles/apply-template` | Apply template |
 
 > **Note:** Role Templates management (Admin Portal) is documented in [admin-api-specification.md](../admin-portal/admin-api-specification.md)
 

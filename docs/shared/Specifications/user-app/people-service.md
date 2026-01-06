@@ -43,7 +43,7 @@ A Person's `isEmailVerified` flag is set to `true` when:
 1. They accept a user invitation and create their account (primary flow)
 2. They complete email verification during password reset
 
-There is no explicit `POST /api/people/{id}/verify-email` endpoint. Email verification is implicitly handled through the user invitation acceptance flow.
+There is no explicit `POST /people/{id}/verify-email` endpoint. Email verification is implicitly handled through the user invitation acceptance flow.
 
 ---
 
@@ -253,7 +253,7 @@ Change current user's username.
 
 ## People Endpoints
 
-### GET /api/people
+### GET /people
 
 List people with filtering and pagination.
 
@@ -325,7 +325,7 @@ List people with filtering and pagination.
 
 ---
 
-### GET /api/people/assignable
+### GET /people/assignable
 
 Get list of people available for work assignment dropdowns.
 
@@ -367,7 +367,7 @@ Get list of people available for work assignment dropdowns.
 
 ---
 
-### GET /api/people/{id}
+### GET /people/{id}
 
 Get detailed person information.
 
@@ -444,7 +444,7 @@ Get detailed person information.
 
 ---
 
-### POST /api/people
+### POST /people
 
 Create a new person.
 
@@ -542,7 +542,7 @@ Create a new person.
 
 ---
 
-### PUT /api/people/{id}
+### PUT /people/{id}
 
 Update an existing person.
 
@@ -769,7 +769,7 @@ Link a person to an existing user account.
 
 ---
 
-### POST /api/people/{id}/tags
+### POST /people/{id}/tags
 
 Add tags to a person.
 
@@ -809,7 +809,7 @@ Add tags to a person.
 
 ---
 
-### DELETE /api/people/{id}/tags/{tagId}
+### DELETE /people/{id}/tags/{tagId}
 
 Remove a tag from a person.
 
@@ -835,7 +835,7 @@ Remove a tag from a person.
 
 ## Person Roles Endpoints
 
-### GET /api/people/{id}/roles
+### GET /people/{id}/roles
 
 Get person's current role assignments.
 
@@ -871,7 +871,7 @@ Get person's current role assignments.
 
 ---
 
-### GET /api/people/{id}/roles/history
+### GET /people/{id}/roles/history
 
 Get person's complete role assignment history.
 
@@ -921,7 +921,7 @@ Get person's complete role assignment history.
 
 ---
 
-### POST /api/people/{id}/roles
+### POST /people/{id}/roles
 
 Assign a role to a person.
 
@@ -999,7 +999,7 @@ Assign a role to a person.
 
 ---
 
-### PUT /api/people/{id}/roles/{roleId}/primary
+### PUT /people/{id}/roles/{roleId}/primary
 
 Set a role as the person's primary role.
 
@@ -1037,7 +1037,7 @@ Set a role as the person's primary role.
 
 ---
 
-### DELETE /api/people/{id}/roles/{roleId}
+### DELETE /people/{id}/roles/{roleId}
 
 Unassign a role from a person.
 
@@ -1079,7 +1079,7 @@ Unassign a role from a person.
 
 ## Person Types Endpoints
 
-### GET /api/person-types
+### GET /person-types
 
 List all person types for the tenant.
 
@@ -1117,7 +1117,7 @@ List all person types for the tenant.
 
 ---
 
-### GET /api/person-types/{id}
+### GET /person-types/{id}
 
 Get person type details.
 
@@ -1147,7 +1147,7 @@ Get person type details.
 
 ---
 
-### POST /api/person-types
+### POST /person-types
 
 Create a new person type.
 
@@ -1202,7 +1202,7 @@ Create a new person type.
 
 ---
 
-### PUT /api/person-types/{id}
+### PUT /person-types/{id}
 
 Update a person type.
 
@@ -1237,7 +1237,7 @@ Update a person type.
 
 ---
 
-### DELETE /api/person-types/{id}
+### DELETE /person-types/{id}
 
 Deactivate a person type.
 
