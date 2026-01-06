@@ -2002,8 +2002,8 @@ Get hierarchical position tree.
     {
       "id": "string (GUID)",
       "title": "string",
-      "roleTypeCode": "string",
-      "roleTypeName": "string",
+      "roleCode": "string",
+      "roleName": "string",
       "organizationUnitId": "string (GUID)?",
       "organizationUnitName": "string?",
       "status": "active | inactive | vacant",
