@@ -40,6 +40,7 @@ This directory contains detailed API specifications for the Traction Service, or
 |----------|------------|-----------|-------------|
 | [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management |
 | [Strategies API](./strategies-api.md) | StrategiesController | 6 endpoints | Strategy management and alignment |
+| [Alignment API](./alignment-api.md) | AlignmentController | 1 endpoint | Cached goal alignment lookup |
 | [Measures API](./measures-api.md) | MeasuresController | 7 endpoints | Measure instance management |
 | [Measure Links API](./measure-links-api.md) | MeasureLinksController | 6 endpoints | Link Measures to goals, people, strategies |
 | [Measure Data API](./measure-data-api.md) | MeasureDataController | 8 endpoints | Targets, actuals, projections |
