@@ -1290,6 +1290,46 @@ List all tags for the tenant.
       "name": "string",
       "personCount": "number",
       "createdAt": "string (ISO 8601)"
+
+---
+
+### POST /person-types/{id}/activate
+
+Reactivate a deactivated person type.
+
+**Path Parameters:**
+
+- `id` - PersonType ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "name": "string",
+    "description": "string?",
+    "isAssignableByDefault": "boolean",
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Error Responses:**
+
+- **404 Not Found** - Person type not found
+- **400 Bad Request** - Invalid person type ID format or activation failed
+- **500 Internal Server Error** - Server error
     }
   ]
 }

@@ -2907,6 +2907,7 @@ The following real-time events will be supported:
 | POST | `/person-types` | Create person type |
 | PUT | `/person-types/{id}` | Update person type |
 | DELETE | `/person-types/{id}` | Delete person type |
+| POST | `/person-types/{id}/activate` | Activate person type |
 | GET | `/person-tags` | List tags |
 | POST | `/person-tags` | Create tag |
 | PUT | `/person-tags/{id}` | Update tag |
