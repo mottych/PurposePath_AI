@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.0  
-**Last Updated:** January 4, 2026  
+**Version:** 2.1  
+**Last Updated:** January 7, 2026  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -47,8 +47,14 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
 - Errors: 401 invalid credentials, 403 `EMAIL_NOT_VERIFIED`.
 
 ### POST /auth/google
-- Body: `{ "token": "string" }`.
+- Body: `{ "token": "string" }` (Google ID token from OAuth flow).
 - Response: same as login.
+- Notes: Validates token with Google, creates new user/tenant if external identity not found, or logs in existing user. Auto-updates user avatar from Google profile if user has no avatar.
+
+### POST /auth/microsoft
+- Body: `{ "token": "string" }` (Microsoft ID token from OAuth/OIDC flow).
+- Response: same as login.
+- Notes: Validates token with Microsoft OIDC metadata endpoint, creates new user/tenant if external identity not found, or logs in existing user. Auto-updates user avatar from Microsoft profile if user has no avatar.
 
 ### POST /auth/register
 - Body: `{ "username": "string", "email": "string", "password": "string", "firstName": "string", "lastName": "string", "phone": "string|null" }`.
