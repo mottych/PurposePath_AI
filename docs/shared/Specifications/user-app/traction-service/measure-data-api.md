@@ -1,27 +1,27 @@
 # Measure Data API Specification
 
-**Version:** 7.0  
-**Last Updated:** December 23, 2025  
+**Version:** 8.0  
+**Last Updated:** January 8, 2026  
 **Base Path:** `/measure-links/{linkId}`  
 **Controller:** `MeasureDataController.cs`
 
 ## Overview
 
-The Measure Data API manages target values and actual measurements for Measure links. This is the v7 unified data model that replaced the deprecated MeasureMilestone, MeasureActual, and MeasureReading entities (issue #374).
+The Measure Data API manages target values and actual measurements for Measure links. This is the v8 consolidated data model that unifies Expected/Optimal/Minimal targets into a single record (issue #512).
 
 ### Key Features
-- **Targets:** Set expected, optimal, and minimal target values
+- **Consolidated Targets:** Set expected, optimal, and minimal values in a single record
 - **Actuals:** Record measured values and estimates
 - **Time-series data:** Track Measure progress over time
 - **Override support:** Manual corrections with audit trail
-- **Replan triggers:** Flag actuals that require goal replanning
 - **Combined queries:** Get all targets + actuals in one request
 
 ### Design Philosophy
-- **Unified model:** Single `MeasureData` entity with subtypes (replaces 3 separate entities)
+- **Single record per target date:** Expected/Optimal/Minimal values stored together, not as separate records
 - **Link-scoped:** All data is associated with a Measure link (not just a Measure)
-- **Category + Subtype:** `Target` (Expected/Optimal/Minimal) or `Actual` (Measured/Estimate)
+- **Category-based:** `Target` (with optional optimal/minimal) or `Actual` (Measured/Estimate)
 - **Historical tracking:** All values are preserved with timestamps
+- **Simplified validation:** Three-value consistency enforced: `OptimalValue >= PostValue >= MinimalValue`
 
 ---
 
@@ -49,14 +49,12 @@ Retrieve all target values for a Measure link.
 
 #### Query Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `targetSubtype` | enum | No | Filter by subtype: `Expected`, `Optimal`, `Minimal` |
+None. All targets for the link are returned.
 
 #### Request Example
 
 ```http
-GET /measure-links/link-123/targets?targetSubtype=Expected
+GET /measure-links/link-123/targets
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -70,15 +68,15 @@ X-Tenant-Id: {tenantId}
   "success": true,
   "data": {
     "measureLinkId": "link-123",
-    "targetSubtypeFilter": "Expected",
     "targets": [
       {
         "id": "target-001",
         "measureLinkId": "link-123",
         "dataCategory": "Target",
-        "targetSubtype": "Expected",
         "actualSubtype": null,
         "postValue": 50000.00,
+        "optimalValue": 60000.00,
+        "minimalValue": 45000.00,
         "postDate": "2025-12-31T00:00:00Z",
         "measuredPeriodStartDate": "2025-12-01T00:00:00Z",
         "label": "Q4 2025 Target",
@@ -89,8 +87,6 @@ X-Tenant-Id: {tenantId}
         "overrideComment": null,
         "dataSource": null,
         "sourceReferenceId": null,
-        "triggersReplan": false,
-        "replanThresholdExceeded": false,
         "createdAt": "2025-10-01T10:00:00Z",
         "updatedAt": "2025-10-01T10:00:00Z"
       }
@@ -108,9 +104,10 @@ X-Tenant-Id: {tenantId}
 | `id` | string (GUID) | Unique Measure data entry identifier |
 | `measureLinkId` | string (GUID) | Associated Measure link |
 | `dataCategory` | enum | `Target` or `Actual` |
-| `targetSubtype` | enum | For targets: `Expected`, `Optimal`, `Minimal` |
-| `actualSubtype` | enum | For actuals: `Measured`, `Estimate` |
-| `postValue` | decimal | The value (target or actual) |
+| `actualSubtype` | enum | For actuals: `Measured`, `Estimate`. Always null for targets. |
+| `postValue` | decimal | The primary/expected target value |
+| `optimalValue` | decimal (nullable) | **NEW:** Stretch goal value (optional) |
+| `minimalValue` | decimal (nullable) | **NEW:** Minimum acceptable value (optional) |
 | `postDate` | datetime | Target date or measurement date |
 | `measuredPeriodStartDate` | datetime | Start of the measurement period |
 | `label` | string | Human-readable label (e.g., "Q4 2025 Target") |
@@ -121,22 +118,22 @@ X-Tenant-Id: {tenantId}
 | `overrideComment` | string | Comment explaining the override |
 | `dataSource` | enum | Where data came from (e.g., `Manual`, `Automated`, `Integration`) |
 | `sourceReferenceId` | string | External system reference |
-| `triggersReplan` | boolean | Does this actual trigger goal replanning? |
-| `replanThresholdExceeded` | boolean | Was threshold exceeded? |
 | `createdAt` | datetime | When entry was created |
 | `updatedAt` | datetime | Last update timestamp |
 
-#### Target Subtypes
+#### Target Value Meanings
 
-- **Expected:** Standard/baseline target (most common)
-- **Optimal:** Stretch goal or best-case scenario
-- **Minimal:** Minimum acceptable performance threshold
+- **postValue:** Standard/baseline target (primary target, always required)
+- **optimalValue:** Stretch goal or best-case scenario (optional)
+- **minimalValue:** Minimum acceptable performance threshold (optional)
+
+**Validation:** When both optimalValue and minimalValue are provided: `optimalValue >= postValue >= minimalValue`
 
 ---
 
 ### 2. Create Target
 
-Set a new target value for a Measure link.
+Set a new target value for a Measure link. Creates a single record with expected (primary) value and optional optimal/minimal values.
 
 **Endpoint:** `POST /measure-links/{linkId}/targets`
 
@@ -150,8 +147,9 @@ Set a new target value for a Measure link.
 
 ```json
 {
-  "targetSubtype": "Expected",
   "targetValue": 50000.00,
+  "optimalValue": 60000.00,
+  "minimalValue": 45000.00,
   "targetDate": "2025-12-31T00:00:00Z",
   "periodStartDate": "2025-12-01T00:00:00Z",
   "label": "Q4 2025 Revenue Target",
@@ -164,8 +162,9 @@ Set a new target value for a Measure link.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `targetSubtype` | enum | **Yes** | `Expected`, `Optimal`, or `Minimal` |
-| `targetValue` | decimal | **Yes** | Target value |
+| `targetValue` | decimal | **Yes** | Primary/expected target value |
+| `optimalValue` | decimal | No | **NEW:** Stretch goal value (optional) |
+| `minimalValue` | decimal | No | **NEW:** Minimum acceptable value (optional) |
 | `targetDate` | datetime | **Yes** | When target should be achieved |
 | `periodStartDate` | datetime | No | Start of measurement period |
 | `label` | string | No | Human-readable label |
@@ -183,8 +182,9 @@ Set a new target value for a Measure link.
     "id": "target-new-001",
     "measureLinkId": "link-123",
     "dataCategory": "Target",
-    "targetSubtype": "Expected",
     "postValue": 50000.00,
+    "optimalValue": 60000.00,
+    "minimalValue": 45000.00,
     "postDate": "2025-12-31T00:00:00Z",
     "measuredPeriodStartDate": "2025-12-01T00:00:00Z",
     "label": "Q4 2025 Revenue Target",
@@ -199,9 +199,33 @@ Set a new target value for a Measure link.
 
 #### Business Rules
 
-- **Multiple targets per subtype:** Can have multiple Expected/Optimal/Minimal targets for different time periods
+- **Single record:** Creates one record with all three target values (if provided)
+- **Required field:** `targetValue` (expected) is always required
+- **Optional fields:** `optimalValue` and `minimalValue` are optional
+- **Validation:** When both optimalValue and minimalValue are provided: `optimalValue >= targetValue >= minimalValue`
 - **Date ranges:** `targetDate` is when the target should be achieved; `periodStartDate` is the measurement period start
 - **Confidence level:** Higher values indicate more certainty about achieving the target
+
+#### Examples
+
+**Example 1: Expected target only**
+```json
+{
+  "targetValue": 50000.00,
+  "targetDate": "2025-12-31T00:00:00Z"
+}
+```
+
+**Example 2: All three target values**
+```json
+{
+  "targetValue": 50000.00,
+  "optimalValue": 60000.00,
+  "minimalValue": 45000.00,
+  "targetDate": "2025-12-31T00:00:00Z",
+  "label": "Q4 2025 Revenue"
+}
+```
 
 ---
 
@@ -223,6 +247,8 @@ Update an existing target value or properties.
 ```json
 {
   "targetValue": 55000.00,
+  "optimalValue": 65000.00,
+  "minimalValue": 47000.00,
   "label": "Q4 2025 Revenue Target (Revised)",
   "confidenceLevel": 85,
   "rationale": "Updated based on new deal closures"
@@ -235,12 +261,16 @@ All fields are optional. Only provided fields will be updated.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `targetValue` | decimal | Updated target value |
+| `targetValue` | decimal | Updated expected/primary target value |
+| `optimalValue` | decimal (nullable) | **NEW:** Updated stretch goal value |
+| `minimalValue` | decimal (nullable) | **NEW:** Updated minimum acceptable value |
 | `label` | string | Updated label |
 | `confidenceLevel` | int | Updated confidence level (0-100) |
 | `rationale` | string | Updated rationale |
 
-**Note:** Cannot change `targetSubtype` or `targetDate` via update. Delete and recreate instead.
+**Validation:** When both optimalValue and minimalValue are provided: `optimalValue >= targetValue >= minimalValue`
+
+**Note:** Cannot change `targetDate` via update. Delete and recreate instead.
 
 #### Response
 
@@ -253,8 +283,9 @@ All fields are optional. Only provided fields will be updated.
     "id": "target-001",
     "measureLinkId": "link-123",
     "dataCategory": "Target",
-    "targetSubtype": "Expected",
     "postValue": 55000.00,
+    "optimalValue": 65000.00,
+    "minimalValue": 47000.00,
     "postDate": "2025-12-31T00:00:00Z",
     "label": "Q4 2025 Revenue Target (Revised)",
     "confidenceLevel": 85,
@@ -343,7 +374,6 @@ X-Tenant-Id: {tenantId}
         "id": "actual-001",
         "measureLinkId": "link-123",
         "dataCategory": "Actual",
-        "targetSubtype": null,
         "actualSubtype": "Measured",
         "postValue": 48500.00,
         "postDate": "2025-12-15T00:00:00Z",
@@ -353,8 +383,6 @@ X-Tenant-Id: {tenantId}
         "rationale": "Monthly recurring revenue from Stripe",
         "originalValue": null,
         "isManualOverride": false,
-        "triggersReplan": false,
-        "replanThresholdExceeded": false,
         "createdAt": "2025-12-15T08:00:00Z",
         "updatedAt": "2025-12-15T08:00:00Z"
       }
@@ -502,64 +530,9 @@ Manually override an actual value with a correction.
 
 ---
 
-### 8. Mark Replan Trigger
-
-Flag an actual as triggering goal replanning.
-
-**Endpoint:** `POST /measure-links/{linkId}/actuals/{actualId}/replan-trigger`
-
-#### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
-| `actualId` | string (GUID) | **Yes** | Actual entry identifier |
-
-#### Request Body
-
-```json
-{
-  "thresholdExceeded": true,
-  "autoAdjustmentApplied": false
-}
-```
-
-#### Request Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `thresholdExceeded` | boolean | **Yes** | Was performance threshold exceeded? |
-| `autoAdjustmentApplied` | boolean | No | Was an automatic adjustment made? |
-
-#### Response
-
-**Status:** `200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "actual-001",
-    "measureLinkId": "link-123",
-    "triggersReplan": true,
-    "replanThresholdExceeded": true,
-    "updatedAt": "2025-12-23T17:30:00Z"
-  },
-  "error": null
-}
-```
-
-#### Business Rules
-
-- **Replan workflow:** Flags actual as requiring attention for goal replanning
-- **Threshold tracking:** Records whether performance threshold was exceeded
-- **Dashboard visibility:** Replan-triggering actuals can be surfaced on dashboards
-
----
-
 ## Combined Data Endpoint
 
-### 9. Get All Series
+### 8. Get All Series
 
 Retrieve all targets and actuals for a Measure link in one request.
 
@@ -588,34 +561,16 @@ X-Tenant-Id: {tenantId}
   "success": true,
   "data": {
     "measureLinkId": "link-123",
-    "targets": {
-      "measureLinkId": "link-123",
-      "expected": [
-        {
-          "id": "target-001",
-          "postValue": 50000.00,
-          "postDate": "2025-12-31T00:00:00Z",
-          "label": "Q4 2025 Target"
-        }
-      ],
-      "optimal": [
-        {
-          "id": "target-002",
-          "postValue": 60000.00,
-          "postDate": "2025-12-31T00:00:00Z",
-          "label": "Q4 2025 Stretch Goal"
-        }
-      ],
-      "minimal": [
-        {
-          "id": "target-003",
-          "postValue": 45000.00,
-          "postDate": "2025-12-31T00:00:00Z",
-          "label": "Q4 2025 Minimum"
-        }
-      ],
-      "totalTargets": 3
-    },
+    "targets": [
+      {
+        "id": "target-001",
+        "postValue": 50000.00,
+        "optimalValue": 60000.00,
+        "minimalValue": 45000.00,
+        "postDate": "2025-12-31T00:00:00Z",
+        "label": "Q4 2025 Target"
+      }
+    ],
     "actuals": [
       {
         "id": "actual-001",
@@ -630,6 +585,7 @@ X-Tenant-Id: {tenantId}
       "postValue": 48500.00,
       "postDate": "2025-12-15T00:00:00Z"
     },
+    "totalTargets": 1,
     "totalActuals": 1
   },
   "error": null
@@ -639,7 +595,7 @@ X-Tenant-Id: {tenantId}
 #### Use Cases
 
 - **Dashboard charts:** Single request for complete time-series visualization
-- **Performance comparison:** Compare actuals against all three target levels
+- **Performance comparison:** Compare actuals against expected/optimal/minimal target levels in single record
 - **Progress tracking:** Show current performance vs. targets
 
 ---
@@ -652,16 +608,6 @@ X-Tenant-Id: {tenantId}
 enum DataCategory {
   Target = "Target",  // Target values
   Actual = "Actual"   // Actual measurements
-}
-```
-
-### Target Subtype Enum
-
-```typescript
-enum TargetSubtype {
-  Expected = "Expected",  // Standard/baseline target
-  Optimal = "Optimal",    // Stretch goal
-  Minimal = "Minimal"     // Minimum acceptable
 }
 ```
 
@@ -690,10 +636,13 @@ enum DataSource {
 
 ### Targets
 
-1. **Multiple targets per period:** Can set Expected, Optimal, and Minimal targets for the same time period
-2. **Time-series:** Can have multiple target entries for different future dates
-3. **Confidence level:** Optional 0-100 value indicating certainty about achieving the target
-4. **Rationale:** Recommended to document why a target was set at a specific value
+1. **Consolidated record:** Expected (primary), Optimal (stretch), and Minimal (floor) values stored in single record
+2. **Required field:** `postValue` (expected) is always required for targets
+3. **Optional fields:** `optimalValue` and `minimalValue` are optional
+4. **Value validation:** When both optimalValue and minimalValue provided: `optimalValue >= postValue >= minimalValue`
+5. **Time-series:** Can have multiple target entries for different future dates
+6. **Confidence level:** Optional 0-100 value indicating certainty about achieving the target
+7. **Rationale:** Recommended to document why a target was set at a specific value
 
 ### Actuals
 
@@ -703,12 +652,6 @@ enum DataSource {
    - Use `Estimate` for projections or manual estimates
 3. **Override capability:** Can correct values with audit trail (original value + comment)
 4. **Data source tracking:** Records where data came from and reference ID
-
-### Replan Triggers
-
-- **Threshold-based:** System can flag actuals that exceed variance thresholds
-- **Manual flagging:** Users can mark actuals as triggering replanning
-- **Dashboard surfacing:** Replan-triggered actuals can be highlighted on dashboards
 
 ---
 
@@ -730,7 +673,7 @@ enum DataSource {
 |------|----------|-----------------|
 | 400 | Invalid GUID format | "Invalid link ID format" |
 | 400 | Missing required field | "TargetValue is required" |
-| 400 | Invalid subtype | "Invalid target subtype. Must be 'Expected', 'Optimal', or 'Minimal'" |
+| 400 | Invalid value order | "optimalValue must be >= targetValue and targetValue must be >= minimalValue" |
 | 401 | Missing/invalid token | "Unauthorized" |
 | 403 | Insufficient permissions | "Access denied to this Measure link" |
 | 404 | Entry not found | "Target not found" |
@@ -751,16 +694,26 @@ const targets = await traction.get<MeasureTargetsListResponse>(
   `/measure-links/${linkId}/targets`
 );
 
-// Create an expected target
+// Create a target with all three values (expected, optimal, minimal)
 const newTarget = await traction.post<MeasureDataResponse>(
   `/measure-links/${linkId}/targets`,
   {
-    targetSubtype: 'Expected',
-    targetValue: 50000.00,
+    targetValue: 50000.00,      // Expected/primary (required)
+    optimalValue: 60000.00,     // Stretch goal (optional)
+    minimalValue: 45000.00,     // Floor (optional)
     targetDate: '2025-12-31T00:00:00Z',
     label: 'Q4 2025 Target',
     confidenceLevel: 80,
     rationale: 'Based on pipeline analysis'
+  }
+);
+
+// Create a simple target (expected value only)
+const simpleTarget = await traction.post<MeasureDataResponse>(
+  `/measure-links/${linkId}/targets`,
+  {
+    targetValue: 50000.00,
+    targetDate: '2025-12-31T00:00:00Z'
   }
 );
 
@@ -787,11 +740,9 @@ const allData = await traction.get<AllMeasureDataResponse>(
   `/measure-links/${linkId}/all-series`
 );
 
-// Chart the data
+// Chart the consolidated data
 renderChart({
-  expected: allData.data.targets.expected,
-  optimal: allData.data.targets.optimal,
-  minimal: allData.data.targets.minimal,
+  targets: allData.data.targets,  // Each target has postValue, optimalValue, minimalValue
   actuals: allData.data.actuals,
   latest: allData.data.latestActual
 });
@@ -842,6 +793,18 @@ renderChart({
 ---
 
 ## Changelog
+
+### v8.0 (January 8, 2026)
+- 🔄 **BREAKING:** Consolidated target values into single record (Issue #512)
+- ✅ Expected/Optimal/Minimal values now stored together, not as separate records
+- ✅ Added `optimalValue` and `minimalValue` optional fields to target records
+- ❌ Removed `TargetSubtype` enum and `targetSubtype` field
+- ❌ Removed `triggersReplan` and `replanThresholdExceeded` fields (unused feature)
+- ❌ Removed Mark Replan Trigger endpoint (Issue #512)
+- ✅ Single API call now creates all three target values atomically
+- ✅ Added validation: `optimalValue >= postValue >= minimalValue`
+- 📝 Updated all endpoints, examples, and data models
+- 📝 Simplified business rules and response structures
 
 ### v7.0 (December 23, 2025)
 - ✨ New unified MeasureData model replacing MeasureMilestone/MeasureActual/MeasureReading (Issue #374)
