@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.0  
-**Last Updated:** December 26, 2025  
+**Version:** 8.1  
+**Last Updated:** January 8, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -91,7 +91,7 @@ X-Tenant-Id: {tenantId}
 | `strategyId` | string (GUID) | Strategy linked to (nullable) |
 | `thresholdPct` | decimal | Completion threshold percentage (0-100) |
 | `linkType` | string | **Calculated field** - Type of link: `"personal"` (only personId), `"goal"` (personId + goalId), `"strategy"` (personId + goalId + strategyId) |
-| `weight` | decimal | Relative importance (for weighted calculations) |
+| `weight` | decimal | Relative importance (for weighted calculations, 0.0-1.0) |
 | `displayOrder` | int | Sort order in UI (lower = first) |
 | `isPrimary` | boolean | Is this the primary Measure for the goal? |
 | `linkedAt` | datetime | When link was created |
@@ -169,7 +169,7 @@ Create a new link between a Measure and person, optionally associating with a go
     "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
     "thresholdPct": 85.0,
     "linkType": "strategy",
-    "weight": 1.5,
+    "weight": 0.5,
     "displayOrder": 1,
     "isPrimary": false,
     "linkedAt": "2025-12-26T10:00:00Z"
@@ -242,7 +242,7 @@ All fields are optional. Only provided fields will be updated.
     "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
     "thresholdPct": 85.0,
     "linkType": "strategy",
-    "weight": 2.0,
+    "weight": 0.8,
     "displayOrder": 1,
     "isPrimary": true,
     "linkedAt": "2025-12-20T10:00:00Z"
@@ -391,33 +391,50 @@ Returns Measures where this person is assigned to work on this specific goal.
     {
       "id": "link-001",
       "measureId": "measure-456e7890-e89b-12d3-a456-426614174001",
+      "measureName": "Customer Satisfaction Score",
+      "unit": "percentage",
       "personId": "person-123",
+      "personName": "John Doe",
       "goalId": "goal-001",
       "strategyId": "strategy-001",
       "thresholdPct": 80.0,
       "linkType": "strategy",
-      "weight": 1.5,
+      "weight": 0.75,
       "displayOrder": 1,
       "isPrimary": true,
-      "linkedAt": "2025-12-20T10:00:00Z"
+      "linkedAt": "2025-12-20T10:00:00Z",
+      "currentValue": 87.5,
+      "currentValueDate": "2025-12-25T09:30:00Z"
     },
     {
       "id": "link-002",
       "measureId": "measure-456e7890-e89b-12d3-a456-426614174001",
+      "measureName": "Customer Satisfaction Score",
+      "unit": "percentage",
       "personId": "person-456",
+      "personName": "Jane Smith",
       "goalId": "goal-002",
       "strategyId": null,
       "thresholdPct": 75.0,
       "linkType": "goal",
-      "weight": 1.0,
+      "weight": 0.5,
       "displayOrder": 2,
       "isPrimary": false,
-      "linkedAt": "2025-12-21T14:30:00Z"
+      "linkedAt": "2025-12-21T14:30:00Z",
+      "currentValue": null,
+      "currentValueDate": null
     }
   ],
   "error": null
 }
 ```
+
+**Note:** The query response includes denormalized fields for convenience:
+- `measureName` - Name of the linked Measure
+- `unit` - Unit of measurement
+- `personName` - Name of the responsible person
+- `currentValue` - Latest actual value (if any)
+- `currentValueDate` - Date of the latest actual value (if any)
 
 #### Use Cases
 
@@ -468,9 +485,10 @@ type LinkType = "personal" | "goal" | "strategy";
 
 ### Weight
 
-- **Range:** Any positive decimal
-- **Meaning:** Relative importance for weighted calculations
-- **Default:** 1.0
+- **Range:** 0.0 - 1.0
+- **Meaning:** Relative importance for weighted calculations (normalized)
+- **Default:** 1.0 (but must be within 0.0-1.0 range)
+- **Validation:** Domain enforces 0.0 ≤ weight ≤ 1.0
 - **Usage:** When calculating weighted averages of multiple Measures
 
 ### Display Order
@@ -540,7 +558,7 @@ const response = await traction.post('/measure-links', {
   measureId: 'measure-123',
   personId: 'person-456',
   thresholdPct: 85.0,
-  weight: 1.0,
+  weight: 0.8,  // Must be between 0.0 and 1.0
   displayOrder: 1
 });
 
@@ -550,6 +568,7 @@ await traction.post('/measure-links', {
   personId: 'person-456',
   goalId: 'goal-789',
   thresholdPct: 80.0,
+  weight: 0.9,  // Must be between 0.0 and 1.0
   isPrimary: true
 });
 
@@ -559,13 +578,15 @@ await traction.post('/measure-links', {
   personId: 'person-456',
   goalId: 'goal-789',
   strategyId: 'strategy-101',
-  thresholdPct: 75.0
+  thresholdPct: 75.0,
+  weight: 0.7  // Must be between 0.0 and 1.0
 });
 
-// Query personal Measures
+// Query personal Measures (returns denormalized fields)
 const personalMeasures = await traction.get('/measure-links', {
   params: { personId: 'person-456' }
 });
+// Response includes: measureName, unit, personName, currentValue, currentValueDate
 
 // Query all Measures for person (including goals/strategies)
 const allMeasures = await traction.get('/measure-links', {
@@ -586,7 +607,7 @@ const goalAllMeasures = await traction.get('/measure-links', {
 await traction.put(`/measure-links/${linkId}`, {
   thresholdPct: 90.0,
   isPrimary: true,
-  weight: 2.0
+  weight: 0.95  // Must be between 0.0 and 1.0
 });
 
 // Delete link
@@ -606,6 +627,12 @@ await traction.delete(`/measure-links/${linkId}`);
 ---
 
 ## Changelog
+
+### v8.1 (January 8, 2026)
+- 📝 **Updated:** Weight range clarified to 0.0-1.0 (matches domain validation)
+- ✨ **Added:** Query response includes denormalized fields: `measureName`, `unit`, `personName`, `currentValue`, `currentValueDate`
+- 📝 **Documentation:** Updated all examples to reflect actual implementation with denormalized fields
+- 🔧 **Clarification:** Weight validation enforces 0.0 ≤ weight ≤ 1.0 in domain layer
 
 ### v8.0 (December 26, 2025)
 - 🔄 **BREAKING:** Unified Measure Links API - removed separate controllers
