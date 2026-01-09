@@ -51,7 +51,14 @@ This specification is split into multiple documents for efficient AI assistant c
    - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
-8. **[Common Patterns & Data Models](./common-patterns.md)**
+8. **[Dashboard Service](./dashboard-service.md)** ⭐ NEW (v1.0)
+   - User Dashboard Configuration CRUD
+   - System Templates Management
+   - Widget Catalog & Registry
+   - Dynamic Widget Data Retrieval
+   - Responsive Grid Layouts
+
+9. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations
