@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.1  
-**Last Updated:** January 8, 2026  
+**Version:** 8.2  
+**Last Updated:** January 10, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -74,7 +74,15 @@ X-Tenant-Id: {tenantId}
     "weight": 1.5,
     "displayOrder": 1,
     "isPrimary": true,
-    "linkedAt": "2025-12-20T10:00:00Z"
+    "linkedAt": "2025-12-20T10:00:00Z",
+    "progress": {
+      "progressPercentage": 85.5,
+      "status": "on_track",
+      "variance": 10.5,
+      "variancePercentage": 14.0,
+      "daysUntilTarget": 15,
+      "isOverdue": false
+    }
   },
   "error": null
 }
@@ -95,6 +103,7 @@ X-Tenant-Id: {tenantId}
 | `displayOrder` | int | Sort order in UI (lower = first) |
 | `isPrimary` | boolean | Is this the primary Measure for the goal? |
 | `linkedAt` | datetime | When link was created |
+| `progress` | object | **Issue #527** - Progress calculation based on latest target and actual values. Includes `progressPercentage` (0-100+), `status` (on_track/at_risk/behind/no_data), `variance`, `variancePercentage`, `daysUntilTarget`, and `isOverdue`. Returns `null` if no target or actual data exists. |
 
 #### Error Responses
 
@@ -627,6 +636,13 @@ await traction.delete(`/measure-links/${linkId}`);
 ---
 
 ## Changelog
+
+### v8.2 (January 10, 2026) - Issue #527: Progress Calculation
+- ✨ **Added:** `progress` field to all measure link responses (GET /measure-links, GET /measure-links/{id})
+- 📊 Progress calculation includes: progressPercentage, status (on_track/at_risk/behind/no_data), variance, variancePercentage, daysUntilTarget, isOverdue
+- 🧮 Implemented via domain service pattern (`MeasureLinkProgressService`) following DDD principles
+- 📝 Progress calculated based on latest target and actual values, accounting for measure direction and threshold
+- 🚀 Batch optimization with throttled parallelism (max 10 concurrent) for performance
 
 ### v8.1 (January 8, 2026)
 - 📝 **Updated:** Weight range clarified to 0.0-1.0 (matches domain validation)

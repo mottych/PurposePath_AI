@@ -118,6 +118,14 @@ Retrieve comprehensive MEASURE summary with filtering, aggregations, and detaile
             "linkOwner": {
               "personId": "person-456",
               "personName": "Jane Doe"
+            },
+            "progress": {
+              "progressPercentage": 83.3,
+              "status": "on_track",
+              "variance": -25000,
+              "variancePercentage": -16.7,
+              "daysUntilTarget": 23,
+              "isOverdue": false
             }
           }
         ],
@@ -138,6 +146,14 @@ Retrieve comprehensive MEASURE summary with filtering, aggregations, and detaile
             "linkOwner": {
               "personId": "person-456",
               "personName": "Jane Doe"
+            },
+            "progress": {
+              "progressPercentage": 83.3,
+              "status": "on_track",
+              "variance": -25000,
+              "variancePercentage": -16.7,
+              "daysUntilTarget": 23,
+              "isOverdue": false
             }
           }
         ],
@@ -1369,6 +1385,13 @@ await traction.delete(`/measures/${measureId}`);
 ---
 
 ## Changelog
+
+### v7.4 (January 10, 2026) - Issue #527: Link-Level Progress
+- ✨ **Added:** `progress` field to `goalLinks` and `strategyLinks` in GET /measures/summary response
+- 🔄 **Changed:** Progress moved from measure level to link level for accurate per-goal/strategy tracking
+- 📊 Progress calculation includes: progressPercentage, status (on_track/at_risk/behind/no_data), variance, variancePercentage, daysUntilTarget, isOverdue
+- 🧮 Implemented via domain service pattern (`MeasureLinkProgressService`) following DDD principles
+- 📝 Each link has independent progress based on its own threshold configuration
 
 ### v7.3 (January 9, 2026) - Issue #526: Measure Summary Endpoint
 - ✨ Added `GET /measures/summary` - Comprehensive measure tracker with filtering and aggregations
