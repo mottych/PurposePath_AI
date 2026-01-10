@@ -1,7 +1,7 @@
 # Measures API Specification
 
-**Version:** 7.2  
-**Last Updated:** January 8, 2026  
+**Version:** 7.3  
+**Last Updated:** January 9, 2026  
 **Base Path:** `/measures`  
 **Controller:** `MeasuresController.cs`
 
@@ -30,7 +30,319 @@ All endpoints require:
 
 ## Endpoints
 
-### 0. Get Available Measures For New Goal (No goalId)
+### 0. Get Measure Summary
+
+**NEW** Issue #526
+
+Retrieve comprehensive MEASURE summary with filtering, aggregations, and detailed measure data. This endpoint provides a complete view of all measures with their relationships, progress, and summary statistics.
+
+**Endpoint:** `GET /measures/summary`
+
+**Headers:**
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+- `category` (optional): Filter by measure category (e.g., "Finance", "Sales", "Customer Success")
+- `ownerId` (optional): Filter by owner (person ID)
+- `status` (optional): Filter by measure status ("active" or "inactive")
+- `progressStatus` (optional): Filter by progress status ("on_track", "at_risk", "behind", "no_data")
+- `period` (optional): Filter by aggregation period ("daily", "weekly", "monthly", "quarterly", "yearly")
+- `includeInactive` (optional): Include inactive measures (default: true)
+- `maxDataPoints` (optional): Maximum trend data points to return (default: 5, 0 = all)
+
+**Response 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "measures": [
+      {
+        "measureId": "m-001",
+        "measureName": "Monthly Recurring Revenue",
+        "description": "Total monthly recurring revenue from all subscriptions",
+        "unit": "$",
+        "direction": "up",
+        "type": "quantitative",
+        "category": "Finance",
+        
+        "currentValue": 125000,
+        "currentValueDate": "2025-01-08",
+        
+        "latestTarget": {
+          "targetId": "t-001",
+          "targetValue": 150000,
+          "targetDate": "2025-01-31",
+          "optimalValue": 175000,
+          "minimalValue": 140000,
+          "label": "Q1 Target"
+        },
+        
+        "latestActual": {
+          "actualId": "a-001",
+          "actualValue": 125000,
+          "measurementDate": "2025-01-08",
+          "actualSubtype": "Measured",
+          "recordedBy": "user-123",
+          "recordedByName": "John Smith"
+        },
+        
+        "progress": {
+          "progressPercentage": 83.3,
+          "status": "on_track",
+          "variance": -25000,
+          "variancePercentage": -16.7,
+          "daysUntilTarget": 23,
+          "isOverdue": false
+        },
+        
+        "owner": {
+          "ownerId": "person-456",
+          "ownerName": "Jane Doe",
+          "ownerEmail": "jane.doe@example.com"
+        },
+        
+        "goalLinks": [
+          {
+            "linkId": "link-001",
+            "goalId": "goal-001",
+            "goalTitle": "Increase Revenue",
+            "goalIntent": "Grow monthly recurring revenue to support expansion",
+            "goalStatus": "active",
+            "isPrimary": true,
+            "thresholdPct": 80,
+            "weight": 1.0,
+            "displayOrder": 0,
+            "linkedAt": "2025-01-01T00:00:00Z",
+            "linkOwner": {
+              "personId": "person-456",
+              "personName": "Jane Doe"
+            }
+          }
+        ],
+        
+        "strategyLinks": [
+          {
+            "linkId": "link-003",
+            "strategyId": "strat-001",
+            "strategyTitle": "Enterprise Sales Initiative",
+            "strategyDescription": "Focus on closing enterprise deals",
+            "strategyStatus": "in_progress",
+            "goalId": "goal-001",
+            "goalTitle": "Increase Revenue",
+            "thresholdPct": 85,
+            "weight": 0.7,
+            "displayOrder": 0,
+            "linkedAt": "2025-01-02T00:00:00Z",
+            "linkOwner": {
+              "personId": "person-456",
+              "personName": "Jane Doe"
+            }
+          }
+        ],
+        
+        "measurementConfig": {
+          "aggregationType": "sum",
+          "aggregationPeriod": "monthly",
+          "valueType": "aggregate",
+          "interpolationMethod": "linear",
+          "measurementFrequency": "daily"
+        },
+        
+        "sharingInfo": {
+          "isShared": true,
+          "totalGoalLinks": 2,
+          "totalStrategyLinks": 1,
+          "catalogId": null,
+          "isCustom": true
+        },
+        
+        "metadata": {
+          "createdAt": "2024-12-15T10:00:00Z",
+          "updatedAt": "2025-01-08T14:30:00Z",
+          "createdBy": "user-456"
+        },
+        
+        "trendData": [
+          {
+            "date": "2024-12-01",
+            "value": 100000,
+            "isTarget": false,
+            "isEstimate": false
+          },
+          {
+            "date": "2024-12-15",
+            "value": 110000,
+            "isTarget": false,
+            "isEstimate": false
+          },
+          {
+            "date": "2025-01-01",
+            "value": 120000,
+            "isTarget": false,
+            "isEstimate": false
+          },
+          {
+            "date": "2025-01-08",
+            "value": 125000,
+            "isTarget": false,
+            "isEstimate": false
+          },
+          {
+            "date": "2025-01-31",
+            "value": 150000,
+            "isTarget": true,
+            "isEstimate": false
+          }
+        ]
+      }
+    ],
+    
+    "summary": {
+      "totalMeasures": 47,
+      "totalActiveMeasures": 42,
+      "totalInactiveMeasures": 5,
+      
+      "statusBreakdown": {
+        "onTrack": 28,
+        "atRisk": 10,
+        "behind": 4,
+        "noData": 5
+      },
+      
+      "categoryBreakdown": [
+        {
+          "category": "Finance",
+          "count": 12,
+          "onTrack": 8,
+          "atRisk": 3,
+          "behind": 1
+        },
+        {
+          "category": "Sales",
+          "count": 10,
+          "onTrack": 7,
+          "atRisk": 2,
+          "behind": 1
+        },
+        {
+          "category": "Customer Success",
+          "count": 8,
+          "onTrack": 5,
+          "atRisk": 2,
+          "behind": 1
+        }
+      ],
+      
+      "ownerBreakdown": [
+        {
+          "ownerId": "person-456",
+          "ownerName": "Jane Doe",
+          "measureCount": 8,
+          "onTrackCount": 6
+        },
+        {
+          "ownerId": "person-789",
+          "ownerName": "Bob Johnson",
+          "measureCount": 5,
+          "onTrackCount": 4
+        }
+      ],
+      
+      "overallHealthScore": 73.5
+    },
+    
+    "metadata": {
+      "generatedAt": "2025-01-09T10:30:45Z",
+      "queryDurationMs": 124,
+      "filters": {
+        "category": null,
+        "ownerId": null,
+        "status": null,
+        "progressStatus": null,
+        "period": null,
+        "includeInactive": true,
+        "maxDataPoints": 5
+      },
+      "version": "1.0"
+    }
+  },
+  "error": null,
+  "timestamp": "2025-01-09T10:30:45Z"
+}
+```
+
+**Progress Status Calculation**
+
+The `progress.status` field is calculated using the following algorithm:
+
+```
+status = f(progressPercentage, thresholdPct, timeRemaining, isOverdue)
+
+Where:
+1. progressPercentage = (currentValue / targetValue) × 100
+   - For direction="up": Higher is better
+   - For direction="down": Invert the logic (2×target - current) / target × 100
+
+2. Apply thresholds:
+   - progressPercentage ≥ thresholdPct → on_track
+   - progressPercentage ≥ (thresholdPct × 0.625) → at_risk
+   - progressPercentage < (thresholdPct × 0.625) → behind
+   - No data → no_data
+
+3. Time-based adjustment:
+   - If isOverdue = true AND progressPercentage < 100 → behind
+   - If daysUntilTarget < 7 AND progressPercentage < thresholdPct → at_risk
+
+Example with thresholdPct = 80:
+   - ≥80% → on_track
+   - ≥50% (80 × 0.625) → at_risk
+   - <50% → behind
+```
+
+**Response 400 Bad Request**
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid filter parameters",
+  "timestamp": "2025-01-09T10:30:45Z"
+}
+```
+
+**Response 401 Unauthorized**
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Unauthorized - Invalid or expired token",
+  "timestamp": "2025-01-09T10:30:45Z"
+}
+```
+
+**Response 500 Internal Server Error**
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Internal server error",
+  "timestamp": "2025-01-09T10:30:45Z"
+}
+```
+
+**Implementation:**
+- Controller: `MeasuresController.GetMeasureSummary()`
+- Handler: `GetMeasureSummaryQueryHandler`
+- Query: `GetMeasureSummaryQuery`
+- Response DTOs: `MeasureSummaryResponse`, `MeasureSummaryItemResponse`, etc.
+
+---
+
+### 0a. Get Available Measures For New Goal (No goalId)
 
 Retrieve the Measures catalog (catalog + tenant custom) when designing a goal that is not yet persisted. This mirrors the goal-scoped available-measures payload but does not require a `goalId`; `usageInfo.isUsedByThisGoal` is always `false`.
 
@@ -1057,6 +1369,13 @@ await traction.delete(`/measures/${measureId}`);
 ---
 
 ## Changelog
+
+### v7.3 (January 9, 2026) - Issue #526: Measure Summary Endpoint
+- ✨ Added `GET /measures/summary` - Comprehensive measure tracker with filtering and aggregations
+- 📊 Includes progress calculations, goal/strategy links, trend data, and summary statistics
+- 🔍 Supports filtering by category, owner, status, progress status, and period
+- 📈 Configurable trend data points (default: 5, supports 0 for all)
+- 📝 Documented progress status calculation algorithm
 
 ### v7.2 (January 8, 2026) - Issue #469: Streamline Measure Terminology
 - ✨ Added `GET /measures/{id}/options` - Get options for Qualitative measures
