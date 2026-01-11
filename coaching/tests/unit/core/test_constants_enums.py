@@ -24,11 +24,9 @@ class TestTopicType:
         assert TopicType.CONVERSATION_COACHING.value == "conversation_coaching"
         assert TopicType.SINGLE_SHOT.value == "single_shot"
         assert TopicType.MEASURE_SYSTEM.value == "measure_system"
-        # Legacy alias still works
-        assert TopicType.KPI_SYSTEM.value == "measure_system"
 
     def test_topic_type_count(self) -> None:
-        """Test that TopicType has 3 values (legacy alias shares value)."""
+        """Test that TopicType has 3 values."""
         assert len(TopicType) == 3
 
     def test_topic_type_is_string_enum(self) -> None:
@@ -106,9 +104,6 @@ class TestParameterSource:
         assert ParameterSource.GOALS.value == "goals"
         assert ParameterSource.MEASURE.value == "measure"
         assert ParameterSource.MEASURES.value == "measures"
-        # Legacy aliases still work
-        assert ParameterSource.KPI.value == "measure"
-        assert ParameterSource.KPIS.value == "measures"
         assert ParameterSource.ACTION.value == "action"
         assert ParameterSource.ISSUE.value == "issue"
         assert ParameterSource.USER.value == "user"
@@ -116,7 +111,7 @@ class TestParameterSource:
         assert ParameterSource.COMPUTED.value == "computed"
 
     def test_parameter_source_count(self) -> None:
-        """Test that ParameterSource has 12 values (legacy aliases share values)."""
+        """Test that ParameterSource has 12 values."""
         assert len(ParameterSource) == 12
 
 
@@ -150,5 +145,3 @@ class TestExistingEnums:
         assert AnalysisType.ALIGNMENT.value == "alignment"
         assert AnalysisType.STRATEGY.value == "strategy"
         assert AnalysisType.MEASURE.value == "measure"
-        # Legacy alias still works
-        assert AnalysisType.KPI.value == "measure"

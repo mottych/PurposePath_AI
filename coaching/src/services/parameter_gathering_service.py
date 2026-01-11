@@ -208,17 +208,17 @@ class ParameterGatheringService:
         elif source == ParameterSource.GOALS:
             data = await self._fetch_goals(user_id, tenant_id)
 
-        elif source == ParameterSource.KPI:
-            # Single KPI - requires kpi_id in request
-            kpi_id = request_data.get("kpi_id")
-            if kpi_id:
-                data = await self._fetch_kpi(kpi_id, tenant_id)
+        elif source == ParameterSource.MEASURE:
+            # Single measure - requires measure_id in request
+            measure_id = request_data.get("measure_id")
+            if measure_id:
+                data = await self._fetch_measure(measure_id, tenant_id)
             else:
-                logger.warning("parameter_source.kpi.missing_id")
+                logger.warning("parameter_source.measure.missing_id")
                 data = {}
 
-        elif source == ParameterSource.KPIS:
-            data = await self._fetch_kpis(tenant_id)
+        elif source == ParameterSource.MEASURES:
+            data = await self._fetch_measures(tenant_id)
 
         elif source == ParameterSource.ACTION:
             # Single action - requires action_id in request
@@ -351,39 +351,45 @@ class ParameterGatheringService:
             )
             return []
 
-    async def _fetch_kpi(self, kpi_id: str, tenant_id: str) -> dict[str, Any]:
-        """Fetch a single KPI by ID.
+    async def _fetch_measure(self, measure_id: str, tenant_id: str) -> dict[str, Any]:
+        """Fetch a single measure by ID.
 
         Args:
-            kpi_id: KPI identifier
+            measure_id: Measure identifier
             tenant_id: Tenant identifier
 
         Returns:
-            KPI data
+            Measure data
         """
-        # TODO: Implement when KPI endpoint is available
-        logger.warning(
-            "fetch_kpi.not_implemented",
-            kpi_id=kpi_id,
-            tenant_id=tenant_id,
-        )
-        return {}
+        try:
+            return await self._client.get_measure_by_id(measure_id, tenant_id)
+        except Exception as e:
+            logger.warning(
+                "fetch_measure.failed",
+                measure_id=measure_id,
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            return {}
 
-    async def _fetch_kpis(self, tenant_id: str) -> list[dict[str, Any]]:
-        """Fetch all KPIs for a tenant.
+    async def _fetch_measures(self, tenant_id: str) -> list[dict[str, Any]]:
+        """Fetch all measures for a tenant.
 
         Args:
             tenant_id: Tenant identifier
 
         Returns:
-            List of KPIs
+            List of measures
         """
-        # TODO: Implement when KPIs endpoint is available
-        logger.warning(
-            "fetch_kpis.not_implemented",
-            tenant_id=tenant_id,
-        )
-        return []
+        try:
+            return await self._client.get_measures(tenant_id)
+        except Exception as e:
+            logger.warning(
+                "fetch_measures.failed",
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            return []
 
     async def _fetch_action(self, action_id: str, tenant_id: str) -> dict[str, Any]:
         """Fetch a single action by ID.

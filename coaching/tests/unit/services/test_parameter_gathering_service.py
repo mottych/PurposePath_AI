@@ -434,13 +434,13 @@ class TestSourceDataRetrieval:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_kpi_source_without_id_returns_empty(
+    async def test_measure_source_without_id_returns_empty(
         self, service: ParameterGatheringService
     ) -> None:
-        """Test KPI source without kpi_id returns empty dict."""
+        """Test MEASURE source without measure_id returns empty dict."""
         result = await service._get_source_data(
-            source=ParameterSource.KPI,
-            request_data={},  # No kpi_id
+            source=ParameterSource.MEASURE,
+            request_data={},  # No measure_id
             user_id="user-1",
             tenant_id="tenant-1",
             conversation_context=None,

@@ -23,8 +23,6 @@ class TopicType(str, Enum):
     CONVERSATION_COACHING = "conversation_coaching"
     SINGLE_SHOT = "single_shot"
     MEASURE_SYSTEM = "measure_system"
-    # Legacy alias for backward compatibility
-    KPI_SYSTEM = "measure_system"
 
 
 class TopicCategory(str, Enum):
@@ -102,10 +100,6 @@ class ParameterSource(str, Enum):
     # All Measures list from Traction Service
     MEASURES = "measures"
 
-    # Legacy aliases for backward compatibility
-    KPI = "measure"  # Deprecated: Use MEASURE
-    KPIS = "measures"  # Deprecated: Use MEASURES
-
     # Action item from Traction Service
     ACTION = "action"
 
@@ -161,8 +155,6 @@ class AnalysisType(str, Enum):
     ROOT_CAUSE = "root_cause"
     ACTION_PLAN = "action_plan"
     GOAL_BREAKDOWN = "goal_breakdown"
-    # Legacy alias
-    KPI = "measure"  # Deprecated: Use MEASURE
 
 
 # Progress weights for each phase

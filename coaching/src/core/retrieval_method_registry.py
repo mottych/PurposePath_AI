@@ -413,7 +413,7 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
 
 @register_retrieval_method(
     name="get_measure_by_id",
-    description="Retrieves measure/KPI details for a specific measure",
+    description="Retrieves measure details for a specific measure",
     provides_params=(
         "measure",
         "measure_name",
@@ -430,7 +430,7 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
 )
 async def get_measure_by_id(context: RetrievalContext) -> dict[str, Any]:
     """Retrieve a specific measure by ID using direct API call."""
-    measure_id = context.payload.get("measure_id") or context.payload.get("kpi_id")
+    measure_id = context.payload.get("measure_id")
     if not measure_id:
         logger.warning("retrieval_method.get_measure_by_id.missing_measure_id")
         return {}
@@ -468,32 +468,6 @@ async def get_measure_by_id(context: RetrievalContext) -> dict[str, Any]:
         return {}
 
 
-# Alias for backward compatibility
-@register_retrieval_method(
-    name="get_kpi_by_id",
-    description="Deprecated: Use get_measure_by_id. Retrieves KPI details",
-    provides_params=(
-        "kpi",
-        "kpi_name",
-        "kpi_value",
-        "kpi_target",
-        "kpi_unit",
-    ),
-    requires_from_payload=("kpi_id",),
-)
-async def get_kpi_by_id(context: RetrievalContext) -> dict[str, Any]:
-    """Deprecated: Use get_measure_by_id instead."""
-    result = await get_measure_by_id(context)
-    # Map new fields to old names for backward compatibility
-    return {
-        "kpi": result.get("measure", {}),
-        "kpi_name": result.get("measure_name", ""),
-        "kpi_value": result.get("measure_current_value", 0),
-        "kpi_target": 0,  # Targets now come from measure links
-        "kpi_unit": result.get("measure_unit", ""),
-    }
-
-
 @register_retrieval_method(
     name="get_measures",
     description="Retrieves all measures for the tenant",
@@ -518,18 +492,6 @@ async def get_measures(context: RetrievalContext) -> dict[str, Any]:
             tenant_id=context.tenant_id,
         )
         return {"measures": [], "measures_count": 0}
-
-
-# Alias for backward compatibility
-@register_retrieval_method(
-    name="get_kpis_list",
-    description="Deprecated: Use get_measures. Retrieves all KPIs",
-    provides_params=("kpis_list",),
-)
-async def get_kpis_list(context: RetrievalContext) -> dict[str, Any]:
-    """Deprecated: Use get_measures instead."""
-    result = await get_measures(context)
-    return {"kpis_list": result.get("measures", [])}
 
 
 @register_retrieval_method(

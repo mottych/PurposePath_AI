@@ -104,17 +104,6 @@ def _measures(name: str, path: str = "") -> ParameterRef:
     return ParameterRef(name=name, source=ParameterSource.MEASURES, source_path=path)
 
 
-# Deprecated aliases for backward compatibility
-def _kpi(name: str, path: str = "") -> ParameterRef:
-    """Deprecated: Use _measure. Create a KPI source parameter reference."""
-    return _measure(name, path)
-
-
-def _kpis(name: str, path: str = "") -> ParameterRef:
-    """Deprecated: Use _measures. Create a KPIS source parameter reference."""
-    return _measures(name, path)
-
-
 def _strategy(name: str, path: str = "") -> ParameterRef:
     """Create a STRATEGY source parameter reference (from get_strategy_by_id)."""
     return ParameterRef(
@@ -174,7 +163,7 @@ class EndpointDefinition:
 
     Attributes:
         topic_id: Topic identifier in DynamoDB (e.g., "alignment_check")
-        topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
+        topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
         category: Grouping category for organization (enum)
         description: Human-readable description of endpoint purpose
         response_model: Response model class name (e.g., "AlignmentAnalysisResponse")
@@ -1254,7 +1243,7 @@ def get_registry_statistics() -> dict[str, int]:
             - inactive_endpoints: Number of inactive endpoints
             - conversation_endpoints: Number of conversation-based endpoints
             - single_shot_endpoints: Number of single-shot endpoints
-            - kpi_system_endpoints: Number of KPI system endpoints
+            - measure_system_endpoints: Number of measure system endpoints
             - endpoints_by_category: Count per category
     """
     all_endpoints = list_all_endpoints(active_only=False)
@@ -1264,7 +1253,9 @@ def get_registry_statistics() -> dict[str, int]:
         e for e in all_endpoints if e.topic_type == TopicType.CONVERSATION_COACHING
     ]
     single_shot_endpoints = [e for e in all_endpoints if e.topic_type == TopicType.SINGLE_SHOT]
-    kpi_system_endpoints = [e for e in all_endpoints if e.topic_type == TopicType.KPI_SYSTEM]
+    measure_system_endpoints = [
+        e for e in all_endpoints if e.topic_type == TopicType.MEASURE_SYSTEM
+    ]
 
     categories: dict[str, int] = {}
     for endpoint in all_endpoints:
@@ -1277,7 +1268,7 @@ def get_registry_statistics() -> dict[str, int]:
         "inactive_endpoints": len(inactive_endpoints),
         "conversation_endpoints": len(conversation_endpoints),
         "single_shot_endpoints": len(single_shot_endpoints),
-        "kpi_system_endpoints": len(kpi_system_endpoints),
+        "measure_system_endpoints": len(measure_system_endpoints),
         **{f"category_{cat}": count for cat, count in categories.items()},
     }
 

@@ -85,8 +85,6 @@ class TestAnalysisTypeEnum:
         assert AnalysisType.ALIGNMENT.value == "alignment"
         assert AnalysisType.STRATEGY.value == "strategy"
         assert AnalysisType.MEASURE.value == "measure"
-        # Legacy alias still works
-        assert AnalysisType.KPI.value == "measure"
         assert AnalysisType.SWOT.value == "swot"
         assert AnalysisType.ROOT_CAUSE.value == "root_cause"
         assert AnalysisType.ACTION_PLAN.value == "action_plan"

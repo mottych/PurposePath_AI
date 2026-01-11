@@ -1,1 +1,0 @@
-Scan the website {{website_data}} and gather all the information you can about the business. The information we have so far is: {{business_context}}

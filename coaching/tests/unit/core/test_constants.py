@@ -106,12 +106,9 @@ class TestAnalysisType:
         assert AnalysisType.ROOT_CAUSE.value == "root_cause"
         assert AnalysisType.ACTION_PLAN.value == "action_plan"
         assert AnalysisType.GOAL_BREAKDOWN.value == "goal_breakdown"
-        # Legacy alias still works
-        assert AnalysisType.KPI.value == "measure"
 
     def test_analysis_type_count(self) -> None:
         """Test that AnalysisType enum has the expected number of values."""
-        # Assert - KPI alias shares value with MEASURE so doesn't add to count
         assert len(AnalysisType) == 7
 
     def test_analysis_type_values_are_strings(self) -> None:

@@ -764,7 +764,6 @@ _register(
 
 # -----------------------------------------------------------------------------
 # Measure Parameters (from get_measure_by_id or get_measures_summary)
-# NOTE: Measures replace the older "KPI" terminology
 # -----------------------------------------------------------------------------
 _register(
     ParameterDefinition(
@@ -935,83 +934,6 @@ _register(
         default=[],
         retrieval_method="get_measures_summary",
         extraction_path="at_risk_measures",
-    )
-)
-
-# -----------------------------------------------------------------------------
-# Legacy KPI Parameters (for backward compatibility)
-# NOTE: Use measure parameters for new development
-# -----------------------------------------------------------------------------
-_register(
-    ParameterDefinition(
-        name="kpi_id",
-        param_type=ParameterType.STRING,
-        description="Deprecated: Use measure_id. The unique identifier of a KPI.",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpi",
-        param_type=ParameterType.DICT,
-        description="Complete KPI data.",
-        retrieval_method="get_kpi_by_id",
-        extraction_path="",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpi_name",
-        param_type=ParameterType.STRING,
-        description="The name of the KPI.",
-        default="",
-        retrieval_method="get_kpi_by_id",
-        extraction_path="name",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpi_value",
-        param_type=ParameterType.FLOAT,
-        description="The current value of the KPI.",
-        default=0.0,
-        retrieval_method="get_kpi_by_id",
-        extraction_path="value",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpi_target",
-        param_type=ParameterType.FLOAT,
-        description="The target value of the KPI.",
-        default=0.0,
-        retrieval_method="get_kpi_by_id",
-        extraction_path="target",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpi_unit",
-        param_type=ParameterType.STRING,
-        description="The unit of measurement for the KPI.",
-        default="",
-        retrieval_method="get_kpi_by_id",
-        extraction_path="unit",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="kpis_list",
-        param_type=ParameterType.LIST,
-        description="List of all KPIs for the user.",
-        default=[],
-        retrieval_method="get_kpis_list",
-        extraction_path="",
     )
 )
 
