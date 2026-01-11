@@ -325,18 +325,20 @@ async def get_user_context(context: RetrievalContext) -> dict[str, Any]:
     description="Retrieves details for a specific goal",
     provides_params=(
         "goal",
-        "goal_title",
-        "goal_intent",
+        "goal_name",
+        "goal_description",
         "goal_status",
-        "goal_horizon",
-        "goal_strategies",
-        "goal_kpis",
+        "goal_type",
         "goal_progress",
+        "goal_start_date",
+        "goal_end_date",
+        "goal_owner_id",
+        "goal_owner_name",
     ),
     requires_from_payload=("goal_id",),
 )
 async def get_goal_by_id(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve a specific goal by ID from payload."""
+    """Retrieve a specific goal by ID from payload using direct API call."""
     goal_id = context.payload.get("goal_id")
     if not goal_id:
         logger.warning("retrieval_method.get_goal_by_id.missing_goal_id")
@@ -348,25 +350,24 @@ async def get_goal_by_id(context: RetrievalContext) -> dict[str, Any]:
             goal_id=goal_id,
             tenant_id=context.tenant_id,
         )
-        # Get all goals and find the one we need
-        goals = await context.client.get_user_goals(context.user_id, context.tenant_id)
-        for goal in goals:
-            if goal.get("id") == goal_id:
-                return {
-                    "goal": goal,
-                    # Map new API fields: 'name' instead of 'title'
-                    "goal_title": goal.get("name", ""),
-                    "goal_intent": goal.get("description", ""),  # description maps to intent
-                    "goal_status": goal.get("status", ""),
-                    "goal_horizon": goal.get(
-                        "type", ""
-                    ),  # type maps to horizon (annual, quarterly, etc)
-                    "goal_strategies": goal.get("strategies", []),
-                    "goal_kpis": goal.get("kpis", []),
-                    "goal_progress": goal.get("progress", 0),
-                }
-        logger.warning("retrieval_method.get_goal_by_id.not_found", goal_id=goal_id)
-        return {}
+        # Direct API call to get goal by ID
+        goal = await context.client.get_goal_by_id(goal_id, context.tenant_id)
+        if not goal:
+            logger.warning("retrieval_method.get_goal_by_id.not_found", goal_id=goal_id)
+            return {}
+
+        return {
+            "goal": goal,
+            "goal_name": goal.get("name", ""),
+            "goal_description": goal.get("description", ""),
+            "goal_status": goal.get("status", ""),
+            "goal_type": goal.get("type", ""),  # annual, quarterly, monthly
+            "goal_progress": goal.get("progress", 0),
+            "goal_start_date": goal.get("startDate", ""),
+            "goal_end_date": goal.get("endDate", ""),
+            "goal_owner_id": goal.get("ownerId", ""),
+            "goal_owner_name": goal.get("ownerName", ""),
+        }
     except Exception as e:
         logger.error(
             "retrieval_method.get_goal_by_id.failed",
@@ -411,8 +412,66 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
 
 
 @register_retrieval_method(
+    name="get_measure_by_id",
+    description="Retrieves measure/KPI details for a specific measure",
+    provides_params=(
+        "measure",
+        "measure_name",
+        "measure_description",
+        "measure_unit",
+        "measure_direction",
+        "measure_type",
+        "measure_category",
+        "measure_current_value",
+        "measure_owner_id",
+        "measure_owner_name",
+    ),
+    requires_from_payload=("measure_id",),
+)
+async def get_measure_by_id(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve a specific measure by ID using direct API call."""
+    measure_id = context.payload.get("measure_id") or context.payload.get("kpi_id")
+    if not measure_id:
+        logger.warning("retrieval_method.get_measure_by_id.missing_measure_id")
+        return {}
+
+    try:
+        logger.debug(
+            "retrieval_method.get_measure_by_id",
+            measure_id=measure_id,
+            tenant_id=context.tenant_id,
+        )
+        measure = await context.client.get_measure_by_id(measure_id, context.tenant_id)
+        if not measure:
+            logger.warning("retrieval_method.get_measure_by_id.not_found", measure_id=measure_id)
+            return {}
+
+        return {
+            "measure": measure,
+            "measure_name": measure.get("name", ""),
+            "measure_description": measure.get("description", ""),
+            "measure_unit": measure.get("unit", ""),
+            "measure_direction": measure.get("direction", ""),  # up, down, maintain
+            "measure_type": measure.get("type", ""),
+            "measure_category": measure.get("category", ""),
+            "measure_current_value": measure.get("currentValue"),
+            "measure_owner_id": measure.get("ownerId", ""),
+            "measure_owner_name": measure.get("ownerName", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_measure_by_id.failed",
+            error=str(e),
+            measure_id=measure_id,
+            tenant_id=context.tenant_id,
+        )
+        return {}
+
+
+# Alias for backward compatibility
+@register_retrieval_method(
     name="get_kpi_by_id",
-    description="Retrieves KPI details for a specific KPI",
+    description="Deprecated: Use get_measure_by_id. Retrieves KPI details",
     provides_params=(
         "kpi",
         "kpi_name",
@@ -423,57 +482,54 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
     requires_from_payload=("kpi_id",),
 )
 async def get_kpi_by_id(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve a specific KPI by ID from payload."""
-    kpi_id = context.payload.get("kpi_id")
-    if not kpi_id:
-        logger.warning("retrieval_method.get_kpi_by_id.missing_kpi_id")
-        return {}
-
-    try:
-        logger.debug(
-            "retrieval_method.get_kpi_by_id",
-            kpi_id=kpi_id,
-            tenant_id=context.tenant_id,
-        )
-        kpi = await context.client.get_kpi_by_id(kpi_id, context.tenant_id)
-        return {
-            "kpi": kpi,
-            "name": kpi.get("name", ""),
-            "value": kpi.get("currentValue", 0),
-            "target": kpi.get("targetValue", 0),
-            "unit": kpi.get("unit", ""),
-        }
-    except Exception as e:
-        logger.error(
-            "retrieval_method.get_kpi_by_id.failed",
-            error=str(e),
-            kpi_id=kpi_id,
-            tenant_id=context.tenant_id,
-        )
-        return {}
+    """Deprecated: Use get_measure_by_id instead."""
+    result = await get_measure_by_id(context)
+    # Map new fields to old names for backward compatibility
+    return {
+        "kpi": result.get("measure", {}),
+        "kpi_name": result.get("measure_name", ""),
+        "kpi_value": result.get("measure_current_value", 0),
+        "kpi_target": 0,  # Targets now come from measure links
+        "kpi_unit": result.get("measure_unit", ""),
+    }
 
 
 @register_retrieval_method(
-    name="get_kpis_list",
-    description="Retrieves all KPIs for the tenant",
-    provides_params=("kpis_list",),
+    name="get_measures",
+    description="Retrieves all measures for the tenant",
+    provides_params=("measures", "measures_count"),
 )
-async def get_kpis_list(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve all KPIs for the tenant."""
+async def get_measures(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all measures for the tenant."""
     try:
         logger.debug(
-            "retrieval_method.get_kpis_list",
+            "retrieval_method.get_measures",
             tenant_id=context.tenant_id,
         )
-        kpis = await context.client.get_kpis(context.tenant_id)
-        return {"kpis_list": kpis}
+        measures = await context.client.get_measures(context.tenant_id)
+        return {
+            "measures": measures,
+            "measures_count": len(measures),
+        }
     except Exception as e:
         logger.error(
-            "retrieval_method.get_kpis_list.failed",
+            "retrieval_method.get_measures.failed",
             error=str(e),
             tenant_id=context.tenant_id,
         )
-        return {"kpis_list": []}
+        return {"measures": [], "measures_count": 0}
+
+
+# Alias for backward compatibility
+@register_retrieval_method(
+    name="get_kpis_list",
+    description="Deprecated: Use get_measures. Retrieves all KPIs",
+    provides_params=("kpis_list",),
+)
+async def get_kpis_list(context: RetrievalContext) -> dict[str, Any]:
+    """Deprecated: Use get_measures instead."""
+    result = await get_measures(context)
+    return {"kpis_list": result.get("measures", [])}
 
 
 @register_retrieval_method(
@@ -486,12 +542,17 @@ async def get_kpis_list(context: RetrievalContext) -> dict[str, Any]:
         "action_status",
         "action_priority",
         "action_due_date",
+        "action_start_date",
         "action_assigned_to",
+        "action_progress",
+        "action_estimated_hours",
+        "action_actual_hours",
+        "action_connections",
     ),
     requires_from_payload=("action_id",),
 )
 async def get_action_by_id(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve a specific action by ID from payload."""
+    """Retrieve a specific action by ID using direct API call."""
     action_id = context.payload.get("action_id")
     if not action_id:
         logger.warning("retrieval_method.get_action_by_id.missing_action_id")
@@ -503,22 +564,26 @@ async def get_action_by_id(context: RetrievalContext) -> dict[str, Any]:
             action_id=action_id,
             tenant_id=context.tenant_id,
         )
-        actions = await context.client.get_operations_actions(context.tenant_id)
-        for action in actions:
-            if action.get("id") == action_id:
-                return {
-                    "action": action,
-                    "action_title": action.get("title", ""),
-                    "action_description": action.get("description", ""),
-                    "action_status": action.get("status", ""),
-                    "action_priority": action.get("priority", ""),
-                    # Map new API fields: 'dueDate' camelCase instead of snake_case
-                    "action_due_date": action.get("dueDate", ""),
-                    # Map new API fields: 'assignedPersonName' instead of 'assigned_to'
-                    "action_assigned_to": action.get("assignedPersonName", ""),
-                }
-        logger.warning("retrieval_method.get_action_by_id.not_found", action_id=action_id)
-        return {}
+        # Direct API call
+        action = await context.client.get_action_by_id(action_id, context.tenant_id)
+        if not action:
+            logger.warning("retrieval_method.get_action_by_id.not_found", action_id=action_id)
+            return {}
+
+        return {
+            "action": action,
+            "action_title": action.get("title", ""),
+            "action_description": action.get("description", ""),
+            "action_status": action.get("status", ""),
+            "action_priority": action.get("priority", ""),
+            "action_due_date": action.get("dueDate", ""),
+            "action_start_date": action.get("startDate", ""),
+            "action_assigned_to": action.get("assignedPersonName", ""),
+            "action_progress": action.get("progress", 0),
+            "action_estimated_hours": action.get("estimatedHours", 0),
+            "action_actual_hours": action.get("actualHours", 0),
+            "action_connections": action.get("connections", {}),
+        }
     except Exception as e:
         logger.error(
             "retrieval_method.get_action_by_id.failed",
@@ -531,7 +596,7 @@ async def get_action_by_id(context: RetrievalContext) -> dict[str, Any]:
 @register_retrieval_method(
     name="get_all_actions",
     description="Retrieves all recent actions",
-    provides_params=("actions", "actions_count", "pending_actions_count"),
+    provides_params=("actions", "actions_count", "pending_actions_count", "actions_by_status"),
 )
 async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
     """Retrieve all actions for the tenant."""
@@ -540,14 +605,25 @@ async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
             "retrieval_method.get_all_actions",
             tenant_id=context.tenant_id,
         )
-        actions = await context.client.get_operations_actions(context.tenant_id)
+        actions = await context.client.get_actions(context.tenant_id)
         actions_list = list(actions)
-        # Map new API fields: status values are snake_case (not_started, in_progress)
-        pending = [a for a in actions_list if a.get("status") in ("not_started", "in_progress")]
+
+        # Group by status
+        by_status: dict[str, list] = {}
+        pending_count = 0
+        for a in actions_list:
+            status = a.get("status", "unknown")
+            if status not in by_status:
+                by_status[status] = []
+            by_status[status].append(a)
+            if status in ("not_started", "in_progress"):
+                pending_count += 1
+
         return {
             "actions": actions_list,
             "actions_count": len(actions_list),
-            "pending_actions_count": len(pending),
+            "pending_actions_count": pending_count,
+            "actions_by_status": by_status,
         }
     except Exception as e:
         logger.error(
@@ -555,7 +631,12 @@ async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
             error=str(e),
             tenant_id=context.tenant_id,
         )
-        return {"actions": [], "actions_count": 0, "pending_actions_count": 0}
+        return {
+            "actions": [],
+            "actions_count": 0,
+            "pending_actions_count": 0,
+            "actions_by_status": {},
+        }
 
 
 @register_retrieval_method(
@@ -565,15 +646,21 @@ async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
         "issue",
         "issue_title",
         "issue_description",
-        "issue_status",
+        "issue_status_config_id",
+        "issue_type_config_id",
         "issue_priority",
-        "issue_business_impact",
+        "issue_impact",
         "issue_assigned_to",
+        "issue_reporter",
+        "issue_due_date",
+        "issue_estimated_hours",
+        "issue_connections",
+        "issue_tags",
     ),
     requires_from_payload=("issue_id",),
 )
 async def get_issue_by_id(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve a specific issue by ID from payload."""
+    """Retrieve a specific issue by ID using direct API call."""
     issue_id = context.payload.get("issue_id")
     if not issue_id:
         logger.warning("retrieval_method.get_issue_by_id.missing_issue_id")
@@ -585,23 +672,27 @@ async def get_issue_by_id(context: RetrievalContext) -> dict[str, Any]:
             issue_id=issue_id,
             tenant_id=context.tenant_id,
         )
-        issues = await context.client.get_operations_issues(context.tenant_id)
-        for issue in issues:
-            if issue.get("id") == issue_id:
-                return {
-                    "issue": issue,
-                    "issue_title": issue.get("title", ""),
-                    "issue_description": issue.get("description", ""),
-                    # Map new API fields: uses statusConfigId, not simple 'status' string
-                    "issue_status": issue.get("statusConfigId", ""),
-                    "issue_priority": issue.get("priority", ""),
-                    # Map new API fields: 'impact' instead of 'business_impact'
-                    "issue_business_impact": issue.get("impact", ""),
-                    # Map new API fields: 'assignedPersonName' instead of 'assigned_to'
-                    "issue_assigned_to": issue.get("assignedPersonName", ""),
-                }
-        logger.warning("retrieval_method.get_issue_by_id.not_found", issue_id=issue_id)
-        return {}
+        # Direct API call
+        issue = await context.client.get_issue_by_id(issue_id, context.tenant_id)
+        if not issue:
+            logger.warning("retrieval_method.get_issue_by_id.not_found", issue_id=issue_id)
+            return {}
+
+        return {
+            "issue": issue,
+            "issue_title": issue.get("title", ""),
+            "issue_description": issue.get("description", ""),
+            "issue_status_config_id": issue.get("statusConfigId", ""),
+            "issue_type_config_id": issue.get("typeConfigId", ""),
+            "issue_priority": issue.get("priority", ""),
+            "issue_impact": issue.get("impact", ""),
+            "issue_assigned_to": issue.get("assignedPersonName", ""),
+            "issue_reporter": issue.get("reporterName", ""),
+            "issue_due_date": issue.get("dueDate", ""),
+            "issue_estimated_hours": issue.get("estimatedHours", 0),
+            "issue_connections": issue.get("connections", {}),
+            "issue_tags": issue.get("tags", []),
+        }
     except Exception as e:
         logger.error(
             "retrieval_method.get_issue_by_id.failed",
@@ -623,7 +714,7 @@ async def get_all_issues(context: RetrievalContext) -> dict[str, Any]:
             "retrieval_method.get_all_issues",
             tenant_id=context.tenant_id,
         )
-        issues = await context.client.get_operations_issues(context.tenant_id)
+        issues = await context.client.get_issues(context.tenant_id)
         issues_list = list(issues)
         critical = [i for i in issues_list if i.get("priority") == "critical"]
         return {
@@ -638,6 +729,346 @@ async def get_all_issues(context: RetrievalContext) -> dict[str, Any]:
             tenant_id=context.tenant_id,
         )
         return {"issues": [], "issues_count": 0, "critical_issues_count": 0}
+
+
+# =============================================================================
+# NEW RETRIEVAL METHODS (Phase 3)
+# =============================================================================
+
+
+@register_retrieval_method(
+    name="get_strategy_by_id",
+    description="Retrieves details for a specific strategy",
+    provides_params=(
+        "strategy",
+        "strategy_name",
+        "strategy_description",
+        "strategy_status",
+        "strategy_type",
+        "strategy_progress",
+        "strategy_start_date",
+        "strategy_end_date",
+        "strategy_owner_id",
+        "strategy_owner_name",
+        "strategy_goal_id",
+        "strategy_alignment_score",
+        "strategy_alignment_explanation",
+    ),
+    requires_from_payload=("strategy_id",),
+)
+async def get_strategy_by_id(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve a specific strategy by ID using direct API call."""
+    strategy_id = context.payload.get("strategy_id")
+    if not strategy_id:
+        logger.warning("retrieval_method.get_strategy_by_id.missing_strategy_id")
+        return {}
+
+    try:
+        logger.debug(
+            "retrieval_method.get_strategy_by_id",
+            strategy_id=strategy_id,
+            tenant_id=context.tenant_id,
+        )
+        strategy = await context.client.get_strategy_by_id(strategy_id, context.tenant_id)
+        if not strategy:
+            logger.warning("retrieval_method.get_strategy_by_id.not_found", strategy_id=strategy_id)
+            return {}
+
+        return {
+            "strategy": strategy,
+            "strategy_name": strategy.get("name", ""),
+            "strategy_description": strategy.get("description", ""),
+            "strategy_status": strategy.get("status", ""),
+            "strategy_type": strategy.get("type", ""),  # initiative, project, etc.
+            "strategy_progress": strategy.get("progress", 0),
+            "strategy_start_date": strategy.get("startDate", ""),
+            "strategy_end_date": strategy.get("endDate", ""),
+            "strategy_owner_id": strategy.get("ownerId", ""),
+            "strategy_owner_name": strategy.get("ownerName", ""),
+            "strategy_goal_id": strategy.get("goalId", ""),
+            "strategy_alignment_score": strategy.get("alignmentScore"),
+            "strategy_alignment_explanation": strategy.get("alignmentExplanation", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_strategy_by_id.failed",
+            error=str(e),
+            strategy_id=strategy_id,
+        )
+        return {}
+
+
+@register_retrieval_method(
+    name="get_all_strategies",
+    description="Retrieves all strategies for the tenant",
+    provides_params=(
+        "strategies",
+        "strategies_count",
+        "strategies_by_status",
+        "strategies_by_type",
+    ),
+)
+async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all strategies for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_all_strategies",
+            tenant_id=context.tenant_id,
+        )
+        strategies = await context.client.get_strategies(context.tenant_id)
+        strategies_list = list(strategies)
+
+        # Group by status
+        by_status: dict[str, list] = {}
+        for s in strategies_list:
+            status = s.get("status", "unknown")
+            if status not in by_status:
+                by_status[status] = []
+            by_status[status].append(s)
+
+        # Group by type
+        by_type: dict[str, list] = {}
+        for s in strategies_list:
+            stype = s.get("type", "unknown")
+            if stype not in by_type:
+                by_type[stype] = []
+            by_type[stype].append(s)
+
+        return {
+            "strategies": strategies_list,
+            "strategies_count": len(strategies_list),
+            "strategies_by_status": by_status,
+            "strategies_by_type": by_type,
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_all_strategies.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {
+            "strategies": [],
+            "strategies_count": 0,
+            "strategies_by_status": {},
+            "strategies_by_type": {},
+        }
+
+
+@register_retrieval_method(
+    name="get_measures_summary",
+    description="Retrieves comprehensive measures summary with progress and statistics",
+    provides_params=(
+        "measures_summary",
+        "measures",
+        "measures_count",
+        "measures_health_score",
+        "measures_status_breakdown",
+        "measures_category_breakdown",
+        "measures_owner_breakdown",
+        "measures_by_status",
+        "at_risk_measures",
+    ),
+)
+async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve comprehensive measures summary - optimization endpoint.
+
+    This single call provides all measures with:
+    - Full measure details
+    - Progress per goal/strategy link
+    - Summary statistics
+    - Health score
+    - Trend data
+    """
+    try:
+        logger.debug(
+            "retrieval_method.get_measures_summary",
+            tenant_id=context.tenant_id,
+        )
+        data = await context.client.get_measures_summary(context.tenant_id)
+
+        measures = data.get("measures", [])
+        summary = data.get("summary", {})
+
+        # Group measures by status
+        by_status: dict[str, list] = {}
+        at_risk = []
+        for m in measures:
+            status = m.get("status", "unknown")
+            if status not in by_status:
+                by_status[status] = []
+            by_status[status].append(m)
+            if status in ("at_risk", "behind"):
+                at_risk.append(m)
+
+        return {
+            "measures_summary": data,
+            "measures": measures,
+            "measures_count": len(measures),
+            "measures_health_score": data.get("healthScore", 0),
+            "measures_status_breakdown": summary.get("byStatus", {}),
+            "measures_category_breakdown": summary.get("byCategory", []),
+            "measures_owner_breakdown": summary.get("byOwner", []),
+            "measures_by_status": by_status,
+            "at_risk_measures": at_risk,
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_measures_summary.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {
+            "measures_summary": {},
+            "measures": [],
+            "measures_count": 0,
+            "measures_health_score": 0,
+            "measures_status_breakdown": {},
+            "measures_category_breakdown": [],
+            "measures_owner_breakdown": [],
+            "measures_by_status": {},
+            "at_risk_measures": [],
+        }
+
+
+@register_retrieval_method(
+    name="get_people",
+    description="Retrieves all people (team members) for the tenant",
+    provides_params=(
+        "people",
+        "people_count",
+        "people_by_department",
+    ),
+)
+async def get_people(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all team members for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_people",
+            tenant_id=context.tenant_id,
+        )
+        people = await context.client.get_people(context.tenant_id)
+        people_list = list(people)
+
+        # Group by department
+        by_department: dict[str, list] = {}
+        for p in people_list:
+            dept = p.get("departmentName", "Unassigned")
+            if dept not in by_department:
+                by_department[dept] = []
+            by_department[dept].append(p)
+
+        return {
+            "people": people_list,
+            "people_count": len(people_list),
+            "people_by_department": by_department,
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_people.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {"people": [], "people_count": 0, "people_by_department": {}}
+
+
+@register_retrieval_method(
+    name="get_person_by_id",
+    description="Retrieves details for a specific person",
+    provides_params=(
+        "person",
+        "person_name",
+        "person_email",
+        "person_role",
+        "person_department",
+        "person_position",
+    ),
+    requires_from_payload=("person_id",),
+)
+async def get_person_by_id(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve a specific person by ID."""
+    person_id = context.payload.get("person_id")
+    if not person_id:
+        logger.warning("retrieval_method.get_person_by_id.missing_person_id")
+        return {}
+
+    try:
+        logger.debug(
+            "retrieval_method.get_person_by_id",
+            person_id=person_id,
+            tenant_id=context.tenant_id,
+        )
+        person = await context.client.get_person_by_id(person_id, context.tenant_id)
+        if not person:
+            logger.warning("retrieval_method.get_person_by_id.not_found", person_id=person_id)
+            return {}
+
+        return {
+            "person": person,
+            "person_name": person.get("name", ""),
+            "person_email": person.get("email", ""),
+            "person_role": person.get("role", ""),
+            "person_department": person.get("departmentName", ""),
+            "person_position": person.get("positionName", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_person_by_id.failed",
+            error=str(e),
+            person_id=person_id,
+        )
+        return {}
+
+
+@register_retrieval_method(
+    name="get_departments",
+    description="Retrieves all departments for the tenant",
+    provides_params=("departments", "departments_count"),
+)
+async def get_departments(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all departments for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_departments",
+            tenant_id=context.tenant_id,
+        )
+        departments = await context.client.get_departments(context.tenant_id)
+        return {
+            "departments": departments,
+            "departments_count": len(departments),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_departments.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {"departments": [], "departments_count": 0}
+
+
+@register_retrieval_method(
+    name="get_positions",
+    description="Retrieves all positions for the tenant",
+    provides_params=("positions", "positions_count"),
+)
+async def get_positions(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all positions for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_positions",
+            tenant_id=context.tenant_id,
+        )
+        positions = await context.client.get_positions(context.tenant_id)
+        return {
+            "positions": positions,
+            "positions_count": len(positions),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_positions.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {"positions": [], "positions_count": 0}
 
 
 @register_retrieval_method(
