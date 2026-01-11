@@ -20,16 +20,17 @@ def mock_repo():
 def mock_business_client():
     client = MagicMock(spec=BusinessApiClient)
     # Setup default async returns
-    client.get_organizational_context = AsyncMock(
+    client.get_business_foundation = AsyncMock(
         return_value={"vision": "Test Vision", "purpose": "Test Purpose"}
     )
     client.get_user_goals = AsyncMock(
         return_value=[{"id": "1", "title": "Goal 1", "status": "active", "progress": 50}]
     )
-    client.get_goal_stats = AsyncMock(return_value={"total_goals": 1, "completion_rate": 50})
-    client.get_performance_score = AsyncMock(return_value={"score": 85})
-    client.get_operations_actions = AsyncMock(return_value=[])
-    client.get_operations_issues = AsyncMock(return_value=[])
+    client.get_measures_summary = AsyncMock(
+        return_value={"healthScore": 85, "measures": [], "summary": {}}
+    )
+    client.get_actions = AsyncMock(return_value=[])
+    client.get_issues = AsyncMock(return_value=[])
     return client
 
 
@@ -88,9 +89,9 @@ async def test_generate_insights_success(insights_service, mock_llm_service):
 async def test_generate_insights_insufficient_data(insights_service, mock_business_client):
     # Arrange
     # Mock empty data to trigger insufficient data check
-    mock_business_client.get_organizational_context.return_value = {}
+    mock_business_client.get_business_foundation.return_value = {}
     mock_business_client.get_user_goals.return_value = []
-    mock_business_client.get_goal_stats.return_value = {}
+    mock_business_client.get_measures_summary.return_value = {}
 
     # Act
     result = await insights_service.generate_insights()
@@ -157,7 +158,7 @@ async def test_get_insights_summary_success(insights_service, mock_llm_service):
 async def test_fetch_business_data_partial_failure(insights_service, mock_business_client):
     # Arrange
     # Simulate one service failing while others succeed
-    mock_business_client.get_organizational_context.side_effect = Exception("API Error")
+    mock_business_client.get_business_foundation.side_effect = Exception("API Error")
 
     # Act
     # Accessing private method for testing

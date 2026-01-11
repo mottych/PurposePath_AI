@@ -609,7 +609,7 @@ async def get_all_actions(context: RetrievalContext) -> dict[str, Any]:
         actions_list = list(actions)
 
         # Group by status
-        by_status: dict[str, list] = {}
+        by_status: dict[str, list[dict[str, Any]]] = {}
         pending_count = 0
         for a in actions_list:
             status = a.get("status", "unknown")
@@ -819,7 +819,7 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
         strategies_list = list(strategies)
 
         # Group by status
-        by_status: dict[str, list] = {}
+        by_status: dict[str, list[dict[str, Any]]] = {}
         for s in strategies_list:
             status = s.get("status", "unknown")
             if status not in by_status:
@@ -827,7 +827,7 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
             by_status[status].append(s)
 
         # Group by type
-        by_type: dict[str, list] = {}
+        by_type: dict[str, list[dict[str, Any]]] = {}
         for s in strategies_list:
             stype = s.get("type", "unknown")
             if stype not in by_type:
@@ -890,7 +890,7 @@ async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
         summary = data.get("summary", {})
 
         # Group measures by status
-        by_status: dict[str, list] = {}
+        by_status: dict[str, list[dict[str, Any]]] = {}
         at_risk = []
         for m in measures:
             status = m.get("status", "unknown")
@@ -950,7 +950,7 @@ async def get_people(context: RetrievalContext) -> dict[str, Any]:
         people_list = list(people)
 
         # Group by department
-        by_department: dict[str, list] = {}
+        by_department: dict[str, list[dict[str, Any]]] = {}
         for p in people_list:
             dept = p.get("departmentName", "Unassigned")
             if dept not in by_department:

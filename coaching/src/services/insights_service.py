@@ -260,25 +260,31 @@ class InsightsService:
         logger.info("Fetching business data", tenant_id=self.tenant_id)
 
         # Fetch all data sources in parallel for performance
+        # NOTE: get_goal_stats and get_performance_score removed - endpoints don't exist
+        # Using get_measures_summary instead for performance metrics
         results = await asyncio.gather(
-            self.business_api_client.get_organizational_context(self.tenant_id),
+            self.business_api_client.get_business_foundation(self.tenant_id),
             self.business_api_client.get_user_goals(self.user_id, self.tenant_id),
-            self.business_api_client.get_goal_stats(self.tenant_id),
-            self.business_api_client.get_performance_score(self.tenant_id),
-            self.business_api_client.get_operations_actions(self.tenant_id, limit=20),
-            self.business_api_client.get_operations_issues(self.tenant_id, limit=20),
+            self.business_api_client.get_measures_summary(self.tenant_id),
+            self.business_api_client.get_actions(self.tenant_id, {"limit": 20}),
+            self.business_api_client.get_issues(self.tenant_id, {"limit": 20}),
             return_exceptions=True,  # Don't fail if one endpoint fails
         )
 
         # Unpack results with error handling
         foundation = results[0] if not isinstance(results[0], Exception) else {}
         goals = results[1] if not isinstance(results[1], Exception) else []
-        goal_stats = results[2] if not isinstance(results[2], Exception) else {}
-        performance_score = results[3] if not isinstance(results[3], Exception) else {}
-        recent_actions = results[4] if not isinstance(results[4], Exception) else []
-        open_issues = results[5] if not isinstance(results[5], Exception) else []
+        measures_summary = results[2] if not isinstance(results[2], Exception) else {}
+        recent_actions = results[3] if not isinstance(results[3], Exception) else []
+        open_issues = results[4] if not isinstance(results[4], Exception) else []
 
-        # Log any errors
+        # Derive goal_stats and performance_score from measures_summary for compatibility
+        goals_list = goals if isinstance(goals, list) else []
+        measures_dict = measures_summary if isinstance(measures_summary, dict) else {}
+        goal_stats = {"total_goals": len(goals_list)}
+        performance_score = {"health_score": measures_dict.get("healthScore", 0)}
+
+        # Log any errors (5 endpoints instead of 6)
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.warning(
