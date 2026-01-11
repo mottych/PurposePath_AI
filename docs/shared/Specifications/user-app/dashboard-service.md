@@ -14,6 +14,7 @@
 | GET | `/dashboard/templates` | Account | Get available dashboard templates |
 | GET | `/dashboard/templates/{id}` | Account | Get specific template details |
 | POST | `/dashboard/config/apply-template` | Account | Apply template to user's dashboard |
+| GET | `/dashboard/widgets` | Account | Get widget catalog (available widget definitions) |
 | GET | `/dashboard/widgets/hot-list/data` | Traction | Get hot list widget data |
 | GET | `/dashboard/widgets/recent-activity/data` | Traction | Get recent activity widget data |
 | GET | `/dashboard/widgets/action-list/data` | Traction | Get action list widget data |
@@ -517,6 +518,161 @@ Content-Type: application/json
 
 ---
 
+## Get Widget Catalog
+
+**GET** `/account/api/v1/dashboard/widgets`
+
+Retrieve the complete widget catalog with all available widget definitions. This provides metadata about widgets including their categories, descriptions, size constraints, and accessibility. The frontend uses this as the single source of truth for available widgets.
+
+**Note**: Widget accessibility is determined by the backend based on the user's current subscription tier and enabled features. Refresh strategies and intervals are implementation details handled by individual widget components, not part of the catalog definition.
+
+### Example Request
+
+```bash
+GET /account/api/v1/dashboard/widgets
+Authorization: Bearer {token}
+X-Tenant-Id: {tenantId}
+```
+
+### Response
+
+Response contains a standard envelope with `success` boolean and `data` array of widget definitions.
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "hot-list",
+      "name": "Hot List",
+      "description": "View urgent items: past due actions, at-risk measures, and critical issues",
+      "category": "overview",
+      "tags": ["urgent", "alerts", "priority", "at-risk"],
+      "isAccessible": true,
+      "previewImage": "/assets/widgets/hot-list-preview.png",
+      "size": {
+        "defaultW": 2,
+        "defaultH": 3,
+        "minW": 2,
+        "minH": 2,
+        "maxW": 3,
+        "maxH": 5
+      }
+    },
+    {
+      "id": "action-list",
+      "name": "Action List",
+      "description": "Filtered and sorted list of actions with customizable views",
+      "category": "actions",
+      "tags": ["actions", "tasks", "todo", "list"],
+      "isAccessible": true,
+      "size": {
+        "defaultW": 3,
+        "defaultH": 4,
+        "minW": 2,
+        "minH": 3,
+        "maxW": 5,
+        "maxH": 6
+      }
+    },
+    {
+      "id": "team-alignment",
+      "name": "Team Alignment",
+      "description": "Measure team alignment across values, goals, and collaboration",
+      "category": "team",
+      "tags": ["team", "alignment", "collaboration", "department"],
+      "isAccessible": false,
+      "size": {
+        "defaultW": 3,
+        "defaultH": 3,
+        "minW": 2,
+        "minH": 2,
+        "maxW": 4,
+        "maxH": 4
+      }
+    }
+  ]
+}
+```
+
+### Response Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `data` | array | yes | Array of widget definition objects |
+| `data[].id` | string | yes | Unique widget identifier (e.g., "hot-list", "action-list"). Must be unique and stable across system updates |
+| `data[].name` | string | yes | Display name for the widget |
+| `data[].description` | string | yes | Description shown in widget gallery |
+| `data[].category` | string | yes | Widget category. Must be one of: `overview`, `actions`, `goals`, `measures`, `issues`, `insights`, `team` |
+| `data[].tags` | array of strings | no | Optional free-form tags for search/filtering. Common examples: "urgent", "alerts", "priority", "actions", "tasks", "team", "alignment" |
+| `data[].isAccessible` | boolean | yes | Indicates if current user can access this widget. Determined by backend based on user's subscription tier and enabled features |
+| `data[].previewImage` | string | no | Optional preview image URL for widget gallery |
+| `data[].size` | object | yes | Size constraints in grid units |
+| `data[].size.defaultW` | number | yes | Default width in grid units when adding widget (1-12) |
+| `data[].size.defaultH` | number | yes | Default height in grid rows when adding widget |
+| `data[].size.minW` | number | yes | Minimum width in grid columns (1-12) |
+| `data[].size.minH` | number | yes | Minimum height in grid rows |
+| `data[].size.maxW` | number | yes | Maximum width in grid columns (1-12) |
+| `data[].size.maxH` | number | yes | Maximum height in grid rows |
+
+### Widget Categories
+
+| Category | Description | Example Widgets |
+|----------|-------------|-----------------|
+| `overview` | Summary/aggregation widgets | Hot List, Performance Score |
+| `actions` | Action management widgets | Action List, Actions By Status |
+| `goals` | Goal tracking widgets | Goal Progress |
+| `measures` | Metric visualization widgets | Measure Graph |
+| `issues` | Issue management widgets | Issue List |
+| `insights` | AI/coaching insights widgets | AI Insights |
+| `team` | Team analytics widgets | Team Alignment |
+
+### Field Constraints
+
+- **Widget ID**: Must be unique, alphanumeric with hyphens, stable across system updates
+- **Category**: Must exactly match one of the valid category values listed above
+- **Size constraints**:
+  - All size values must be positive integers
+  - `minW` and `maxW` must be between 1 and 12 (grid columns)
+  - `minW` ≤ `defaultW` ≤ `maxW`
+  - `minH` ≤ `defaultH` ≤ `maxH`
+- **Tags**: Array of strings, optional. Used for search/filtering only. No validation rules on tag values.
+- **Preview Image**: Must be a valid URL if provided
+
+### Business Rules
+
+- Returns all widgets available in the system, regardless of user's subscription tier
+- `isAccessible` field is calculated by backend based on:
+  - User's current subscription tier
+  - Enabled feature flags for the user
+  - Backend-evaluated access rules
+- Widget IDs must remain stable across updates (used in saved dashboard configurations)
+- Size constraints use grid units (default grid is 5 columns for large screens, see Grid Configuration section)
+- Descriptions and metadata can be updated dynamically without frontend code changes
+- Refresh strategies and intervals are widget implementation details handled in widget code, not included in catalog
+
+### Error Responses
+
+**401 Unauthorized**
+```json
+{
+  "success": false,
+  "error": "Unauthorized",
+  "code": "UNAUTHORIZED"
+}
+```
+
+**500 Internal Server Error**
+```json
+{
+  "success": false,
+  "error": "Internal server error",
+  "code": "INTERNAL_SERVER_ERROR"
+}
+```
+
+---
+
 # Traction Service Endpoints
 
 ## Hot List Widget
@@ -968,14 +1124,16 @@ Get team alignment score with factor breakdown.
 | `insights` | AI/coaching | AI Insights |
 | `team` | Team analytics | Team Alignment |
 
-## Widget Tiers
+## Widget Access Control
 
-| Tier | Description | Access |
-|------|-------------|--------|
-| `free` | Basic widgets | All users |
-| `starter` | Standard widgets | Starter+ subscription |
-| `professional` | Advanced widgets | Professional+ subscription |
-| `enterprise` | Premium widgets | Enterprise subscription only |
+Widget accessibility is determined by the backend based on:
+- User's current subscription tier (free, starter, professional, enterprise)
+- Enabled feature flags for the user
+- Dynamic business rules managed by the backend
+
+The widget catalog API returns `isAccessible: boolean` for each widget, eliminating the need for the frontend to evaluate tier requirements or feature flags. This allows the backend to manage tier definitions and access rules dynamically without requiring frontend code changes.
+
+**Note**: Tier and feature requirements are internal backend concerns and are not exposed in the API response.
 
 ## Grid Configuration
 
