@@ -22,7 +22,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 ❌ **What's Missing:**
 - **No WebSocket implementation** (only SSE with EventSource)
 - **No global real-time connection manager**
-- **No support for action, KPI, or issue events**
+- **No support for action, Measure, or issue events**
 - **No reconnection logic** (EventSource auto-reconnects but limited control)
 - **No connection state management**
 - **No event handlers for most backend event types**
@@ -52,7 +52,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - ✅ Status callbacks (`connecting`, `open`, `closed`, `error`, `reconnecting`)
 
 **Limitations:**
-- ❌ Only supports **goal activity** events (not actions, KPIs, issues)
+- ❌ Only supports **goal activity** events (not actions, Measures, issues)
 - ❌ Uses **EventSource** (SSE) instead of WebSocket
 - ❌ No support for tenant-wide subscriptions
 - ❌ No ping/pong heartbeat handling
@@ -66,7 +66,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - activity.created
 - decision.created
 - attachment.created
-- kpi.reading.created (mentioned but not in backend spec)
+- measure.reading.created (mentioned but not in backend spec)
 ```
 
 **Backend WebSocket Event Types (from spec):**
@@ -86,8 +86,8 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - action.reassigned
 - action.progress_updated
 
-// KPI Events
-- kpi.reading.created
+// Measure Events
+- measure.reading.created
 
 // Issue Events
 - issue.created
@@ -119,7 +119,7 @@ The PurposePath frontend currently has **partial SSE (Server-Sent Events) infras
 - ❌ **No global Goal context** (components load goals individually via `listGoals()`)
 - ❌ **No global Action context** (loaded per component)
 - ❌ **No global Issue context** (loaded per component)
-- ❌ **No global KPI context** (loaded per component)
+- ❌ **No global Measure context** (loaded per component)
 - ✅ Uses service layer for data fetching (`src/services/`)
 
 **Current Pattern:**
@@ -210,10 +210,10 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
 
 **Existing Types (`src/types/strategic-planning.ts`):**
 ```typescript
-✅ Goal, GoalStatus, GoalKPI
+✅ Goal, GoalStatus, GoalMeasure
 ✅ Action, ActionStatus, ActionPriority
 ✅ Issue, IssueStatus, IssueImpact
-✅ SharedKPI, TimeHorizon, KPIReading
+✅ SharedMeasure, TimeHorizon, MeasureReading
 ✅ Strategy, Decision
 ```
 
@@ -281,7 +281,7 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
 **Tasks:**
 
 1. **Expand Event Types**
-   - Add all backend event types (goals, actions, KPIs, issues, decisions, attachments)
+   - Add all backend event types (goals, actions, Measures, issues, decisions, attachments)
    - Normalize event payloads (snake_case → camelCase)
    - Add event validation/parsing
 
@@ -403,7 +403,7 @@ REACT_APP_REALTIME_WS_URL=wss://api.dev.purposepath.app/realtime
    - Goal created/completed
    - High-priority actions created
    - Critical issues created
-   - KPI thresholds breached (red zone)
+   - Measure thresholds breached (red zone)
 
 4. **Activity Feed Live Updates**
    - Goal activity feed updates in real-time

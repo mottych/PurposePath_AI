@@ -1,24 +1,24 @@
-# Issue #XXX-4: Domain - Add AggregationPeriodCount to Kpi
+# Issue #XXX-4: Domain - Add AggregationPeriodCount to Measure
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** Medium  
-**Labels:** `domain`, `entity`, `kpi`  
+**Labels:** `domain`, `entity`, `measure`  
 **Estimated Effort:** 1-2 hours
 
 ---
 
 ## 📋 Description
 
-Add `AggregationPeriodCount` property to the `Kpi` entity to support multi-period aggregation windows (e.g., "2 weeks", "3 months").
+Add `AggregationPeriodCount` property to the `Measure` entity to support multi-period aggregation windows (e.g., "2 weeks", "3 months").
 
 ---
 
 ## 🏗️ Changes Required
 
-### Kpi Entity Updates
+### Measure Entity Updates
 
-Location: `PurposePath.Domain/Entities/Kpi.cs`
+Location: `PurposePath.Domain/Entities/Measure.cs`
 
 Add the following property:
 
@@ -75,11 +75,11 @@ public void ConfigureAggregation(
 Update the `Restore` factory method to include `aggregationPeriodCount`:
 
 ```csharp
-public static Kpi Restore(
+public static Measure Restore(
     // ... existing parameters ...
     int aggregationPeriodCount = 1)  // Add this parameter
 {
-    return new Kpi
+    return new Measure
     {
         // ... existing assignments ...
         AggregationPeriodCount = aggregationPeriodCount
@@ -93,21 +93,21 @@ public static Kpi Restore(
 
 ```csharp
 // 2-week measurement window
-kpi.ConfigureAggregation(
+measure.ConfigureAggregation(
     AggregationType.Sum,
     AggregationPeriod.Weekly,
     DataNature.Aggregate,
     periodCount: 2);
 
 // Monthly measurement (1 month)
-kpi.ConfigureAggregation(
+measure.ConfigureAggregation(
     AggregationType.Sum,
     AggregationPeriod.Monthly,
     DataNature.Aggregate,
     periodCount: 1);
 
 // Quarterly measurement (3 months using monthly base)
-kpi.ConfigureAggregation(
+measure.ConfigureAggregation(
     AggregationType.Sum,
     AggregationPeriod.Monthly,
     DataNature.Aggregate,
@@ -120,7 +120,7 @@ kpi.ConfigureAggregation(
 
 | File | Action |
 |------|--------|
-| `PurposePath.Domain/Entities/Kpi.cs` | Modify - add property and methods |
+| `PurposePath.Domain/Entities/Measure.cs` | Modify - add property and methods |
 
 ---
 
@@ -141,7 +141,7 @@ kpi.ConfigureAggregation(
 
 ## ✅ Definition of Done
 
-- [ ] `AggregationPeriodCount` property added to Kpi entity
+- [ ] `AggregationPeriodCount` property added to Measure entity
 - [ ] `SetAggregationPeriodCount` method added
 - [ ] `ConfigureAggregation` updated with periodCount parameter
 - [ ] `Restore` method updated

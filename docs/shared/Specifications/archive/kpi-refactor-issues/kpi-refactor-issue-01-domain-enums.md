@@ -1,6 +1,6 @@
 # Issue #XXX-1: Domain - Add New Enums and Value Objects
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
 **Labels:** `domain`, `enums`, `value-objects`  
@@ -10,7 +10,7 @@
 
 ## 📋 Description
 
-Create new enums and value objects required for the KPI linking and data refactoring.
+Create new enums and value objects required for the Measure linking and data refactoring.
 
 ---
 
@@ -22,9 +22,9 @@ Location: `PurposePath.Domain/Common/TractionEnums.cs`
 
 ```csharp
 /// <summary>
-/// Category of KPI data point
+/// Category of Measure data point
 /// </summary>
-public enum KpiDataCategory
+public enum MeasureDataCategory
 {
     /// <summary>Target/planned value</summary>
     Target,
@@ -59,47 +59,47 @@ public enum ActualSubtype
 
 ### 2. Create New Value Objects
 
-#### KpiLinkId
+#### MeasureLinkId
 
-Location: `PurposePath.Domain/ValueObjects/KpiLinkId.cs`
+Location: `PurposePath.Domain/ValueObjects/MeasureLinkId.cs`
 
 ```csharp
 namespace PurposePath.Domain.ValueObjects;
 
 /// <summary>
-/// Strongly-typed identifier for KpiLink entities
+/// Strongly-typed identifier for MeasureLink entities
 /// </summary>
-public record KpiLinkId(Guid Value)
+public record MeasureLinkId(Guid Value)
 {
-    public static KpiLinkId New() => new(Guid.NewGuid());
-    public static KpiLinkId From(string value) => new(Guid.Parse(value));
-    public static KpiLinkId From(Guid value) => new(value);
+    public static MeasureLinkId New() => new(Guid.NewGuid());
+    public static MeasureLinkId From(string value) => new(Guid.Parse(value));
+    public static MeasureLinkId From(Guid value) => new(value);
     public override string ToString() => Value.ToString();
     
-    public static implicit operator Guid(KpiLinkId id) => id.Value;
-    public static implicit operator string(KpiLinkId id) => id.Value.ToString();
+    public static implicit operator Guid(MeasureLinkId id) => id.Value;
+    public static implicit operator string(MeasureLinkId id) => id.Value.ToString();
 }
 ```
 
-#### KpiDataId
+#### MeasureDataId
 
-Location: `PurposePath.Domain/ValueObjects/KpiDataId.cs`
+Location: `PurposePath.Domain/ValueObjects/MeasureDataId.cs`
 
 ```csharp
 namespace PurposePath.Domain.ValueObjects;
 
 /// <summary>
-/// Strongly-typed identifier for KpiData entities
+/// Strongly-typed identifier for MeasureData entities
 /// </summary>
-public record KpiDataId(Guid Value)
+public record MeasureDataId(Guid Value)
 {
-    public static KpiDataId New() => new(Guid.NewGuid());
-    public static KpiDataId From(string value) => new(Guid.Parse(value));
-    public static KpiDataId From(Guid value) => new(value);
+    public static MeasureDataId New() => new(Guid.NewGuid());
+    public static MeasureDataId From(string value) => new(Guid.Parse(value));
+    public static MeasureDataId From(Guid value) => new(value);
     public override string ToString() => Value.ToString();
     
-    public static implicit operator Guid(KpiDataId id) => id.Value;
-    public static implicit operator string(KpiDataId id) => id.Value.ToString();
+    public static implicit operator Guid(MeasureDataId id) => id.Value;
+    public static implicit operator string(MeasureDataId id) => id.Value.ToString();
 }
 ```
 
@@ -119,8 +119,8 @@ public record KpiDataId(Guid Value)
 | File | Action |
 |------|--------|
 | `PurposePath.Domain/Common/TractionEnums.cs` | Modify - add new enums |
-| `PurposePath.Domain/ValueObjects/KpiLinkId.cs` | Create |
-| `PurposePath.Domain/ValueObjects/KpiDataId.cs` | Create |
+| `PurposePath.Domain/ValueObjects/MeasureLinkId.cs` | Create |
+| `PurposePath.Domain/ValueObjects/MeasureDataId.cs` | Create |
 
 ---
 
@@ -133,8 +133,8 @@ public record KpiDataId(Guid Value)
 ## ✅ Definition of Done
 
 - [ ] All enums added to `TractionEnums.cs`
-- [ ] `KpiLinkId` value object created
-- [ ] `KpiDataId` value object created
+- [ ] `MeasureLinkId` value object created
+- [ ] `MeasureDataId` value object created
 - [ ] Unit tests pass
 - [ ] Code compiles without errors
 
@@ -149,8 +149,8 @@ public record KpiDataId(Guid Value)
 
 **Completed:**
 - [ ] Added enums to TractionEnums.cs
-- [ ] Created KpiLinkId value object
-- [ ] Created KpiDataId value object
+- [ ] Created MeasureLinkId value object
+- [ ] Created MeasureDataId value object
 - [ ] Added unit tests
 
 **Notes:** [Any relevant notes]

@@ -63,7 +63,7 @@ Retrieve all strategies associated with a specific goal.
       "alignmentExplanation": "Aligns well with company vision and core values",
       "alignmentSuggestions": [
         "Consider adding customer satisfaction metrics",
-        "Link to brand awareness KPIs"
+        "Link to brand awareness Measures"
       ],
       "ownerId": "user-456",
       "dueDate": "2025-12-31",
@@ -208,7 +208,7 @@ Update strategy alignment scores calculated by the Coaching Service AI.
   "alignmentExplanation": "Strategy aligns strongly with company vision to become market leader in cloud solutions. Direct connection to 'Innovation' and 'Customer Focus' core values. Supports goal of increasing market share by 15%.",
   "alignmentSuggestions": [
     "Consider adding customer satisfaction metrics to track alignment with 'Customer Focus' value",
-    "Link to brand awareness KPIs to measure market leadership progress"
+    "Link to brand awareness Measures to measure market leadership progress"
   ]
 }
 ```
@@ -234,7 +234,7 @@ Update strategy alignment scores calculated by the Coaching Service AI.
     "alignmentExplanation": "Strategy aligns strongly with company vision...",
     "alignmentSuggestions": [
       "Consider adding customer satisfaction metrics...",
-      "Link to brand awareness KPIs..."
+      "Link to brand awareness Measures..."
     ],
     "updatedAt": "2025-01-21T10:15:00Z"
   }
@@ -380,7 +380,7 @@ Atomically update the display order of multiple strategies within a goal.
 ## Related APIs
 
 - [Goals API](./goals-api.md) - Parent goals management
-- [KPI Links API](./kpi-links-api.md) - Link KPIs to strategies
+- [Measure Links API](./measure-links-api.md) - Link Measures to strategies
 
 ---
 

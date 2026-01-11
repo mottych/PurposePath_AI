@@ -94,7 +94,7 @@ Strategic Planning
 |------|------|---------|--------------|
 | 1 | **Intent Canvas** | Define WHAT | Goal statement, why it matters, AI alignment check |
 | 2 | **Strategy Workshop** | Define HOW | Add strategies, AI suggestions, alignment scores |
-| 3 | **Success Measures** | Define KPIs | Per-strategy KPIs + goal-level KPIs, target setting |
+| 3 | **Success Measures** | Define Measures | Per-strategy Measures + goal-level Measures, target setting |
 | 4 | **Action Planning** | Define TASKS | Per-strategy actions, AI suggestions, assignments |
 | 5 | **Review & Activate** | Launch | Summary view, share with team, "Activate Goal" |
 
@@ -117,19 +117,19 @@ A **dashboard-focused experience** for daily execution. Think mission control, n
 ```
 Operations
 ├── 🎯 Command Center (dashboard)
-├── 📊 KPI Tracker (all KPIs, quick entry)
+├── 📊 Measure Tracker (all Measures, quick entry)
 ├── ✅ Action Board (kanban/list)
 ├── ⚠️ Issues (existing)
-├── 📈 Personal Scorecard (ALL KPIs user owns - personal + goal + strategy)
+├── 📈 Personal Scorecard (ALL Measures user owns - personal + goal + strategy)
 └── 🔍 Goal Drill-Down (read-only deep view)
 ```
 
-> **Personal Scorecard Scope:** Shows ALL KPIs the user is responsible for, not just personal KPIs. This includes:
-> - Personal KPIs (directly linked to user)
-> - Goal KPIs where user is the owner
-> - Strategy KPIs where user is the owner
+> **Personal Scorecard Scope:** Shows ALL Measures the user is responsible for, not just personal Measures. This includes:
+> - Personal Measures (directly linked to user)
+> - Goal Measures where user is the owner
+> - Strategy Measures where user is the owner
 > 
-> Each KPI displays its association (Personal / Goal / Strategy) for context.
+> Each Measure displays its association (Personal / Goal / Strategy) for context.
 
 ### Command Center (The Hero Screen)
 
@@ -176,7 +176,7 @@ Operations
 │                                                                             │
 │  QUICK ENTRY                                                                │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  [+ Record KPI Actual]   [+ Log Action Progress]   [+ Report Issue]  │  │
+│  │  [+ Record Measure Actual]   [+ Log Action Progress]   [+ Report Issue]  │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -194,7 +194,7 @@ When user clicks "Drill →" on a goal:
 │     Progress: ████████░░ 78%    Status: On Track    Due: Q4 2025           │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [Overview]  [Strategies]  [KPIs]  [Actions]  [History]             │   │
+│  │  [Overview]  [Strategies]  [Measures]  [Actions]  [History]             │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  STRATEGIES PERFORMANCE                                                     │
@@ -203,20 +203,20 @@ When user clicks "Drill →" on a goal:
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │ ▼ PARTNER CHANNEL EXPANSION                           ██████████ 95%│  │
 │  │   ─────────────────────────────────────────────────────────────────  │  │
-│  │   KPIs:                                                              │  │
+│  │   Measures:                                                              │  │
 │  │   • Partner Count: 12/15 (80%) ████████░░                            │  │
 │  │   • Partner Revenue: $450K/$500K (90%) █████████░                    │  │
 │  │                                                                      │  │
 │  │   Actions: 4 complete, 2 in progress, 0 blocked                      │  │
-│  │   [View All Actions] [Record KPI Actual]                             │  │
+│  │   [View All Actions] [Record Measure Actual]                             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │ ▶ ENTERPRISE SALES TEAM                               ████░░░░░░ 60%│  │
-│  │   2 KPIs • 6 Actions • At Risk                        [Expand]       │  │
+│  │   2 Measures • 6 Actions • At Risk                        [Expand]       │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  GOAL-LEVEL KPIs                                                            │
+│  GOAL-LEVEL Measures                                                            │
 │  ───────────────────────────────────────────────────────────────────────   │
 │  • Market Share: 8.5%/10% (85%) ████████░░      [+ Record]                  │
 │  • Enterprise Revenue: $2.1M/$2.5M (84%) ████████░░      [+ Record]         │
@@ -250,10 +250,10 @@ When user clicks "Drill →" on a goal:
 │                                                                             │
 │  ⚡ Operations                   ← TRACKING MODE                             │
 │     ├── Command Center          (dashboard: what needs attention)           │
-│     ├── KPI Tracker             (all KPIs, quick entry, alerts)             │
+│     ├── Measure Tracker             (all Measures, quick entry, alerts)             │
 │     ├── Action Board            (kanban/list of all actions)                │
 │     ├── Issues                  (existing issues module)                    │
-│     └── Personal Scorecard      (user's personal KPIs)                      │
+│     └── Personal Scorecard      (user's personal Measures)                      │
 │                                                                             │
 │  💬 Feedback & Guidance                                                     │
 │                                                                             │
@@ -295,7 +295,7 @@ When user clicks "Drill →" on a goal:
 | Current State | Reimagined State |
 |---------------|------------------|
 | Goal Room with tabs | Planning Studio (wizard) + Goal Drill-Down (read view) |
-| KPI tab in Goal Room | KPI Tracker in Operations |
+| Measure tab in Goal Room | Measure Tracker in Operations |
 | Actions tab in Goal Room | Action Board in Operations |
 | No central dashboard | Command Center as Operations home |
 | Mixed planning/tracking | Clear separation |

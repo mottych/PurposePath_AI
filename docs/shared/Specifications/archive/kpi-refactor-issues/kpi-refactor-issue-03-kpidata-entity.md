@@ -1,24 +1,24 @@
-# Issue #XXX-3: Domain - Create KpiData Entity
+# Issue #XXX-3: Domain - Create MeasureData Entity
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
-**Labels:** `domain`, `entity`, `kpi-data`  
+**Labels:** `domain`, `entity`, `measure-data`  
 **Estimated Effort:** 6-8 hours
 
 ---
 
 ## 📋 Description
 
-Create the unified `KpiData` entity that consolidates `KpiActual`, `KpiMilestone`, and `KpiReading` into a single table supporting both target and actual values with subtypes.
+Create the unified `MeasureData` entity that consolidates `MeasureActual`, `MeasureMilestone`, and `MeasureReading` into a single table supporting both target and actual values with subtypes.
 
 ---
 
 ## 🏗️ Entity Design
 
-### KpiData Entity
+### MeasureData Entity
 
-Location: `PurposePath.Domain/Entities/KpiData.cs`
+Location: `PurposePath.Domain/Entities/MeasureData.cs`
 
 ```csharp
 using PurposePath.Domain.Common;
@@ -28,39 +28,39 @@ using PurposePath.Domain.ValueObjects;
 namespace PurposePath.Domain.Entities;
 
 /// <summary>
-/// Unified entity for KPI target and actual values.
-/// Replaces KpiActual, KpiMilestone, and KpiReading.
+/// Unified entity for Measure target and actual values.
+/// Replaces MeasureActual, MeasureMilestone, and MeasureReading.
 /// </summary>
-public class KpiData : FullyAuditableEntity
+public class MeasureData : FullyAuditableEntity
 {
-    public KpiDataId Id { get; private set; }
-    public KpiLinkId KpiLinkId { get; private set; }
+    public MeasureDataId Id { get; private set; }
+    public MeasureLinkId MeasureLinkId { get; private set; }
     
     // Data classification
-    public KpiDataCategory DataCategory { get; private set; }
+    public MeasureDataCategory DataCategory { get; private set; }
     public TargetSubtype? TargetSubtype { get; private set; }
     public ActualSubtype? ActualSubtype { get; private set; }
     
     // Core values
     public decimal PostValue { get; private set; }
     public string PostDate { get; private set; }  // ISO 8601 date string
-    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate KPIs
+    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate Measures
     
-    // Target metadata (from KpiMilestone)
+    // Target metadata (from MeasureMilestone)
     public string? Label { get; private set; }
     public int? ConfidenceLevel { get; private set; }  // 1-5
     public string? Rationale { get; private set; }
     
-    // Override tracking (from KpiActual)
+    // Override tracking (from MeasureActual)
     public decimal? OriginalValue { get; private set; }
     public bool IsManualOverride { get; private set; }
     public string? OverrideComment { get; private set; }
     
-    // Source tracking (from KpiActual)
+    // Source tracking (from MeasureActual)
     public DataSource DataSource { get; private set; }
     public string? SourceReferenceId { get; private set; }
     
-    // Replan triggers (from KpiActual)
+    // Replan triggers (from MeasureActual)
     public bool TriggersReplan { get; private set; }
     public bool ReplanThresholdExceeded { get; private set; }
     public bool? AutoAdjustmentApplied { get; private set; }
@@ -69,10 +69,10 @@ public class KpiData : FullyAuditableEntity
     public string RecordedBy { get; private set; }
     public DateTimeOffset RecordedAt { get; private set; }
 
-    private KpiData()
+    private MeasureData()
     {
         Id = null!;
-        KpiLinkId = null!;
+        MeasureLinkId = null!;
         PostDate = null!;
         RecordedBy = null!;
     }
@@ -82,8 +82,8 @@ public class KpiData : FullyAuditableEntity
     /// <summary>
     /// Create an Expected target (primary target)
     /// </summary>
-    public static KpiData CreateExpectedTarget(
-        KpiLinkId kpiLinkId,
+    public static MeasureData CreateExpectedTarget(
+        MeasureLinkId measureLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -92,15 +92,15 @@ public class KpiData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(kpiLinkId, TargetSubtype.Expected, targetValue, targetDate, 
+        return CreateTarget(measureLinkId, TargetSubtype.Expected, targetValue, targetDate, 
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
     /// <summary>
     /// Create an Optimal target (stretch goal)
     /// </summary>
-    public static KpiData CreateOptimalTarget(
-        KpiLinkId kpiLinkId,
+    public static MeasureData CreateOptimalTarget(
+        MeasureLinkId measureLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -109,15 +109,15 @@ public class KpiData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(kpiLinkId, TargetSubtype.Optimal, targetValue, targetDate,
+        return CreateTarget(measureLinkId, TargetSubtype.Optimal, targetValue, targetDate,
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
     /// <summary>
     /// Create a Minimal target (floor/threshold)
     /// </summary>
-    public static KpiData CreateMinimalTarget(
-        KpiLinkId kpiLinkId,
+    public static MeasureData CreateMinimalTarget(
+        MeasureLinkId measureLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -126,12 +126,12 @@ public class KpiData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(kpiLinkId, TargetSubtype.Minimal, targetValue, targetDate,
+        return CreateTarget(measureLinkId, TargetSubtype.Minimal, targetValue, targetDate,
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
-    private static KpiData CreateTarget(
-        KpiLinkId kpiLinkId,
+    private static MeasureData CreateTarget(
+        MeasureLinkId measureLinkId,
         TargetSubtype targetSubtype,
         decimal targetValue,
         string targetDate,
@@ -145,11 +145,11 @@ public class KpiData : FullyAuditableEntity
         ValidateConfidenceLevel(confidenceLevel);
         ValidateRecordedBy(recordedBy);
 
-        var data = new KpiData
+        var data = new MeasureData
         {
-            Id = KpiDataId.New(),
-            KpiLinkId = kpiLinkId ?? throw new ArgumentNullException(nameof(kpiLinkId)),
-            DataCategory = KpiDataCategory.Target,
+            Id = MeasureDataId.New(),
+            MeasureLinkId = measureLinkId ?? throw new ArgumentNullException(nameof(measureLinkId)),
+            DataCategory = MeasureDataCategory.Target,
             TargetSubtype = targetSubtype,
             ActualSubtype = null,
             PostValue = targetValue,
@@ -163,8 +163,8 @@ public class KpiData : FullyAuditableEntity
             RecordedAt = DateTimeOffset.UtcNow
         };
 
-        data.AddDomainEvent(new KpiTargetCreatedEvent(
-            data.Id, data.KpiLinkId, targetSubtype, targetValue, targetDate));
+        data.AddDomainEvent(new MeasureTargetCreatedEvent(
+            data.Id, data.MeasureLinkId, targetSubtype, targetValue, targetDate));
 
         return data;
     }
@@ -176,8 +176,8 @@ public class KpiData : FullyAuditableEntity
     /// <summary>
     /// Create an Estimated actual (forecast/estimate)
     /// </summary>
-    public static KpiData CreateEstimate(
-        KpiLinkId kpiLinkId,
+    public static MeasureData CreateEstimate(
+        MeasureLinkId measureLinkId,
         decimal estimatedValue,
         string measurementDate,
         string recordedBy,
@@ -185,15 +185,15 @@ public class KpiData : FullyAuditableEntity
         DateTime? periodStartDate = null,
         string? sourceReferenceId = null)
     {
-        return CreateActual(kpiLinkId, ActualSubtype.Estimate, estimatedValue, measurementDate,
+        return CreateActual(measureLinkId, ActualSubtype.Estimate, estimatedValue, measurementDate,
             recordedBy, dataSource, periodStartDate, sourceReferenceId);
     }
 
     /// <summary>
     /// Create a Measured actual (recorded value)
     /// </summary>
-    public static KpiData CreateMeasured(
-        KpiLinkId kpiLinkId,
+    public static MeasureData CreateMeasured(
+        MeasureLinkId measureLinkId,
         decimal measuredValue,
         string measurementDate,
         string recordedBy,
@@ -201,12 +201,12 @@ public class KpiData : FullyAuditableEntity
         DateTime? periodStartDate = null,
         string? sourceReferenceId = null)
     {
-        return CreateActual(kpiLinkId, ActualSubtype.Measured, measuredValue, measurementDate,
+        return CreateActual(measureLinkId, ActualSubtype.Measured, measuredValue, measurementDate,
             recordedBy, dataSource, periodStartDate, sourceReferenceId);
     }
 
-    private static KpiData CreateActual(
-        KpiLinkId kpiLinkId,
+    private static MeasureData CreateActual(
+        MeasureLinkId measureLinkId,
         ActualSubtype actualSubtype,
         decimal value,
         string measurementDate,
@@ -218,11 +218,11 @@ public class KpiData : FullyAuditableEntity
         ValidateDate(measurementDate);
         ValidateRecordedBy(recordedBy);
 
-        var data = new KpiData
+        var data = new MeasureData
         {
-            Id = KpiDataId.New(),
-            KpiLinkId = kpiLinkId ?? throw new ArgumentNullException(nameof(kpiLinkId)),
-            DataCategory = KpiDataCategory.Actual,
+            Id = MeasureDataId.New(),
+            MeasureLinkId = measureLinkId ?? throw new ArgumentNullException(nameof(measureLinkId)),
+            DataCategory = MeasureDataCategory.Actual,
             TargetSubtype = null,
             ActualSubtype = actualSubtype,
             PostValue = value,
@@ -237,8 +237,8 @@ public class KpiData : FullyAuditableEntity
             ReplanThresholdExceeded = false
         };
 
-        data.AddDomainEvent(new KpiActualRecordedEvent(
-            data.Id, data.KpiLinkId, actualSubtype, value, measurementDate, dataSource));
+        data.AddDomainEvent(new MeasureActualRecordedEvent(
+            data.Id, data.MeasureLinkId, actualSubtype, value, measurementDate, dataSource));
 
         return data;
     }
@@ -252,7 +252,7 @@ public class KpiData : FullyAuditableEntity
     /// </summary>
     public void UpdateTargetValue(decimal newValue, string? rationale = null)
     {
-        if (DataCategory != KpiDataCategory.Target)
+        if (DataCategory != MeasureDataCategory.Target)
             throw new InvalidOperationException("Can only update target value for Target data");
 
         var previousValue = PostValue;
@@ -263,7 +263,7 @@ public class KpiData : FullyAuditableEntity
         
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new KpiTargetUpdatedEvent(Id, KpiLinkId, previousValue, newValue));
+        AddDomainEvent(new MeasureTargetUpdatedEvent(Id, MeasureLinkId, previousValue, newValue));
     }
 
     /// <summary>
@@ -271,7 +271,7 @@ public class KpiData : FullyAuditableEntity
     /// </summary>
     public void UpdateActualValue(decimal newValue, string? overrideComment = null)
     {
-        if (DataCategory != KpiDataCategory.Actual)
+        if (DataCategory != MeasureDataCategory.Actual)
             throw new InvalidOperationException("Can only update actual value for Actual data");
 
         if (!IsManualOverride && overrideComment != null)
@@ -301,7 +301,7 @@ public class KpiData : FullyAuditableEntity
     /// </summary>
     public void MarkAsReplanTrigger(bool thresholdExceeded, bool autoAdjustmentApplied)
     {
-        if (DataCategory != KpiDataCategory.Actual)
+        if (DataCategory != MeasureDataCategory.Actual)
             throw new InvalidOperationException("Can only mark Actual data as replan trigger");
 
         TriggersReplan = true;
@@ -315,12 +315,12 @@ public class KpiData : FullyAuditableEntity
     #region Restore Method
 
     /// <summary>
-    /// Factory method to restore KpiData from persistence
+    /// Factory method to restore MeasureData from persistence
     /// </summary>
-    public static KpiData Restore(
-        KpiDataId id,
-        KpiLinkId kpiLinkId,
-        KpiDataCategory dataCategory,
+    public static MeasureData Restore(
+        MeasureDataId id,
+        MeasureLinkId measureLinkId,
+        MeasureDataCategory dataCategory,
         TargetSubtype? targetSubtype,
         ActualSubtype? actualSubtype,
         decimal postValue,
@@ -344,10 +344,10 @@ public class KpiData : FullyAuditableEntity
         UserId? updatedBy,
         DateTime? updatedAt)
     {
-        return new KpiData
+        return new MeasureData
         {
             Id = id,
-            KpiLinkId = kpiLinkId,
+            MeasureLinkId = measureLinkId,
             DataCategory = dataCategory,
             TargetSubtype = targetSubtype,
             ActualSubtype = actualSubtype,
@@ -409,11 +409,11 @@ public class KpiData : FullyAuditableEntity
 
 | File | Action |
 |------|--------|
-| `PurposePath.Domain/Entities/KpiData.cs` | Create |
-| `PurposePath.Domain/Events/KpiTargetCreatedEvent.cs` | Create |
-| `PurposePath.Domain/Events/KpiTargetUpdatedEvent.cs` | Create |
-| `PurposePath.Domain/Events/KpiActualRecordedEvent.cs` | Update (add ActualSubtype) |
-| `PurposePath.Domain/Repositories/IKpiDataRepository.cs` | Create |
+| `PurposePath.Domain/Entities/MeasureData.cs` | Create |
+| `PurposePath.Domain/Events/MeasureTargetCreatedEvent.cs` | Create |
+| `PurposePath.Domain/Events/MeasureTargetUpdatedEvent.cs` | Create |
+| `PurposePath.Domain/Events/MeasureActualRecordedEvent.cs` | Update (add ActualSubtype) |
+| `PurposePath.Domain/Repositories/IMeasureDataRepository.cs` | Create |
 
 ---
 
@@ -443,16 +443,16 @@ public class KpiData : FullyAuditableEntity
 
 ## 🔗 Dependencies
 
-- Issue #XXX-1: Domain enums and value objects (`KpiDataId`, `KpiDataCategory`, etc.)
-- Issue #XXX-2: KpiLink entity (`KpiLinkId`)
+- Issue #XXX-1: Domain enums and value objects (`MeasureDataId`, `MeasureDataCategory`, etc.)
+- Issue #XXX-2: MeasureLink entity (`MeasureLinkId`)
 
 ---
 
 ## ✅ Definition of Done
 
-- [ ] `KpiData` entity created with all properties and methods
+- [ ] `MeasureData` entity created with all properties and methods
 - [ ] Factory methods for all target and actual types
-- [ ] Repository interface `IKpiDataRepository` created
+- [ ] Repository interface `IMeasureDataRepository` created
 - [ ] Domain events created/updated
 - [ ] Unit tests pass
 - [ ] Code compiles without errors
@@ -467,10 +467,10 @@ public class KpiData : FullyAuditableEntity
 **Status:** [In Progress / Blocked / Complete]
 
 **Completed:**
-- [ ] Created KpiData entity
+- [ ] Created MeasureData entity
 - [ ] Created target factory methods
 - [ ] Created actual factory methods
-- [ ] Created IKpiDataRepository interface
+- [ ] Created IMeasureDataRepository interface
 - [ ] Created/updated domain events
 - [ ] Added unit tests
 

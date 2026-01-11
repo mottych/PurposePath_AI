@@ -62,7 +62,7 @@ A production-ready WebSocket real-time system with:
 - **Goals (7):** created, activated, completed, cancelled, paused, resumed, activity.created
 - **Actions (6):** created, status_changed, completed, priority_changed, reassigned, progress_updated
 - **Issues (2):** created, status_changed
-- **KPIs (1):** reading_created
+- **Measures (1):** reading_created
 - **Auth (2):** success, error
 - **System (3):** connection_error, ping, pong
 

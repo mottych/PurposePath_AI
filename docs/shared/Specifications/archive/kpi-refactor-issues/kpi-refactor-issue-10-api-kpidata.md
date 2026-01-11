@@ -1,16 +1,16 @@
-# Issue #XXX-10: API - Update KPI Planning Endpoints
+# Issue #XXX-10: API - Update Measure Planning Endpoints
 
-**Parent Epic:** KPI Linking & Data Model Refactoring  
+**Parent Epic:** Measure Linking & Data Model Refactoring  
 **Type:** Task  
 **Priority:** High  
-**Labels:** `api`, `controllers`, `kpi-data`  
+**Labels:** `api`, `controllers`, `measure-data`  
 **Estimated Effort:** 8-10 hours
 
 ---
 
 ## 📋 Description
 
-Update the Traction Lambda API controllers and DTOs to support the new KpiData functionality, including targets with subtypes (Expected, Optimal, Minimal) and actuals with subtypes (Estimate, Measured).
+Update the Traction Lambda API controllers and DTOs to support the new MeasureData functionality, including targets with subtypes (Expected, Optimal, Minimal) and actuals with subtypes (Estimate, Measured).
 
 ---
 
@@ -20,33 +20,33 @@ Update the Traction Lambda API controllers and DTOs to support the new KpiData f
 
 | Method | Endpoint | Description | Change |
 |--------|----------|-------------|--------|
-| GET | `/kpi-links/{linkId}/targets` | Get all targets for a link | New endpoint |
-| POST | `/kpi-links/{linkId}/targets` | Create target | New endpoint |
-| PUT | `/kpi-links/{linkId}/targets` | Batch update targets | New endpoint |
-| GET | `/kpi-links/{linkId}/actuals` | Get all actuals for a link | New endpoint |
-| POST | `/kpi-links/{linkId}/actuals` | Record actual value | New endpoint |
-| GET | `/kpi-links/{linkId}/planning` | Get combined planning data | New endpoint |
+| GET | `/measure-links/{linkId}/targets` | Get all targets for a link | New endpoint |
+| POST | `/measure-links/{linkId}/targets` | Create target | New endpoint |
+| PUT | `/measure-links/{linkId}/targets` | Batch update targets | New endpoint |
+| GET | `/measure-links/{linkId}/actuals` | Get all actuals for a link | New endpoint |
+| POST | `/measure-links/{linkId}/actuals` | Record actual value | New endpoint |
+| GET | `/measure-links/{linkId}/planning` | Get combined planning data | New endpoint |
 
 ### Deprecated Endpoints (map to new)
 
 | Old Endpoint | New Endpoint | Notes |
 |--------------|--------------|-------|
-| GET `/kpi-planning/kpis/{id}/milestones` | GET `/kpi-links/{linkId}/targets` | Requires link ID |
-| PUT `/kpi-planning/kpis/{id}/milestones` | PUT `/kpi-links/{linkId}/targets` | Requires link ID |
-| GET `/kpi-planning/kpis/{id}/actuals` | GET `/kpi-links/{linkId}/actuals` | Requires link ID |
-| POST `/kpi-planning/kpis/{id}/actuals` | POST `/kpi-links/{linkId}/actuals` | Requires link ID |
-| GET `/kpi-planning/kpis/{id}/plan` | GET `/kpi-links/{linkId}/planning` | Requires link ID |
+| GET `/measure-planning/measures/{id}/milestones` | GET `/measure-links/{linkId}/targets` | Requires link ID |
+| PUT `/measure-planning/measures/{id}/milestones` | PUT `/measure-links/{linkId}/targets` | Requires link ID |
+| GET `/measure-planning/measures/{id}/actuals` | GET `/measure-links/{linkId}/actuals` | Requires link ID |
+| POST `/measure-planning/measures/{id}/actuals` | POST `/measure-links/{linkId}/actuals` | Requires link ID |
+| GET `/measure-planning/measures/{id}/plan` | GET `/measure-links/{linkId}/planning` | Requires link ID |
 
 ---
 
 ## 📋 Request/Response DTOs
 
-### CreateKpiTargetRequest
+### CreateMeasureTargetRequest
 
-Location: `DTOs/Requests/KpiData/CreateKpiTargetRequest.cs`
+Location: `DTOs/Requests/MeasureData/CreateMeasureTargetRequest.cs`
 
 ```csharp
-public record CreateKpiTargetRequest
+public record CreateMeasureTargetRequest
 {
     /// <summary>
     /// Target subtype: Expected, Optimal, or Minimal
@@ -67,7 +67,7 @@ public record CreateKpiTargetRequest
     public string TargetDate { get; init; } = string.Empty;
     
     /// <summary>
-    /// Start date of measurement period (for aggregate KPIs)
+    /// Start date of measurement period (for aggregate Measures)
     /// </summary>
     public string? PeriodStartDate { get; init; }
     
@@ -91,7 +91,7 @@ public record CreateKpiTargetRequest
 
 ### BatchUpdateTargetsRequest
 
-Location: `DTOs/Requests/KpiData/BatchUpdateTargetsRequest.cs`
+Location: `DTOs/Requests/MeasureData/BatchUpdateTargetsRequest.cs`
 
 ```csharp
 public record BatchUpdateTargetsRequest
@@ -136,7 +136,7 @@ public record TargetItem
 
 ### RecordActualRequest
 
-Location: `DTOs/Requests/KpiData/RecordActualRequest.cs`
+Location: `DTOs/Requests/MeasureData/RecordActualRequest.cs`
 
 ```csharp
 public record RecordActualRequest
@@ -160,7 +160,7 @@ public record RecordActualRequest
     public string MeasurementDate { get; init; } = string.Empty;
     
     /// <summary>
-    /// Start date of measurement period (for aggregate KPIs)
+    /// Start date of measurement period (for aggregate Measures)
     /// </summary>
     public string? PeriodStartDate { get; init; }
     
@@ -176,12 +176,12 @@ public record RecordActualRequest
 }
 ```
 
-### KpiTargetResponse
+### MeasureTargetResponse
 
-Location: `DTOs/Responses/KpiData/KpiTargetResponse.cs`
+Location: `DTOs/Responses/MeasureData/MeasureTargetResponse.cs`
 
 ```csharp
-public record KpiTargetResponse
+public record MeasureTargetResponse
 {
     public string Id { get; init; } = string.Empty;
     public string Subtype { get; init; } = string.Empty;  // Expected, Optimal, Minimal
@@ -196,12 +196,12 @@ public record KpiTargetResponse
 }
 ```
 
-### KpiActualResponse
+### MeasureActualResponse
 
-Location: `DTOs/Responses/KpiData/KpiActualResponse.cs`
+Location: `DTOs/Responses/MeasureData/MeasureActualResponse.cs`
 
 ```csharp
-public record KpiActualResponse
+public record MeasureActualResponse
 {
     public string Id { get; init; } = string.Empty;
     public string Subtype { get; init; } = string.Empty;  // Estimate, Measured
@@ -230,14 +230,14 @@ public record KpiActualResponse
 }
 ```
 
-### KpiPlanningResponse
+### MeasurePlanningResponse
 
-Location: `DTOs/Responses/KpiData/KpiPlanningResponse.cs`
+Location: `DTOs/Responses/MeasureData/MeasurePlanningResponse.cs`
 
 ```csharp
-public record KpiPlanningResponse
+public record MeasurePlanningResponse
 {
-    public KpiLinkResponse Link { get; init; } = null!;
+    public MeasureLinkResponse Link { get; init; } = null!;
     
     // Target series for graphing
     public TargetSeriesResponse ExpectedSeries { get; init; } = null!;
@@ -245,7 +245,7 @@ public record KpiPlanningResponse
     public TargetSeriesResponse? MinimalSeries { get; init; }
     
     // Actual data
-    public IEnumerable<KpiActualResponse> Actuals { get; init; } = Array.Empty<KpiActualResponse>();
+    public IEnumerable<MeasureActualResponse> Actuals { get; init; } = Array.Empty<MeasureActualResponse>();
     
     // Summary
     public decimal? LatestActualValue { get; init; }
@@ -259,7 +259,7 @@ public record KpiPlanningResponse
 public record TargetSeriesResponse
 {
     public string Subtype { get; init; } = string.Empty;
-    public IEnumerable<KpiTargetResponse> Points { get; init; } = Array.Empty<KpiTargetResponse>();
+    public IEnumerable<MeasureTargetResponse> Points { get; init; } = Array.Empty<MeasureTargetResponse>();
 }
 ```
 
@@ -267,25 +267,25 @@ public record TargetSeriesResponse
 
 ## 🎮 Controller Implementation
 
-Location: `Services/PurposePath.Traction.Lambda/Controllers/KpiDataController.cs`
+Location: `Services/PurposePath.Traction.Lambda/Controllers/MeasureDataController.cs`
 
 ```csharp
 [ApiController]
-[Route("kpi-links/{linkId}")]
-public class KpiDataController : ControllerBase
+[Route("measure-links/{linkId}")]
+public class MeasureDataController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public KpiDataController(IMediator mediator)
+    public MeasureDataController(IMediator mediator)
     {
         _mediator = mediator;
     }
 
     /// <summary>
-    /// Get targets for a KPI link
+    /// Get targets for a Measure link
     /// </summary>
     [HttpGet("targets")]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<KpiTargetResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MeasureTargetResponse>>), 200)]
     public async Task<IActionResult> GetTargets(
         string linkId,
         [FromQuery] string? subtype,
@@ -297,23 +297,23 @@ public class KpiDataController : ControllerBase
     }
 
     /// <summary>
-    /// Create a target for a KPI link
+    /// Create a target for a Measure link
     /// </summary>
     [HttpPost("targets")]
-    [ProducesResponseType(typeof(ApiResponse<KpiTargetResponse>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureTargetResponse>), 201)]
     public async Task<IActionResult> CreateTarget(
         string linkId,
-        [FromBody] CreateKpiTargetRequest request,
+        [FromBody] CreateMeasureTargetRequest request,
         CancellationToken ct)
     {
         // Implementation
     }
 
     /// <summary>
-    /// Batch update targets for a KPI link
+    /// Batch update targets for a Measure link
     /// </summary>
     [HttpPut("targets")]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<KpiTargetResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MeasureTargetResponse>>), 200)]
     public async Task<IActionResult> UpdateTargets(
         string linkId,
         [FromBody] BatchUpdateTargetsRequest request,
@@ -323,10 +323,10 @@ public class KpiDataController : ControllerBase
     }
 
     /// <summary>
-    /// Get actuals for a KPI link
+    /// Get actuals for a Measure link
     /// </summary>
     [HttpGet("actuals")]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<KpiActualResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MeasureActualResponse>>), 200)]
     public async Task<IActionResult> GetActuals(
         string linkId,
         [FromQuery] string? subtype,
@@ -341,7 +341,7 @@ public class KpiDataController : ControllerBase
     /// Record an actual value
     /// </summary>
     [HttpPost("actuals")]
-    [ProducesResponseType(typeof(ApiResponse<KpiActualResponse>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<MeasureActualResponse>), 201)]
     public async Task<IActionResult> RecordActual(
         string linkId,
         [FromBody] RecordActualRequest request,
@@ -354,7 +354,7 @@ public class KpiDataController : ControllerBase
     /// Get combined planning data
     /// </summary>
     [HttpGet("planning")]
-    [ProducesResponseType(typeof(ApiResponse<KpiPlanningResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<MeasurePlanningResponse>), 200)]
     public async Task<IActionResult> GetPlanningData(
         string linkId,
         [FromQuery] string? startDate,
@@ -373,30 +373,30 @@ public class KpiDataController : ControllerBase
 ### DTOs
 | File | Action |
 |------|--------|
-| `DTOs/Requests/KpiData/CreateKpiTargetRequest.cs` | Create |
-| `DTOs/Requests/KpiData/BatchUpdateTargetsRequest.cs` | Create |
-| `DTOs/Requests/KpiData/RecordActualRequest.cs` | Create |
-| `DTOs/Responses/KpiData/KpiTargetResponse.cs` | Create |
-| `DTOs/Responses/KpiData/KpiActualResponse.cs` | Create |
-| `DTOs/Responses/KpiData/KpiPlanningResponse.cs` | Create |
+| `DTOs/Requests/MeasureData/CreateMeasureTargetRequest.cs` | Create |
+| `DTOs/Requests/MeasureData/BatchUpdateTargetsRequest.cs` | Create |
+| `DTOs/Requests/MeasureData/RecordActualRequest.cs` | Create |
+| `DTOs/Responses/MeasureData/MeasureTargetResponse.cs` | Create |
+| `DTOs/Responses/MeasureData/MeasureActualResponse.cs` | Create |
+| `DTOs/Responses/MeasureData/MeasurePlanningResponse.cs` | Create |
 
 ### Controllers
 | File | Action |
 |------|--------|
-| `Controllers/KpiDataController.cs` | Create |
-| `Controllers/KpiPlanningController.cs` | Modify - add deprecation notices |
+| `Controllers/MeasureDataController.cs` | Create |
+| `Controllers/MeasurePlanningController.cs` | Modify - add deprecation notices |
 
 ### Validators
 | File | Action |
 |------|--------|
-| `Validators/KpiData/CreateKpiTargetRequestValidator.cs` | Create |
-| `Validators/KpiData/RecordActualRequestValidator.cs` | Create |
-| `Validators/KpiData/BatchUpdateTargetsRequestValidator.cs` | Create |
+| `Validators/MeasureData/CreateMeasureTargetRequestValidator.cs` | Create |
+| `Validators/MeasureData/RecordActualRequestValidator.cs` | Create |
+| `Validators/MeasureData/BatchUpdateTargetsRequestValidator.cs` | Create |
 
 ### Mappers
 | File | Action |
 |------|--------|
-| `Mappers/TractionLambdaMappingProfile.cs` | Modify - add KpiData mappings |
+| `Mappers/TractionLambdaMappingProfile.cs` | Modify - add MeasureData mappings |
 
 ---
 
@@ -430,7 +430,7 @@ public class KpiDataController : ControllerBase
 
 ## 🔗 Dependencies
 
-- Issue #XXX-8: KpiData application layer
+- Issue #XXX-8: MeasureData application layer
 
 ---
 
@@ -458,7 +458,7 @@ public class KpiDataController : ControllerBase
 **Completed:**
 - [ ] Created request DTOs
 - [ ] Created response DTOs
-- [ ] Created KpiDataController
+- [ ] Created MeasureDataController
 - [ ] Created validators
 - [ ] Updated mapper profiles
 - [ ] Added API tests

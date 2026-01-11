@@ -1,20 +1,11 @@
 # Organizational Structure Service - API Specification
 
-**Version:** 2.0  
-**Last Updated:** December 26, 2025  
+**Version:** 3.1  
+**Last Updated:** January 4, 2026  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
 [← People Service](./people-service.md) | [Back to Index](./index.md)
-
-## Changelog
-
-| Version | Date | Changes |
-|---------|------|----------|
-| 2.0 | December 26, 2025 | **BREAKING:** Converted all JSON properties from snake_case to camelCase to match C#/.NET implementation (e.g., `role_id` → `roleId`, `reports_to` → `reportsTo`). Query parameters also converted to camelCase. This matches ASP.NET Core default JSON serialization. |
-| 1.2 | December 23, 2025 | Moved admin template endpoints to Admin Portal specification |
-| 1.1 | December 21, 2025 | Migrated endpoints from Traction service to Account service |
-| 1.0 | December 21, 2025 | Initial version |
 
 > **📋 NOTE:** Admin Template endpoints have been moved to the [Admin Portal API Specification](../admin-portal/admin-api-specification.md#role-templates).
 
@@ -22,28 +13,65 @@
 
 ## Overview
 
-The Organizational Structure module manages roles, role relationships (reporting/collaboration), and organization charts. It provides the foundation for the accountability framework within PurposePath.
+The Organizational Structure module manages the organizational hierarchy through roles, positions, organization units, and their relationships. It provides the foundation for the accountability framework within PurposePath.
 
-### Frontend Implementation
+### Architecture Overview
 
-- **Primary Client:** `accountClient` (axios instance) ⚠️ *Changed from tractionClient*
-- **Related Files:**
-  - `src/services/roles-service.ts` - Role CRUD operations
-  - `src/services/role-relationships-service.ts` - Reporting/collaboration structures
-  - `src/services/org-chart-service.ts` - Organization chart visualization
+The org structure is built on these key entities:
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│     RoleType     │     │       Role       │     │OrganizationUnit- │
+│    (Reference)   │────▶│    (Template)    │     │      Type        │
+│                  │     │                  │     │   (Reference)    │
+└──────────────────┘     └────────┬─────────┘     └────────┬─────────┘
+                                  │                        │
+                                  │                        ▼
+                                  │              ┌──────────────────┐
+                                  │              │ OrganizationUnit │
+                                  │              │  (Department/    │
+                                  │              │   Team/etc.)     │
+                                  │              └────────┬─────────┘
+                                  │                        │
+                                  ▼                        │
+                         ┌──────────────────┐              │
+                         │     Position     │◀─────────────┘
+                         │ (Instance of Role│
+                         │  in an Org Unit) │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Person      │
+                         │   (Occupant)     │
+                         └──────────────────┘
+```
 
 ### Key Concepts
 
-- **Role**: A defined position/function within the organization
-- **Role Relationship**: Non-hierarchical connection between roles (Support, Advise, Collaborate, Mentor)
-- **Reports To**: Hierarchical relationship defined on Role entity (not a relationship type)
-- **Org Chart**: Hierarchical visualization of role relationships
+- **Role**: A template defining responsibilities and accountability (e.g., "Software Engineer", "VP Sales")
+- **RoleType**: Classification of roles (Executive, Management, Professional, Associate)
+- **Position**: An instance of a role within an organization unit, optionally filled by a person
+- **OrganizationUnit**: A logical grouping (Company, Division, Department, Team)
+- **OrganizationUnitType**: Classification of organization units
+- **Position Relationship**: Non-hierarchical connection between positions (Support, Advise, Collaborate, Mentor)
+- **Reports To**: Hierarchical relationship defined on Position entity
+
+### Frontend Implementation
+
+- **Primary Client:** `accountClient` (axios instance)
+- **Related Files:**
+  - `src/services/roles-service.ts` - Role CRUD operations
+  - `src/services/positions-service.ts` - Position management *(planned)*
+  - `src/services/org-units-service.ts` - Organization unit management *(planned)*
+  - `src/services/role-relationships-service.ts` - Reporting/collaboration structures
+  - `src/services/org-chart-service.ts` - Organization chart visualization
 
 ---
 
 ## Roles Endpoints
 
-### GET /api/roles
+### GET /roles
 
 List all roles with filtering and pagination.
 
@@ -76,6 +104,12 @@ List all roles with filtering and pagination.
         "code": "string",
         "name": "string",
         "description": "string?",
+        "roleTypeId": "string (GUID)",
+        "roleType": {
+          "id": "string (GUID)",
+          "code": "string",
+          "name": "string"
+        },
         "isActive": "boolean",
         "currentOccupant": {
           "id": "string (GUID)?",
@@ -103,7 +137,7 @@ List all roles with filtering and pagination.
 
 ---
 
-### GET /api/roles/dropdown
+### GET /roles/dropdown
 
 Get simplified role list for dropdowns.
 
@@ -138,7 +172,7 @@ Get simplified role list for dropdowns.
 
 ---
 
-### GET /api/roles/{id}
+### GET /roles/{id}
 
 Get detailed role information.
 
@@ -162,6 +196,13 @@ Get detailed role information.
     "name": "string",
     "accountability": "string",
     "description": "string?",
+    "roleTypeId": "string (GUID)",
+    "roleType": {
+      "id": "string (GUID)",
+      "code": "string",
+      "name": "string",
+      "isStretchRole": "boolean"
+    },
     "isActive": "boolean",
     "currentOccupant": {
       "id": "string (GUID)?",
@@ -234,7 +275,7 @@ Get detailed role information.
 
 ---
 
-### POST /api/roles
+### POST /roles
 
 Create a new role.
 
@@ -251,6 +292,7 @@ Create a new role.
   "name": "string",
   "accountability": "string",
   "description": "string?",
+  "roleTypeId": "string (GUID)?",
   "reportsToRoleId": "string (GUID)?"
 }
 ```
@@ -263,6 +305,7 @@ Create a new role.
 | name | string | Yes | 1-100 characters |
 | accountability | string | Yes | 1-500 characters, describes what this role is accountable for |
 | description | string | No | Max 2000 characters (detailed responsibilities, can include markdown) |
+| roleTypeId | GUID | No | Must be valid RoleType ID. Defaults to "Professional" type if not specified. |
 | reportsToRoleId | GUID | No | Must be valid active role |
 
 **Response:**
@@ -276,11 +319,16 @@ Create a new role.
     "name": "string",
     "accountability": "string",
     "description": "string?",
+    "roleTypeId": "string (GUID)",
+    "roleType": {
+      "id": "string (GUID)",
+      "code": "string",
+      "name": "string"
+    },
     "isActive": true,
     "currentOccupant": null,
-    "reportsTo": [],
+    "reportsTo": null,
     "directReports": [],
-    "collaboratesWith": [],
     "createdAt": "string (ISO 8601)",
     "createdBy": "string (GUID)"
   }
@@ -302,7 +350,7 @@ Create a new role.
 
 ---
 
-### PUT /api/roles/{id}
+### PUT /roles/{id}
 
 Update an existing role.
 
@@ -348,7 +396,7 @@ Update an existing role.
 
 ---
 
-### DELETE /api/roles/{id}
+### DELETE /roles/{id}
 
 Soft delete a role.
 
@@ -396,7 +444,7 @@ Soft delete a role.
 
 ---
 
-### POST /api/roles/{id}/activate
+### POST /roles/{id}/activate
 
 Reactivate a deactivated role.
 
@@ -418,7 +466,7 @@ Reactivate a deactivated role.
 
 ---
 
-### POST /api/roles/{id}/deactivate
+### POST /roles/{id}/deactivate
 
 Deactivate a role (unassigns person, removes from hierarchy).
 
@@ -469,7 +517,7 @@ Deactivate a role (unassigns person, removes from hierarchy).
 
 ## Role Relationships Endpoints
 
-### GET /api/role-relationships
+### GET /role-relationships
 
 List all role relationships.
 
@@ -519,7 +567,7 @@ List all role relationships.
 
 ---
 
-### POST /api/role-relationships
+### POST /role-relationships
 
 Create a role relationship.
 
@@ -603,7 +651,7 @@ Create a role relationship.
 
 ---
 
-### PUT /api/role-relationships/{id}
+### PUT /role-relationships/{id}
 
 Update a relationship (description only).
 
@@ -630,7 +678,7 @@ Update a relationship (description only).
 
 ---
 
-### DELETE /api/role-relationships/{id}
+### DELETE /role-relationships/{id}
 
 Delete a role relationship.
 
@@ -653,7 +701,7 @@ Delete a role relationship.
 
 ---
 
-### GET /api/role-relationship-types
+### GET /role-relationship-types
 
 List available relationship types.
 
@@ -726,7 +774,7 @@ List available relationship types.
 
 ---
 
-### GET /api/role-relationship-types/{id}
+### GET /role-relationship-types/{id}
 
 Get relationship type details.
 
@@ -762,7 +810,7 @@ Get relationship type details.
 
 ---
 
-### POST /api/role-relationship-types
+### POST /role-relationship-types
 
 Create a custom relationship type.
 
@@ -827,7 +875,7 @@ Create a custom relationship type.
 
 ---
 
-### PUT /api/role-relationship-types/{id}
+### PUT /role-relationship-types/{id}
 
 Update a relationship type.
 
@@ -867,7 +915,7 @@ Update a relationship type.
 
 ---
 
-### DELETE /api/role-relationship-types/{id}
+### DELETE /role-relationship-types/{id}
 
 Deactivate a relationship type.
 
@@ -914,9 +962,1246 @@ Deactivate a relationship type.
 
 ---
 
+## Role Types Endpoints
+
+Role Types provide classification categories for roles (Executive, Management, Professional, Associate).
+
+### GET /role-types
+
+List available role types.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| includeInactive | boolean | false | Include inactive types |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "code": "EXECUTIVE",
+      "name": "Executive",
+      "description": "C-level and senior leadership roles with strategic decision-making authority",
+      "isStretchRole": false,
+      "displayOrder": 1,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "MANAGEMENT",
+      "name": "Management",
+      "description": "Directors, VPs, and managers with team leadership responsibilities",
+      "isStretchRole": false,
+      "displayOrder": 2,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "PROFESSIONAL",
+      "name": "Professional",
+      "description": "Individual contributors with specialized expertise",
+      "isStretchRole": false,
+      "displayOrder": 3,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "ASSOCIATE",
+      "name": "Associate",
+      "description": "Entry-level and support roles",
+      "isStretchRole": false,
+      "displayOrder": 4,
+      "isActive": true,
+      "isSystem": true
+    }
+  ]
+}
+```
+
+**Notes:**
+
+- `isSystem` indicates seeded types that cannot be deleted
+- `isStretchRole` indicates extended responsibility positions (not full-time)
+- `displayOrder` is used for sorting in UI dropdowns
+
+---
+
+### GET /role-types/{id}
+
+Get role type details.
+
+**Path Parameters:**
+
+- `id` - RoleType ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "name": "string",
+    "description": "string?",
+    "isStretchRole": "boolean",
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "isSystem": "boolean",
+    "usageCount": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+---
+
+### POST /role-types
+
+Create a custom role type.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Request:**
+
+```json
+{
+  "code": "string",
+  "name": "string",
+  "description": "string?",
+  "isStretchRole": "boolean?",
+  "displayOrder": "number?"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| code | string | Yes | 2-20 chars, uppercase alphanumeric + underscore, unique within tenant |
+| name | string | Yes | 1-50 characters |
+| description | string | No | Max 500 characters |
+| isStretchRole | boolean | No | Default: false |
+| displayOrder | number | No | Auto-assigned if not provided |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "name": "string",
+    "description": "string?",
+    "isStretchRole": "boolean",
+    "displayOrder": "number",
+    "isActive": true,
+    "isSystem": false,
+    "createdAt": "string (ISO 8601)"
+  }
+}
+```
+
+---
+
+### PUT /role-types/{id}
+
+Update a role type.
+
+**Path Parameters:**
+
+- `id` - RoleType ID (GUID)
+
+**Request:**
+
+```json
+{
+  "name": "string?",
+  "description": "string?",
+  "isStretchRole": "boolean?",
+  "displayOrder": "number?"
+}
+```
+
+**Notes:**
+
+- `code` cannot be changed after creation
+- System types (`isSystem = true`) can have name/description updated but not deleted
+
+---
+
+### DELETE /role-types/{id}
+
+Deactivate a role type.
+
+**Path Parameters:**
+
+- `id` - RoleType ID (GUID)
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete system role type",
+  "code": "BUSINESS_RULE_VIOLATION"
+}
+```
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete role type with existing roles",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "details": {
+    "usageCount": 5
+  }
+}
+```
+
+---
+
+## Organization Unit Types Endpoints
+
+Organization Unit Types classify organizational units (Company, Division, Department, Team, Project).
+
+### GET /organization-unit-types
+
+List available organization unit types.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| includeInactive | boolean | false | Include inactive types |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "code": "COMPANY",
+      "name": "Company",
+      "description": "Top-level organizational unit representing the entire company",
+      "displayOrder": 1,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "DIVISION",
+      "name": "Division",
+      "description": "Major business unit or division within the company",
+      "displayOrder": 2,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "DEPARTMENT",
+      "name": "Department",
+      "description": "Functional department within a division or company",
+      "displayOrder": 3,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "TEAM",
+      "name": "Team",
+      "description": "Work team or unit within a department",
+      "displayOrder": 4,
+      "isActive": true,
+      "isSystem": true
+    },
+    {
+      "id": "string (GUID)",
+      "code": "PROJECT",
+      "name": "Project",
+      "description": "Cross-functional project team",
+      "displayOrder": 5,
+      "isActive": true,
+      "isSystem": true
+    }
+  ]
+}
+```
+
+---
+
+### GET /organization-unit-types/{id}
+
+Get organization unit type details.
+
+**Path Parameters:**
+
+- `id` - OrganizationUnitType ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "code": "string",
+    "name": "string",
+    "description": "string?",
+    "displayOrder": "number",
+    "isActive": "boolean",
+    "isSystem": "boolean",
+    "usageCount": "number",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+---
+
+### POST /organization-unit-types
+
+Create a custom organization unit type.
+
+**Request:**
+
+```json
+{
+  "code": "string",
+  "name": "string",
+  "description": "string?",
+  "displayOrder": "number?"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| code | string | Yes | 2-20 chars, uppercase alphanumeric + underscore, unique within tenant |
+| name | string | Yes | 1-50 characters |
+| description | string | No | Max 500 characters |
+| displayOrder | number | No | Auto-assigned if not provided |
+
+---
+
+### PUT /organization-unit-types/{id}
+
+Update an organization unit type.
+
+**Request:**
+
+```json
+{
+  "name": "string?",
+  "description": "string?",
+  "displayOrder": "number?"
+}
+```
+
+---
+
+### DELETE /organization-unit-types/{id}
+
+Deactivate an organization unit type.
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete system organization unit type",
+  "code": "BUSINESS_RULE_VIOLATION"
+}
+```
+
+---
+
+## Organization Units Endpoints
+
+Organization Units represent the logical structure of the organization (companies, divisions, departments, teams).
+
+### GET /organization-units
+
+List all organization units.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| parentId | GUID | - | Filter by parent unit (null for top-level) |
+| typeId | GUID | - | Filter by organization unit type |
+| includeInactive | boolean | false | Include inactive units |
+| page | number | 1 | Page number |
+| pageSize | number | 20 | Items per page |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "description": "string?",
+        "organizationUnitType": {
+          "id": "string (GUID)",
+          "code": "string",
+          "name": "string"
+        },
+        "parentOrganizationUnitId": "string (GUID)?",
+        "parentOrganizationUnitName": "string?",
+        "unitLeadPersonId": "string (GUID)?",
+        "unitLeadPersonName": "string?",
+        "isActive": "boolean",
+        "childrenCount": "number",
+        "positionsCount": "number",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ],
+    "pagination": {
+      "page": "number",
+      "pageSize": "number",
+      "totalItems": "number",
+      "totalPages": "number"
+    }
+  }
+}
+```
+
+---
+
+### GET /organization-units/tree
+
+Get hierarchical tree of organization units.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "rootNodes": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "organizationUnitType": {
+          "id": "string (GUID)",
+          "code": "string",
+          "name": "string"
+        },
+        "unitLeadPersonName": "string?",
+        "positionsCount": "number",
+        "depth": "number",
+        "children": ["recursive OrgUnitNode"]
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /organization-units/{id}
+
+Get organization unit details.
+
+**Path Parameters:**
+
+- `id` - OrganizationUnit ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "name": "string",
+    "description": "string?",
+    "organizationUnitType": {
+      "id": "string (GUID)",
+      "code": "string",
+      "name": "string"
+    },
+    "parentOrganizationUnit": {
+      "id": "string (GUID)?",
+      "name": "string?"
+    },
+    "unitLeadPerson": {
+      "id": "string (GUID)?",
+      "displayName": "string?",
+      "email": "string?"
+    },
+    "childUnits": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "typeCode": "string"
+      }
+    ],
+    "positions": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "roleName": "string",
+        "occupantName": "string?",
+        "isVacant": "boolean"
+      }
+    ],
+    "isActive": "boolean",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+---
+
+### POST /organization-units
+
+Create an organization unit.
+
+**Request:**
+
+```json
+{
+  "name": "string",
+  "description": "string?",
+  "organizationUnitTypeId": "string (GUID)",
+  "parentOrganizationUnitId": "string (GUID)?",
+  "unitLeadPersonId": "string (GUID)?"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| name | string | Yes | 1-100 characters |
+| description | string | No | Max 500 characters |
+| organizationUnitTypeId | GUID | Yes | Must be valid organization unit type |
+| parentOrganizationUnitId | GUID | No | Must be valid active organization unit |
+| unitLeadPersonId | GUID | No | Must be valid active person |
+
+---
+
+### PUT /organization-units/{id}
+
+Update an organization unit.
+
+**Request:**
+
+```json
+{
+  "name": "string?",
+  "description": "string?",
+  "organizationUnitTypeId": "string (GUID)?",
+  "parentOrganizationUnitId": "string (GUID)?",
+  "unitLeadPersonId": "string (GUID)?"
+}
+```
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot set parent to self or child unit (circular reference)",
+  "code": "CIRCULAR_REFERENCE"
+}
+```
+
+---
+
+### DELETE /organization-units/{id}
+
+Deactivate an organization unit.
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete organization unit with child units",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "details": {
+    "childUnitsCount": 3
+  }
+}
+```
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete organization unit with active positions",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "details": {
+    "positionsCount": 5
+  }
+}
+```
+
+---
+
+### GET /organization-units/dropdown
+
+Get simplified organization unit list for dropdowns.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| typeId | GUID | - | Filter by organization unit type |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "name": "string",
+      "typeCode": "string",
+      "typeName": "string",
+      "parentId": "string (GUID)?",
+      "parentName": "string?",
+      "depth": "number"
+    }
+  ]
+}
+```
+
+---
+
+### PUT /organization-units/{id}/status
+
+Update organization unit status (activate/deactivate).
+
+**Path Parameters:**
+
+- `id` - OrganizationUnit ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Request:**
+
+```json
+{
+  "status": "active | inactive"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "name": "string",
+    "status": "active | inactive",
+    "updatedAt": "string (ISO 8601)"
+  }
+}
+```
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot deactivate organization unit with active child units",
+  "code": "BUSINESS_RULE_VIOLATION"
+}
+```
+
+---
+
+## Positions Endpoints
+
+Positions represent instances of roles within organization units, optionally filled by persons.
+
+### GET /positions
+
+List all positions.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| status | string | `active` | Filter: `active`, `inactive`, `vacant`, `all` |
+| organizationUnitId | GUID | - | Filter by organization unit |
+| roleId | GUID | - | Filter by role |
+| personId | GUID | - | Filter by assigned person |
+| search | string | - | Search by name |
+| page | number | 1 | Page number |
+| pageSize | number | 20 | Items per page |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "description": "string?",
+        "specificAccountability": "string?",
+        "role": {
+          "id": "string (GUID)",
+          "code": "string",
+          "name": "string",
+          "roleTypeCode": "string"
+        },
+        "organizationUnit": {
+          "id": "string (GUID)",
+          "name": "string",
+          "typeCode": "string"
+        },
+        "person": {
+          "id": "string (GUID)?",
+          "displayName": "string?",
+          "email": "string?"
+        },
+        "reportsToPosition": {
+          "id": "string (GUID)?",
+          "name": "string?",
+          "occupantName": "string?"
+        },
+        "status": "active | inactive | vacant",
+        "directReportsCount": "number",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ],
+    "pagination": {
+      "page": "number",
+      "pageSize": "number",
+      "totalItems": "number",
+      "totalPages": "number"
+    }
+  }
+}
+```
+
+---
+
+### GET /positions/{id}
+
+Get position details.
+
+**Path Parameters:**
+
+- `id` - Position ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "name": "string",
+    "description": "string?",
+    "specificAccountability": "string?",
+    "role": {
+      "id": "string (GUID)",
+      "code": "string",
+      "name": "string",
+      "accountability": "string",
+      "roleType": {
+        "id": "string (GUID)",
+        "code": "string",
+        "name": "string"
+      }
+    },
+    "organizationUnit": {
+      "id": "string (GUID)",
+      "name": "string",
+      "organizationUnitType": {
+        "id": "string (GUID)",
+        "code": "string",
+        "name": "string"
+      }
+    },
+    "person": {
+      "id": "string (GUID)?",
+      "firstName": "string?",
+      "lastName": "string?",
+      "displayName": "string?",
+      "email": "string?",
+      "title": "string?"
+    },
+    "reportsToPosition": {
+      "id": "string (GUID)?",
+      "name": "string?",
+      "roleName": "string?",
+      "occupantName": "string?"
+    },
+    "directReports": [
+      {
+        "id": "string (GUID)",
+        "name": "string",
+        "roleName": "string",
+        "occupantName": "string?",
+        "status": "string"
+      }
+    ],
+    "relationships": [
+      {
+        "relationshipId": "string (GUID)",
+        "direction": "from | to",
+        "positionId": "string (GUID)",
+        "positionName": "string",
+        "occupantName": "string?",
+        "relationshipType": {
+          "code": "string",
+          "name": "string",
+          "verb": "string"
+        }
+      }
+    ],
+    "status": "active | inactive | vacant",
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+---
+
+### POST /positions
+
+Create a position.
+
+**Request:**
+
+```json
+{
+  "name": "string",
+  "description": "string?",
+  "specificAccountability": "string?",
+  "roleId": "string (GUID)",
+  "organizationUnitId": "string (GUID)",
+  "personId": "string (GUID)?",
+  "reportsToPositionId": "string (GUID)?"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| name | string | Yes | 1-100 characters |
+| description | string | No | Max 500 characters |
+| specificAccountability | string | No | Max 500 characters (additional context beyond role accountability) |
+| roleId | GUID | Yes | Must be valid active role |
+| organizationUnitId | GUID | Yes | Must be valid active organization unit |
+| personId | GUID | No | Must be valid active person |
+| reportsToPositionId | GUID | No | Must be valid active position |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string (GUID)",
+    "name": "string",
+    "status": "active | vacant",
+    "role": { "id": "string", "name": "string" },
+    "organizationUnit": { "id": "string", "name": "string" },
+    "person": { "id": "string?", "displayName": "string?" },
+    "reportsToPosition": { "id": "string?", "name": "string?" },
+    "createdAt": "string (ISO 8601)"
+  }
+}
+```
+
+---
+
+### PUT /positions/{id}
+
+Update a position.
+
+**Request:**
+
+```json
+{
+  "name": "string",
+  "roleId": "string (GUID)",
+  "organizationUnitId": "string (GUID)",
+  "description": "string?",
+  "specificAccountability": "string?",
+  "reportsToPositionId": "string (GUID)?"
+}
+```
+
+**Notes:**
+
+- `roleId` may be changed via this endpoint
+- To change the person, use the assign/unassign endpoints
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot report to self",
+  "code": "BUSINESS_RULE_VIOLATION"
+}
+```
+
+```json
+{
+  "success": false,
+  "error": "Would create circular reporting structure",
+  "code": "CIRCULAR_REFERENCE"
+}
+```
+
+---
+
+### DELETE /positions/{id}
+
+Deactivate a position.
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete position with direct reports",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "details": {
+    "directReportsCount": 3
+  }
+}
+```
+
+---
+
+### GET /positions/dropdown
+
+Get simplified position list for dropdowns.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| organizationUnitId | GUID | - | Filter by organization unit |
+| vacantOnly | boolean | false | Show only vacant positions |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "title": "string",
+      "roleTypeCode": "string",
+      "roleTypeName": "string",
+      "organizationUnitId": "string (GUID)?",
+      "organizationUnitName": "string?",
+      "status": "active | inactive | vacant",
+      "personId": "string (GUID)?",
+      "personName": "string?"
+    }
+  ]
+}
+```
+
+---
+
+### GET /positions/tree
+
+Get hierarchical position tree.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| rootPositionId | GUID | - | Start tree from specific position |
+| organizationUnitId | GUID | - | Filter by organization unit |
+| includeInactive | boolean | false | Include inactive positions |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "title": "string",
+      "roleCode": "string",
+      "roleName": "string",
+      "organizationUnitId": "string (GUID)?",
+      "organizationUnitName": "string?",
+      "status": "active | inactive | vacant",
+      "personId": "string (GUID)?",
+      "personName": "string?",
+      "reportsToId": "string (GUID)?",
+      "depth": "number",
+      "children": [/* recursive PositionTreeNode */]
+    }
+  ]
+}
+```
+
+---
+
+### POST /positions/{id}/assign
+
+Assign a person to a position.
+
+**Path Parameters:**
+
+- `id` - Position ID (GUID)
+
+**Request:**
+
+```json
+{
+  "personId": "string (GUID)"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "positionId": "string (GUID)",
+    "personId": "string (GUID)",
+    "personName": "string",
+    "status": "active",
+    "assignedAt": "string (ISO 8601)"
+  }
+}
+```
+
+---
+
+### POST /positions/{id}/unassign
+
+Remove person from a position.
+
+**Path Parameters:**
+
+- `id` - Position ID (GUID)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "positionId": "string (GUID)",
+    "status": "vacant",
+    "unassignedAt": "string (ISO 8601)"
+  }
+}
+```
+
+---
+
+### PUT /positions/{id}/status
+
+Update position status.
+
+**Request:**
+
+```json
+{
+  "status": "active | inactive"
+}
+```
+
+**Notes:**
+
+- Setting to `inactive` will also unassign any person
+- `vacant` status is automatic when no person is assigned
+
+---
+
+## Position Relationships Endpoints
+
+Position Relationships define non-hierarchical connections between positions (Support, Advise, Collaborate, Mentor).
+
+### GET /position-relationships
+
+List all position relationships.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| positionId | GUID | - | Get relationships for specific position |
+| typeCode | string | - | Filter by relationship type code |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string (GUID)",
+      "fromPosition": {
+        "id": "string (GUID)",
+        "name": "string",
+        "roleName": "string",
+        "occupantName": "string?"
+      },
+      "toPosition": {
+        "id": "string (GUID)",
+        "name": "string",
+        "roleName": "string",
+        "occupantName": "string?"
+      },
+      "relationshipType": {
+        "id": "string (GUID)",
+        "code": "string",
+        "name": "string",
+        "forwardVerb": "string",
+        "reverseVerb": "string"
+      },
+      "description": "string?",
+      "createdAt": "string (ISO 8601)"
+    }
+  ]
+}
+```
+
+---
+
+### POST /position-relationships
+
+Create a position relationship.
+
+**Request:**
+
+```json
+{
+  "fromPositionId": "string (GUID)",
+  "toPositionId": "string (GUID)",
+  "relationshipTypeId": "string (GUID)",
+  "description": "string?"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| fromPositionId | GUID | Yes | Must be active position |
+| toPositionId | GUID | Yes | Must be active position, different from fromPositionId |
+| relationshipTypeId | GUID | Yes | Must be valid RoleRelationshipType ID |
+| description | string | No | Max 500 characters |
+
+---
+
+### PUT /position-relationships/{id}
+
+Update a position relationship.
+
+**Request:**
+
+```json
+{
+  "description": "string?"
+}
+```
+
+---
+
+### DELETE /position-relationships/{id}
+
+Delete a position relationship.
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Organization Chart Endpoints
 
-### GET /api/org-chart
+### GET /org-chart
 
 Get complete org chart tree structure.
 
@@ -929,10 +2214,7 @@ Get complete org chart tree structure.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| rootRoleId | GUID | - | Start tree from specific role |
-| maxDepth | number | 10 | Maximum hierarchy depth |
 | includeVacant | boolean | true | Include vacant positions |
-| includeInactive | boolean | false | Include inactive roles |
 
 **Response:**
 
@@ -940,29 +2222,39 @@ Get complete org chart tree structure.
 {
   "success": true,
   "data": {
-    "tree": [
+    "rootNodes": [
       {
         "role": {
           "id": "string (GUID)",
           "code": "string",
-          "name": "string"
+          "name": "string",
+          "accountability": "string",
+          "description": "string?",
+          "isVacant": "boolean",
+          "isActive": "boolean"
         },
-        "occupant": {
-          "id": "string (GUID)?",
-          "name": "string?",
-          "title": "string?",
-          "avatarUrl": "string?"
-        },
-        "isVacant": "boolean",
-        "depth": "number",
+        "assignedPersons": [
+          {
+            "id": "string (GUID)",
+            "displayName": "string",
+            "title": "string?",
+            "email": "string?",
+            "isPrimary": "boolean",
+            "effectiveDate": "string (ISO 8601)"
+          }
+        ],
         "children": [
           "recursive RoleNode"
-        ]
+        ],
+        "relationships": null,
+        "depth": "number"
       }
     ],
     "totalRoles": "number",
-    "totalVacant": "number",
-    "maxDepth": "number"
+    "totalPersons": "number",
+    "vacantRoles": "number",
+    "maxDepth": "number",
+    "generatedAt": "string (ISO 8601)"
   }
 }
 ```
@@ -970,11 +2262,12 @@ Get complete org chart tree structure.
 **Notes:**
 
 - Top-level roles (no reportsTo) are roots of separate trees
-- If `rootRoleId` specified, returns single tree starting from that role
+- `assignedPersons` is an array to support multiple people assigned to one role
+- Empty array when role is vacant
 
 ---
 
-### GET /api/org-chart/flat
+### GET /org-chart/flat
 
 Get flat list for table/grid display.
 
@@ -1020,7 +2313,7 @@ Get flat list for table/grid display.
 
 ---
 
-### GET /api/org-chart/role/{id}/subtree
+### GET /org-chart/role/{id}/subtree
 
 Get subtree under a specific role.
 
@@ -1052,6 +2345,239 @@ Get subtree under a specific role.
   }
 }
 ```
+
+---
+
+### GET /org-chart/layouts/active
+
+Get the current user's active org chart layout (node positions).
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": true,
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `404` - No active layout found
+
+---
+
+### GET /org-chart/layouts
+
+Get all org chart layouts for the current user.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layouts": [
+      {
+        "layoutId": "string (GUID)",
+        "layoutName": "string",
+        "isActive": "boolean",
+        "positionCount": "number",
+        "createdAt": "string (ISO 8601)",
+        "updatedAt": "string (ISO 8601)?"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### POST /org-chart/layouts
+
+Create a new layout or update an existing layout with node positions.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Request:**
+
+```json
+{
+  "layoutId": "string (GUID)?",
+  "layoutName": "string",
+  "positions": [
+    {
+      "roleId": "string (GUID)",
+      "positionX": "number",
+      "positionY": "number"
+    }
+  ],
+  "setAsActive": "boolean"
+}
+```
+
+**Field Constraints:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| layoutId | GUID | No | If provided, updates existing layout. Must belong to current user. |
+| layoutName | string | Yes | 1-100 characters |
+| positions | array | Yes | Array of node positions |
+| positions[].roleId | GUID | Yes | Must be valid role in tenant |
+| positions[].positionX | number | Yes | X coordinate |
+| positions[].positionY | number | Yes | Y coordinate |
+| setAsActive | boolean | No | Default: false. If true, sets as active layout after save. |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": "boolean",
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201` - Created (new layout)
+- `200` - OK (updated existing layout)
+- `400` - Validation error
+- `404` - Layout not found (when updating with layoutId)
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- If `layoutId` is null, creates new layout
+- If `layoutId` provided, updates existing layout (must belong to current user)
+- First layout for user is automatically activated regardless of `setAsActive`
+- When `setAsActive` is true, deactivates other layouts for the user
+
+---
+
+### PUT /org-chart/layouts/{layoutId}/activate
+
+Set a specific layout as the active layout for the current user.
+
+**Path Parameters:**
+
+- `layoutId` - Layout ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "layoutId": "string (GUID)",
+    "layoutName": "string",
+    "isActive": true,
+    "positions": [
+      {
+        "roleId": "string (GUID)",
+        "positionX": "number",
+        "positionY": "number"
+      }
+    ],
+    "createdAt": "string (ISO 8601)",
+    "updatedAt": "string (ISO 8601)?"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `404` - Layout not found
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- Automatically deactivates any currently active layout for the user
+- If layout is already active, returns success without changes
+
+---
+
+### DELETE /org-chart/layouts/{layoutId}
+
+Delete a layout. Cannot delete the active layout.
+
+**Path Parameters:**
+
+- `layoutId` - Layout ID (GUID)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Layout deleted successfully"
+}
+```
+
+**Status Codes:**
+
+- `200` - Success
+- `400` - Cannot delete active layout
+- `404` - Layout not found
+- `403` - Layout does not belong to user
+
+**Notes:**
+
+- Cannot delete a layout that is currently active
+- To delete active layout, activate a different layout first
+
+---
+
 ## Error Codes Reference
 
 | Code | HTTP Status | Description |
@@ -1074,6 +2600,84 @@ Get subtree under a specific role.
 
 ```typescript
 type RoleStatus = 'active' | 'inactive';
+```
+
+### PositionStatus
+
+```typescript
+type PositionStatus = 'active' | 'inactive' | 'vacant';
+```
+
+### RoleType
+
+```typescript
+interface RoleType {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isStretchRole: boolean;  // Indicates extended responsibility, not full-time
+  displayOrder: number;
+  isActive: boolean;
+  isSystem: boolean;       // System types cannot be deleted
+}
+```
+
+### OrganizationUnitType
+
+```typescript
+interface OrganizationUnitType {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  isSystem: boolean;       // System types cannot be deleted
+}
+```
+
+### OrganizationUnit
+
+```typescript
+interface OrganizationUnit {
+  id: string;
+  name: string;
+  description: string | null;
+  organizationUnitType: OrganizationUnitType;
+  parentOrganizationUnitId: string | null;
+  unitLeadPersonId: string | null;
+  isActive: boolean;
+}
+```
+
+### Position
+
+```typescript
+interface Position {
+  id: string;
+  name: string;
+  description: string | null;
+  specificAccountability: string | null;  // Additional context beyond role
+  roleId: string;
+  organizationUnitId: string;
+  personId: string | null;
+  reportsToPositionId: string | null;
+  status: PositionStatus;
+}
+```
+
+### PositionRelationship
+
+```typescript
+interface PositionRelationship {
+  id: string;
+  fromPositionId: string;
+  toPositionId: string;
+  relationshipTypeId: string;  // Uses RoleRelationshipType
+  description: string | null;
+  createdAt: string;
+}
 ```
 
 ### RelationshipTypeCode
@@ -1109,6 +2713,7 @@ interface RoleNode {
     id: string;
     code: string;
     name: string;
+    roleType: RoleType;
   };
   occupant: {
     id: string | null;
@@ -1122,6 +2727,29 @@ interface RoleNode {
 }
 ```
 
+### PositionNode (Org Chart - Future)
+
+```typescript
+interface PositionNode {
+  position: {
+    id: string;
+    name: string;
+    roleName: string;
+    roleTypeCode: string;
+    organizationUnitName: string;
+  };
+  occupant: {
+    id: string | null;
+    name: string | null;
+    title: string | null;
+    avatarUrl: string | null;
+  } | null;
+  status: PositionStatus;
+  depth: number;
+  children: PositionNode[];
+}
+```
+
 ### Template Categories
 
 | Code | Name | Description |
@@ -1131,6 +2759,29 @@ interface RoleNode {
 | ENTERPRISE | Enterprise | Comprehensive multi-level hierarchy |
 | EOS | EOS® | Entrepreneurial Operating System structure |
 | SCALING | Scaling Up | Based on Scaling Up methodology |
+
+---
+
+## Seeded Role Types
+
+| Code | Name | Description | Is Stretch Role |
+|------|------|-------------|-----------------|
+| EXECUTIVE | Executive | C-level and senior leadership roles | No |
+| MANAGEMENT | Management | Directors, VPs, and managers | No |
+| PROFESSIONAL | Professional | Individual contributors with expertise | No |
+| ASSOCIATE | Associate | Entry-level and support roles | No |
+
+---
+
+## Seeded Organization Unit Types
+
+| Code | Name | Description |
+|------|------|-------------|
+| COMPANY | Company | Top-level organizational unit |
+| DIVISION | Division | Major business unit or division |
+| DEPARTMENT | Department | Functional department |
+| TEAM | Team | Work team or unit |
+| PROJECT | Project | Cross-functional project team |
 
 ---
 
@@ -1235,58 +2886,133 @@ The following real-time events will be supported:
 | POST | `/auth/login` | Login with username/password |
 | POST | `/auth/forgot-username` | Request username reminder |
 | PUT | `/user/username` | Change username |
-| GET | `/api/people` | List people |
-| GET | `/api/people/assignable` | Get assignable people for dropdowns |
-| GET | `/api/people/{id}` | Get person details |
-| POST | `/api/people` | Create person |
-| PUT | `/api/people/{id}` | Update person |
-| DELETE | `/api/people/{id}` | Delete person |
-| POST | `/api/people/{id}/activate` | Activate person |
-| POST | `/api/people/{id}/deactivate` | Deactivate person |
-| POST | `/api/people/{id}/link-user` | Link person to user |
-| POST | `/api/people/{id}/tags` | Add tags |
-| DELETE | `/api/people/{id}/tags/{tagId}` | Remove tag |
-| GET | `/api/people/{id}/roles` | Get person's roles |
-| GET | `/api/people/{id}/roles/history` | Get role history |
-| POST | `/api/people/{id}/roles` | Assign role |
-| PUT | `/api/people/{id}/roles/{roleId}/primary` | Set primary role |
-| DELETE | `/api/people/{id}/roles/{roleId}` | Unassign role |
-| GET | `/api/person-types` | List person types |
-| GET | `/api/person-types/{id}` | Get person type |
-| POST | `/api/person-types` | Create person type |
-| PUT | `/api/person-types/{id}` | Update person type |
-| DELETE | `/api/person-types/{id}` | Delete person type |
-| GET | `/api/person-tags` | List tags |
-| POST | `/api/person-tags` | Create tag |
-| PUT | `/api/person-tags/{id}` | Update tag |
-| DELETE | `/api/person-tags/{id}` | Delete tag |
+| GET | `/people` | List people |
+| GET | `/people/assignable` | Get assignable people for dropdowns |
+| GET | `/people/{id}` | Get person details |
+| POST | `/people` | Create person |
+| PUT | `/people/{id}` | Update person |
+| DELETE | `/people/{id}` | Delete person |
+| POST | `/people/{id}/activate` | Activate person |
+| POST | `/people/{id}/deactivate` | Deactivate person |
+| POST | `/people/{id}/link-user` | Link person to user |
+| POST | `/people/{id}/tags` | Add tags |
+| DELETE | `/people/{id}/tags/{tagId}` | Remove tag |
+| GET | `/people/{id}/roles` | Get person's roles |
+| GET | `/people/{id}/roles/history` | Get role history |
+| POST | `/people/{id}/roles` | Assign role |
+| PUT | `/people/{id}/roles/{roleId}/primary` | Set primary role |
+| DELETE | `/people/{id}/roles/{roleId}` | Unassign role |
+| GET | `/person-types` | List person types |
+| GET | `/person-types/{id}` | Get person type |
+| POST | `/person-types` | Create person type |
+| PUT | `/person-types/{id}` | Update person type |
+| DELETE | `/person-types/{id}` | Delete person type |
+| POST | `/person-types/{id}/activate` | Activate person type |
+| GET | `/person-tags` | List tags |
+| POST | `/person-tags` | Create tag |
+| PUT | `/person-tags/{id}` | Update tag |
+| DELETE | `/person-tags/{id}` | Delete tag |
 
 ### Organizational Structure (Part 2)
 
+#### Roles
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/roles` | List roles |
-| GET | `/api/roles/dropdown` | Get roles for dropdown |
-| GET | `/api/roles/{id}` | Get role details |
-| POST | `/api/roles` | Create role |
-| PUT | `/api/roles/{id}` | Update role |
-| DELETE | `/api/roles/{id}` | Delete role |
-| POST | `/api/roles/{id}/activate` | Activate role |
-| POST | `/api/roles/{id}/deactivate` | Deactivate role |
-| GET | `/api/role-relationships` | List relationships |
-| POST | `/api/role-relationships` | Create relationship |
-| PUT | `/api/role-relationships/{id}` | Update relationship |
-| DELETE | `/api/role-relationships/{id}` | Delete relationship |
-| GET | `/api/role-relationship-types` | List relationship types |
-| GET | `/api/role-relationship-types/{id}` | Get relationship type details |
-| POST | `/api/role-relationship-types` | Create relationship type |
-| PUT | `/api/role-relationship-types/{id}` | Update relationship type |
-| DELETE | `/api/role-relationship-types/{id}` | Delete relationship type |
-| GET | `/api/org-chart` | Get org chart tree |
-| GET | `/api/org-chart/flat` | Get flat org chart |
-| GET | `/api/org-chart/role/{id}/subtree` | Get role subtree |
-| POST | `/api/roles/preview-template` | Preview template application |
-| POST | `/api/roles/apply-template` | Apply template |
+| GET | `/roles` | List roles |
+| GET | `/roles/dropdown` | Get roles for dropdown |
+| GET | `/roles/{id}` | Get role details |
+| POST | `/roles` | Create role |
+| PUT | `/roles/{id}` | Update role |
+| DELETE | `/roles/{id}` | Delete role |
+| POST | `/roles/{id}/activate` | Activate role |
+| POST | `/roles/{id}/deactivate` | Deactivate role |
+
+#### Role Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/role-types` | List role types |
+| GET | `/role-types/{id}` | Get role type details |
+| POST | `/role-types` | Create role type |
+| PUT | `/role-types/{id}` | Update role type |
+| DELETE | `/role-types/{id}` | Delete role type |
+
+#### Role Relationships
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/role-relationships` | List relationships |
+| POST | `/role-relationships` | Create relationship |
+| PUT | `/role-relationships/{id}` | Update relationship |
+| DELETE | `/role-relationships/{id}` | Delete relationship |
+
+#### Role Relationship Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/role-relationship-types` | List relationship types |
+| GET | `/role-relationship-types/{id}` | Get relationship type details |
+| POST | `/role-relationship-types` | Create relationship type |
+| PUT | `/role-relationship-types/{id}` | Update relationship type |
+| DELETE | `/role-relationship-types/{id}` | Delete relationship type |
+
+#### Organization Units
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/organization-units` | List organization units |
+| GET | `/organization-units/tree` | Get org unit hierarchy tree |
+| GET | `/organization-units/dropdown` | Get simplified list for dropdowns |
+| GET | `/organization-units/{id}` | Get organization unit details |
+| POST | `/organization-units` | Create organization unit |
+| PUT | `/organization-units/{id}` | Update organization unit |
+| PUT | `/organization-units/{id}/status` | Update organization unit status |
+| DELETE | `/organization-units/{id}` | Delete organization unit |
+
+#### Organization Unit Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/organization-unit-types` | List org unit types |
+| GET | `/organization-unit-types/{id}` | Get org unit type details |
+| POST | `/organization-unit-types` | Create org unit type |
+| PUT | `/organization-unit-types/{id}` | Update org unit type |
+| DELETE | `/organization-unit-types/{id}` | Delete org unit type |
+
+#### Positions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/positions` | List positions |
+| GET | `/positions/dropdown` | Get simplified list for dropdowns |
+| GET | `/positions/tree` | Get hierarchical position tree |
+| GET | `/positions/{id}` | Get position details |
+| POST | `/positions` | Create position |
+| PUT | `/positions/{id}` | Update position |
+| DELETE | `/positions/{id}` | Delete position |
+| POST | `/positions/{id}/assign` | Assign person to position |
+| POST | `/positions/{id}/unassign` | Remove person from position |
+| PUT | `/positions/{id}/status` | Update position status |
+
+#### Position Relationships
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/position-relationships` | List position relationships |
+| POST | `/position-relationships` | Create position relationship |
+| PUT | `/position-relationships/{id}` | Update position relationship |
+| DELETE | `/position-relationships/{id}` | Delete position relationship |
+
+#### Org Chart
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/org-chart` | Get org chart tree |
+| GET | `/org-chart/flat` | Get flat org chart |
+| GET | `/org-chart/role/{id}/subtree` | Get role subtree |
+| POST | `/roles/preview-template` | Preview template application |
+| POST | `/roles/apply-template` | Apply template |
 
 > **Note:** Role Templates management (Admin Portal) is documented in [admin-api-specification.md](../admin-portal/admin-api-specification.md)
 

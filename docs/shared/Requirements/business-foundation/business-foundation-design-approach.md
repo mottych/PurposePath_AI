@@ -57,7 +57,7 @@ We'll apply the same successful pattern from Strategic Planning:
 │                          ▼                                   │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │            POWERS ENTIRE APPLICATION                  │   │
-│  │  Goal Alignment • KPI Suggestions • Strategy AI      │   │
+│  │  Goal Alignment • Measure Suggestions • Strategy AI      │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -282,7 +282,7 @@ Each section can invoke AI for:
 The enriched Business Foundation powers:
 - **Goal Alignment**: More accurate alignment scoring
 - **Strategy Suggestions**: Industry-specific recommendations
-- **KPI Recommendations**: Relevant metrics based on stage/industry
+- **Measure Recommendations**: Relevant metrics based on stage/industry
 - **Action Suggestions**: Context-aware task recommendations
 
 ## Visual Design Principles

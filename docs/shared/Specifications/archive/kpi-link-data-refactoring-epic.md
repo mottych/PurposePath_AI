@@ -1,19 +1,19 @@
-# Epic: KPI Linking & Data Model Refactoring
+# Epic: Measure Linking & Data Model Refactoring
 
 **Epic ID:** #XXX (to be assigned)  
 **Created:** December 21, 2025  
 **Status:** Planning  
 **Priority:** High  
-**Labels:** `epic`, `refactoring`, `strategic-planning`, `kpi`
+**Labels:** `epic`, `refactoring`, `strategic-planning`, `measure`
 
 ---
 
 ## 📋 Executive Summary
 
-This epic covers a comprehensive refactoring of the KPI linking and data tracking system to:
+This epic covers a comprehensive refactoring of the Measure linking and data tracking system to:
 
-1. **Rename and enhance `GoalKpiLink`** → `KpiLink` with support for linking to Person, Goal, and Strategy
-2. **Consolidate data tables** - Merge `KpiActual`, `KpiMilestone`, and `KpiReading` into a unified `KpiData` entity
+1. **Rename and enhance `GoalMeasureLink`** → `MeasureLink` with support for linking to Person, Goal, and Strategy
+2. **Consolidate data tables** - Merge `MeasureActual`, `MeasureMilestone`, and `MeasureReading` into a unified `MeasureData` entity
 3. **Add support for multiple target types** - Expected, Optimal, Minimal
 4. **Add support for actual value types** - Estimate vs Measured
 5. **Add `AggregationPeriodCount`** to support multi-period aggregation windows
@@ -25,7 +25,7 @@ This epic covers a comprehensive refactoring of the KPI linking and data trackin
 | Document | Purpose |
 |----------|---------|
 | `docs/Specifications/people-org-structure-technical-design.md` | Person entity specification |
-| `docs/guides/KPI_PLANNING_REQUIREMENTS.md` | Current KPI planning requirements |
+| `docs/guides/Measure_PLANNING_REQUIREMENTS.md` | Current Measure planning requirements |
 | `docs/Specifications/archive/backend-integration-traction-service-v5.md` | Archived v5 API specifications |
 | `docs/Specifications/traction-service/` | Current v7 modular API specifications |
 
@@ -33,8 +33,8 @@ This epic covers a comprehensive refactoring of the KPI linking and data trackin
 
 ## 🎯 Business Goals
 
-1. **Flexible KPI Assignment**: Allow KPIs to be linked to Goals, Strategies within Goals, or Persons directly (personal scorecards)
-2. **Unified Data Model**: Single source for all KPI target and actual values
+1. **Flexible Measure Assignment**: Allow Measures to be linked to Goals, Strategies within Goals, or Persons directly (personal scorecards)
+2. **Unified Data Model**: Single source for all Measure target and actual values
 3. **Multiple Target Types**: Support Expected (main), Optimal (stretch), and Minimal (floor) targets for visual tracking
 4. **Actual Value Types**: Distinguish between Estimated (forecasted) and Measured (actual) values
 5. **Simplified Maintenance**: Remove calculated fields that can be derived on-the-fly
@@ -46,11 +46,11 @@ This epic covers a comprehensive refactoring of the KPI linking and data trackin
 ### Current State
 
 ```
-Goal (1) ────< GoalKpiLink >──── (1) Kpi
+Goal (1) ────< GoalMeasureLink >──── (1) Measure
                                      │
                  ┌───────────────────┼───────────────────┐
                  │                   │                   │
-            KpiMilestone       KpiActual           KpiReading
+            MeasureMilestone       MeasureActual           MeasureReading
             (targets)          (actuals)           (readings)
 ```
 
@@ -59,11 +59,11 @@ Goal (1) ────< GoalKpiLink >──── (1) Kpi
 ```
 Person (1) ──┐
              │
-Goal (1) ────┼──< KpiLink >──── (1) Kpi
+Goal (1) ────┼──< MeasureLink >──── (1) Measure
              │        │
 Strategy (1)─┘        │
                       │
-                  KpiData
+                  MeasureData
                   (unified targets & actuals)
 ```
 
@@ -71,14 +71,14 @@ Strategy (1)─┘        │
 
 ## 📊 New Data Model
 
-### KpiLink Entity
+### MeasureLink Entity
 
 ```csharp
-public class KpiLink : FullyAuditableEntity
+public class MeasureLink : FullyAuditableEntity
 {
-    public KpiLinkId Id { get; private set; }
+    public MeasureLinkId Id { get; private set; }
     public TenantId TenantId { get; private set; }
-    public KpiId KpiId { get; private set; }
+    public MeasureId MeasureId { get; private set; }
     
     // Required - person responsible for values on this link
     public PersonId PersonId { get; private set; }
@@ -100,43 +100,43 @@ public class KpiLink : FullyAuditableEntity
 ```
 
 **Uniqueness Constraints:**
-- Only ONE link per `(KpiId, GoalId)` where `GoalId IS NOT NULL AND StrategyId IS NULL`
-- Only ONE link per `(KpiId, StrategyId)` where `StrategyId IS NOT NULL`
-- Multiple links per `(KpiId, PersonId)` allowed when `GoalId IS NULL AND StrategyId IS NULL` (personal scorecards)
+- Only ONE link per `(MeasureId, GoalId)` where `GoalId IS NOT NULL AND StrategyId IS NULL`
+- Only ONE link per `(MeasureId, StrategyId)` where `StrategyId IS NOT NULL`
+- Multiple links per `(MeasureId, PersonId)` allowed when `GoalId IS NULL AND StrategyId IS NULL` (personal scorecards)
 
-### KpiData Entity
+### MeasureData Entity
 
 ```csharp
-public class KpiData : FullyAuditableEntity
+public class MeasureData : FullyAuditableEntity
 {
-    public KpiDataId Id { get; private set; }
-    public KpiLinkId KpiLinkId { get; private set; }
+    public MeasureDataId Id { get; private set; }
+    public MeasureLinkId MeasureLinkId { get; private set; }
     
     // Data classification
-    public KpiDataCategory DataCategory { get; private set; }  // Target | Actual
+    public MeasureDataCategory DataCategory { get; private set; }  // Target | Actual
     public TargetSubtype? TargetSubtype { get; private set; }  // Expected | Optimal | Minimal
     public ActualSubtype? ActualSubtype { get; private set; }  // Estimate | Measured
     
     // Core values (renamed from ActualValue/MeasurementDate)
     public decimal PostValue { get; private set; }
     public string PostDate { get; private set; }  // ISO 8601
-    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate KPIs
+    public DateTime? MeasuredPeriodStartDate { get; private set; }  // For aggregate Measures
     
-    // From KpiMilestone
+    // From MeasureMilestone
     public string? Label { get; private set; }
     public int? ConfidenceLevel { get; private set; }  // 1-5
     public string? Rationale { get; private set; }
     
-    // From KpiActual - Override tracking
+    // From MeasureActual - Override tracking
     public decimal? OriginalValue { get; private set; }
     public bool IsManualOverride { get; private set; }
     public string? OverrideComment { get; private set; }
     
-    // From KpiActual - Source tracking
+    // From MeasureActual - Source tracking
     public DataSource DataSource { get; private set; }
     public string? SourceReferenceId { get; private set; }
     
-    // From KpiActual - Replan triggers
+    // From MeasureActual - Replan triggers
     public bool TriggersReplan { get; private set; }
     public bool ReplanThresholdExceeded { get; private set; }
     public bool? AutoAdjustmentApplied { get; private set; }
@@ -155,7 +155,7 @@ public class KpiData : FullyAuditableEntity
 ### New Enums
 
 ```csharp
-public enum KpiDataCategory
+public enum MeasureDataCategory
 {
     Target,   // Planned/target value
     Actual    // Actual/recorded value
@@ -175,12 +175,12 @@ public enum ActualSubtype
 }
 ```
 
-### Kpi Entity Changes
+### Measure Entity Changes
 
 Add `AggregationPeriodCount` to support multi-period windows:
 
 ```csharp
-// In Kpi entity
+// In Measure entity
 public int? AggregationPeriodCount { get; private set; }  // NEW: e.g., 2 for "2 weeks"
 ```
 
@@ -193,30 +193,30 @@ public int? AggregationPeriodCount { get; private set; }  // NEW: e.g., 2 for "2
 | Issue | Title | Dependencies |
 |-------|-------|--------------|
 | #XXX-1 | **Domain: Add new enums and value objects** | None |
-| #XXX-2 | **Domain: Create KpiLink entity (rename GoalKpiLink)** | #XXX-1 |
-| #XXX-3 | **Domain: Create KpiData entity** | #XXX-1, #XXX-2 |
-| #XXX-4 | **Domain: Add AggregationPeriodCount to Kpi** | None |
+| #XXX-2 | **Domain: Create MeasureLink entity (rename GoalMeasureLink)** | #XXX-1 |
+| #XXX-3 | **Domain: Create MeasureData entity** | #XXX-1, #XXX-2 |
+| #XXX-4 | **Domain: Add AggregationPeriodCount to Measure** | None |
 
 ### Phase 2: Infrastructure Layer
 
 | Issue | Title | Dependencies |
 |-------|-------|--------------|
-| #XXX-5 | **Infrastructure: KpiLink data model, mapper, repository** | #XXX-2 |
-| #XXX-6 | **Infrastructure: KpiData data model, mapper, repository** | #XXX-3 |
+| #XXX-5 | **Infrastructure: MeasureLink data model, mapper, repository** | #XXX-2 |
+| #XXX-6 | **Infrastructure: MeasureData data model, mapper, repository** | #XXX-3 |
 
 ### Phase 3: Application Layer
 
 | Issue | Title | Dependencies |
 |-------|-------|--------------|
-| #XXX-7 | **Application: KpiLink commands and queries** | #XXX-5 |
-| #XXX-8 | **Application: KpiData commands and queries** | #XXX-6 |
+| #XXX-7 | **Application: MeasureLink commands and queries** | #XXX-5 |
+| #XXX-8 | **Application: MeasureData commands and queries** | #XXX-6 |
 
 ### Phase 4: API Layer
 
 | Issue | Title | Dependencies |
 |-------|-------|--------------|
-| #XXX-9 | **API: Update KPI linking endpoints** | #XXX-7 |
-| #XXX-10 | **API: Update KPI planning endpoints** | #XXX-8 |
+| #XXX-9 | **API: Update Measure linking endpoints** | #XXX-7 |
+| #XXX-10 | **API: Update Measure planning endpoints** | #XXX-8 |
 
 ### Phase 5: Migration & Cleanup
 
@@ -238,15 +238,15 @@ Update this section as work progresses:
 
 ### Completed
 - [ ] Issue #XXX-1: Domain enums and value objects
-- [ ] Issue #XXX-2: KpiLink entity
-- [ ] Issue #XXX-3: KpiData entity
+- [ ] Issue #XXX-2: MeasureLink entity
+- [ ] Issue #XXX-3: MeasureData entity
 - [ ] Issue #XXX-4: AggregationPeriodCount
-- [ ] Issue #XXX-5: KpiLink infrastructure
-- [ ] Issue #XXX-6: KpiData infrastructure
-- [ ] Issue #XXX-7: KpiLink application layer
-- [ ] Issue #XXX-8: KpiData application layer
-- [ ] Issue #XXX-9: KPI linking API
-- [ ] Issue #XXX-10: KPI planning API
+- [ ] Issue #XXX-5: MeasureLink infrastructure
+- [ ] Issue #XXX-6: MeasureData infrastructure
+- [ ] Issue #XXX-7: MeasureLink application layer
+- [ ] Issue #XXX-8: MeasureData application layer
+- [ ] Issue #XXX-9: Measure linking API
+- [ ] Issue #XXX-10: Measure planning API
 - [ ] Issue #XXX-11: Data migration
 - [ ] Issue #XXX-12: Cleanup
 
@@ -259,16 +259,16 @@ Update this section as work progresses:
 
 ## ⚠️ Breaking Changes
 
-1. **GoalKpiLink renamed to KpiLink** - All references must be updated
-2. **KpiActual, KpiMilestone, KpiReading tables deprecated** - Data migrated to KpiData
+1. **GoalMeasureLink renamed to MeasureLink** - All references must be updated
+2. **MeasureActual, MeasureMilestone, MeasureReading tables deprecated** - Data migrated to MeasureData
 3. **Calculated fields removed** - Frontend must calculate variance on-the-fly
-4. **New required field PersonId on KpiLink** - Migration will use current Kpi.OwnerId or user who created the link
+4. **New required field PersonId on MeasureLink** - Migration will use current Measure.OwnerId or user who created the link
 
 ---
 
 ## 🔄 Migration Strategy
 
-1. **Create new tables** (`kpi-links`, `kpi-data`) alongside existing tables
+1. **Create new tables** (`measure-links`, `measure-data`) alongside existing tables
 2. **Run migration scripts** to copy data from old to new tables
 3. **Update application code** to use new entities
 4. **Verify data integrity** with validation scripts
@@ -279,11 +279,11 @@ Update this section as work progresses:
 
 ## ✅ Acceptance Criteria
 
-- [ ] KPIs can be linked to Goals, Strategies, or Persons
-- [ ] Personal scorecards work (KPI linked only to Person)
-- [ ] Goal-level KPI links enforce uniqueness per Goal
-- [ ] Strategy-level KPI links enforce uniqueness per Strategy
-- [ ] KpiData supports Target and Actual categories
+- [ ] Measures can be linked to Goals, Strategies, or Persons
+- [ ] Personal scorecards work (Measure linked only to Person)
+- [ ] Goal-level Measure links enforce uniqueness per Goal
+- [ ] Strategy-level Measure links enforce uniqueness per Strategy
+- [ ] MeasureData supports Target and Actual categories
 - [ ] Target subtypes (Expected, Optimal, Minimal) work correctly
 - [ ] Actual subtypes (Estimate, Measured) work correctly with Measured winning for same period
 - [ ] Variance is calculated on-the-fly (not stored)

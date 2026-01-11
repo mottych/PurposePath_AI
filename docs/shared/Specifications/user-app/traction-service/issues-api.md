@@ -2,8 +2,8 @@
 
 **Service:** Traction Service  
 **Base Path:** `/api/issues`  
-**Version:** v7.0  
-**Last Updated:** December 23, 2025
+**Version:** v7.1  
+**Last Updated:** January 4, 2026
 
 ## Overview
 
@@ -47,6 +47,7 @@ The Issues API manages operational issues, bugs, blockers, and problems within t
 | DELETE | `/issues/{issueId}/tags` | Remove tags from issue |
 | GET | `/issues/stats` | Get aggregated issue statistics |
 | POST | `/issues/{issueId}/convert-to-actions` | Convert issue to actions |
+| PUT | `/issues:reorder` | Reorder issues (drag-and-drop sorting) |
 
 ---
 
@@ -1308,6 +1309,116 @@ interface ConvertIssueToActionsRequest {
 
 ---
 
+### 16. Reorder Issues
+
+**PUT** `/issues:reorder`
+
+Reorder issues (drag-and-drop sorting). Updates the `displayOrder` field for each issue based on its position in the provided array. Similar to `/operations/issue-statuses:reorder` pattern.
+
+#### Request Body
+
+```typescript
+interface ReorderIssuesRequest {
+  issueIds: string[];                 // Ordered array of issue IDs (min 1 item)
+}
+```
+
+#### Example Request
+
+```json
+{
+  "issueIds": [
+    "issue_123abc",
+    "issue_456def",
+    "issue_789ghi",
+    "issue_012jkl"
+  ]
+}
+```
+
+#### Response
+
+**Success (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "issues": [
+      {
+        "id": "issue_123abc",
+        "title": "Critical production bug",
+        "displayOrder": 0,
+        // ... other issue fields
+      },
+      {
+        "id": "issue_456def",
+        "title": "Database connection timeout",
+        "displayOrder": 1,
+        // ... other issue fields
+      },
+      {
+        "id": "issue_789ghi",
+        "title": "UI rendering issue",
+        "displayOrder": 2,
+        // ... other issue fields
+      },
+      {
+        "id": "issue_012jkl",
+        "title": "Performance degradation",
+        "displayOrder": 3,
+        // ... other issue fields
+      }
+    ],
+    "total": 4,
+    "page": 1,
+    "limit": 4,
+    "totalPages": 1
+  }
+}
+```
+
+#### Business Rules
+
+- **Position-Based Ordering**: Array index determines new displayOrder (0-indexed)
+- **Tenant Scoped**: All issues must belong to current tenant
+- **Atomic Update**: All display orders updated in single transaction
+- **No Gaps**: Display order is sequential based on array position
+- **Validation**: Returns 400 if any issue ID is invalid or not found
+
+#### Validation Rules
+
+- `issueIds`: Required, must have at least 1 item
+- All issue IDs must exist and belong to current tenant
+- Issue IDs must be valid identifiers
+
+#### Error Responses
+
+**400 Bad Request**
+```json
+{
+  "success": false,
+  "error": "At least one issue ID is required"
+}
+```
+
+**400 Bad Request - Invalid Issue ID**
+```json
+{
+  "success": false,
+  "error": "Issue with ID 'issue_invalid' not found"
+}
+```
+
+**404 Not Found**
+```json
+{
+  "success": false,
+  "error": "Issue with ID 'issue_123abc' not found"
+}
+```
+
+---
+
 ## TypeScript Usage Examples
 
 ### List Issues with Filtering
@@ -1659,6 +1770,12 @@ Enables breaking down complex issues into actionable work items with automatic c
 ---
 
 ## Changelog
+
+### v7.1 (January 4, 2026)
+- **NEW**: Reorder issues endpoint (`PUT /issues:reorder`) for drag-and-drop sorting support
+  - Updates `displayOrder` field based on array position
+  - Supports atomic batch updates in single transaction
+  - Similar pattern to issue-statuses:reorder endpoint
 
 ### v7.0 (December 23, 2025)
 - **NEW**: Configuration-based status and types replacing hardcoded enums
