@@ -1,7 +1,7 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 1.2  
-**Last Updated:** December 15, 2025  
+**Version:** 2.0  
+**Last Updated:** January 11, 2026  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -21,11 +21,44 @@ The Unified AI endpoints provide a single entry point (`/ai/execute`) for all si
 - **Schema discovery** via `/ai/schemas/{schema_name}`
 - **Topic listing** via `/ai/topics`
 - **Consistent error handling** across all topics
+- **Automatic parameter enrichment** from backend data sources
 
 ### Frontend Implementation
 
 - **Primary Client:** `coachingClient` (axios instance in `src/services/api.ts`)
 - **Key Pattern:** Call `/ai/execute` with `topic_id` and `parameters`
+
+---
+
+## Architecture
+
+### Parameter Enrichment System
+
+The AI backend automatically enriches prompts with data from multiple sources. When you call `/ai/execute`, the system:
+
+1. **Identifies required parameters** from the topic registry
+2. **Groups parameters by source** (one API call per source)
+3. **Fetches data** from Business API, Account Service, etc.
+4. **Extracts individual values** using defined extraction paths
+5. **Renders prompts** with all gathered parameters
+
+This means frontend only needs to provide **request-level parameters** (e.g., `goal_id`, `measure_id`). Context like business foundation, strategies, and measures is automatically fetched.
+
+### Data Sources
+
+| Source | Description | Example Parameters |
+|--------|-------------|-------------------|
+| `REQUEST` | Provided in API request body | `goal_id`, `measure_id`, `current_value` |
+| `ONBOARDING` | Business foundation from Account Service | `vision`, `purpose`, `icas`, `core_values` |
+| `GOAL` | Single goal from Traction Service | `goal`, `goal_name`, `goal_description` |
+| `GOALS` | All goals from Traction Service | `goals`, `goals_count` |
+| `MEASURE` | Single measure from Traction Service | `measure`, `measure_name`, `measure_unit` |
+| `MEASURES` | All measures/summary from Traction Service | `measures`, `measures_count` |
+| `ACTION` | Single action from Traction Service | `action`, `action_title`, `action_status` |
+| `ISSUE` | Single issue from Traction Service | `issue`, `issue_title`, `issue_priority` |
+| `WEBSITE` | Scraped website content | `website_content`, `website_title` |
+| `CONVERSATION` | Current conversation context | `conversation_history` |
+| `COMPUTED` | Derived from other parameters | `alignment_score` |
 
 ---
 
@@ -43,7 +76,7 @@ Execute any registered single-shot AI topic.
 {
   "topic_id": "string",
   "parameters": {
-    // Topic-specific parameters
+    // Topic-specific parameters (request-level only)
   }
 }
 ```
@@ -149,19 +182,19 @@ Review and suggest variations for business niche.
   "topic_id": "niche_review",
   "success": true,
   "data": {
-    "qualityReview": "Your niche is clear but could be more specific. Consider narrowing your target market and specifying the outcomes you deliver...",
+    "qualityReview": "Your niche is clear but could be more specific...",
     "suggestions": [
       {
         "text": "We help B2B SaaS startups under $5M ARR build predictable revenue pipelines",
-        "reasoning": "More specific target market (B2B SaaS, revenue stage) and clear outcome (predictable pipelines)"
+        "reasoning": "More specific target market (B2B SaaS, revenue stage) and clear outcome"
       },
       {
         "text": "We help local service businesses attract high-value clients through digital marketing",
-        "reasoning": "Specifies business type (local service) and value proposition (high-value clients)"
+        "reasoning": "Specifies business type and value proposition"
       },
       {
         "text": "We help e-commerce brands scale past $1M revenue with data-driven marketing strategies",
-        "reasoning": "Clear niche (e-commerce), growth stage ($1M), and methodology (data-driven)"
+        "reasoning": "Clear niche, growth stage, and methodology"
       }
     ]
   },
@@ -194,37 +227,6 @@ Review and suggest variations for Ideal Client Avatar (ICA).
 
 **Response Model:** `OnboardingReviewResponse`
 
-```json
-{
-  "topic_id": "ica_review",
-  "success": true,
-  "data": {
-    "qualityReview": "Your ICA is too broad. A strong ICA should include demographics, psychographics, pain points, and goals...",
-    "suggestions": [
-      {
-        "text": "Growth-minded CEOs of B2B companies with 10-50 employees, frustrated by inconsistent lead flow and seeking scalable marketing systems",
-        "reasoning": "Includes role, company size, pain point (inconsistent leads), and goal (scalable systems)"
-      },
-      {
-        "text": "Ambitious founders of 2-5 year old businesses generating $500K-$2M revenue, ready to invest in professional marketing to reach the next level",
-        "reasoning": "Specifies business maturity, revenue stage, and readiness to invest"
-      },
-      {
-        "text": "Time-strapped small business owners wearing too many hats, looking for done-for-you marketing solutions",
-        "reasoning": "Identifies key pain point (time-strapped) and preferred solution type (done-for-you)"
-      }
-    ]
-  },
-  "schema_ref": "OnboardingReviewResponse",
-  "metadata": {
-    "model": "gpt-4o-mini",
-    "tokens_used": 520,
-    "processing_time_ms": 2890,
-    "finish_reason": "stop"
-  }
-}
-```
-
 ---
 
 #### Topic: `value_proposition_review`
@@ -243,59 +245,6 @@ Review and suggest variations for value proposition.
 ```
 
 **Response Model:** `OnboardingReviewResponse`
-
-```json
-{
-  "topic_id": "value_proposition_review",
-  "success": true,
-  "data": {
-    "qualityReview": "Your value proposition lacks specificity and differentiation. Strong value propositions explain what you do, for whom, and what makes you different...",
-    "suggestions": [
-      {
-        "text": "We transform struggling marketing departments into revenue-generating machines through our proven 90-day Marketing Acceleration Program",
-        "reasoning": "Clear transformation (struggling to revenue-generating), specific methodology (90-day program)"
-      },
-      {
-        "text": "We help growth-stage companies double their qualified leads in 6 months using AI-powered marketing automation",
-        "reasoning": "Specific outcome (double leads), timeline (6 months), and differentiator (AI-powered)"
-      },
-      {
-        "text": "We deliver enterprise-quality marketing strategies at startup-friendly prices, with guaranteed ROI tracking",
-        "reasoning": "Value contrast (enterprise quality, startup prices), risk reduction (guaranteed ROI tracking)"
-      }
-    ]
-  },
-  "schema_ref": "OnboardingReviewResponse",
-  "metadata": {
-    "model": "gpt-4o-mini",
-    "tokens_used": 480,
-    "processing_time_ms": 2650,
-    "finish_reason": "stop"
-  }
-}
-```
-
----
-
-## Response Model Schemas
-
-### OnboardingReviewResponse
-
-Used by: `niche_review`, `ica_review`, `value_proposition_review`
-
-```typescript
-interface OnboardingReviewResponse {
-  qualityReview: string;  // AI review of current content with feedback
-  suggestions: SuggestionVariation[];  // Exactly 3 suggestions
-}
-
-interface SuggestionVariation {
-  text: string;      // The suggested text variation
-  reasoning: string; // Explanation of why this variation is recommended
-}
-```
-
-**JSON Schema:** Available via `GET /ai/schemas/OnboardingReviewResponse`
 
 ---
 
@@ -328,66 +277,32 @@ Scan a website URL and extract business information for onboarding.
   "success": true,
   "data": {
     "scan_id": "scan_f3c9ab",
-    "captured_at": "2025-12-24T03:12:54Z",
+    "captured_at": "2026-01-11T03:12:54Z",
     "source_url": "https://example.com",
     "company_profile": {
       "company_name": "Example Corp",
       "legal_name": "Example Corporation, Inc.",
       "tagline": "Data-driven growth for modern teams",
-      "overview": "Example Corp provides analytics-driven marketing platforms that help mid-market teams launch, test, and scale campaigns."
+      "overview": "Example Corp provides analytics-driven marketing platforms..."
     },
     "target_market": {
       "primary_audience": "Marketing and revenue leaders at mid-market SaaS companies",
-      "segments": [
-        "B2B SaaS (ARR $5M-$50M)",
-        "Hybrid go-to-market teams",
-        "Demand generation leaders"
-      ],
-      "pain_points": [
-        "Fragmented channel analytics",
-        "Slow experimentation cycles",
-        "Unclear attribution for pipeline"
-      ]
+      "segments": ["B2B SaaS (ARR $5M-$50M)", "Hybrid go-to-market teams"],
+      "pain_points": ["Fragmented channel analytics", "Slow experimentation cycles"]
     },
     "offers": {
       "primary_product": "Growth Experimentation Platform",
-      "categories": [
-        "Marketing analytics",
-        "Campaign orchestration"
-      ],
-      "features": [
-        "Channel performance dashboards",
-        "Experiment templates",
-        "Automated reporting"
-      ],
-      "differentiators": [
-        "Playbooks tuned for B2B SaaS",
-        "Fast setup with existing data stack",
-        "Revenue-aware experimentation scoring"
-      ]
+      "categories": ["Marketing analytics", "Campaign orchestration"],
+      "features": ["Channel performance dashboards", "Experiment templates"],
+      "differentiators": ["Playbooks tuned for B2B SaaS", "Fast setup"]
     },
     "credibility": {
-      "notable_clients": [
-        "Northwind Analytics",
-        "Contoso Labs",
-        "Fabrikam Cloud"
-      ],
-      "testimonials": [
-        {
-          "quote": "We doubled qualified pipeline after standardizing experiments in one place.",
-          "attribution": "VP Growth, Northwind"
-        }
-      ]
+      "notable_clients": ["Northwind Analytics", "Contoso Labs"],
+      "testimonials": [{"quote": "We doubled qualified pipeline...", "attribution": "VP Growth, Northwind"}]
     },
     "conversion": {
       "primary_cta_text": "Book a growth audit",
-      "primary_cta_url": "https://example.com/demo",
-      "supporting_assets": [
-        {
-          "label": "2025 SaaS Growth Benchmark Report",
-          "url": "https://example.com/benchmark"
-        }
-      ]
+      "primary_cta_url": "https://example.com/demo"
     }
   },
   "schema_ref": "WebsiteScanResponse",
@@ -400,41 +315,470 @@ Scan a website URL and extract business information for onboarding.
 }
 ```
 
-**Notes:**
+---
 
-- This topic uses a **retrieval method** (`get_website_content`) to fetch and parse the website
-- The `website_url` parameter is passed from the frontend payload
-- The retrieval method scrapes the website and provides `website_content`, `website_title`, and `meta_description` to the prompt template
-- Results used to pre-fill onboarding form
-- May return partial results if website has anti-scraping measures
+### Strategic Planning Topics
 
-**Schema:** Use `GET /ai/schemas/WebsiteScanResponse` to get the full JSON schema with field descriptions. The schema is auto-generated from the Pydantic model.
+#### Topic: `alignment_check`
+
+Calculate alignment score between a goal and business foundation.
+
+**Request:**
+
+```json
+{
+  "topic_id": "alignment_check",
+  "parameters": {
+    "goal_id": "goal-123"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `goal_id` | string | Yes | ID of goal to check alignment for |
+
+**Auto-enriched Parameters:** `goal`, `business_foundation` (vision, purpose, core_values)
+
+**Response Model:** `AlignmentAnalysisResponse`
+
+```json
+{
+  "topic_id": "alignment_check",
+  "success": true,
+  "data": {
+    "alignment_score": 85,
+    "alignment_level": "high",
+    "factors": [
+      {"factor": "Purpose Alignment", "score": 90, "reasoning": "Goal directly supports core purpose"},
+      {"factor": "Values Alignment", "score": 80, "reasoning": "Reflects innovation and integrity values"}
+    ]
+  },
+  "schema_ref": "AlignmentAnalysisResponse"
+}
+```
 
 ---
 
-## Additional Topics (Coming Soon)
+#### Topic: `alignment_explanation`
 
-The following topics are registered in the system and will be documented as they become active:
+Get detailed explanation of an alignment score.
 
-### Strategic Planning
-- `alignment_check` - Calculate goal alignment score
-- `alignment_explanation` - Get detailed alignment explanation
-- `alignment_suggestions` - Get suggestions to improve alignment
-- `strategy_suggestions` - AI suggestions for strategies
-- `measure_recommendations` - AI recommendations for Measures
+**Request:**
 
-### Operations AI
-- `root_cause_suggestions` - Root cause analysis suggestions
-- `swot_analysis` - Generate SWOT analysis
-- `five_whys_questions` - Generate Five Whys questions
-- `action_suggestions` - Suggest actions for issues
-- `optimize_action_plan` - Optimize action plans
+```json
+{
+  "topic_id": "alignment_explanation",
+  "parameters": {
+    "goal_id": "goal-123",
+    "alignment_score": 85
+  }
+}
+```
 
-### Website & Onboarding
-- ~~`website_scan` - Scan website and extract business info~~ **→ ACTIVE** (see above)
-- `onboarding_suggestions` - Generate onboarding suggestions
-- `onboarding_coaching` - AI coaching for onboarding
-- `business_metrics` - Retrieve business metrics
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `goal_id` | string | Yes | ID of goal |
+| `alignment_score` | integer | Yes | Previously calculated alignment score |
+
+**Response Model:** `AlignmentExplanationResponse`
+
+---
+
+#### Topic: `alignment_suggestions`
+
+Get suggestions to improve goal alignment with business foundation.
+
+**Request:**
+
+```json
+{
+  "topic_id": "alignment_suggestions",
+  "parameters": {
+    "goal_id": "goal-123",
+    "alignment_score": 65
+  }
+}
+```
+
+**Response Model:** `AlignmentSuggestionsResponse`
+
+```json
+{
+  "topic_id": "alignment_suggestions",
+  "success": true,
+  "data": {
+    "current_score": 65,
+    "suggestions": [
+      {
+        "suggestion": "Reframe the goal to emphasize customer impact",
+        "expected_improvement": 15,
+        "reasoning": "Better connects to your purpose statement"
+      },
+      {
+        "suggestion": "Add specific metrics tied to core values",
+        "expected_improvement": 10,
+        "reasoning": "Makes integrity and excellence measurable"
+      }
+    ],
+    "potential_score": 90
+  },
+  "schema_ref": "AlignmentSuggestionsResponse"
+}
+```
+
+---
+
+#### Topic: `strategy_suggestions`
+
+Get AI suggestions for strategies based on goals and business foundation.
+
+**Request:**
+
+```json
+{
+  "topic_id": "strategy_suggestions",
+  "parameters": {}
+}
+```
+
+**Auto-enriched Parameters:** `goals`, `business_foundation`, `existing_strategies`
+
+**Response Model:** `StrategySuggestionsResponse`
+
+---
+
+#### Topic: `measure_recommendations`
+
+Get AI recommendations for measures to track goal progress.
+
+**Request:**
+
+```json
+{
+  "topic_id": "measure_recommendations",
+  "parameters": {}
+}
+```
+
+**Auto-enriched Parameters:** `goals`, `business_context`, `existing_measures`
+
+**Response Model:** `MeasureRecommendationsResponse`
+
+```json
+{
+  "topic_id": "measure_recommendations",
+  "success": true,
+  "data": {
+    "recommendations": [
+      {
+        "name": "Customer Acquisition Cost (CAC)",
+        "description": "Average cost to acquire a new customer",
+        "unit": "USD",
+        "direction": "down",
+        "frequency": "monthly",
+        "reasoning": "Critical for measuring marketing efficiency"
+      },
+      {
+        "name": "Net Promoter Score (NPS)",
+        "description": "Customer satisfaction and loyalty indicator",
+        "unit": "score",
+        "direction": "up",
+        "frequency": "quarterly",
+        "reasoning": "Aligns with your value of customer excellence"
+      }
+    ],
+    "total_recommendations": 5
+  },
+  "schema_ref": "MeasureRecommendationsResponse"
+}
+```
+
+---
+
+### Operations AI Topics
+
+#### Topic: `root_cause_suggestions`
+
+Get AI suggestions for root causes of an issue.
+
+**Request:**
+
+```json
+{
+  "topic_id": "root_cause_suggestions",
+  "parameters": {
+    "issue_id": "issue-456"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `issue_id` | string | Yes | ID of issue to analyze |
+
+**Auto-enriched Parameters:** `issue`, `business_context`
+
+**Response Model:** `RootCauseSuggestionsResponse`
+
+```json
+{
+  "topic_id": "root_cause_suggestions",
+  "success": true,
+  "data": {
+    "issue_summary": "Declining customer retention rate",
+    "potential_causes": [
+      {
+        "cause": "Inadequate onboarding process",
+        "likelihood": "high",
+        "evidence": "Customer feedback mentions confusion in first 30 days",
+        "investigation_steps": ["Review onboarding completion rates", "Survey churned customers"]
+      },
+      {
+        "cause": "Feature gaps vs. competitors",
+        "likelihood": "medium",
+        "evidence": "Exit surveys mention missing integrations",
+        "investigation_steps": ["Competitive feature analysis", "Review feature requests"]
+      }
+    ]
+  },
+  "schema_ref": "RootCauseSuggestionsResponse"
+}
+```
+
+---
+
+#### Topic: `swot_analysis`
+
+Generate a SWOT analysis based on business context.
+
+**Request:**
+
+```json
+{
+  "topic_id": "swot_analysis",
+  "parameters": {}
+}
+```
+
+**Auto-enriched Parameters:** `business_foundation`, `goals`, `strategies`, `measures_summary`
+
+**Response Model:** `SWOTAnalysisResponse`
+
+---
+
+#### Topic: `action_suggestions`
+
+Get AI-suggested actions for an issue.
+
+**Request:**
+
+```json
+{
+  "topic_id": "action_suggestions",
+  "parameters": {
+    "issue_id": "issue-456"
+  }
+}
+```
+
+**Response Model:** `ActionSuggestionsResponse`
+
+---
+
+#### Topic: `optimize_action_plan`
+
+Optimize an existing action plan for better outcomes.
+
+**Request:**
+
+```json
+{
+  "topic_id": "optimize_action_plan",
+  "parameters": {
+    "goal_id": "goal-123"
+  }
+}
+```
+
+**Auto-enriched Parameters:** `goal`, `actions`, `business_context`
+
+**Response Model:** `OptimizedActionPlanResponse`
+
+---
+
+### Analysis Topics
+
+#### Topic: `measure_analysis`
+
+Analyze measure performance and trends.
+
+**Request:**
+
+```json
+{
+  "topic_id": "measure_analysis",
+  "parameters": {
+    "performance_data": {
+      "period": "Q4 2025",
+      "metrics": [...]
+    }
+  }
+}
+```
+
+**Auto-enriched Parameters:** `measures`
+
+**Response Model:** `MeasurePerformanceResponse`
+
+---
+
+## Available Parameter Reference
+
+### Business Foundation Parameters
+
+These parameters are automatically fetched from the Account Service:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `vision` | string | Organization's vision statement |
+| `purpose` | string | Organization's purpose statement |
+| `icas` | array | Ideal Client Avatars with demographics, pain points, goals |
+| `core_values` | array | List of core value objects with name, description |
+| `pillars` | array | Business foundation pillars |
+| `industry` | string | Industry classification |
+| `business_type` | string | Type of business |
+| `business_stage` | string | Current business stage |
+
+### Strategy Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `strategy` | object | Single strategy details |
+| `strategy_name` | string | Strategy name |
+| `strategy_description` | string | Strategy description |
+| `strategy_alignment_score` | integer | Alignment with business foundation |
+| `strategies` | array | All strategies for tenant |
+
+### Goal Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `goal` | object | Complete goal data |
+| `goal_name` | string | Goal name/title |
+| `goal_description` | string | Goal description |
+| `goal_status` | string | Current status |
+| `goal_progress` | integer | Progress percentage (0-100) |
+| `goal_due_date` | string | Target completion date |
+| `goals` | array | All goals for user |
+| `goals_count` | integer | Total number of goals |
+
+### Measure Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `measure` | object | Complete measure data |
+| `measure_name` | string | Measure name |
+| `measure_description` | string | Measure description |
+| `measure_unit` | string | Unit of measurement |
+| `measure_direction` | string | Target direction (up/down/maintain) |
+| `measure_type` | string | Measure type |
+| `measure_current_value` | number | Current value |
+| `measures` | array | All measures for tenant |
+| `measures_count` | integer | Total number of measures |
+| `measures_summary` | object | Aggregated measures summary |
+
+### Action Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | object | Complete action data |
+| `action_title` | string | Action title |
+| `action_description` | string | Action description |
+| `action_status` | string | Current status |
+| `action_priority` | string | Priority level |
+| `action_due_date` | string | Due date |
+| `actions` | array | All actions |
+
+### Issue Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `issue` | object | Complete issue data |
+| `issue_title` | string | Issue title |
+| `issue_description` | string | Issue description |
+| `issue_status` | string | Current status |
+| `issue_priority` | string | Priority level |
+| `issues` | array | All issues |
+
+### People & Organization Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `people` | array | All people in organization |
+| `person` | object | Single person details |
+| `departments` | array | Organization departments |
+| `positions` | array | Organization positions |
+
+---
+
+## Response Model Schemas
+
+### OnboardingReviewResponse
+
+Used by: `niche_review`, `ica_review`, `value_proposition_review`
+
+```typescript
+interface OnboardingReviewResponse {
+  qualityReview: string;  // AI review with feedback
+  suggestions: SuggestionVariation[];  // Exactly 3 suggestions
+}
+
+interface SuggestionVariation {
+  text: string;      // Suggested text variation
+  reasoning: string; // Why this variation is recommended
+}
+```
+
+### AlignmentAnalysisResponse
+
+Used by: `alignment_check`
+
+```typescript
+interface AlignmentAnalysisResponse {
+  alignment_score: number;  // 0-100
+  alignment_level: "low" | "medium" | "high";
+  factors: AlignmentFactor[];
+}
+
+interface AlignmentFactor {
+  factor: string;
+  score: number;
+  reasoning: string;
+}
+```
+
+### MeasureRecommendationsResponse
+
+Used by: `measure_recommendations`
+
+```typescript
+interface MeasureRecommendationsResponse {
+  recommendations: MeasureRecommendation[];
+  total_recommendations: number;
+}
+
+interface MeasureRecommendation {
+  name: string;
+  description: string;
+  unit: string;
+  direction: "up" | "down" | "maintain";
+  frequency: string;
+  reasoning: string;
+}
+```
+
+**JSON Schemas:** Available via `GET /ai/schemas/{schema_name}`
 
 ---
 
@@ -457,6 +801,7 @@ All errors follow the standard API error format:
 | 400 | `Topic {topic_id} is type {type}` | Use conversation endpoints for coaching |
 | 422 | `Missing required parameters: [...]` | Include all required parameters |
 | 500 | `Response model not configured` | Backend configuration issue |
+| 500 | `Parameter enrichment failed` | Backend data source unavailable |
 
 ---
 
@@ -465,15 +810,26 @@ All errors follow the standard API error format:
 ### JavaScript/TypeScript
 
 ```typescript
-// Using coachingClient from api.ts
-const response = await coachingClient.post('/ai/execute', {
+// Basic execution with request parameters only
+const alignmentResult = await coachingClient.post('/ai/execute', {
+  topic_id: 'alignment_check',
+  parameters: {
+    goal_id: 'goal-123'  // Only need to provide IDs
+  }
+});
+
+// The backend automatically fetches goal details and business foundation
+const { alignment_score, factors } = alignmentResult.data.data;
+
+// Onboarding review (requires full content)
+const nicheReview = await coachingClient.post('/ai/execute', {
   topic_id: 'niche_review',
   parameters: {
     current_value: 'We help small businesses grow'
   }
 });
 
-const { qualityReview, suggestions } = response.data.data;
+const { qualityReview, suggestions } = nicheReview.data.data;
 ```
 
 ### Python
@@ -481,20 +837,18 @@ const { qualityReview, suggestions } = response.data.data;
 ```python
 import httpx
 
-async def review_niche(current_value: str) -> dict:
+async def check_alignment(goal_id: str) -> dict:
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{BASE_URL}/ai/execute",
             json={
-                "topic_id": "niche_review",
-                "parameters": {"current_value": current_value}
+                "topic_id": "alignment_check",
+                "parameters": {"goal_id": goal_id}
             },
             headers={"Authorization": f"Bearer {token}"}
         )
         return response.json()["data"]
 ```
-
----
 
 ---
 
@@ -548,20 +902,6 @@ Check status of an async job. Use for polling fallback if WebSocket disconnects.
 
 **Full URL:** `{BASE_URL}/ai/jobs/{jobId}`
 
-**Response (Pending):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "processing",
-    "topicId": "niche_review",
-    "createdAt": "2025-12-10T20:00:00Z"
-  }
-}
-```
-
 **Response (Completed):**
 
 ```json
@@ -571,8 +911,8 @@ Check status of an async job. Use for polling fallback if WebSocket disconnects.
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "status": "completed",
     "topicId": "niche_review",
-    "createdAt": "2025-12-10T20:00:00Z",
-    "completedAt": "2025-12-10T20:00:35Z",
+    "createdAt": "2026-01-11T20:00:00Z",
+    "completedAt": "2026-01-11T20:00:35Z",
     "result": {
       "qualityReview": "...",
       "suggestions": [...]
@@ -582,228 +922,22 @@ Check status of an async job. Use for polling fallback if WebSocket disconnects.
 }
 ```
 
-**Response (Failed):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "failed",
-    "topicId": "niche_review",
-    "createdAt": "2025-12-10T20:00:00Z",
-    "completedAt": "2025-12-10T20:00:45Z",
-    "error": "LLM provider timeout",
-    "errorCode": "LLM_TIMEOUT"
-  }
-}
-```
-
----
-
-### EventBridge Events
-
-The AI service publishes events to AWS EventBridge for async processing and real-time notifications. The .NET WebSocket broadcaster subscribes to these events and forwards them to connected clients.
-
-**Event Bus**: `default`  
-**Source**: `purposepath.ai`
-
-#### EventBridge Event Structure
-
-All events follow this envelope structure:
-
-```json
-{
-  "version": "0",
-  "id": "event-id-from-eventbridge",
-  "detail-type": "ai.job.completed",
-  "source": "purposepath.ai",
-  "account": "123456789012",
-  "time": "2025-12-10T20:00:35Z",
-  "region": "us-east-1",
-  "detail": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "tenantId": "tenant-123",
-    "userId": "user-456",
-    "topicId": "niche_review",
-    "eventType": "ai.job.completed",
-    "data": {
-      "jobId": "550e8400-e29b-41d4-a716-446655440000",
-      "topicId": "niche_review",
-      "result": { ... },
-      "processingTimeMs": 35000
-    }
-  }
-}
-```
-
-#### ai.job.created (EventBridge)
-
-Published when an async job is created. Triggers the job executor Lambda.
-
-```json
-{
-  "detail-type": "ai.job.created",
-  "source": "purposepath.ai",
-  "detail": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "tenantId": "tenant-123",
-    "userId": "user-456",
-    "topicId": "niche_review",
-    "eventType": "ai.job.created",
-    "data": {
-      "jobId": "550e8400-e29b-41d4-a716-446655440000",
-      "topicId": "niche_review",
-      "parameters": {
-        "current_value": "We help small businesses grow"
-      },
-      "estimatedDurationMs": 30000
-    }
-  }
-}
-```
-
-#### ai.job.started (EventBridge)
-
-Published when job processing begins.
-
-```json
-{
-  "detail-type": "ai.job.started",
-  "source": "purposepath.ai",
-  "detail": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "tenantId": "tenant-123",
-    "userId": "user-456",
-    "topicId": "niche_review",
-    "eventType": "ai.job.started",
-    "data": {
-      "jobId": "550e8400-e29b-41d4-a716-446655440000",
-      "topicId": "niche_review",
-      "estimatedDurationMs": 30000
-    }
-  }
-}
-```
-
-#### ai.job.completed (EventBridge)
-
-Published when job finishes successfully. **The `data` object contains the full result.**
-
-```json
-{
-  "detail-type": "ai.job.completed",
-  "source": "purposepath.ai",
-  "detail": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "tenantId": "tenant-123",
-    "userId": "user-456",
-    "topicId": "niche_review",
-    "eventType": "ai.job.completed",
-    "data": {
-      "jobId": "550e8400-e29b-41d4-a716-446655440000",
-      "topicId": "niche_review",
-      "result": {
-        "qualityReview": "Your niche is clear but could be more specific...",
-        "suggestions": [
-          {
-            "text": "We help B2B SaaS startups...",
-            "reasoning": "More specific target market..."
-          }
-        ]
-      },
-      "processingTimeMs": 35000
-    }
-  }
-}
-```
-
-#### ai.job.failed (EventBridge)
-
-Published when job fails.
-
-```json
-{
-  "detail-type": "ai.job.failed",
-  "source": "purposepath.ai",
-  "detail": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "tenantId": "tenant-123",
-    "userId": "user-456",
-    "topicId": "niche_review",
-    "eventType": "ai.job.failed",
-    "data": {
-      "jobId": "550e8400-e29b-41d4-a716-446655440000",
-      "topicId": "niche_review",
-      "error": "LLM provider timeout after 60 seconds",
-      "errorCode": "LLM_TIMEOUT"
-    }
-  }
-}
-```
-
-#### .NET Broadcaster Implementation Notes
-
-The WebSocket broadcaster should:
-
-1. **Subscribe** to EventBridge events with source `purposepath.ai`
-2. **Route** messages to the correct WebSocket connection using `detail.tenantId` and `detail.userId`
-3. **Forward the full `detail.data` object** as the WebSocket message `data` field
-4. **Use `detail.eventType`** as the WebSocket message `type` field
-
-**Example transformation:**
-
-```csharp
-// EventBridge detail -> WebSocket message
-var websocketMessage = new {
-    type = eventBridgeDetail.eventType,      // "ai.job.completed"
-    timestamp = DateTime.UtcNow.ToString("o"),
-    data = eventBridgeDetail.data            // Forward ENTIRE data object including result
-};
-```
-
 ---
 
 ### WebSocket Events
 
 Results are delivered via the existing WebSocket connection at `wss://{WEBSOCKET_URL}`.
 
-#### ai.job.started
-
-Sent when job processing begins.
-
-```json
-{
-  "type": "ai.job.started",
-  "timestamp": "2025-12-10T20:00:00Z",
-  "data": {
-    "jobId": "550e8400-e29b-41d4-a716-446655440000",
-    "topicId": "niche_review",
-    "estimatedDurationMs": 30000
-  }
-}
-```
-
 #### ai.job.completed
-
-Sent when job finishes successfully.
 
 ```json
 {
   "type": "ai.job.completed",
-  "timestamp": "2025-12-10T20:00:35Z",
+  "timestamp": "2026-01-11T20:00:35Z",
   "data": {
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "topicId": "niche_review",
-    "result": {
-      "qualityReview": "Your niche is clear but could be more specific...",
-      "suggestions": [
-        {
-          "text": "We help B2B SaaS startups...",
-          "reasoning": "More specific target market..."
-        }
-      ]
-    },
+    "result": { ... },
     "processingTimeMs": 35000
   }
 }
@@ -811,66 +945,15 @@ Sent when job finishes successfully.
 
 #### ai.job.failed
 
-Sent when job fails.
-
 ```json
 {
   "type": "ai.job.failed",
-  "timestamp": "2025-12-10T20:00:45Z",
+  "timestamp": "2026-01-11T20:00:45Z",
   "data": {
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "topicId": "niche_review",
     "error": "LLM provider timeout after 60 seconds",
     "errorCode": "LLM_TIMEOUT"
-  }
-}
-```
-
----
-
-### Frontend Integration Pattern
-
-```typescript
-// 1. Start async job
-const { jobId, status } = await coachingClient.post('/ai/execute-async', {
-  topic_id: 'niche_review',
-  parameters: { current_value: 'We help small businesses grow' }
-});
-
-// 2. Store pending job (for recovery)
-const pendingJobs = JSON.parse(localStorage.getItem('pendingAiJobs') || '[]');
-pendingJobs.push({ jobId, topicId: 'niche_review', startedAt: Date.now() });
-localStorage.setItem('pendingAiJobs', JSON.stringify(pendingJobs));
-
-// 3. Listen for WebSocket events
-websocket.on('message', (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'ai.job.completed' && data.data.jobId === jobId) {
-    handleResult(data.data.result);
-    removePendingJob(jobId);
-  }
-  if (data.type === 'ai.job.failed' && data.data.jobId === jobId) {
-    handleError(data.data.error);
-    removePendingJob(jobId);
-  }
-});
-
-// 4. Polling fallback (on reconnect or page load)
-async function checkPendingJobs() {
-  const pendingJobs = JSON.parse(localStorage.getItem('pendingAiJobs') || '[]');
-  for (const job of pendingJobs) {
-    if (Date.now() - job.startedAt > 300000) { // 5 min TTL
-      removePendingJob(job.jobId);
-      continue;
-    }
-    const status = await coachingClient.get(`/ai/jobs/${job.jobId}`);
-    if (status.data.status === 'completed') {
-      handleResult(status.data.result);
-      removePendingJob(job.jobId);
-    } else if (status.data.status === 'failed') {
-      handleError(status.data.error);
-      removePendingJob(job.jobId);
-    }
   }
 }
 ```
@@ -886,7 +969,7 @@ async function checkPendingJobs() {
 | Batch operations | `POST /ai/execute-async` | Process in background |
 | User waiting on screen | `POST /ai/execute-async` | Better UX with progress |
 
-**Recommended:** Use async for all onboarding review topics (`niche_review`, `ica_review`, `value_proposition_review`) as they may take 30-60 seconds depending on LLM load.
+**Recommended:** Use async for onboarding review topics (`niche_review`, `ica_review`, `value_proposition_review`) as they may take 30-60 seconds depending on LLM load.
 
 ---
 
@@ -901,8 +984,6 @@ All coaching conversation endpoints are prefixed with `/ai/coaching`.
 **Full URL Pattern:** `{BASE_URL}/ai/coaching/{endpoint}`
 
 ### Available Coaching Topics
-
-The following coaching topics are currently available:
 
 | topic_id | Name | Description |
 |----------|------|-------------|
@@ -923,11 +1004,11 @@ When a coaching session completes (`is_final: true`), the `result` field contain
   "values": [
     {
       "name": "string (1-100 chars)",
-      "description": "string (10-500 chars) - What this value means",
-      "importance": "string (10-500 chars) - Why this value matters"
+      "description": "string (10-500 chars)",
+      "importance": "string (10-500 chars)"
     }
   ],
-  "summary": "string (50-1000 chars) - Overall summary of the values"
+  "summary": "string (50-1000 chars)"
 }
 ```
 
@@ -935,9 +1016,9 @@ When a coaching session completes (`is_final: true`), the `result` field contain
 
 ```json
 {
-  "purpose_statement": "string (20-500 chars) - The organization's purpose statement",
-  "why_it_matters": "string (50-1000 chars) - Why this purpose is meaningful",
-  "how_it_guides": "string (50-1000 chars) - How purpose guides decisions"
+  "purpose_statement": "string (20-500 chars)",
+  "why_it_matters": "string (50-1000 chars)",
+  "how_it_guides": "string (50-1000 chars)"
 }
 ```
 
@@ -945,65 +1026,11 @@ When a coaching session completes (`is_final: true`), the `result` field contain
 
 ```json
 {
-  "vision_statement": "string (20-500 chars) - The organization's vision statement",
-  "time_horizon": "string (1-50 chars) - Time frame (e.g., '5 years', '10 years')",
-  "key_aspirations": ["string"] // 1-10 aspirations that comprise the vision
+  "vision_statement": "string (20-500 chars)",
+  "time_horizon": "string (1-50 chars)",
+  "key_aspirations": ["string"]
 }
 ```
-
----
-
-### GET /ai/coaching/topics
-
-Get all coaching topics with user's completion status.
-
-**Full URL:** `{BASE_URL}/ai/coaching/topics`
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "topics": [
-      {
-        "topic_id": "core_values",
-        "name": "Core Values Discovery",
-        "description": "Discover and articulate your organization's authentic core values",
-        "status": "not_started",
-        "session_id": null,
-        "completed_at": null
-      },
-      {
-        "topic_id": "purpose",
-        "name": "Purpose Discovery",
-        "description": "Define your organization's deeper purpose and reason for existing",
-        "status": "in_progress",
-        "session_id": "sess_abc123",
-        "completed_at": null
-      },
-      {
-        "topic_id": "vision",
-        "name": "Vision Crafting",
-        "description": "Craft a compelling vision for your organization's future",
-        "status": "completed",
-        "session_id": "sess_xyz789",
-        "completed_at": "2025-12-15T10:00:00Z"
-      }
-    ]
-  },
-  "message": "Topics retrieved successfully"
-}
-```
-
-**Topic Statuses:**
-
-| Status | Description |
-|--------|-------------|
-| `not_started` | User has never started this topic |
-| `in_progress` | User has an active session |
-| `paused` | User has a paused session (can be resumed) |
-| `completed` | User has completed this topic |
 
 ---
 
@@ -1027,7 +1054,7 @@ Start a new coaching session or resume an existing one.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `topic_id` | string | Yes | ID of the coaching topic (e.g., `core_values`, `purpose`, `vision`) |
+| `topic_id` | string | Yes | ID of the coaching topic |
 | `context` | object | No | Optional context data for the session |
 
 **Response:**
@@ -1040,7 +1067,7 @@ Start a new coaching session or resume an existing one.
     "tenant_id": "tenant-123",
     "topic_id": "core_values",
     "status": "active",
-    "message": "Welcome! Let's begin exploring your core values. What values are most important to you in your business?",
+    "message": "Welcome! Let's begin exploring your core values...",
     "turn": 1,
     "max_turns": 10,
     "is_final": false,
@@ -1054,39 +1081,6 @@ Start a new coaching session or resume an existing one.
   "message": "Session started successfully"
 }
 ```
-
-**Response (Resumed Session):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session_id": "sess_abc123",
-    "tenant_id": "tenant-123",
-    "topic_id": "core_values",
-    "status": "active",
-    "message": "Welcome back! Let's continue where we left off...",
-    "turn": 5,
-    "max_turns": 10,
-    "is_final": false,
-    "resumed": true,
-    "metadata": {
-      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-      "processing_time_ms": 980,
-      "tokens_used": 120
-    }
-  },
-  "message": "Session started successfully"
-}
-```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 400 | VALIDATION_ERROR | Request validation failed |
-| 409 | SESSION_CONFLICT | Another user has an active session for this topic |
-| 422 | INVALID_TOPIC | Topic not found or invalid |
 
 ---
 
@@ -1105,85 +1099,42 @@ Send a message in an active coaching session.
 }
 ```
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `session_id` | string | Yes | ID of the coaching session |
-| `message` | string | Yes | User's message content (min 1 character) |
-
-**Response:**
+**Response (In Progress):**
 
 ```json
 {
   "success": true,
   "data": {
     "session_id": "sess_abc123",
-    "message": "That's wonderful! Integrity and innovation are powerful values. Can you tell me more about how integrity shows up in your daily business decisions?",
+    "message": "That's wonderful! Can you tell me more about how integrity shows up in your daily business decisions?",
     "status": "active",
     "turn": 3,
     "max_turns": 10,
     "is_final": false,
     "message_count": 6,
-    "result": null,
-    "metadata": {
-      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-      "processing_time_ms": 1450,
-      "tokens_used": 180
-    }
-  },
-  "message": "Message processed successfully"
+    "result": null
+  }
 }
 ```
 
-**Response (Session Auto-Completed by LLM):**
-
-When the LLM determines the conversation is naturally complete, it sets `is_final: true` and includes extracted results:
+**Response (Auto-Completed):**
 
 ```json
 {
   "success": true,
   "data": {
     "session_id": "sess_abc123",
-    "message": "Thank you for this wonderful conversation! I've captured your core values and created a summary of what we discussed.",
+    "message": "Thank you for this wonderful conversation! I've captured your core values...",
     "status": "completed",
     "turn": 8,
-    "max_turns": 10,
     "is_final": true,
-    "message_count": 16,
     "result": {
-      "values": [
-        {
-          "name": "Integrity",
-          "description": "Acting with honesty and transparency in all business dealings",
-          "importance": "Builds trust with clients and partners, essential for long-term relationships"
-        },
-        {
-          "name": "Innovation",
-          "description": "Continuously seeking new and better solutions to challenges",
-          "importance": "Keeps the business competitive and responsive to market changes"
-        }
-      ],
-      "summary": "Based on our conversation, your core values center around integrity in all dealings and a commitment to innovation. These values reflect your belief that sustainable business success comes from building trust while continuously improving."
-    },
-    "metadata": {
-      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-      "processing_time_ms": 2100,
-      "tokens_used": 350
+      "values": [...],
+      "summary": "..."
     }
-  },
-  "message": "Message processed successfully"
+  }
 }
 ```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 400 | SESSION_NOT_ACTIVE | Session is not in active state |
-| 403 | SESSION_ACCESS_DENIED | User does not own this session |
-| 410 | SESSION_EXPIRED | Session has expired |
-| 410 | SESSION_IDLE_TIMEOUT | Session exceeded idle timeout |
-| 422 | SESSION_NOT_FOUND | Session not found |
-| 422 | MAX_TURNS_REACHED | Maximum conversation turns reached |
 
 ---
 
@@ -1191,244 +1142,29 @@ When the LLM determines the conversation is naturally complete, it sets `is_fina
 
 Pause an active coaching session.
 
-**Full URL:** `{BASE_URL}/ai/coaching/pause`
-
-**Request:**
-
-```json
-{
-  "session_id": "sess_abc123"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session_id": "sess_abc123",
-    "status": "paused",
-    "topic_id": "core_values",
-    "turn_count": 5,
-    "max_turns": 10,
-    "created_at": "2025-12-15T10:00:00Z",
-    "updated_at": "2025-12-15T10:15:00Z"
-  },
-  "message": "Session paused successfully"
-}
-```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 400 | SESSION_NOT_ACTIVE | Session cannot be paused (not active) |
-| 403 | SESSION_ACCESS_DENIED | User does not own this session |
-| 422 | SESSION_NOT_FOUND | Session not found |
-
----
-
 ### POST /ai/coaching/complete
 
 Complete a coaching session and extract results.
-
-**Full URL:** `{BASE_URL}/ai/coaching/complete`
-
-**Request:**
-
-```json
-{
-  "session_id": "sess_abc123"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session_id": "sess_abc123",
-    "status": "completed",
-    "result": {
-      "values": [
-        {
-          "name": "Integrity",
-          "description": "Acting with honesty and transparency in all dealings",
-          "importance": "Foundation of trust with clients, partners, and team members"
-        },
-        {
-          "name": "Innovation",
-          "description": "Continuously seeking new and better solutions",
-          "importance": "Drives competitive advantage and adaptability"
-        },
-        {
-          "name": "Excellence",
-          "description": "Striving for the highest quality in everything",
-          "importance": "Ensures consistent delivery and customer satisfaction"
-        }
-      ],
-      "summary": "Your core values center around building trust through integrity, staying competitive through innovation, and delivering quality through excellence."
-    }
-  },
-  "message": "Session completed successfully"
-}
-```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 400 | SESSION_NOT_ACTIVE | Session cannot be completed (not active/paused) |
-| 403 | SESSION_ACCESS_DENIED | User does not own this session |
-| 422 | SESSION_NOT_FOUND | Session not found |
-| 500 | EXTRACTION_FAILED | Failed to extract results from session |
-
----
 
 ### POST /ai/coaching/cancel
 
 Cancel a coaching session.
 
-**Full URL:** `{BASE_URL}/ai/coaching/cancel`
-
-**Request:**
-
-```json
-{
-  "session_id": "sess_abc123"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session_id": "sess_abc123",
-    "status": "cancelled",
-    "topic_id": "core_values",
-    "turn_count": 3,
-    "max_turns": 10,
-    "created_at": "2025-12-15T10:00:00Z",
-    "updated_at": "2025-12-15T10:05:00Z"
-  },
-  "message": "Session cancelled successfully"
-}
-```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 400 | SESSION_NOT_ACTIVE | Session cannot be cancelled (already completed) |
-| 403 | SESSION_ACCESS_DENIED | User does not own this session |
-| 422 | SESSION_NOT_FOUND | Session not found |
-
----
-
 ### GET /ai/coaching/session
 
 Get detailed information about a coaching session.
-
-**Full URL:** `{BASE_URL}/ai/coaching/session?session_id={session_id}`
-
-**Query Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `session_id` | string | Yes | ID of the session to retrieve |
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session_id": "sess_abc123",
-    "tenant_id": "tenant-123",
-    "topic_id": "core_values",
-    "user_id": "user-456",
-    "status": "active",
-    "messages": [
-      {
-        "role": "assistant",
-        "content": "Welcome! Let's explore your core values...",
-        "timestamp": "2025-12-15T10:00:00Z"
-      },
-      {
-        "role": "user",
-        "content": "I think integrity is important...",
-        "timestamp": "2025-12-15T10:01:00Z"
-      }
-    ],
-    "context": {},
-    "max_turns": 10,
-    "created_at": "2025-12-15T10:00:00Z",
-    "updated_at": "2025-12-15T10:01:00Z",
-    "completed_at": null,
-    "extracted_result": null
-  },
-  "message": "Session retrieved successfully"
-}
-```
-
-**Error Responses:**
-
-| Status | Code | Description |
-|--------|------|-------------|
-| 403 | SESSION_ACCESS_DENIED | User does not own this session |
-| 422 | SESSION_NOT_FOUND | Session not found |
-
----
 
 ### GET /ai/coaching/sessions
 
 List all coaching sessions for the current user.
 
-**Full URL:** `{BASE_URL}/ai/coaching/sessions?include_completed={bool}&limit={int}`
+### GET /ai/coaching/topics
 
-**Query Parameters:**
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `include_completed` | boolean | No | false | Include completed/cancelled sessions |
-| `limit` | integer | No | 20 | Maximum sessions to return (1-100) |
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "session_id": "sess_abc123",
-      "topic_id": "core_values",
-      "status": "active",
-      "turn_count": 5,
-      "created_at": "2025-12-15T10:00:00Z",
-      "updated_at": "2025-12-15T10:15:00Z"
-    },
-    {
-      "session_id": "sess_def456",
-      "topic_id": "purpose",
-      "status": "paused",
-      "turn_count": 3,
-      "created_at": "2025-12-14T09:00:00Z",
-      "updated_at": "2025-12-14T09:10:00Z"
-    }
-  ],
-  "message": "Found 2 sessions"
-}
-```
+Get all coaching topics with user's completion status.
 
 ---
 
 ### Error Response Format
-
-All coaching conversation errors follow this format:
 
 ```json
 {
@@ -1443,74 +1179,37 @@ All coaching conversation errors follow this format:
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | SESSION_NOT_ACTIVE | Session is not in an active state for the requested operation |
+| 400 | SESSION_NOT_ACTIVE | Session is not in an active state |
 | 400 | VALIDATION_ERROR | Request validation failed |
 | 403 | SESSION_ACCESS_DENIED | User does not have access to this session |
-| 409 | SESSION_CONFLICT | Another user has an active session for this topic |
+| 409 | SESSION_CONFLICT | Another user has an active session |
 | 410 | SESSION_EXPIRED | Session has expired |
 | 410 | SESSION_IDLE_TIMEOUT | Session exceeded idle timeout |
 | 422 | SESSION_NOT_FOUND | Session not found |
 | 422 | MAX_TURNS_REACHED | Maximum conversation turns reached |
 | 422 | INVALID_TOPIC | Topic not found or invalid |
-| 500 | EXTRACTION_FAILED | Failed to extract results from session |
+| 500 | EXTRACTION_FAILED | Failed to extract results |
 
 ---
 
-### Frontend Integration Example
+## Changelog
 
-```typescript
-// Start or resume a coaching session
-async function startCoachingSession(topicId: string, context?: Record<string, any>) {
-  try {
-    const response = await coachingClient.post('/ai/coaching/start', {
-      topic_id: topicId,
-      context
-    });
-    return response.data.data;
-  } catch (error) {
-    if (error.response?.status === 409) {
-      // Another user has an active session
-      throw new Error('Session in progress by another user');
-    }
-    throw error;
-  }
-}
+### Version 2.0 (January 2026)
 
-// Send a message and get coach response
-async function sendMessage(sessionId: string, message: string) {
-  try {
-    const response = await coachingClient.post('/ai/coaching/message', {
-      session_id: sessionId,
-      message
-    });
-    const { message: coachMessage, status, result, is_final } = response.data.data;
-    
-    if (is_final || status === 'completed') {
-      // Session was auto-completed by the LLM
-      handleCompletion(result);
-    }
-    
-    return response.data.data;
-  } catch (error) {
-    if (error.response?.status === 422) {
-      const code = error.response.data.detail?.code;
-      if (code === 'MAX_TURNS_REACHED') {
-        // Prompt user to complete the session
-        return completeSession(sessionId);
-      }
-    }
-    throw error;
-  }
-}
+- **Terminology Update:** Replaced all "KPI" references with "Measure"
+- **New Data Sources:** Added strategy, measure, people, and organization parameters
+- **Parameter Enrichment:** Documented automatic parameter enrichment system
+- **New Topics:** Added strategic planning topics (alignment_check, alignment_explanation, alignment_suggestions, strategy_suggestions, measure_recommendations)
+- **New Topics:** Added operations AI topics (root_cause_suggestions, swot_analysis, action_suggestions, optimize_action_plan)
+- **New Topics:** Added analysis topics (measure_analysis)
+- **Parameter Reference:** Complete reference of all available parameters by source
+- **Response Models:** Added schemas for new response models
 
-// Complete session manually
-async function completeSession(sessionId: string) {
-  const response = await coachingClient.post('/ai/coaching/complete', {
-    session_id: sessionId
-  });
-  return response.data.data;
-}
-```
+### Version 1.2 (December 2025)
+
+- Added async execution endpoints
+- Added coaching conversation sessions
+- Added website_scan topic
 
 ---
 
