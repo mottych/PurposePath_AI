@@ -151,29 +151,128 @@ def list_retrieval_methods() -> list[RetrievalMethodDefinition]:
 
 @register_retrieval_method(
     name="get_business_foundation",
-    description="Retrieves business foundation data including vision, purpose, and core values",
+    description="Retrieves complete business foundation with 6 strategic pillars",
     provides_params=(
-        "vision",
-        "purpose",
-        "core_values",
-        "business_context",
+        # Full foundation object
+        "business_foundation",
+        # Profile (Pillar 1)
+        "business_name",
+        "company_name",
+        "business_description",
         "industry",
-        "business_type",
+        "sub_industry",
+        "company_stage",
         "company_size",
-        "target_market",
-        "value_proposition",
-        "strategic_priorities",
+        "revenue_range",
+        "year_founded",
+        "geographic_focus",
+        "headquarters_location",
+        "website",
+        # Identity (Pillar 2)
+        "vision",
+        "vision_timeframe",
+        "purpose",
+        "who_we_serve",
+        "core_values",
+        # Target Market (Pillar 3)
+        "niche_statement",
+        "market_size",
+        "growth_trend",
+        "market_characteristics",
+        "icas",  # Ideal Customer Avatars
+        # Products & Services (Pillar 4)
+        "products",
+        # Value Proposition (Pillar 5)
+        "unique_selling_proposition",
+        "key_differentiators",
+        "competitive_advantages",
+        "brand_promise",
+        "positioning_statement",
+        # Business Model (Pillar 6)
+        "business_model_types",
+        "revenue_streams",
+        "pricing_strategy",
+        "key_partnerships",
+        "distribution_channels",
     ),
 )
 async def get_business_foundation(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve business foundation/organizational context."""
+    """Retrieve complete business foundation data with 6 strategic pillars.
+
+    Returns:
+        Flattened dictionary with:
+        - business_foundation: Full raw response
+        - Profile fields (business_name, industry, company_stage, etc.)
+        - Identity fields (vision, purpose, core_values, etc.)
+        - Market fields (niche_statement, icas, etc.)
+        - Products array
+        - Proposition fields (unique_selling_proposition, key_differentiators, etc.)
+        - Model fields (business_model_types, revenue_streams, etc.)
+    """
     try:
         logger.debug(
             "retrieval_method.get_business_foundation",
             tenant_id=context.tenant_id,
         )
-        data = await context.client.get_organizational_context(context.tenant_id)
-        return dict(data)
+        data = await context.client.get_business_foundation(context.tenant_id)
+
+        # Flatten the nested structure for parameter extraction
+        result: dict[str, Any] = {
+            "business_foundation": data,  # Keep full object available
+        }
+
+        # Extract Profile (Pillar 1)
+        profile = data.get("profile", {})
+        result["business_name"] = profile.get("businessName", "")
+        result["company_name"] = profile.get("businessName", "")  # Alias
+        result["business_description"] = profile.get("businessDescription", "")
+        result["industry"] = profile.get("industry", "")
+        result["sub_industry"] = profile.get("subIndustry", "")
+        result["company_stage"] = profile.get("companyStage", "")
+        result["company_size"] = profile.get("companySize", "")
+        result["revenue_range"] = profile.get("revenueRange", "")
+        result["year_founded"] = profile.get("yearFounded")
+        result["geographic_focus"] = profile.get("geographicFocus", [])
+        result["headquarters_location"] = profile.get("headquartersLocation", "")
+        result["website"] = profile.get("website", "")
+
+        # Extract Identity (Pillar 2)
+        identity = data.get("identity", {})
+        result["vision"] = identity.get("vision", "")
+        result["vision_timeframe"] = identity.get("visionTimeframe", "")
+        result["purpose"] = identity.get("purpose", "")
+        result["who_we_serve"] = identity.get("whoWeServe", "")
+        result["core_values"] = identity.get("values", [])
+
+        # Extract Target Market (Pillar 3)
+        market = data.get("market", {})
+        result["niche_statement"] = market.get("nicheStatement", "")
+        result["market_size"] = market.get("marketSize", "")
+        result["growth_trend"] = market.get("growthTrend", "")
+        result["market_characteristics"] = market.get("characteristics", [])
+        result["icas"] = market.get("icas", [])
+
+        # Extract Products (Pillar 4)
+        result["products"] = data.get("products", [])
+
+        # Extract Value Proposition (Pillar 5)
+        proposition = data.get("proposition", {})
+        result["unique_selling_proposition"] = proposition.get("uniqueSellingProposition", "")
+        result["key_differentiators"] = proposition.get("keyDifferentiators", [])
+        result["competitive_advantages"] = proposition.get("competitiveAdvantages", [])
+        result["brand_promise"] = proposition.get("brandPromise", "")
+        result["positioning_statement"] = proposition.get("positioningStatement", "")
+
+        # Extract Business Model (Pillar 6)
+        model = data.get("model", {})
+        result["business_model_types"] = model.get("types", [])
+        result["revenue_streams"] = model.get("revenueStreams", [])
+        result["pricing_strategy"] = model.get("pricingStrategy", "")
+        result["key_partnerships"] = model.get("keyPartnerships", [])
+        result["distribution_channels"] = model.get("distributionChannels", [])
+
+        return result
+
     except Exception as e:
         logger.error(
             "retrieval_method.get_business_foundation.failed",
@@ -309,6 +408,7 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
 # NOTE: get_goal_stats and get_performance_score removed - endpoints don't exist
 # Goal statistics can be derived from get_all_goals results
 # Performance metrics will be computed from measures summary data
+
 
 @register_retrieval_method(
     name="get_kpi_by_id",
