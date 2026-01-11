@@ -306,80 +306,9 @@ async def get_all_goals(context: RetrievalContext) -> dict[str, Any]:
         return {"goals": [], "goals_count": 0, "goals_summary": ""}
 
 
-@register_retrieval_method(
-    name="get_goal_stats",
-    description="Retrieves goal statistics for the tenant",
-    provides_params=(
-        "total_goals",
-        "completion_rate",
-        "at_risk_goals",
-        "behind_schedule_goals",
-        "goals_by_horizon",
-        "goals_by_status",
-    ),
-)
-async def get_goal_stats(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve goal statistics."""
-    try:
-        logger.debug(
-            "retrieval_method.get_goal_stats",
-            tenant_id=context.tenant_id,
-        )
-        stats = await context.client.get_goal_stats(context.tenant_id)
-        return {
-            "total_goals": stats.get("total_goals", 0),
-            "completion_rate": stats.get("completion_rate", 0),
-            "at_risk_goals": stats.get("at_risk", 0),
-            "behind_schedule_goals": stats.get("behind_schedule", 0),
-            "goals_by_horizon": stats.get("by_horizon", {}),
-            "goals_by_status": stats.get("by_status", {}),
-        }
-    except Exception as e:
-        logger.error(
-            "retrieval_method.get_goal_stats.failed",
-            error=str(e),
-            tenant_id=context.tenant_id,
-        )
-        return {}
-
-
-@register_retrieval_method(
-    name="get_performance_score",
-    description="Retrieves performance score and components",
-    provides_params=(
-        "overall_score",
-        "goals_score",
-        "strategies_score",
-        "kpis_score",
-        "actions_score",
-        "performance_trend",
-    ),
-)
-async def get_performance_score(context: RetrievalContext) -> dict[str, Any]:
-    """Retrieve performance score data."""
-    try:
-        logger.debug(
-            "retrieval_method.get_performance_score",
-            tenant_id=context.tenant_id,
-        )
-        score = await context.client.get_performance_score(context.tenant_id)
-        components = score.get("component_scores", {})
-        return {
-            "overall_score": score.get("overall_score", 0),
-            "goals_score": components.get("goals", 0),
-            "strategies_score": components.get("strategies", 0),
-            "kpis_score": components.get("kpis", 0),
-            "actions_score": components.get("actions", 0),
-            "performance_trend": score.get("trend", "stable"),
-        }
-    except Exception as e:
-        logger.error(
-            "retrieval_method.get_performance_score.failed",
-            error=str(e),
-            tenant_id=context.tenant_id,
-        )
-        return {}
-
+# NOTE: get_goal_stats and get_performance_score removed - endpoints don't exist
+# Goal statistics can be derived from get_all_goals results
+# Performance metrics will be computed from measures summary data
 
 @register_retrieval_method(
     name="get_kpi_by_id",

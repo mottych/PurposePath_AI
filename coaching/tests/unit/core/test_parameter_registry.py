@@ -151,10 +151,11 @@ class TestParameterRegistry:
         business_params = [
             "business_foundation",
             "core_values",
-            "mission_statement",
-            "vision_statement",
+            "vision",  # Updated from vision_statement
+            "purpose",  # Updated from mission_statement
             "company_name",
             "industry",
+            "icas",  # Added - replaces target_audience
         ]
         for param_name in business_params:
             assert param_name in PARAMETER_REGISTRY, f"Missing parameter: {param_name}"
@@ -257,8 +258,9 @@ class TestGetParametersByRetrievalMethod:
         assert len(params) > 0
         param_names = [p.name for p in params]
         assert "core_values" in param_names
-        assert "mission_statement" in param_names
-        assert "vision_statement" in param_names
+        assert "vision" in param_names  # Updated from vision_statement
+        assert "purpose" in param_names  # Updated from mission_statement
+        assert "icas" in param_names  # Added - replaces target_audience
 
     def test_get_goal_by_id_parameters(self) -> None:
         """Test getting parameters using get_goal_by_id method."""
@@ -302,7 +304,8 @@ class TestGetEnrichableParameters:
         enrichable = get_enrichable_parameters()
         names = [p.name for p in enrichable]
         assert "core_values" in names
-        assert "mission_statement" in names
+        assert "vision" in names  # Updated from vision_statement
+        assert "purpose" in names  # Updated from mission_statement
 
     def test_enrichable_includes_goal_params(self) -> None:
         """Test that goal params are enrichable."""
@@ -365,10 +368,17 @@ class TestRetrievalMethodExtraction:
         assert core_values.retrieval_method == "get_business_foundation"
         assert core_values.extraction_path == "core_values"
 
-        mission = get_parameter_definition("mission_statement")
-        assert mission is not None
-        assert mission.retrieval_method == "get_business_foundation"
-        assert mission.extraction_path == "mission_statement"
+        # Updated: mission_statement renamed to purpose
+        purpose = get_parameter_definition("purpose")
+        assert purpose is not None
+        assert purpose.retrieval_method == "get_business_foundation"
+        assert purpose.extraction_path == "purpose"
+
+        # Updated: vision_statement renamed to vision
+        vision = get_parameter_definition("vision")
+        assert vision is not None
+        assert vision.retrieval_method == "get_business_foundation"
+        assert vision.extraction_path == "vision"
 
     def test_goal_extraction_paths(self) -> None:
         """Test that goal params have correct extraction paths."""

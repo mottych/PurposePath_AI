@@ -113,30 +113,9 @@ class TestBusinessApiClient:
             params={"personId": "u1"},
         )
 
-    async def test_get_goal_stats(self, business_client, mock_http_client):
-        """Test get_goal_stats."""
-        mock_http_client.get.return_value.json.return_value = {
-            "data": {"total_goals": 10, "completion_rate": 0.8}
-        }
-
-        result = await business_client.get_goal_stats("t1")
-
-        assert result["total_goals"] == 10
-        assert result["completion_rate"] == 0.8
-        mock_http_client.get.assert_called_with(
-            "/goals/stats", headers=business_client._get_headers("t1")
-        )
-
-    async def test_get_performance_score(self, business_client, mock_http_client):
-        """Test get_performance_score."""
-        mock_http_client.get.return_value.json.return_value = {"data": {"overall_score": 85.5}}
-
-        result = await business_client.get_performance_score("t1")
-
-        assert result["overall_score"] == 85.5
-        mock_http_client.get.assert_called_with(
-            "/performance/score", headers=business_client._get_headers("t1")
-        )
+    # NOTE: test_get_goal_stats and test_get_performance_score removed
+    # These methods were removed from BusinessApiClient as the endpoints
+    # /goals/stats and /performance/score don't exist in the API specs
 
     async def test_get_operations_actions(self, business_client, mock_http_client):
         """Test get_operations_actions."""
@@ -225,11 +204,7 @@ class TestBusinessApiClient:
         with pytest.raises(httpx.HTTPStatusError):
             await business_client.get_user_goals("u1", "t1")
 
-        with pytest.raises(httpx.HTTPStatusError):
-            await business_client.get_goal_stats("t1")
-
-        with pytest.raises(httpx.HTTPStatusError):
-            await business_client.get_performance_score("t1")
+        # NOTE: get_goal_stats and get_performance_score removed - endpoints don't exist
 
         with pytest.raises(httpx.HTTPStatusError):
             await business_client.get_operations_actions("t1")

@@ -923,7 +923,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("user_name"),
             _onb("company_name", "company_name"),
             _onb("core_values", "core_values"),
-            _onb("mission_statement", "mission_statement"),  # Purpose/mission
+            _onb("purpose", "purpose"),  # Updated from mission_statement
             _onb("onboarding_niche", "onboarding_niche"),
             _onb("onboarding_ica", "onboarding_ica"),
             _onb("onboarding_value_proposition", "onboarding_value_proposition"),

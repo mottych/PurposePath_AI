@@ -133,25 +133,28 @@ _register(
     )
 )
 
+# NOTE: mission_statement renamed to 'purpose', vision_statement renamed to 'vision'
+# See new parameters below for updated naming
+
 _register(
     ParameterDefinition(
-        name="mission_statement",
+        name="vision",
         param_type=ParameterType.STRING,
-        description="The mission statement of the business.",
+        description="The vision statement of the business.",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="mission_statement",
+        extraction_path="vision",
     )
 )
 
 _register(
     ParameterDefinition(
-        name="vision_statement",
+        name="purpose",
         param_type=ParameterType.STRING,
-        description="The vision statement of the business.",
+        description="The purpose/mission statement of the business.",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="vision_statement",
+        extraction_path="purpose",
     )
 )
 
@@ -188,14 +191,15 @@ _register(
     )
 )
 
+# NOTE: target_audience replaced by 'icas' (Ideal Customer Avatars) array
 _register(
     ParameterDefinition(
-        name="target_audience",
-        param_type=ParameterType.STRING,
-        description="The target audience of the business.",
-        default="",
+        name="icas",
+        param_type=ParameterType.LIST,
+        description="Ideal Customer Avatars (ICAs) for the business.",
+        default=[],
         retrieval_method="get_business_foundation",
-        extraction_path="target_audience",
+        extraction_path="icas",
     )
 )
 
@@ -210,49 +214,9 @@ _register(
     )
 )
 
-_register(
-    ParameterDefinition(
-        name="short_term_objectives",
-        param_type=ParameterType.LIST,
-        description="Short-term business objectives.",
-        default=[],
-        retrieval_method="get_business_foundation",
-        extraction_path="short_term_objectives",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="long_term_objectives",
-        param_type=ParameterType.LIST,
-        description="Long-term business objectives.",
-        default=[],
-        retrieval_method="get_business_foundation",
-        extraction_path="long_term_objectives",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="brand_voice",
-        param_type=ParameterType.STRING,
-        description="The brand voice of the business.",
-        default="",
-        retrieval_method="get_business_foundation",
-        extraction_path="brand_voice",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="brand_personality",
-        param_type=ParameterType.STRING,
-        description="The brand personality of the business.",
-        default="",
-        retrieval_method="get_business_foundation",
-        extraction_path="brand_personality",
-    )
-)
+# NOTE: short_term_objectives, long_term_objectives, brand_voice, brand_personality
+# removed - these fields no longer exist in the business foundation API.
+# Use goals/strategies for objectives, and business model for brand context.
 
 # -----------------------------------------------------------------------------
 # Goal Parameters (from get_goal_by_id or get_goals_list)
