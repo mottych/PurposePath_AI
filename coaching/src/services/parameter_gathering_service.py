@@ -362,7 +362,7 @@ class ParameterGatheringService:
             Measure data
         """
         try:
-            return await self._client.get_measure_by_id(measure_id, tenant_id)
+            return await self.business_api_client.get_measure_by_id(measure_id, tenant_id)
         except Exception as e:
             logger.warning(
                 "fetch_measure.failed",
@@ -382,7 +382,7 @@ class ParameterGatheringService:
             List of measures
         """
         try:
-            return await self._client.get_measures(tenant_id)
+            return await self.business_api_client.get_measures(tenant_id)
         except Exception as e:
             logger.warning(
                 "fetch_measures.failed",
