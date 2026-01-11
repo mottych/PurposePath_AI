@@ -133,25 +133,28 @@ _register(
     )
 )
 
+# NOTE: mission_statement renamed to 'purpose', vision_statement renamed to 'vision'
+# See new parameters below for updated naming
+
 _register(
     ParameterDefinition(
-        name="mission_statement",
+        name="vision",
         param_type=ParameterType.STRING,
-        description="The mission statement of the business.",
+        description="The vision statement of the business.",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="mission_statement",
+        extraction_path="vision",
     )
 )
 
 _register(
     ParameterDefinition(
-        name="vision_statement",
+        name="purpose",
         param_type=ParameterType.STRING,
-        description="The vision statement of the business.",
+        description="The purpose/mission statement of the business.",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="vision_statement",
+        extraction_path="purpose",
     )
 )
 
@@ -188,14 +191,15 @@ _register(
     )
 )
 
+# NOTE: target_audience replaced by 'icas' (Ideal Customer Avatars) array
 _register(
     ParameterDefinition(
-        name="target_audience",
-        param_type=ParameterType.STRING,
-        description="The target audience of the business.",
-        default="",
+        name="icas",
+        param_type=ParameterType.LIST,
+        description="Ideal Customer Avatars (ICAs) for the business.",
+        default=[],
         retrieval_method="get_business_foundation",
-        extraction_path="target_audience",
+        extraction_path="icas",
     )
 )
 
@@ -210,49 +214,278 @@ _register(
     )
 )
 
+# Business Profile (Pillar 1)
 _register(
     ParameterDefinition(
-        name="short_term_objectives",
-        param_type=ParameterType.LIST,
-        description="Short-term business objectives.",
-        default=[],
-        retrieval_method="get_business_foundation",
-        extraction_path="short_term_objectives",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="long_term_objectives",
-        param_type=ParameterType.LIST,
-        description="Long-term business objectives.",
-        default=[],
-        retrieval_method="get_business_foundation",
-        extraction_path="long_term_objectives",
-    )
-)
-
-_register(
-    ParameterDefinition(
-        name="brand_voice",
+        name="business_description",
         param_type=ParameterType.STRING,
-        description="The brand voice of the business.",
+        description="Description of the business.",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="brand_voice",
+        extraction_path="business_description",
     )
 )
 
 _register(
     ParameterDefinition(
-        name="brand_personality",
+        name="company_stage",
         param_type=ParameterType.STRING,
-        description="The brand personality of the business.",
+        description="Stage of the company (startup, growth, scale, mature).",
         default="",
         retrieval_method="get_business_foundation",
-        extraction_path="brand_personality",
+        extraction_path="company_stage",
     )
 )
+
+_register(
+    ParameterDefinition(
+        name="company_size",
+        param_type=ParameterType.STRING,
+        description="Size of the company (solo, micro, small, medium, large, enterprise).",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="company_size",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="revenue_range",
+        param_type=ParameterType.STRING,
+        description="Revenue range of the business.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="revenue_range",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="year_founded",
+        param_type=ParameterType.INTEGER,
+        description="Year the business was founded.",
+        retrieval_method="get_business_foundation",
+        extraction_path="year_founded",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="geographic_focus",
+        param_type=ParameterType.LIST,
+        description="Geographic focus areas (local, regional, national, global).",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="geographic_focus",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="website",
+        param_type=ParameterType.STRING,
+        description="Business website URL.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="website",
+    )
+)
+
+# Business Identity (Pillar 2) - vision, purpose, core_values already defined above
+_register(
+    ParameterDefinition(
+        name="vision_timeframe",
+        param_type=ParameterType.STRING,
+        description="Timeframe for the vision (e.g., 3-5 years).",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="vision_timeframe",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="who_we_serve",
+        param_type=ParameterType.STRING,
+        description="Description of who the business serves.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="who_we_serve",
+    )
+)
+
+# Target Market (Pillar 3) - icas already defined above
+_register(
+    ParameterDefinition(
+        name="niche_statement",
+        param_type=ParameterType.STRING,
+        description="The business niche statement.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="niche_statement",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="market_size",
+        param_type=ParameterType.STRING,
+        description="Estimated market size.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="market_size",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="growth_trend",
+        param_type=ParameterType.STRING,
+        description="Market growth trend.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="growth_trend",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="market_characteristics",
+        param_type=ParameterType.LIST,
+        description="Key market characteristics.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="market_characteristics",
+    )
+)
+
+# Products & Services (Pillar 4)
+_register(
+    ParameterDefinition(
+        name="products",
+        param_type=ParameterType.LIST,
+        description="List of products and services offered.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="products",
+    )
+)
+
+# Value Proposition (Pillar 5) - unique_value_proposition already defined above
+_register(
+    ParameterDefinition(
+        name="unique_selling_proposition",
+        param_type=ParameterType.STRING,
+        description="The unique selling proposition.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="unique_selling_proposition",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="key_differentiators",
+        param_type=ParameterType.LIST,
+        description="Key differentiators from competitors.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="key_differentiators",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="competitive_advantages",
+        param_type=ParameterType.LIST,
+        description="Competitive advantages.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="competitive_advantages",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="brand_promise",
+        param_type=ParameterType.STRING,
+        description="The brand promise.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="brand_promise",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="positioning_statement",
+        param_type=ParameterType.STRING,
+        description="The positioning statement.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="positioning_statement",
+    )
+)
+
+# Business Model (Pillar 6)
+_register(
+    ParameterDefinition(
+        name="business_model_types",
+        param_type=ParameterType.LIST,
+        description="Types of business models used.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="business_model_types",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="revenue_streams",
+        param_type=ParameterType.LIST,
+        description="Revenue streams for the business.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="revenue_streams",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="pricing_strategy",
+        param_type=ParameterType.STRING,
+        description="Pricing strategy.",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="pricing_strategy",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="key_partnerships",
+        param_type=ParameterType.LIST,
+        description="Key business partnerships.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="key_partnerships",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="distribution_channels",
+        param_type=ParameterType.LIST,
+        description="Distribution channels.",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="distribution_channels",
+    )
+)
+
+# NOTE: short_term_objectives, long_term_objectives, brand_voice, brand_personality
+# removed - these fields no longer exist in the business foundation API.
+# Use goals/strategies for objectives, and business model for brand context.
 
 # -----------------------------------------------------------------------------
 # Goal Parameters (from get_goal_by_id or get_goals_list)
@@ -341,13 +574,379 @@ _register(
 )
 
 # -----------------------------------------------------------------------------
-# KPI Parameters (from get_kpi_by_id or get_kpis_list)
+# Goal Aggregation Parameters (from get_all_goals)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="goals",
+        param_type=ParameterType.LIST,
+        description="List of all goals for the tenant.",
+        default=[],
+        retrieval_method="get_all_goals",
+        extraction_path="goals",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="goals_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of goals.",
+        default=0,
+        retrieval_method="get_all_goals",
+        extraction_path="goals_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="goals_summary",
+        param_type=ParameterType.STRING,
+        description="Summary of goals by status.",
+        default="",
+        retrieval_method="get_all_goals",
+        extraction_path="goals_summary",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Strategy Parameters (from get_strategy_by_id or get_all_strategies)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="strategy_id",
+        param_type=ParameterType.STRING,
+        description="The unique identifier of a strategy.",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy",
+        param_type=ParameterType.DICT,
+        description="Complete strategy data.",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_name",
+        param_type=ParameterType.STRING,
+        description="The name of the strategy.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_description",
+        param_type=ParameterType.STRING,
+        description="The description of the strategy.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_description",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_status",
+        param_type=ParameterType.STRING,
+        description="The current status of the strategy.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_status",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_type",
+        param_type=ParameterType.STRING,
+        description="The type of strategy (initiative, project, etc.).",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_type",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_progress",
+        param_type=ParameterType.FLOAT,
+        description="Progress percentage of the strategy.",
+        default=0.0,
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_progress",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_owner_name",
+        param_type=ParameterType.STRING,
+        description="Name of the strategy owner.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_owner_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_goal_id",
+        param_type=ParameterType.STRING,
+        description="ID of the goal this strategy supports.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_goal_id",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_alignment_score",
+        param_type=ParameterType.FLOAT,
+        description="AI-computed alignment score for the strategy.",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_alignment_score",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategy_alignment_explanation",
+        param_type=ParameterType.STRING,
+        description="AI explanation of strategy alignment.",
+        default="",
+        retrieval_method="get_strategy_by_id",
+        extraction_path="strategy_alignment_explanation",
+    )
+)
+
+# Strategy Aggregation Parameters
+_register(
+    ParameterDefinition(
+        name="strategies",
+        param_type=ParameterType.LIST,
+        description="List of all strategies for the tenant.",
+        default=[],
+        retrieval_method="get_all_strategies",
+        extraction_path="strategies",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategies_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of strategies.",
+        default=0,
+        retrieval_method="get_all_strategies",
+        extraction_path="strategies_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategies_by_status",
+        param_type=ParameterType.DICT,
+        description="Strategies grouped by status.",
+        default={},
+        retrieval_method="get_all_strategies",
+        extraction_path="strategies_by_status",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Measure Parameters (from get_measure_by_id or get_measures_summary)
+# NOTE: Measures replace the older "KPI" terminology
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="measure_id",
+        param_type=ParameterType.STRING,
+        description="The unique identifier of a measure.",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure",
+        param_type=ParameterType.DICT,
+        description="Complete measure data.",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_name",
+        param_type=ParameterType.STRING,
+        description="The name of the measure.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_description",
+        param_type=ParameterType.STRING,
+        description="The description of the measure.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_description",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_unit",
+        param_type=ParameterType.STRING,
+        description="The unit of measurement.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_unit",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_direction",
+        param_type=ParameterType.STRING,
+        description="Direction for improvement (up, down, maintain).",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_direction",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_type",
+        param_type=ParameterType.STRING,
+        description="Type of measure.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_type",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_category",
+        param_type=ParameterType.STRING,
+        description="Category of the measure.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_category",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_current_value",
+        param_type=ParameterType.FLOAT,
+        description="The current value of the measure.",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_current_value",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measure_owner_name",
+        param_type=ParameterType.STRING,
+        description="Name of the measure owner.",
+        default="",
+        retrieval_method="get_measure_by_id",
+        extraction_path="measure_owner_name",
+    )
+)
+
+# Measures Summary Parameters (from get_measures_summary optimization endpoint)
+_register(
+    ParameterDefinition(
+        name="measures_summary",
+        param_type=ParameterType.DICT,
+        description="Complete measures summary with all data.",
+        default={},
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_summary",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measures",
+        param_type=ParameterType.LIST,
+        description="List of all measures with progress data.",
+        default=[],
+        retrieval_method="get_measures_summary",
+        extraction_path="measures",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measures_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of measures.",
+        default=0,
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measures_health_score",
+        param_type=ParameterType.FLOAT,
+        description="Overall health score (0-100) for all measures.",
+        default=0.0,
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_health_score",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measures_status_breakdown",
+        param_type=ParameterType.DICT,
+        description="Count of measures by status (on_track, at_risk, behind).",
+        default={},
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_status_breakdown",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="at_risk_measures",
+        param_type=ParameterType.LIST,
+        description="List of measures that are at risk or behind.",
+        default=[],
+        retrieval_method="get_measures_summary",
+        extraction_path="at_risk_measures",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Legacy KPI Parameters (for backward compatibility)
+# NOTE: Use measure parameters for new development
 # -----------------------------------------------------------------------------
 _register(
     ParameterDefinition(
         name="kpi_id",
         param_type=ParameterType.STRING,
-        description="The unique identifier of a KPI.",
+        description="Deprecated: Use measure_id. The unique identifier of a KPI.",
     )
 )
 
@@ -476,7 +1075,118 @@ _register(
         param_type=ParameterType.DATETIME,
         description="The due date of the action.",
         retrieval_method="get_action_by_id",
-        extraction_path="due_date",
+        extraction_path="action_due_date",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_priority",
+        param_type=ParameterType.STRING,
+        description="The priority of the action (low, medium, high, critical).",
+        default="",
+        retrieval_method="get_action_by_id",
+        extraction_path="action_priority",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_progress",
+        param_type=ParameterType.INTEGER,
+        description="Progress percentage of the action (0-100).",
+        default=0,
+        retrieval_method="get_action_by_id",
+        extraction_path="action_progress",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_assigned_to",
+        param_type=ParameterType.STRING,
+        description="Name of person assigned to the action.",
+        default="",
+        retrieval_method="get_action_by_id",
+        extraction_path="action_assigned_to",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_estimated_hours",
+        param_type=ParameterType.FLOAT,
+        description="Estimated hours for the action.",
+        default=0.0,
+        retrieval_method="get_action_by_id",
+        extraction_path="action_estimated_hours",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_actual_hours",
+        param_type=ParameterType.FLOAT,
+        description="Actual hours spent on the action.",
+        default=0.0,
+        retrieval_method="get_action_by_id",
+        extraction_path="action_actual_hours",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="action_connections",
+        param_type=ParameterType.DICT,
+        description="Linked goals, strategies, and issues for the action.",
+        default={},
+        retrieval_method="get_action_by_id",
+        extraction_path="action_connections",
+    )
+)
+
+# Action Aggregation Parameters
+_register(
+    ParameterDefinition(
+        name="actions",
+        param_type=ParameterType.LIST,
+        description="List of all actions for the tenant.",
+        default=[],
+        retrieval_method="get_all_actions",
+        extraction_path="actions",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="actions_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of actions.",
+        default=0,
+        retrieval_method="get_all_actions",
+        extraction_path="actions_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="pending_actions_count",
+        param_type=ParameterType.INTEGER,
+        description="Number of actions not yet completed.",
+        default=0,
+        retrieval_method="get_all_actions",
+        extraction_path="pending_actions_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="actions_by_status",
+        param_type=ParameterType.DICT,
+        description="Actions grouped by status.",
+        default={},
+        retrieval_method="get_all_actions",
+        extraction_path="actions_by_status",
     )
 )
 
@@ -542,6 +1252,255 @@ _register(
         default="",
         retrieval_method="get_issue_by_id",
         extraction_path="status",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issue_impact",
+        param_type=ParameterType.STRING,
+        description="The business impact of the issue.",
+        default="",
+        retrieval_method="get_issue_by_id",
+        extraction_path="issue_impact",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issue_assigned_to",
+        param_type=ParameterType.STRING,
+        description="Name of person assigned to the issue.",
+        default="",
+        retrieval_method="get_issue_by_id",
+        extraction_path="issue_assigned_to",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issue_reporter",
+        param_type=ParameterType.STRING,
+        description="Name of person who reported the issue.",
+        default="",
+        retrieval_method="get_issue_by_id",
+        extraction_path="issue_reporter",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issue_tags",
+        param_type=ParameterType.LIST,
+        description="Tags associated with the issue.",
+        default=[],
+        retrieval_method="get_issue_by_id",
+        extraction_path="issue_tags",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issue_connections",
+        param_type=ParameterType.DICT,
+        description="Linked goals, strategies, and actions for the issue.",
+        default={},
+        retrieval_method="get_issue_by_id",
+        extraction_path="issue_connections",
+    )
+)
+
+# Issue Aggregation Parameters
+_register(
+    ParameterDefinition(
+        name="issues",
+        param_type=ParameterType.LIST,
+        description="List of all issues for the tenant.",
+        default=[],
+        retrieval_method="get_all_issues",
+        extraction_path="issues",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="issues_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of issues.",
+        default=0,
+        retrieval_method="get_all_issues",
+        extraction_path="issues_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="critical_issues_count",
+        param_type=ParameterType.INTEGER,
+        description="Number of critical priority issues.",
+        default=0,
+        retrieval_method="get_all_issues",
+        extraction_path="critical_issues_count",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# People Parameters (from get_people or get_person_by_id)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="person_id",
+        param_type=ParameterType.STRING,
+        description="The unique identifier of a person.",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person",
+        param_type=ParameterType.DICT,
+        description="Complete person data.",
+        retrieval_method="get_person_by_id",
+        extraction_path="person",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person_name",
+        param_type=ParameterType.STRING,
+        description="The name of the person.",
+        default="",
+        retrieval_method="get_person_by_id",
+        extraction_path="person_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person_email",
+        param_type=ParameterType.STRING,
+        description="The email of the person.",
+        default="",
+        retrieval_method="get_person_by_id",
+        extraction_path="person_email",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person_role",
+        param_type=ParameterType.STRING,
+        description="The role of the person.",
+        default="",
+        retrieval_method="get_person_by_id",
+        extraction_path="person_role",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person_department",
+        param_type=ParameterType.STRING,
+        description="The department of the person.",
+        default="",
+        retrieval_method="get_person_by_id",
+        extraction_path="person_department",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="person_position",
+        param_type=ParameterType.STRING,
+        description="The position of the person.",
+        default="",
+        retrieval_method="get_person_by_id",
+        extraction_path="person_position",
+    )
+)
+
+# People Aggregation Parameters
+_register(
+    ParameterDefinition(
+        name="people",
+        param_type=ParameterType.LIST,
+        description="List of all people in the organization.",
+        default=[],
+        retrieval_method="get_people",
+        extraction_path="people",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="people_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of people.",
+        default=0,
+        retrieval_method="get_people",
+        extraction_path="people_count",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="people_by_department",
+        param_type=ParameterType.DICT,
+        description="People grouped by department.",
+        default={},
+        retrieval_method="get_people",
+        extraction_path="people_by_department",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Department Parameters (from get_departments)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="departments",
+        param_type=ParameterType.LIST,
+        description="List of all departments.",
+        default=[],
+        retrieval_method="get_departments",
+        extraction_path="departments",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="departments_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of departments.",
+        default=0,
+        retrieval_method="get_departments",
+        extraction_path="departments_count",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Position Parameters (from get_positions)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="positions",
+        param_type=ParameterType.LIST,
+        description="List of all positions.",
+        default=[],
+        retrieval_method="get_positions",
+        extraction_path="positions",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="positions_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of positions.",
+        default=0,
+        retrieval_method="get_positions",
+        extraction_path="positions_count",
     )
 )
 

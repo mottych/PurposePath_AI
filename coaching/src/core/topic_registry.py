@@ -95,13 +95,53 @@ def _goals(name: str, path: str = "") -> ParameterRef:
 
 
 def _kpi(name: str, path: str = "") -> ParameterRef:
-    """Create a KPI source parameter reference."""
+    """Create a KPI source parameter reference. Deprecated: Use _measure."""
     return ParameterRef(name=name, source=ParameterSource.KPI, source_path=path)
 
 
 def _kpis(name: str, path: str = "") -> ParameterRef:
-    """Create a KPIS source parameter reference."""
+    """Create a KPIS source parameter reference. Deprecated: Use _measures."""
     return ParameterRef(name=name, source=ParameterSource.KPIS, source_path=path)
+
+
+def _measure(name: str, path: str = "") -> ParameterRef:
+    """Create a MEASURE source parameter reference (from get_measure_by_id)."""
+    return ParameterRef(name=name, source=ParameterSource.KPI, source_path=path)  # Reuse KPI source
+
+
+def _measures(name: str, path: str = "") -> ParameterRef:
+    """Create a MEASURES source parameter reference (from get_measures_summary)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.KPIS, source_path=path
+    )  # Reuse KPIS source
+
+
+def _strategy(name: str, path: str = "") -> ParameterRef:
+    """Create a STRATEGY source parameter reference (from get_strategy_by_id)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.GOAL, source_path=path
+    )  # Reuse GOAL source
+
+
+def _strategies(name: str, path: str = "") -> ParameterRef:
+    """Create a STRATEGIES source parameter reference (from get_all_strategies)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.GOALS, source_path=path
+    )  # Reuse GOALS source
+
+
+def _people(name: str, path: str = "") -> ParameterRef:
+    """Create a PEOPLE source parameter reference (from get_people)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.USER, source_path=path
+    )  # Reuse USER source
+
+
+def _departments(name: str, path: str = "") -> ParameterRef:
+    """Create a DEPARTMENTS source parameter reference (from get_departments)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.USER, source_path=path
+    )  # Reuse USER source
 
 
 def _action(name: str, path: str = "") -> ParameterRef:
@@ -923,7 +963,7 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("user_name"),
             _onb("company_name", "company_name"),
             _onb("core_values", "core_values"),
-            _onb("mission_statement", "mission_statement"),  # Purpose/mission
+            _onb("purpose", "purpose"),  # Updated from mission_statement
             _onb("onboarding_niche", "onboarding_niche"),
             _onb("onboarding_ica", "onboarding_ica"),
             _onb("onboarding_value_proposition", "onboarding_value_proposition"),
