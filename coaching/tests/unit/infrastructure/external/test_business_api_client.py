@@ -482,9 +482,7 @@ class TestBusinessApiClient:
         )
 
         # get_kpis should call get_measures
-        mock_http_client.get.return_value.json.return_value = {
-            "data": {"items": [{"id": "m1"}]}
-        }
+        mock_http_client.get.return_value.json.return_value = {"data": {"items": [{"id": "m1"}]}}
         result = await business_client.get_kpis("t1")
         assert len(result) == 1
         mock_http_client.get.assert_called_with(
