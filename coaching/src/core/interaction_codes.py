@@ -27,8 +27,11 @@ ALIGNMENT_ANALYSIS: Final[str] = "ALIGNMENT_ANALYSIS"
 STRATEGY_ANALYSIS: Final[str] = "STRATEGY_ANALYSIS"
 """Analyze business strategy effectiveness."""
 
-KPI_ANALYSIS: Final[str] = "KPI_ANALYSIS"
-"""Analyze KPI effectiveness and recommend improvements."""
+MEASURE_ANALYSIS: Final[str] = "MEASURE_ANALYSIS"
+"""Analyze measure effectiveness and recommend improvements."""
+
+# Deprecated alias for backward compatibility
+KPI_ANALYSIS: Final[str] = "MEASURE_ANALYSIS"
 
 # Coaching Interactions
 COACHING_RESPONSE: Final[str] = "COACHING_RESPONSE"
@@ -74,7 +77,8 @@ __all__ = [
     "ALIGNMENT_SUGGESTIONS",
     "COACHING_RESPONSE",
     "INSIGHTS_GENERATION",
-    "KPI_ANALYSIS",
+    "KPI_ANALYSIS",  # Deprecated: Use MEASURE_ANALYSIS
+    "MEASURE_ANALYSIS",
     "ONBOARDING_SUGGESTIONS",
     "PRIORITIZATION_SUGGESTIONS",
     "ROOT_CAUSE_ANALYSIS",

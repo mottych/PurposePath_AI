@@ -46,13 +46,13 @@ class TestAnalysisRequested:
         """Test event serialization."""
         event = AnalysisRequested(
             aggregate_id="req-123",
-            analysis_type=AnalysisType.KPI,
+            analysis_type=AnalysisType.MEASURE,
             user_id="user-456",
             tenant_id="tenant-789",
         )
 
         data = event.to_dict()
-        assert data["analysis_type"] == "kpi"
+        assert data["analysis_type"] == "measure"
 
 
 class TestAnalysisCompleted:

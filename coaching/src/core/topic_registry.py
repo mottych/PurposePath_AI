@@ -94,26 +94,25 @@ def _goals(name: str, path: str = "") -> ParameterRef:
     return ParameterRef(name=name, source=ParameterSource.GOALS, source_path=path)
 
 
-def _kpi(name: str, path: str = "") -> ParameterRef:
-    """Create a KPI source parameter reference. Deprecated: Use _measure."""
-    return ParameterRef(name=name, source=ParameterSource.KPI, source_path=path)
-
-
-def _kpis(name: str, path: str = "") -> ParameterRef:
-    """Create a KPIS source parameter reference. Deprecated: Use _measures."""
-    return ParameterRef(name=name, source=ParameterSource.KPIS, source_path=path)
-
-
 def _measure(name: str, path: str = "") -> ParameterRef:
     """Create a MEASURE source parameter reference (from get_measure_by_id)."""
-    return ParameterRef(name=name, source=ParameterSource.KPI, source_path=path)  # Reuse KPI source
+    return ParameterRef(name=name, source=ParameterSource.MEASURE, source_path=path)
 
 
 def _measures(name: str, path: str = "") -> ParameterRef:
     """Create a MEASURES source parameter reference (from get_measures_summary)."""
-    return ParameterRef(
-        name=name, source=ParameterSource.KPIS, source_path=path
-    )  # Reuse KPIS source
+    return ParameterRef(name=name, source=ParameterSource.MEASURES, source_path=path)
+
+
+# Deprecated aliases for backward compatibility
+def _kpi(name: str, path: str = "") -> ParameterRef:
+    """Deprecated: Use _measure. Create a KPI source parameter reference."""
+    return _measure(name, path)
+
+
+def _kpis(name: str, path: str = "") -> ParameterRef:
+    """Deprecated: Use _measures. Create a KPIS source parameter reference."""
+    return _measures(name, path)
 
 
 def _strategy(name: str, path: str = "") -> ParameterRef:
@@ -354,19 +353,19 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("market_context"),
         ),
     ),
-    "POST:/coaching/kpi-recommendations": EndpointDefinition(
-        endpoint_path="/coaching/kpi-recommendations",
+    "POST:/coaching/measure-recommendations": EndpointDefinition(
+        endpoint_path="/coaching/measure-recommendations",
         http_method="POST",
-        topic_id="kpi_recommendations",
-        response_model="KPIRecommendationsResponse",
+        topic_id="measure_recommendations",
+        response_model="MeasureRecommendationsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
-        description="Recommend KPIs based on business goals",
+        description="Recommend measures based on business goals",
         is_active=True,
         parameter_refs=(
             _goals("goals"),
             _onb("business_context"),
-            _kpis("existing_kpis"),
+            _measures("existing_measures"),
         ),
     ),
     "POST:/coaching/alignment-check": EndpointDefinition(
@@ -666,113 +665,113 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _issue("issue_details"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/update": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/update",
+    "POST:/operations/measures/{measure_id}/update": EndpointDefinition(
+        endpoint_path="/operations/measures/{measure_id}/update",
         http_method="POST",
-        topic_id="update_kpi",
-        response_model="UpdateKPIResponse",
+        topic_id="update_measure",
+        response_model="UpdateMeasureResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Update a KPI value with audit trail",
+        description="Update a measure value with audit trail",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("update_data"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/calculate": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/calculate",
+    "POST:/operations/measures/{measure_id}/calculate": EndpointDefinition(
+        endpoint_path="/operations/measures/{measure_id}/calculate",
         http_method="POST",
-        topic_id="calculate_kpi",
-        response_model="CalculateKPIResponse",
+        topic_id="calculate_measure",
+        response_model="CalculateMeasureResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Calculate KPI value from linked data",
+        description="Calculate measure value from linked data",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
-            _kpi("kpi_id", "id"),
+            _req("measure_id"),
+            _measure("measure_id", "id"),
         ),
     ),
-    "GET:/operations/kpis/{kpi_id}/history": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/history",
+    "GET:/operations/measures/{measure_id}/history": EndpointDefinition(
+        endpoint_path="/operations/measures/{measure_id}/history",
         http_method="GET",
-        topic_id="kpi_history",
-        response_model="KPIHistoryResponse",
+        topic_id="measure_history",
+        response_model="MeasureHistoryResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Get historical values for a KPI",
+        description="Get historical values for a measure",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("time_range"),
         ),
     ),
-    "GET:/operations/kpis/{kpi_id}/impact": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/impact",
+    "GET:/operations/measures/{measure_id}/impact": EndpointDefinition(
+        endpoint_path="/operations/measures/{measure_id}/impact",
         http_method="GET",
-        topic_id="kpi_impact",
-        response_model="KPIImpactResponse",
+        topic_id="measure_impact",
+        response_model="MeasureImpactResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Analyze KPI impact on strategic goals",
+        description="Analyze measure impact on strategic goals",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
-            _kpis("related_kpis"),
+            _req("measure_id"),
+            _measures("related_measures"),
         ),
     ),
-    "POST:/operations/actions/{action_id}/kpi-impact": EndpointDefinition(
-        endpoint_path="/operations/actions/{action_id}/kpi-impact",
+    "POST:/operations/actions/{action_id}/measure-impact": EndpointDefinition(
+        endpoint_path="/operations/actions/{action_id}/measure-impact",
         http_method="POST",
-        topic_id="action_kpi_impact",
-        response_model="ActionKPIImpactResponse",
+        topic_id="action_measure_impact",
+        response_model="ActionMeasureImpactResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Calculate impact of action completion on KPIs",
+        description="Calculate impact of action completion on measures",
         is_active=False,
         parameter_refs=(
             _req("action_id"),
             _action("action_details"),
-            _kpis("related_kpis"),
+            _measures("related_measures"),
         ),
     ),
-    "POST:/operations/kpis/sync-to-strategy": EndpointDefinition(
-        endpoint_path="/operations/kpis/sync-to-strategy",
+    "POST:/operations/measures/sync-to-strategy": EndpointDefinition(
+        endpoint_path="/operations/measures/sync-to-strategy",
         http_method="POST",
-        topic_id="sync_kpis_to_strategy",
-        response_model="SyncKPIsResponse",
+        topic_id="sync_measures_to_strategy",
+        response_model="SyncMeasuresResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Sync operational KPIs to strategic planning",
+        description="Sync operational measures to strategic planning",
         is_active=False,
         parameter_refs=(
-            _req("kpi_updates"),
+            _req("measure_updates"),
             _onb("strategy"),
         ),
     ),
-    "GET:/operations/kpis/detect-conflicts": EndpointDefinition(
-        endpoint_path="/operations/kpis/detect-conflicts",
+    "GET:/operations/measures/detect-conflicts": EndpointDefinition(
+        endpoint_path="/operations/measures/detect-conflicts",
         http_method="GET",
-        topic_id="detect_kpi_conflicts",
-        response_model="KPIConflictsResponse",
+        topic_id="detect_measure_conflicts",
+        response_model="MeasureConflictsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Detect conflicts between operational and strategic KPIs",
+        description="Detect conflicts between operational and strategic measures",
         is_active=False,
         parameter_refs=(
-            _kpis("operational_kpis"),
-            _kpis("strategic_kpis"),
+            _measures("operational_measures"),
+            _measures("strategic_measures"),
         ),
     ),
-    "POST:/operations/kpis/resolve-conflict": EndpointDefinition(
-        endpoint_path="/operations/kpis/resolve-conflict",
+    "POST:/operations/measures/resolve-conflict": EndpointDefinition(
+        endpoint_path="/operations/measures/resolve-conflict",
         http_method="POST",
-        topic_id="resolve_kpi_conflict",
+        topic_id="resolve_measure_conflict",
         response_model="ResolveConflictResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Resolve a detected KPI conflict",
+        description="Resolve a detected measure conflict",
         is_active=False,
         parameter_refs=(
             _req("conflict_id"),
@@ -821,17 +820,17 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("update_data"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/cascade-update": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/cascade-update",
+    "POST:/operations/measures/{measure_id}/cascade-update": EndpointDefinition(
+        endpoint_path="/operations/measures/{measure_id}/cascade-update",
         http_method="POST",
-        topic_id="cascade_kpi_update",
+        topic_id="cascade_measure_update",
         response_model="CascadeUpdateResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Cascade KPI updates to related strategic items",
+        description="Cascade measure updates to related strategic items",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("update_value"),
         ),
     ),
@@ -864,17 +863,17 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("business_foundation"),
         ),
     ),
-    "POST:/analysis/kpi-performance": EndpointDefinition(
-        endpoint_path="/analysis/kpi-performance",
+    "POST:/analysis/measure-performance": EndpointDefinition(
+        endpoint_path="/analysis/measure-performance",
         http_method="POST",
-        topic_id="kpi_analysis",
-        response_model="KPIPerformanceResponse",
+        topic_id="measure_analysis",
+        response_model="MeasurePerformanceResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ANALYSIS,
-        description="Analyze KPI performance trends",
+        description="Analyze measure performance trends",
         is_active=True,
         parameter_refs=(
-            _kpis("kpis"),
+            _measures("measures"),
             _req("performance_data"),
         ),
     ),
