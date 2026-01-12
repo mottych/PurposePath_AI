@@ -112,7 +112,8 @@ interface DashboardConfigResponse {
 }
 
 interface WidgetInstance {
-  instanceId: string | null;      // Unique ID for this instance (may be null for system default templates)
+  instanceId: string | null;      // Frontend-owned unique ID for this widget instance (may be null for system default templates)
+  layoutId?: string;              // Required when instanceId is null (correlation id to map widgets[] to layouts[].i)
   widgetId: string;              // References widget catalog ID
   title?: string;                // Custom title override
 }
@@ -125,7 +126,7 @@ interface ResponsiveLayouts {
 }
 
 interface WidgetLayout {
-  i: string;                     // Matches WidgetInstance.instanceId
+  i: string;                     // Matches WidgetInstance.instanceId (or WidgetInstance.layoutId when instanceId is null)
   x: number;                     // X position (0-based grid column)
   y: number;                     // Y position (0-based grid row)
   w: number;                     // Width in grid units
@@ -183,9 +184,11 @@ X-Tenant-Id: {tenantId}
 - Returns default configuration if user has no saved config
 - Configuration is user-specific (isolated by userId within tenant)
 - Widget instances must reference valid widget IDs from the catalog
+- **Frontend owns widget instance IDs** (`widgets[].instanceId`)
 - When returning a system default template (no user config exists), `widgets[].instanceId` may be null
-  - Frontend must generate instance IDs and then save the updated config
-  - Settings endpoints require a non-null instanceId
+  - When `instanceId` is null, the backend must provide `widgets[].layoutId` and `layouts[].i` must match that layoutId
+  - The frontend must immediately generate `instanceId`s for those widgets, update layouts to use the new instanceIds, and persist via `PUT /account/api/v1/dashboard/config`
+  - Settings endpoints require a non-null instanceId (settings cannot be read/updated until the frontend assigns an instanceId)
 - Layout positions must be non-negative integers
 
 ---
@@ -264,7 +267,7 @@ Content-Type: application/json
 | Field | Rule |
 |-------|------|
 | `widgets` | Required, non-empty array |
-| `widgets[].instanceId` | Required, unique within dashboard |
+| `widgets[].instanceId` | Required (frontend-owned), unique within dashboard |
 | `widgets[].widgetId` | Required, must exist in widget catalog |
 | `layouts` | Required, must have lg, md, sm, xs |
 | `layouts[].i` | Must match a widget instanceId |
@@ -680,7 +683,11 @@ Dashboard config (Account Service) does not store widget settings.
 
 **GET** `/traction/api/v1/dashboard/widgets/{widgetId}/instances/{instanceId}/settings`
 
-Retrieve current settings for a specific widget instance. If no settings exist yet, returns an empty `settings` object.
+Retrieve current settings for a specific widget instance.
+
+If no settings exist yet, returns an empty `settings` object. **Missing fields imply default operational behavior** (either a default value or a default rule handled by the widget/backend), e.g.:
+- If a filter setting is missing, show all items
+- If a "next X days" setting is missing, default to 7 days (widget-defined)
 
 The `version` returned is the widget's current version (used to interpret settings and schema).
 
@@ -770,9 +777,68 @@ Reset settings for a widget instance to its defaults as defined by the widget's 
 
 **GET** `/traction/api/v1/dashboard/widgets/{widgetId}/settings/schema`
 
-Return the widget's settings schema (including defaults) to help the frontend generate a settings UI.
+Return the widget's **settings UI schema** (including defaults) so the frontend can auto-generate a standardized settings dialog.
 
-The schema uses a JSON-Schema-like format and may include additional UI metadata (e.g. `x-ui`).
+Notes:
+- **Schema is never null.** Widgets with no settings return `fields: []`.
+- Settings represent **operational configuration only** (not layout/position/size).
+- The settings dialog is schema-driven by default. Widgets may opt into a **custom settings dialog** via `ui.mode = "custom"`.
+- Frontend uses `defaultValue` to prefill the dialog when a setting key is missing from stored settings.
+
+### Response Structure
+
+```typescript
+type SettingFieldType =
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'multiselect'
+  | 'checkbox'
+  | 'daterange'
+  | 'color'
+  | 'entity-picker';
+
+interface SettingFieldValidation {
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;     // regex string
+  message?: string;     // optional override message
+}
+
+interface SettingFieldOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+  description?: string;
+}
+
+interface SettingFieldSchema {
+  key: string;                            // setting key within settings object
+  label: string;                          // UI label
+  type: SettingFieldType;                 // UI control type
+  description?: string;                   // help text
+  required?: boolean;                     // required in the UI
+  defaultValue: unknown;                  // default UI value (may be null/undefined if default is "behavioral")
+  placeholder?: string;
+  options?: SettingFieldOption[];         // for select/multiselect
+  entityType?: 'goal' | 'measure' | 'action' | 'issue' | 'user' | 'strategy'; // for entity-picker
+  multiple?: boolean;                     // for entity-picker
+  validation?: SettingFieldValidation;
+  dependsOn?: { field: string; value: unknown }; // conditional visibility
+}
+
+interface WidgetSettingsSchemaResponse {
+  success: boolean;
+  data: {
+    widgetId: string;
+    version: number;                      // widget settings schema version
+    ui: { mode: 'schema' | 'custom' };    // settings dialog rendering strategy
+    fields: SettingFieldSchema[];         // schema-driven fields (empty when none)
+  };
+}
+```
 
 ### Response
 
@@ -782,22 +848,28 @@ The schema uses a JSON-Schema-like format and may include additional UI metadata
   "data": {
     "widgetId": "hot-list",
     "version": 1,
-    "schema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxItemsPerSection": {
-          "type": "number",
-          "default": 5,
-          "x-ui": { "control": "number", "label": "Max items per section" }
-        },
-        "showUrgentIssues": {
-          "type": "boolean",
-          "default": true,
-          "x-ui": { "control": "toggle", "label": "Show urgent issues" }
-        }
+    "ui": {
+      "mode": "schema"
+    },
+    "fields": [
+      {
+        "key": "maxItemsPerSection",
+        "label": "Max items per section",
+        "type": "number",
+        "description": "Maximum items shown in each section",
+        "required": false,
+        "defaultValue": 5,
+        "validation": { "min": 1, "max": 50 }
+      },
+      {
+        "key": "showUrgentIssues",
+        "label": "Show urgent issues",
+        "type": "checkbox",
+        "description": "Include urgent issues in the Hot List",
+        "required": false,
+        "defaultValue": true
       }
-    }
+    ]
   }
 }
 ```
