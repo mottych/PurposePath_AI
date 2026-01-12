@@ -1,8 +1,8 @@
 # Dashboard API Specification
 
 **Services:** Account Service (configuration) + Traction Service (widget data)  
-**Version:** 1.1  
-**Last Updated:** January 9, 2026
+**Version:** 1.2  
+**Last Updated:** January 12, 2026
 
 ## Endpoints Summary
 
@@ -15,6 +15,10 @@
 | GET | `/dashboard/templates/{id}` | Account | Get specific template details |
 | POST | `/dashboard/config/apply-template` | Account | Apply template to user's dashboard |
 | GET | `/dashboard/widgets` | Account | Get widget catalog (available widget definitions) |
+| GET | `/dashboard/widgets/{widgetId}/instances/{instanceId}/settings` | Traction | Get widget instance settings |
+| PUT | `/dashboard/widgets/{widgetId}/instances/{instanceId}/settings` | Traction | Save widget instance settings |
+| POST | `/dashboard/widgets/{widgetId}/instances/{instanceId}/settings/reset` | Traction | Reset widget instance settings to defaults |
+| GET | `/dashboard/widgets/{widgetId}/settings/schema` | Traction | Get widget settings schema (for UI generation + defaults) |
 | GET | `/dashboard/widgets/hot-list/data` | Traction | Get hot list widget data |
 | GET | `/dashboard/widgets/recent-activity/data` | Traction | Get recent activity widget data |
 | GET | `/dashboard/widgets/action-list/data` | Traction | Get action list widget data |
@@ -30,6 +34,7 @@
 
 | Date | Version | Summary |
 |------|---------|---------|
+| January 12, 2026 | 1.2 | Add widget settings schema + reset endpoint; include widget version in settings payloads; clarify instanceId behavior for system default templates |
 | January 9, 2026 | 1.1 | Split specification by service: Account (config/templates) and Traction (widget data) |
 | January 8, 2026 | 1.0 | Initial specification for customizable dashboard system |
 
@@ -44,9 +49,10 @@ The Dashboard API provides endpoints for managing user-customizable dashboards w
 
 ### Key Concepts
 
-- **Dashboard Config**: A user's complete dashboard state (widgets, layout, settings)
+- **Dashboard Config**: A user's dashboard layout state (widgets + layout)
 - **Widget Definition**: A widget type from the catalog (e.g., "action-list", "measure-graph")
-- **Widget Instance**: A specific widget placed on a user's dashboard with its settings
+- **Widget Instance**: A specific widget placed on a user's dashboard
+- **Widget Settings**: Per-widget-instance configuration used by Traction to generate widget data
 - **Layout**: Position and size of widgets in a responsive grid
 - **Template**: Pre-configured dashboard layouts users can apply
 
@@ -106,10 +112,9 @@ interface DashboardConfigResponse {
 }
 
 interface WidgetInstance {
-  instanceId: string;            // Unique ID for this instance
+  instanceId: string | null;      // Unique ID for this instance (may be null for system default templates)
   widgetId: string;              // References widget catalog ID
   title?: string;                // Custom title override
-  settings: Record<string, unknown>;
 }
 
 interface ResponsiveLayouts {
@@ -150,13 +155,7 @@ X-Tenant-Id: {tenantId}
       {
         "instanceId": "hot-list-1704700800000",
         "widgetId": "hot-list",
-        "title": null,
-        "settings": {
-          "showPastDueActions": true,
-          "showAtRiskMeasures": true,
-          "showCriticalIssues": true,
-          "maxItems": 5
-        }
+        "title": null
       }
     ],
     "layouts": {
@@ -184,6 +183,9 @@ X-Tenant-Id: {tenantId}
 - Returns default configuration if user has no saved config
 - Configuration is user-specific (isolated by userId within tenant)
 - Widget instances must reference valid widget IDs from the catalog
+- When returning a system default template (no user config exists), `widgets[].instanceId` may be null
+  - Frontend must generate instance IDs and then save the updated config
+  - Settings endpoints require a non-null instanceId
 - Layout positions must be non-negative integers
 
 ---
@@ -219,13 +221,7 @@ Content-Type: application/json
   "widgets": [
     {
       "instanceId": "hot-list-1704700800000",
-      "widgetId": "hot-list",
-      "settings": {
-        "showPastDueActions": true,
-        "showAtRiskMeasures": true,
-        "showCriticalIssues": true,
-        "maxItems": 10
-      }
+      "widgetId": "hot-list"
     }
   ],
   "layouts": {
@@ -270,7 +266,6 @@ Content-Type: application/json
 | `widgets` | Required, non-empty array |
 | `widgets[].instanceId` | Required, unique within dashboard |
 | `widgets[].widgetId` | Required, must exist in widget catalog |
-| `widgets[].settings` | Optional, widget-specific validation |
 | `layouts` | Required, must have lg, md, sm, xs |
 | `layouts[].i` | Must match a widget instanceId |
 | `layouts[].x` | >= 0, < grid columns (5 for lg) |
@@ -675,6 +670,140 @@ Response contains a standard envelope with `success` boolean and `data` array of
 
 # Traction Service Endpoints
 
+## Widget Instance Settings
+
+Widget settings are stored per user and per widget instance. Widgets use these settings to determine what data to return.
+
+Dashboard config (Account Service) does not store widget settings.
+
+### Get Widget Instance Settings
+
+**GET** `/traction/api/v1/dashboard/widgets/{widgetId}/instances/{instanceId}/settings`
+
+Retrieve current settings for a specific widget instance. If no settings exist yet, returns an empty `settings` object.
+
+The `version` returned is the widget's current version (used to interpret settings and schema).
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "widgetId": "hot-list",
+    "instanceId": "widget-1704700800000-abc123",
+    "version": 1,
+    "settings": {},
+    "updatedAt": "2026-01-12T12:00:00Z"
+  }
+}
+```
+
+### Save Widget Instance Settings
+
+**PUT** `/traction/api/v1/dashboard/widgets/{widgetId}/instances/{instanceId}/settings`
+
+Persist settings for a specific widget instance.
+
+### Request Body
+
+```json
+{
+  "version": 1,
+  "settings": {
+    "maxItemsPerSection": 5,
+    "showUrgentIssues": true
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "widgetId": "hot-list",
+    "instanceId": "widget-1704700800000-abc123",
+    "version": 1,
+    "settings": {
+      "maxItemsPerSection": 5,
+      "showUrgentIssues": true
+    },
+    "updatedAt": "2026-01-12T12:05:00Z"
+  }
+}
+```
+
+---
+
+### Reset Widget Instance Settings
+
+**POST** `/traction/api/v1/dashboard/widgets/{widgetId}/instances/{instanceId}/settings/reset`
+
+Reset settings for a widget instance to its defaults as defined by the widget's settings schema.
+
+- If the widget defines no defaults, the backend returns an empty `settings` object.
+- The backend persists the reset result so subsequent calls return the same values.
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "widgetId": "hot-list",
+    "instanceId": "widget-1704700800000-abc123",
+    "version": 1,
+    "settings": {
+      "maxItemsPerSection": 5,
+      "showUrgentIssues": true
+    },
+    "updatedAt": "2026-01-12T12:10:00Z"
+  }
+}
+```
+
+---
+
+## Widget Settings Schema
+
+**GET** `/traction/api/v1/dashboard/widgets/{widgetId}/settings/schema`
+
+Return the widget's settings schema (including defaults) to help the frontend generate a settings UI.
+
+The schema uses a JSON-Schema-like format and may include additional UI metadata (e.g. `x-ui`).
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "widgetId": "hot-list",
+    "version": 1,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxItemsPerSection": {
+          "type": "number",
+          "default": 5,
+          "x-ui": { "control": "number", "label": "Max items per section" }
+        },
+        "showUrgentIssues": {
+          "type": "boolean",
+          "default": true,
+          "x-ui": { "control": "toggle", "label": "Show urgent issues" }
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
 ## Hot List Widget
 
 **GET** `/traction/api/v1/dashboard/widgets/hot-list/data`
@@ -683,12 +812,9 @@ Get urgent items: past due actions, at-risk measures, and critical issues.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `showPastDueActions` | boolean | true | Include past due actions |
-| `showAtRiskMeasures` | boolean | true | Include at-risk measures |
-| `showCriticalIssues` | boolean | true | Include critical issues |
-| `maxItemsPerSection` | number | 5 | Max items per section |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -736,10 +862,9 @@ Get recent activities across the system.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `maxItems` | number | 5 | Maximum activities |
-| `activityTypes` | string | - | Comma-separated types |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -772,17 +897,9 @@ Get a filtered and sorted list of actions.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `dateRangePreset` | string | week | Date range filter |
-| `startDate` | string | - | Custom start date (ISO 8601) |
-| `endDate` | string | - | Custom end date (ISO 8601) |
-| `statusFilter` | string | - | Comma-separated statuses |
-| `assigneeFilter` | string | - | Comma-separated user IDs |
-| `sortBy` | string | dueDate | Sort field |
-| `sortOrder` | string | asc | Sort direction |
-| `maxItems` | number | 10 | Maximum items to return |
-| `showCompleted` | boolean | false | Include completed actions |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -817,14 +934,9 @@ Get a filtered list of issues.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `impactFilter` | string | - | Comma-separated impacts |
-| `priorityFilter` | string | - | Comma-separated priorities |
-| `statusFilter` | string | - | Comma-separated status categories |
-| `sortBy` | string | priority | Sort field |
-| `sortOrder` | string | desc | Sort direction |
-| `maxItems` | number | 10 | Maximum items |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -859,13 +971,9 @@ Get goal progress with strategies and measures.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `goalIds` | string | - | Comma-separated goal IDs (optional, all if empty) |
-| `status` | string | active | Goal status filter |
-| `showStrategies` | boolean | true | Include strategy data |
-| `showMeasures` | boolean | true | Include measure data |
-| `maxGoals` | number | 5 | Maximum goals to return |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -923,10 +1031,7 @@ Get measure data with historical values and trend.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `measureId` | string | Yes | Measure ID to display |
-| `dateRange` | string | No | Time range: week, month, quarter, year, all |
-| `startDate` | string | No | Custom start date (ISO 8601) |
-| `endDate` | string | No | Custom end date (ISO 8601) |
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -966,11 +1071,9 @@ Get action counts grouped by status, assignee, or priority.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `groupBy` | string | status | Group by: status, assignee, priority |
-| `dateRange` | string | month | Date range filter |
-| `chartType` | string | bar | Chart type: bar, pie, donut |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -999,11 +1102,9 @@ Get AI-generated insights and recommendations.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `maxItems` | number | 3 | Maximum insights |
-| `priority` | string | all | Priority filter: all, high, critical |
-| `insightTypes` | string | - | Comma-separated types |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -1036,10 +1137,9 @@ Get overall performance score with component breakdown.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `dateRange` | string | month | Time range for calculation |
-| `showHistory` | boolean | true | Include historical trend |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
@@ -1077,10 +1177,9 @@ Get team alignment score with factor breakdown.
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `displayMode` | string | score | Display mode: score, factors, trend |
-| `showHistory` | boolean | true | Include historical trend |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `instanceId` | string | Yes | Widget instance ID. Settings are loaded by this id. |
 
 ### Response
 
