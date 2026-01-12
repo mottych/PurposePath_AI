@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.1  
-**Last Updated:** January 7, 2026  
+**Version:** 2.2  
+**Last Updated:** January 12, 2026  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -233,6 +233,223 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
 - Headers: signature header varies by provider (`Stripe-Signature`, `PayPal-Signature`, or `X-Webhook-Signature`).
 - Body: raw webhook payload from provider.
 - Response: `{ "success": true, "data": { "received": true } }` (400 on signature/body validation failure).
+
+## User Invitations (Multi-User System)
+
+**Owner-Only Operations:** All invitation management endpoints except activation are restricted to tenant owners only.
+
+### POST /invitations
+**Owner-Only** - Invite a person to create a user account.
+
+- Body:
+```json
+{
+  "personId": "uuid",
+  "expirationDays": 7
+}
+```
+- Headers: `Authorization`, `X-Tenant-Id`, `X-Frontend-Base-Url` (required for activation link).
+- Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "personId": "uuid",
+    "tenantId": "uuid",
+    "invitedByUserId": "uuid",
+    "invitationToken": "64-char-token",
+    "status": "Sent",
+    "expiresAt": "2026-01-19T00:00:00Z",
+    "createdAt": "2026-01-12T00:00:00Z",
+    "sentAt": "2026-01-12T00:00:00Z"
+  }
+}
+```
+- Errors: 403 not owner, 400 person not found/no email/already linked/active invitation exists.
+
+### GET /invitations
+**Owner-Only** - List invitations for tenant.
+
+- Query: `status` (optional: `Pending|Sent|Accepted|Expired|Withdrawn`).
+- Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "personId": "uuid",
+      "person": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com"
+      },
+      "tenantId": "uuid",
+      "invitedByUserId": "uuid",
+      "status": "Sent",
+      "expiresAt": "2026-01-19T00:00:00Z",
+      "createdAt": "2026-01-12T00:00:00Z",
+      "sentAt": "2026-01-12T00:00:00Z",
+      "acceptedAt": null
+    }
+  ]
+}
+```
+
+### POST /invitations/{id}/resend
+**Owner-Only** - Regenerate token and resend invitation email.
+
+- Path: invitation ID (GUID).
+- Body:
+```json
+{
+  "expirationDays": 7
+}
+```
+- Headers: `X-Frontend-Base-Url` (required for activation link).
+- Response: updated invitation object (same as POST /invitations).
+- Errors: 403 not owner, 404 not found, 400 already accepted.
+
+### DELETE /invitations/{id}
+**Owner-Only** - Withdraw invitation (cancel before acceptance).
+
+- Path: invitation ID (GUID).
+- Response: `{ "success": true, "message": "Invitation withdrawn successfully" }`.
+- Errors: 403 not owner, 404 not found, 400 already accepted.
+
+### GET /invitations/validate/{token} (Public)
+**No Auth Required** - Validate invitation token before activation.
+
+- Path: invitation token (64-char string).
+- Response:
+```json
+{
+  "success": true,
+  "data": {
+    "isValid": true,
+    "invitation": {
+      "id": "uuid",
+      "personId": "uuid",
+      "person": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com"
+      },
+      "tenantId": "uuid",
+      "status": "Sent",
+      "expiresAt": "2026-01-19T00:00:00Z"
+    }
+  }
+}
+```
+- Invalid token response:
+```json
+{
+  "success": false,
+  "error": "Invalid or expired invitation",
+  "data": { "isValid": false }
+}
+```
+
+### POST /invitations/activate (Public)
+**No Auth Required** - Activate invitation and create user account.
+
+- Body (Password-based):
+```json
+{
+  "token": "64-char-token",
+  "password": "SecurePassword123!"
+}
+```
+- Body (OAuth-based):
+```json
+{
+  "token": "64-char-token",
+  "googleUserId": "google-oauth-id",
+  "googleEmail": "john.doe@example.com",
+  "googleProfilePictureUrl": "https://..."
+}
+```
+- Response:
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "jwt",
+    "refreshToken": "jwt",
+    "user": {
+      "id": "uuid",
+      "username": "johndoe",
+      "personId": "uuid",
+      "tenantId": "uuid",
+      "status": "Active",
+      "createdAt": "2026-01-12T00:00:00Z"
+    },
+    "person": {
+      "id": "uuid",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "linkedUserId": "uuid"
+    },
+    "tenant": {
+      "id": "uuid",
+      "name": "Acme Corp",
+      "status": "Active"
+    }
+  }
+}
+```
+- Errors: 400 invalid token/expired/already used/person already linked/email mismatch (OAuth).
+
+### GET /users/tenant (Owner-Only)
+**Owner-Only** - List all users in tenant.
+
+- Query: `activeOnly` (optional boolean).
+- Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "username": "johndoe",
+      "personId": "uuid",
+      "person": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com"
+      },
+      "status": "Active",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "lastLoginAt": "2026-01-12T08:00:00Z"
+    }
+  ]
+}
+```
+- Errors: 403 not owner.
+
+### POST /users/{id}/deactivate (Owner-Only)
+**Owner-Only** - Deactivate another user (cannot deactivate self).
+
+- Path: user ID (GUID).
+- Response: `{ "success": true, "message": "User deactivated successfully" }`.
+- Errors: 403 not owner, 400 cannot deactivate self, 404 user not found.
+
+### GET /users/count/active (Owner-Only)
+**Owner-Only** - Get count of active users (for billing).
+
+- Response:
+```json
+{
+  "success": true,
+  "data": {
+    "activeUserCount": 5
+  }
+}
+```
+- Errors: 403 not owner.
 
 ## Health
 
