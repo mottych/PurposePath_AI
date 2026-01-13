@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.2  
-**Last Updated:** January 12, 2026  
+**Version:** 2.3  
+**Last Updated:** January 12, 2026 (Issue #545: Tenant owner status in JWT + AuthResponse)  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -15,6 +15,19 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
 - Paginated responses use `PaginatedResponse<T>`: same envelope plus `pagination: { page, limit, total, totalPages }`.
 - Authenticated endpoints require headers: `Authorization: Bearer {accessToken}`, `X-Tenant-Id: {tenantId}`. Public endpoints are marked.
 - Optional headers: `X-Frontend-Base-Url` (used for auth emails), `X-E2E-Test: true` (DEV only to bypass email verification on register).
+
+## JWT Claims (Issue #545)
+
+The access token JWT includes the following custom claims:
+- `user_id`: User's GUID
+- `tenant_id`: Tenant's GUID
+- `username`: User's username
+- `email_verified`: Boolean (from Person entity)
+- `user_status`: User status (e.g., "Active")
+- `role`: User role (e.g., "user" or "admin")
+- `is_tenant_owner`: Boolean - `true` if the user is the tenant owner, `false` otherwise (Issue #545)
+
+Frontend can decode the JWT to access these claims, but `isTenantOwner` is also available directly in `AuthResponse.user` for convenience.
 
 ## Authentication
 
@@ -36,6 +49,7 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
       "tenantId": "uuid",
       "status": "string",
       "isEmailVerified": true,
+      "isTenantOwner": false,
       "createdAt": "2025-12-29T00:00:00Z",
       "updatedAt": "2025-12-29T00:00:00Z"
     },
@@ -44,17 +58,18 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
   }
 }
 ```
+- **Issue #545**: `user.isTenantOwner` is `true` if the authenticated user is the tenant owner (`tenant.ownerUserId == user.id`), `false` otherwise.
 - Errors: 401 invalid credentials, 403 `EMAIL_NOT_VERIFIED`.
 
 ### POST /auth/google
 - Body: `{ "token": "string" }` (Google ID token from OAuth flow).
-- Response: same as login.
-- Notes: Validates token with Google, creates new user/tenant if external identity not found, or logs in existing user. Auto-updates user avatar from Google profile if user has no avatar.
+- Response: same as login (includes `user.isTenantOwner`).
+- Notes: Validates token with Google, creates new user/tenant if external identity not found (new user is automatically the tenant owner), or logs in existing user. Auto-updates user avatar from Google profile if user has no avatar.
 
 ### POST /auth/microsoft
 - Body: `{ "token": "string" }` (Microsoft ID token from OAuth/OIDC flow).
-- Response: same as login.
-- Notes: Validates token with Microsoft OIDC metadata endpoint, creates new user/tenant if external identity not found, or logs in existing user. Auto-updates user avatar from Microsoft profile if user has no avatar.
+- Response: same as login (includes `user.isTenantOwner`).
+- Notes: Validates token with Microsoft OIDC metadata endpoint, creates new user/tenant if external identity not found (new user is automatically the tenant owner), or logs in existing user. Auto-updates user avatar from Microsoft profile if user has no avatar.
 
 ### POST /auth/register
 - Body: `{ "username": "string", "email": "string", "password": "string", "firstName": "string", "lastName": "string", "phone": "string|null" }`.
