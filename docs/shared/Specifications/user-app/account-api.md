@@ -65,11 +65,13 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Body: `{ "token": "string" }` (Google ID token from OAuth flow).
 - Response: same as login (includes `user.isTenantOwner`).
 - Notes: Validates token with Google, creates new user/tenant if external identity not found (new user is automatically the tenant owner), or logs in existing user. Auto-updates user avatar from Google profile if user has no avatar.
+- **Issue #546**: Allows registration even if Google doesn't provide email (person.email will be null, person.emailVerified will be false). Frontend can detect missing email and direct user to update it via PUT /user/email.
 
 ### POST /auth/microsoft
 - Body: `{ "token": "string" }` (Microsoft ID token from OAuth/OIDC flow).
 - Response: same as login (includes `user.isTenantOwner`).
 - Notes: Validates token with Microsoft OIDC metadata endpoint, creates new user/tenant if external identity not found (new user is automatically the tenant owner), or logs in existing user. Auto-updates user avatar from Microsoft profile if user has no avatar.
+- **Issue #546**: Allows registration even if Microsoft doesn't provide email (person.email will be null, person.emailVerified will be false). Frontend can detect missing email and direct user to update it via PUT /user/email.
 
 ### POST /auth/register
 - Body: `{ "username": "string", "email": "string", "password": "string", "firstName": "string", "lastName": "string", "phone": "string|null" }`.
@@ -116,6 +118,15 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ### PUT /user/profile
 - Body (all optional): `{ "firstName": "string|null", "lastName": "string|null", "phone": "string|null", "avatarUrl": "string|null", "preferences": { "theme": "string", "language": "string", "timezone": "string", "dateFormat": "string", "timeFormat": "string", "currency": "string", "notifications": { "email": true, "push": true, "sms": true, "marketing": true, "coachingReminders": true, "teamUpdates": true, "systemNotifications": true }, "coaching": { "preferredSessionLength": 60, "reminderFrequency": "weekly", "coachingStyle": "directive" } } }`.
 - Response: updated `UserProfileDetailResponse`.
+
+### PUT /user/email
+- **Issue #546**: Update user email (for OAuth users who registered without email).
+- Requires authentication (including users with unverified email).
+- Body: `{ "email": "string" }`.
+- Headers: Optional `X-Frontend-Base-Url` for verification email link.
+- Response: `{ "success": true, "message": "Email updated successfully. Verification email sent." }`.
+- Errors: 400 invalid email format, 409 email already in use (EMAIL_IN_USE), 404 user not found.
+- Notes: Updates person.email and sets person.emailVerified to false. Sends verification email using existing /auth/confirm-email flow. Frontend should direct user to email verification screen after successful update.
 
 ### PUT /user/preferences
 - Body: `UserPreferencesRequest` (same shape as `preferences` above).
