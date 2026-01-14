@@ -1,15 +1,124 @@
 # Measure Data API Specification
 
-**Version:** 8.0  
+**Version:** 9.0  
 **Last Updated:** January 8, 2026  
-**Base Path:** `/measure-links/{linkId}`  
+**Base Path:** `/measures/{measureId}`  
 **Controller:** `MeasureDataController.cs`
+
+## ⚠️ BREAKING CHANGES (v9.0 - Issue #557)
+
+**Released:** January 8, 2026  
+**GitHub Issue:** [#557 - Fix MeasureData Architecture](https://github.com/purposepath/purposepath-api/issues/557)
+
+### Overview
+Version 9.0 introduces a significant architectural improvement where Measure Data is now tied directly to Measures instead of MeasureLinks. This fixes the data model inconsistency where the same measure with multiple links had separate data sets.
+
+### URL Changes (REQUIRED UPDATE)
+All endpoints have changed from `/measures/{measureId}/*` to `/measures/{measureId}/*`:
+
+| Old Endpoint (v8) | New Endpoint (v9) |
+|-------------------|-------------------|
+| `GET /measures/{measureId}/targets` | `GET /measures/{measureId}/targets` |
+| `POST /measures/{measureId}/targets` | `POST /measures/{measureId}/targets` |
+| `PUT /measures/{measureId}/targets/{targetId}` | `PUT /measures/{measureId}/targets/{targetId}` |
+| `DELETE /measures/{measureId}/targets/{targetId}` | `DELETE /measures/{measureId}/targets/{targetId}` |
+| `GET /measures/{measureId}/actuals` | `GET /measures/{measureId}/actuals` |
+| `POST /measures/{measureId}/actuals` | `POST /measures/{measureId}/actuals` |
+| `PUT /measures/{measureId}/actuals/{actualId}/override` | `PUT /measures/{measureId}/actuals/{actualId}/override` |
+| `GET /measures/{measureId}/all-series` | `GET /measures/{measureId}/all-series` |
+
+### Response Field Changes (REQUIRED UPDATE)
+All response DTOs now use `measureId` instead of `measureLinkId`:
+
+```json
+// ❌ Old (v8)
+{
+  "measureId": "measure-456",
+  "targets": [...]
+}
+
+// ✅ New (v9)
+{
+  "measureId": "measure-456",
+  "targets": [...]
+}
+```
+
+### Migration Guide for Frontend Developers
+
+#### Step 1: Update API Service Base URLs
+```typescript
+// ❌ Old
+const url = `/measure-links/${linkId}/targets`;
+
+// ✅ New - Get measureId from link object
+const url = `/measures/${link.measureId}/targets`;
+```
+
+#### Step 2: Update Response Type Definitions
+```typescript
+// ❌ Old interface
+interface MeasureDataResponse {
+  measureLinkId: string;
+  targets: TargetValue[];
+  actuals: ActualValue[];
+}
+
+// ✅ New interface
+interface MeasureDataResponse {
+  measureId: string;  // Changed from measureLinkId
+  targets: TargetValue[];
+  actuals: ActualValue[];
+}
+```
+
+#### Step 3: Update Component Props
+```typescript
+// ❌ Old
+function MeasureChart({ measureLinkId }: Props) {
+  const data = await fetchMeasureData(measureLinkId);
+}
+
+// ✅ New
+function MeasureChart({ measureId }: Props) {
+  const data = await fetchMeasureData(measureId);
+}
+```
+
+#### Step 4: Accessing measureId from Link Objects
+```typescript
+// All MeasureLink objects now have a measureId property
+const link = await getMeasureLink(linkId);
+const data = await fetchMeasureData(link.measureId);  // Use this
+```
+
+### Data Persistence Changes
+- DynamoDB partition keys changed from `MEASURELINK#{linkId}` to `MEASURE#{measureId}`
+- GSI names changed: `measure-link-index` → `measure-index`
+- All measure data is now stored once per Measure (not per Link)
+- Multiple links to the same Measure share the same data set
+
+### Benefits of This Change
+✅ **Architectural correctness:** Data properly tied to the Measure entity  
+✅ **Data consistency:** One Measure = one data set, regardless of links  
+✅ **Simplified queries:** No need to aggregate across multiple links  
+✅ **Widget performance:** Widgets query by measureId directly  
+
+### Backward Compatibility
+⚠️ **None** - This is a breaking change requiring frontend updates  
+⚠️ All old `/measures/{measureId}/*` endpoints will return 404  
+⚠️ All `measureLinkId` fields in responses have been removed  
+
+**Estimated Frontend Migration Time:** 1-2 days for a typical application
+
+---
 
 ## Overview
 
-The Measure Data API manages target values and actual measurements for Measure links. This is the v8 consolidated data model that unifies Expected/Optimal/Minimal targets into a single record (issue #512).
+The Measure Data API manages target values and actual measurements for Measures. This is the v9 architecture where data is tied directly to Measures (not MeasureLinks), consolidated with v8 data model that unifies Expected/Optimal/Minimal targets into a single record (issue #512, #557).
 
 ### Key Features
+- **Measure-scoped:** All data is associated with a Measure (not MeasureLink)
 - **Consolidated Targets:** Set expected, optimal, and minimal values in a single record
 - **Actuals:** Record measured values and estimates
 - **Time-series data:** Track Measure progress over time
@@ -18,7 +127,7 @@ The Measure Data API manages target values and actual measurements for Measure l
 
 ### Design Philosophy
 - **Single record per target date:** Expected/Optimal/Minimal values stored together, not as separate records
-- **Link-scoped:** All data is associated with a Measure link (not just a Measure)
+- **Measure-scoped:** All data is associated with a Measure directly (architectural fix in v9)
 - **Category-based:** `Target` (with optional optimal/minimal) or `Actual` (Measured/Estimate)
 - **Historical tracking:** All values are preserved with timestamps
 - **Simplified validation:** Three-value consistency enforced: `OptimalValue >= PostValue >= MinimalValue`
@@ -37,15 +146,15 @@ All endpoints require:
 
 ### 1. Get Targets
 
-Retrieve all target values for a Measure link.
+Retrieve all target values for a Measure.
 
-**Endpoint:** `GET /measure-links/{linkId}/targets`
+**Endpoint:** `GET /measures/{measureId}/targets`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 
 #### Query Parameters
 
@@ -54,7 +163,7 @@ None. All targets for the link are returned.
 #### Request Example
 
 ```http
-GET /measure-links/link-123/targets
+GET /measures/measure-456/targets
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -67,11 +176,11 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "targets": [
       {
         "id": "target-001",
-        "measureLinkId": "link-123",
+        "measureId": "measure-456",
         "dataCategory": "Target",
         "actualSubtype": null,
         "postValue": 50000.00,
@@ -102,7 +211,7 @@ X-Tenant-Id: {tenantId}
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string (GUID) | Unique Measure data entry identifier |
-| `measureLinkId` | string (GUID) | Associated Measure link |
+| `measureId` | string (GUID) | Associated Measure |
 | `dataCategory` | enum | `Target` or `Actual` |
 | `actualSubtype` | enum | For actuals: `Measured`, `Estimate`. Always null for targets. |
 | `postValue` | decimal | The primary/expected target value |
@@ -135,13 +244,13 @@ X-Tenant-Id: {tenantId}
 
 Set a new target value for a Measure link. Creates a single record with expected (primary) value and optional optimal/minimal values.
 
-**Endpoint:** `POST /measure-links/{linkId}/targets`
+**Endpoint:** `POST /measures/{measureId}/targets`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 
 #### Request Body
 
@@ -180,7 +289,7 @@ Set a new target value for a Measure link. Creates a single record with expected
   "success": true,
   "data": {
     "id": "target-new-001",
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "dataCategory": "Target",
     "postValue": 50000.00,
     "optimalValue": 60000.00,
@@ -233,13 +342,13 @@ Set a new target value for a Measure link. Creates a single record with expected
 
 Update an existing target value or properties.
 
-**Endpoint:** `PUT /measure-links/{linkId}/targets/{targetId}`
+**Endpoint:** `PUT /measures/{measureId}/targets/{targetId}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 | `targetId` | string (GUID) | **Yes** | Target entry identifier |
 
 #### Request Body
@@ -281,7 +390,7 @@ All fields are optional. Only provided fields will be updated.
   "success": true,
   "data": {
     "id": "target-001",
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "dataCategory": "Target",
     "postValue": 55000.00,
     "optimalValue": 65000.00,
@@ -302,13 +411,13 @@ All fields are optional. Only provided fields will be updated.
 
 Remove a target entry.
 
-**Endpoint:** `DELETE /measure-links/{linkId}/targets/{targetId}`
+**Endpoint:** `DELETE /measures/{measureId}/targets/{targetId}`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 | `targetId` | string (GUID) | **Yes** | Target entry identifier |
 
 #### Response
@@ -338,13 +447,13 @@ Remove a target entry.
 
 Retrieve all actual measurements for a Measure link.
 
-**Endpoint:** `GET /measure-links/{linkId}/actuals`
+**Endpoint:** `GET /measures/{measureId}/actuals`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 
 #### Query Parameters
 
@@ -355,7 +464,7 @@ Retrieve all actual measurements for a Measure link.
 #### Request Example
 
 ```http
-GET /measure-links/link-123/actuals?actualSubtype=Measured
+GET /measures/measure-456/actuals?actualSubtype=Measured
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -368,11 +477,11 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "actuals": [
       {
         "id": "actual-001",
-        "measureLinkId": "link-123",
+        "measureId": "measure-456",
         "dataCategory": "Actual",
         "actualSubtype": "Measured",
         "postValue": 48500.00,
@@ -404,13 +513,13 @@ X-Tenant-Id: {tenantId}
 
 Record a new actual measurement or estimate.
 
-**Endpoint:** `POST /measure-links/{linkId}/actuals`
+**Endpoint:** `POST /measures/{measureId}/actuals`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 
 #### Request Body
 
@@ -447,7 +556,7 @@ Record a new actual measurement or estimate.
   "success": true,
   "data": {
     "id": "actual-new-001",
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "dataCategory": "Actual",
     "actualSubtype": "Measured",
     "postValue": 48500.00,
@@ -475,13 +584,13 @@ Record a new actual measurement or estimate.
 
 Manually override an actual value with a correction.
 
-**Endpoint:** `PUT /measure-links/{linkId}/actuals/{actualId}/override`
+**Endpoint:** `PUT /measures/{measureId}/actuals/{actualId}/override`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 | `actualId` | string (GUID) | **Yes** | Actual entry identifier |
 
 #### Request Body
@@ -509,7 +618,7 @@ Manually override an actual value with a correction.
   "success": true,
   "data": {
     "id": "actual-001",
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "dataCategory": "Actual",
     "actualSubtype": "Measured",
     "postValue": 49000.00,
@@ -536,18 +645,18 @@ Manually override an actual value with a correction.
 
 Retrieve all targets and actuals for a Measure link in one request.
 
-**Endpoint:** `GET /measure-links/{linkId}/all-series`
+**Endpoint:** `GET /measures/{measureId}/all-series`
 
 #### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `linkId` | string (GUID) | **Yes** | Measure link identifier |
+| `measureId` | string (GUID) | **Yes** | Measure Measure identifier |
 
 #### Request Example
 
 ```http
-GET /measure-links/link-123/all-series
+GET /measures/measure-456/all-series
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -560,7 +669,7 @@ X-Tenant-Id: {tenantId}
 {
   "success": true,
   "data": {
-    "measureLinkId": "link-123",
+    "measureId": "measure-456",
     "targets": [
       {
         "id": "target-001",
@@ -772,7 +881,7 @@ renderChart({
 - Single `MeasureData` entity with `DataCategory` (Target/Actual)
 - Target subtypes: Expected/Optimal/Minimal
 - Actual subtypes: Measured/Estimate
-- Consistent endpoints: `/measure-links/{linkId}/targets` and `/measure-links/{linkId}/actuals`
+- Consistent endpoints: `/measures/{measureId}/targets` and `/measures/{measureId}/actuals`
 
 ### Benefits of v7 Design
 
