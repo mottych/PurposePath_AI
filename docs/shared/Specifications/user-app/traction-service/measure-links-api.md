@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.2  
-**Last Updated:** January 10, 2026  
+**Version:** 8.3  
+**Last Updated:** January 14, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -342,6 +342,7 @@ Get Measure links with flexible filtering by Measure, person, goal, or strategy.
 | `goalId` | string (GUID) | No | Filter by goal |
 | `strategyId` | string (GUID) | No | Filter by strategy |
 | `includeAll` | boolean | No | Include nested links (default: false) |
+| `measureInfo` | boolean | No | Include enriched measure details (default: false) - **Issue #562** |
 
 **At least one filter parameter is required.** Multiple parameters can be combined.
 
@@ -389,6 +390,12 @@ GET /measure-links?personId={personId}&goalId={goalId}
 ```
 Returns Measures where this person is assigned to work on this specific goal.
 
+**With Enriched Measure Info (Issue #562):**
+```http
+GET /measure-links?goalId={goalId}&measureInfo=true
+```
+Returns measure links with additional measure details including aggregation config, owner info, trend data, and metadata.
+
 #### Response
 
 **Status:** `200 OK`
@@ -413,7 +420,49 @@ Returns Measures where this person is assigned to work on this specific goal.
       "isPrimary": true,
       "linkedAt": "2025-12-20T10:00:00Z",
       "currentValue": 87.5,
-      "currentValueDate": "2025-12-25T09:30:00Z"
+      "currentValueDate": "2025-12-25T09:30:00Z",
+      "progress": {
+        "progressPercentage": 85.5,
+        "status": "on_track",
+        "variance": 10.5,
+        "variancePercentage": 14.0,
+        "daysUntilTarget": 15,
+        "isOverdue": false
+      },
+      "measure": {
+        "measurementConfig": {
+          "aggregationPeriod": "monthly"
+        },
+        "ownerId": "person-789",
+        "ownerName": "Sarah Johnson",
+        "ownerEmail": "sarah.johnson@example.com",
+        "trendData": [
+          {
+            "date": "2025-12-01",
+            "value": 85.0,
+            "isTarget": true
+          },
+          {
+            "date": "2025-12-01",
+            "value": 82.3,
+            "isTarget": false
+          },
+          {
+            "date": "2025-11-01",
+            "value": 80.0,
+            "isTarget": true
+          },
+          {
+            "date": "2025-11-01",
+            "value": 78.5,
+            "isTarget": false
+          }
+        ],
+        "metadata": {
+          "createdAt": "2025-10-15T08:30:00Z",
+          "updatedAt": "2025-12-20T14:22:00Z"
+        }
+      }
     },
     {
       "id": "link-002",
@@ -444,6 +493,14 @@ Returns Measures where this person is assigned to work on this specific goal.
 - `personName` - Name of the responsible person
 - `currentValue` - Latest actual value (if any)
 - `currentValueDate` - Date of the latest actual value (if any)
+- `progress` - Progress calculation (Issue #527)
+- `measure` - Enriched measure details (only when `measureInfo=true`) - **Issue #562**
+  - `measurementConfig.aggregationPeriod` - Aggregation period ('daily', 'weekly', 'monthly', 'quarterly', 'yearly')
+  - `ownerId` - Person responsible for the measure
+  - `ownerName` - Owner's display name (denormalized)
+  - `ownerEmail` - Owner's email (denormalized)
+  - `trendData` - Array of recent data points (5-10 points) for sparkline visualization
+  - `metadata` - Audit information (createdAt, updatedAt)
 
 #### Use Cases
 
