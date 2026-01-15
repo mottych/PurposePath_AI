@@ -1126,10 +1126,14 @@ Get measure data with historical values and trend.
     "targetValue": 100000,
     "variance": -5.0,
     "dataPoints": [
-      { "date": "2025-10-01", "value": 75000, "target": 80000 },
-      { "date": "2025-11-01", "value": 82000, "target": 90000 },
-      { "date": "2025-12-01", "value": 90000, "target": 95000 },
-      { "date": "2026-01-01", "value": 95000, "target": 100000 }
+      { "date": "2025-10-01", "value": 75000, "dataType": "actual" },
+      { "date": "2025-10-01", "value": 80000, "dataType": "target" },
+      { "date": "2025-11-01", "value": 82000, "dataType": "actual" },
+      { "date": "2025-11-01", "value": 90000, "dataType": "target" },
+      { "date": "2025-12-01", "value": 90000, "dataType": "actual" },
+      { "date": "2025-12-01", "value": 95000, "dataType": "target" },
+      { "date": "2026-01-01", "value": 95000, "dataType": "actual" },
+      { "date": "2026-01-01", "value": 100000, "dataType": "target" }
     ],
     "trend": {
       "direction": "up",
@@ -1139,6 +1143,8 @@ Get measure data with historical values and trend.
   }
 }
 ```
+
+**Note:** The `dataPoints` array includes all data points (both actual and target values) with an explicit `dataType` field indicating whether each point is an "actual" recorded value or a "target" planned value. This allows the frontend to distinguish between actual and target data points and supports scenarios where there may be targets without actuals or vice versa.
 
 ---
 
