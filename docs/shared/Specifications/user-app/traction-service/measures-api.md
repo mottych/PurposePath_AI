@@ -442,7 +442,7 @@ Retrieve Measures with optional filtering.
 | `goalId` | string (GUID) | No | Filter by linked goal |
 | `strategyId` | string (GUID) | No | Filter by linked strategy |
 
-**Default Behavior:** If no filter is provided, returns Measures owned by the current user.
+**Default Behavior:** If no filter is provided, returns all Measures for the tenant (useful for dropdowns and lists).
 
 #### Request Example
 
@@ -523,7 +523,7 @@ X-Tenant-Id: {tenantId}
   1. `ownerId` takes precedence
   2. Then `goalId`
   3. Then `strategyId`
-  4. Default: Current user's Measures
+  4. Default: All tenant Measures
 - **Multi-tenancy:** Only returns Measures for the specified tenant
 - **Soft Deletes:** Deleted Measures (`isDeleted: true`) are excluded by default
 
