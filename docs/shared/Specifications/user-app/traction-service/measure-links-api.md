@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.3  
-**Last Updated:** January 14, 2026  
+**Version:** 8.4  
+**Last Updated:** January 15, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -412,7 +412,9 @@ Returns measure links with additional measure details including aggregation conf
       "personId": "person-123",
       "personName": "John Doe",
       "goalId": "goal-001",
+      "goalTitle": "Increase Customer Satisfaction",
       "strategyId": "strategy-001",
+      "strategyTitle": "Improve Support Response Time",
       "thresholdPct": 80.0,
       "linkType": "strategy",
       "weight": 0.75,
@@ -491,6 +493,8 @@ Returns measure links with additional measure details including aggregation conf
 - `measureName` - Name of the linked Measure
 - `unit` - Unit of measurement
 - `personName` - Name of the responsible person
+- `goalTitle` - Title/name of the linked goal (if any) - **Issue #569**
+- `strategyTitle` - Title/name of the linked strategy (if any) - **Issue #569**
 - `currentValue` - Latest actual value (if any)
 - `currentValueDate` - Date of the latest actual value (if any)
 - `progress` - Progress calculation (Issue #527)
@@ -693,6 +697,12 @@ await traction.delete(`/measure-links/${linkId}`);
 ---
 
 ## Changelog
+
+### v8.3 (January 15, 2026) - Issue #569: Goal and Strategy Titles
+- ✨ **Added:** `goalTitle` and `strategyTitle` fields to all Measure Link response payloads
+- 🚀 **Performance:** Reduces frontend API calls by providing denormalized goal/strategy names directly in responses
+- 📝 **Implementation:** Query handler fetches and populates titles with throttled parallelism (max 10 concurrent)
+- 🔧 **Nullable fields:** Both fields return `null` when goal/strategy is not linked to the Measure Link
 
 ### v8.2 (January 10, 2026) - Issue #527: Progress Calculation
 - ✨ **Added:** `progress` field to all measure link responses (GET /measure-links, GET /measure-links/{id})
