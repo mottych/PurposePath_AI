@@ -427,6 +427,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
   }
 }
 ```
+- **Note**: `tenant.name` is populated from the business foundation's company name if available, otherwise falls back to the tenant's name field.
 - Errors: 400 invalid token/expired/already used/person already linked/email mismatch (OAuth).
 
 ## Users (Multi-User Operations - Owner Only)
