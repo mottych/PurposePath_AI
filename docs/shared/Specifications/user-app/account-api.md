@@ -106,9 +106,9 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Query: `refreshToken` (camelCase). Legacy `refresh_token` still accepted.
 - Response: `{ "success": true }`.
 
-## Users
+## Users (Single User Operations)
 
-### GET /users/{id}
+### GET /user/{id}
 - Path: user ID (GUID). Public auth required.
 - Response: `{ "success": true, "data": { "userId": "uuid", "email": "string", "firstName": "string", "lastName": "string", "avatarUrl": "string|null" } }`.
 
@@ -429,10 +429,12 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ```
 - Errors: 400 invalid token/expired/already used/person already linked/email mismatch (OAuth).
 
-### GET /users/tenant (Owner-Only)
+## Users (Multi-User Operations - Owner Only)
+
+### GET /users
 **Owner-Only** - List all users in tenant.
 
-- Query: `activeOnly` (optional boolean).
+- Query: `status` (optional: `Active|Inactive` - omit to return all users).
 - Response:
 ```json
 {
@@ -456,26 +458,27 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ```
 - Errors: 403 not owner.
 
-### POST /users/{id}/deactivate (Owner-Only)
-**Owner-Only** - Deactivate another user (cannot deactivate self).
+### GET /users/count
+**Owner-Only** - Get count of users in tenant (for billing and management).
 
-- Path: user ID (GUID).
-- Response: `{ "success": true, "message": "User deactivated successfully" }`.
-- Errors: 403 not owner, 400 cannot deactivate self, 404 user not found.
-
-### GET /users/count/active (Owner-Only)
-**Owner-Only** - Get count of active users (for billing).
-
+- Query: `status` (optional: `Active|Inactive` - omit to return count of all users).
 - Response:
 ```json
 {
   "success": true,
   "data": {
-    "activeUserCount": 5
+    "userCount": 5
   }
 }
 ```
 - Errors: 403 not owner.
+
+### POST /users/{id}/deactivate
+**Owner-Only** - Deactivate another user (cannot deactivate self).
+
+- Path: user ID (GUID).
+- Response: `{ "success": true, "message": "User deactivated successfully" }`.
+- Errors: 403 not owner, 400 cannot deactivate self, 404 user not found.
 
 ## Health
 
