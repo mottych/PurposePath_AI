@@ -267,6 +267,37 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         alias="isPrimaryCandidate",
         description="Whether this should be the primary KPI",
     )
+    catalog_measure_id: str | None = Field(
+        default=None,
+        alias="catalogMeasureId",
+        description="ID of recommended catalog measure (if from catalog)",
+    )
+    suggested_owner_id: str | None = Field(
+        default=None,
+        alias="suggestedOwnerId",
+        description="Suggested person ID to assign as measure owner",
+    )
+    suggested_owner_name: str | None = Field(
+        default=None,
+        alias="suggestedOwnerName",
+        description="Suggested person name to assign as measure owner",
+    )
+    suggested_position_id: str | None = Field(
+        default=None,
+        alias="suggestedPositionId",
+        description="Suggested position ID (optional, if position-based assignment)",
+    )
+    association_type: str | None = Field(
+        default=None,
+        alias="associationType",
+        description="Whether measure is for 'goal' or 'strategy'",
+        pattern="^(goal|strategy)$",
+    )
+    associated_entity_id: str | None = Field(
+        default=None,
+        alias="associatedEntityId",
+        description="Goal ID or Strategy ID this measure is associated with",
+    )
 
 
 class KPIRecommendationsData(StrategicPlanningBaseModel):
@@ -310,6 +341,10 @@ class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
         default="KPIRecommendationsResponseV2",
         description="Reference to this schema",
     )
+
+
+# Alias for measure_recommendations topic
+MeasureRecommendationsResponse = KPIRecommendationsResponseV2
 
 
 # =============================================================================

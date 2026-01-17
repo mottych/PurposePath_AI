@@ -1059,6 +1059,146 @@ class BusinessApiClient:
             logger.error("Request error fetching positions", tenant_id=tenant_id, error=str(e))
             raise
 
+    async def get_position_by_id(self, position_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get position details by ID.
+
+        Endpoint: GET /org/positions/{id}
+
+        Args:
+            position_id: Position identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Position details with id, name, role, organizationUnit, person, etc.
+        """
+        try:
+            logger.info("Fetching position", position_id=position_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/org/positions/{position_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching position",
+                position_id=position_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching position",
+                position_id=position_id,
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_roles(self, tenant_id: str) -> list[dict[str, Any]]:
+        """List all roles for the tenant.
+
+        Endpoint: GET /roles
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            List of roles with id, code, name, accountability, roleType, etc.
+        """
+        try:
+            logger.info("Fetching roles", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/roles",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                roles = data
+            elif isinstance(data, dict):
+                roles = data.get("items") or data.get("roles") or data.get("data") or []
+            else:
+                roles = []
+
+            return cast(list[dict[str, Any]], roles)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching roles",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching roles", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_measure_catalog(
+        self, tenant_id: str, goal_id: str | None = None
+    ) -> dict[str, Any]:
+        """Get measure catalog (available measures for goals).
+
+        Endpoint: GET /goals/available-measures (if goal_id is None)
+                  GET /goals/{goalId}/available-measures (if goal_id is provided)
+
+        Args:
+            tenant_id: Tenant identifier
+            goal_id: Optional goal ID to get measures for specific goal
+
+        Returns:
+            Dictionary with catalogMeasures and tenantCustomMeasures arrays
+        """
+        try:
+            logger.info("Fetching measure catalog", tenant_id=tenant_id, goal_id=goal_id)
+
+            if goal_id:
+                endpoint = f"/goals/{goal_id}/available-measures"
+            else:
+                endpoint = "/goals/available-measures"
+
+            response = await self.client.get(
+                endpoint,
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching measure catalog",
+                tenant_id=tenant_id,
+                goal_id=goal_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching measure catalog",
+                tenant_id=tenant_id,
+                goal_id=goal_id,
+                error=str(e),
+            )
+            raise
+
     async def get_subscription_tiers(self) -> list[dict[str, Any]]:
         """
         Get all available subscription tiers from Account Service.

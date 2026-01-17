@@ -1034,6 +1034,138 @@ async def get_positions(context: RetrievalContext) -> dict[str, Any]:
 
 
 @register_retrieval_method(
+    name="get_position_by_id",
+    description="Retrieves details for a specific position",
+    provides_params=(
+        "position",
+        "position_name",
+        "position_role_id",
+        "position_role_name",
+        "position_role_code",
+        "position_organization_unit_id",
+        "position_organization_unit_name",
+        "position_person_id",
+        "position_person_name",
+        "position_specific_accountability",
+    ),
+    requires_from_payload=("position_id",),
+)
+async def get_position_by_id(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve a specific position by ID."""
+    position_id = context.payload.get("position_id")
+    if not position_id:
+        logger.warning("retrieval_method.get_position_by_id.missing_position_id")
+        return {}
+
+    try:
+        logger.debug(
+            "retrieval_method.get_position_by_id",
+            position_id=position_id,
+            tenant_id=context.tenant_id,
+        )
+        position = await context.client.get_position_by_id(position_id, context.tenant_id)
+        if not position:
+            logger.warning("retrieval_method.get_position_by_id.not_found", position_id=position_id)
+            return {}
+
+        role = position.get("role", {})
+        org_unit = position.get("organizationUnit", {})
+        person = position.get("person", {})
+
+        return {
+            "position": position,
+            "position_name": position.get("name", ""),
+            "position_role_id": role.get("id", ""),
+            "position_role_name": role.get("name", ""),
+            "position_role_code": role.get("code", ""),
+            "position_organization_unit_id": org_unit.get("id", ""),
+            "position_organization_unit_name": org_unit.get("name", ""),
+            "position_person_id": person.get("id", ""),
+            "position_person_name": person.get("displayName", ""),
+            "position_specific_accountability": position.get("specificAccountability", ""),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_position_by_id.failed",
+            error=str(e),
+            position_id=position_id,
+        )
+        return {}
+
+
+@register_retrieval_method(
+    name="get_roles",
+    description="Retrieves all roles for the tenant",
+    provides_params=(
+        "roles",
+        "roles_count",
+    ),
+)
+async def get_roles(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve all roles for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_roles",
+            tenant_id=context.tenant_id,
+        )
+        roles = await context.client.get_roles(context.tenant_id)
+        roles_list = list(roles)
+
+        return {
+            "roles": roles_list,
+            "roles_count": len(roles_list),
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_roles.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {"roles": [], "roles_count": 0}
+
+
+@register_retrieval_method(
+    name="get_measure_catalog",
+    description="Retrieves measure catalog (available catalog and tenant custom measures)",
+    provides_params=(
+        "measure_catalog",
+        "catalog_measures",
+        "tenant_custom_measures",
+    ),
+)
+async def get_measure_catalog(context: RetrievalContext) -> dict[str, Any]:
+    """Retrieve measure catalog for the tenant."""
+    try:
+        logger.debug(
+            "retrieval_method.get_measure_catalog",
+            tenant_id=context.tenant_id,
+        )
+        # Get goal_id from payload if available (optional)
+        goal_id = context.payload.get("goal_id")
+        catalog_data = await context.client.get_measure_catalog(context.tenant_id, goal_id=goal_id)
+
+        catalog_measures = catalog_data.get("catalogMeasures", [])
+        tenant_custom_measures = catalog_data.get("tenantCustomMeasures", [])
+
+        return {
+            "measure_catalog": catalog_data,
+            "catalog_measures": catalog_measures,
+            "tenant_custom_measures": tenant_custom_measures,
+        }
+    except Exception as e:
+        logger.error(
+            "retrieval_method.get_measure_catalog.failed",
+            error=str(e),
+            tenant_id=context.tenant_id,
+        )
+        return {
+            "measure_catalog": {},
+            "catalog_measures": [],
+            "tenant_custom_measures": [],
+        }
+
+
+@register_retrieval_method(
     name="get_onboarding_data",
     description="Retrieves onboarding data including niche, ICA, value proposition, and products",
     provides_params=(

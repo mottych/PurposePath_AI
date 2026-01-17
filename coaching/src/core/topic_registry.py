@@ -334,12 +334,17 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         response_model="StrategySuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
-        description="Generate strategic planning suggestions",
+        description="Generate strategic planning suggestions for a specific goal, including review of existing strategies",
         is_active=True,
         parameter_refs=(
-            _onb("business_foundation"),
-            _onb("current_strategy"),
-            _req("market_context"),
+            _req("goal_id"),  # Required: goal to generate strategies for
+            _goals("goal"),  # Auto-enriched: complete goal data
+            _goals("goal_title"),  # Auto-enriched: goal title
+            _goals("goal_description"),  # Auto-enriched: goal description
+            _onb("business_foundation"),  # Auto-enriched: vision, purpose, core_values
+            _strategies(
+                "strategies"
+            ),  # Auto-enriched: all strategies (filter by goal_id in template)
         ),
     ),
     "POST:/coaching/measure-recommendations": EndpointDefinition(
@@ -349,12 +354,37 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         response_model="MeasureRecommendationsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
-        description="Recommend measures based on business goals",
+        description="Recommend catalog measures for a goal or strategy, with suggested owner assignment",
         is_active=True,
         parameter_refs=(
-            _goals("goals"),
-            _onb("business_context"),
-            _measures("existing_measures"),
+            _req("goal_id"),  # Required: goal_id or strategy_id
+            _opt_req(
+                "strategy_id"
+            ),  # Optional: if provided, recommend measures for specific strategy
+            _goal("goal"),  # Auto-enriched from goal_id
+            _strategies(
+                "strategies"
+            ),  # Auto-enriched: all strategies (filter by goal_id in template)
+            _onb("business_context"),  # Auto-enriched: business foundation
+            _measures("existing_measures"),  # Auto-enriched: existing measures
+            ParameterRef(
+                name="measure_catalog",
+                source=ParameterSource.MEASURES,
+                source_path="measure_catalog",
+            ),  # Auto-enriched: measure catalog
+            ParameterRef(
+                name="catalog_measures",
+                source=ParameterSource.MEASURES,
+                source_path="catalog_measures",
+            ),  # Auto-enriched: catalog measures list
+            ParameterRef(
+                name="tenant_custom_measures",
+                source=ParameterSource.MEASURES,
+                source_path="tenant_custom_measures",
+            ),  # Auto-enriched: tenant custom measures
+            _people("roles"),  # Auto-enriched: all roles
+            _people("positions"),  # Auto-enriched: all positions
+            _people("people"),  # Auto-enriched: all people
         ),
     ),
     "POST:/coaching/alignment-check": EndpointDefinition(
