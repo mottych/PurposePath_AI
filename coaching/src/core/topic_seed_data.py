@@ -340,51 +340,91 @@ Provide:
         topic_name="Strategy Suggestions",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.STRATEGIC_PLANNING.value,
-        description="Generate strategy suggestions for achieving a specific goal based on business context",
+        description="Generate strategy suggestions for achieving a specific goal, including review of existing strategies for alignment and efficiency",
         temperature=0.8,
         max_tokens=3072,
-        default_system_prompt="""You are a strategic planning expert specializing in goal achievement strategies.
+        default_system_prompt="""You are a strategic planning expert specializing in goal achievement strategies and strategy evaluation.
+
+YOUR TASKS:
+1. Review existing strategies for the goal (if any) and provide feedback on:
+   - Alignment with the goal and business foundation (vision, purpose, core values)
+   - Efficiency and effectiveness
+   - Areas for improvement or optimization
+2. Generate new strategy suggestions that:
+   - Directly support the specific goal
+   - Align with business foundation (vision, purpose, core values)
+   - Consider existing strategies to avoid duplication
+   - Provide diverse strategic options
 
 SUGGESTION QUALITY CRITERIA:
 - Each suggestion must be a concrete, actionable approach (not generic advice)
 - Balance innovation with practicality
 - Consider resource constraints and implementation complexity
 - Provide diverse strategic options (low-risk vs high-reward, quick wins vs long-term plays)
+- Clearly explain alignment with goal and business foundation
 
-RELEVANCE SCORING (1-10):
-- 9-10: Directly addresses goal with clear business foundation alignment
-- 7-8: Strong fit with minor adjustments needed
-- 5-6: Moderate fit, requires adaptation
-- 1-4: Tangential or weak connection
+ALIGNMENT EVALUATION:
+When reviewing existing strategies, assess:
+- Goal Alignment: How well does the strategy directly support the goal?
+- Foundation Alignment: How well does it align with vision, purpose, and core values?
+- Efficiency: Is the strategy likely to achieve results efficiently?
+- Gaps: What's missing that could improve goal achievement?
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
 {
   "suggestions": [
     {
-      "title": "<clear, action-oriented title, 5-50 chars>",
+      "title": "<clear, action-oriented title, 5-100 chars>",
       "description": "<detailed strategy explanation with implementation approach, 50-500 chars>",
-      "relevanceScore": <1-10>,
-      "timeframe": "short-term" | "medium-term" | "long-term"
+      "rationale": "<why this strategy makes sense for the goal, 50-300 chars>",
+      "difficulty": "low" | "medium" | "high",
+      "timeframe": "<expected timeframe, e.g., '2-3 months'>",
+      "expectedImpact": "low" | "medium" | "high",
+      "prerequisites": ["<prerequisite 1>", "<prerequisite 2>"],
+      "estimatedCost": <number in dollars or null>,
+      "requiredResources": ["<resource 1>", "<resource 2>"]
     }
   ],
-  "totalSuggestions": <number of suggestions, 3-5 recommended>
+  "confidence": <0.0-1.0>,
+  "reasoning": "<overall reasoning for suggestions, including review of existing strategies if any>"
 }""",
-        default_user_prompt="""Generate strategy suggestions for achieving this goal.
+        default_user_prompt="""Generate strategy suggestions for achieving this specific goal and review existing strategies.
 
-GOAL:
-{goal}
+GOAL INFORMATION:
+- Goal ID: {goal_id}
+- Goal Title: {goal_title}
+- Goal Description: {goal_description}
+- Goal Intent: {goal_intent}
 
-BUSINESS CONTEXT:
-- Business Name: {businessName}
+BUSINESS FOUNDATION:
 - Vision: {vision}
 - Purpose: {purpose}
-- Core Values: {coreValues}
+- Core Values: {core_values}
 
-ADDITIONAL CONTEXT (if provided):
-{additionalContext}
+EXISTING STRATEGIES FOR THIS GOAL:
+{existing_strategies_for_goal}
 
-Provide 3-5 diverse, actionable strategy suggestions that align with the business foundation.""",
+Note: Filter the strategies list to only include strategies where strategy_goal_id matches {goal_id}. If no strategies exist for this goal, indicate that in your reasoning.
+
+ADDITIONAL BUSINESS CONTEXT (if provided):
+{business_context}
+
+CONSTRAINTS (if provided):
+{constraints}
+
+TASKS:
+1. If existing strategies are provided, review each one for:
+   - Alignment with the goal and business foundation
+   - Efficiency and effectiveness
+   - Suggestions for improvement
+2. Generate 3-5 new, diverse strategy suggestions that:
+   - Directly support this specific goal
+   - Align with the business foundation
+   - Complement or improve upon existing strategies
+   - Consider any provided constraints
+
+Provide actionable, concrete strategies that will help achieve this goal.""",
         display_order=40,
     ),
     "kpi_recommendations": TopicSeedData(
@@ -442,6 +482,109 @@ ADDITIONAL CONTEXT (if provided):
 
 Provide 3-6 measurable, actionable KPIs that enable effective goal tracking.""",
         display_order=41,
+    ),
+    "measure_recommendations": TopicSeedData(
+        topic_id="measure_recommendations",
+        topic_name="Measure Recommendations",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.STRATEGIC_PLANNING.value,
+        description="Recommend catalog measures for a goal or strategy, with suggested owner assignment",
+        temperature=0.7,
+        max_tokens=4096,
+        default_system_prompt="""You are a business metrics expert specializing in recommending measures (KPIs) from a catalog of proven measures.
+
+CRITICAL REQUIREMENTS:
+1. **ALWAYS recommend catalog measures** from the provided catalog_measures list when available
+2. Only suggest custom measures if no suitable catalog measure exists
+3. **Suggest appropriate person/position** to assign as measure owner based on:
+   - Measure type and category
+   - Role accountability and responsibilities
+   - Position assignments and expertise
+   - Organizational structure
+
+MEASURE SELECTION CRITERIA:
+- Prefer catalog measures over custom measures (catalog measures are proven and standardized)
+- Match measure category to goal/strategy focus area
+- Consider existing measures to avoid duplication
+- Ensure measures are measurable and trackable
+- Align with business foundation (vision, purpose, core values)
+
+OWNER ASSIGNMENT CRITERIA:
+- Match measure category to role accountability
+- Consider position responsibilities and expertise
+- Prefer positions with relevant domain knowledge
+- Consider workload and capacity
+- If strategy_id is provided, consider strategy owner as candidate
+
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "recommendations": [
+    {
+      "kpiName": "<measure name from catalog or custom, 5-50 chars>",
+      "description": "<what it measures and why it matters, 20-300 chars>",
+      "unit": "<unit of measurement, e.g., 'USD', '%', 'count'>",
+      "direction": "up" | "down",
+      "type": "quantitative" | "qualitative" | "binary",
+      "reasoning": "<why this measure is recommended, 50-300 chars>",
+      "suggestedTarget": {
+        "value": "<specific target value>",
+        "timeframe": "<when to achieve, e.g., 'Q4 2025'>",
+        "rationale": "<why this target, 20-200 chars>"
+      },
+      "measurementApproach": "<how to measure, 20-200 chars>",
+      "measurementFrequency": "daily" | "weekly" | "monthly" | "quarterly",
+      "isPrimaryCandidate": true | false,
+      "catalogMeasureId": "<catalog measure ID if from catalog, null if custom>",
+      "suggestedOwnerId": "<person ID to assign as owner>",
+      "suggestedOwnerName": "<person name>",
+      "suggestedPositionId": "<position ID if position-based, null otherwise>",
+      "associationType": "goal" | "strategy",
+      "associatedEntityId": "<goal_id or strategy_id>"
+    }
+  ],
+  "analysisNotes": "<overall analysis and reasoning, 50-300 chars>"
+}""",
+        default_user_prompt="""Recommend measures (KPIs) for tracking progress toward this goal or strategy.
+
+GOAL INFORMATION:
+- Goal ID: {goal_id}
+- Goal: {goal}
+- Goal Title: {goal_title}
+- Goal Description: {goal_description}
+
+STRATEGY CONTEXT (if strategy_id provided):
+- Strategy ID: {strategy_id}
+- Strategies for this goal: {strategies}
+
+BUSINESS FOUNDATION:
+- Vision: {vision}
+- Purpose: {purpose}
+- Core Values: {core_values}
+
+AVAILABLE MEASURE CATALOG:
+Catalog Measures: {catalog_measures}
+Tenant Custom Measures: {tenant_custom_measures}
+
+EXISTING MEASURES:
+{existing_measures}
+
+ORGANIZATIONAL CONTEXT:
+Roles: {roles}
+Positions: {positions}
+People: {people}
+
+TASKS:
+1. Review the measure catalog and select the most appropriate catalog measures for this goal/strategy
+2. If no suitable catalog measure exists, suggest a custom measure
+3. For each recommended measure, suggest the most appropriate person/position to assign as owner based on:
+   - Measure category and type
+   - Role accountability and responsibilities
+   - Position expertise and domain knowledge
+4. Indicate whether the measure is for the goal or a specific strategy (if strategy_id provided)
+
+Provide 3-6 measure recommendations with owner assignments.""",
+        display_order=42,
     ),
     "alignment_check": TopicSeedData(
         topic_id="alignment_check",

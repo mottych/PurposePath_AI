@@ -12,29 +12,34 @@ class StrategySuggestionsBaseModel(BaseModel):
 
 
 class StrategySuggestionsRequest(StrategySuggestionsBaseModel):
-    """Request for AI-generated strategy recommendations.
+    """Request for AI-generated strategy recommendations for a specific goal.
 
-    Matches specification in backend-integration-coaching-service.md line 199-217.
+    Updated to be goal-centric: requires goal_id and optionally accepts goal_intent.
+    Auto-enriches goal data, business foundation, and existing strategies for the goal.
     """
 
-    goal_intent: str = Field(
+    goal_id: str = Field(
         ...,
+        alias="goalId",
+        description="The unique identifier of the goal requiring strategies",
+        examples=["goal-123"],
+    )
+
+    goal_intent: str | None = Field(
+        default=None,
         alias="goalIntent",
         min_length=5,
         max_length=500,
-        description="The goal intent requiring strategies",
+        description="Optional goal intent/description. If not provided, will be extracted from goal data.",
         examples=["Increase customer retention by 20%"],
     )
 
-    business_context: dict[str, Any] = Field(
-        ...,
+    business_context: dict[str, Any] | None = Field(
+        default=None,
         alias="businessContext",
-        description="Business context for strategy generation",
+        description="Optional additional business context. Business foundation (vision, purpose, core values) is auto-enriched.",
         examples=[
             {
-                "vision": "To be the leading provider in our industry",
-                "purpose": "To help customers achieve their goals",
-                "coreValues": ["Excellence", "Innovation", "Integrity"],
                 "targetMarket": "Small to medium businesses",
                 "valueProposition": "Comprehensive solutions with personal service",
                 "businessName": "Sample Business",
@@ -43,13 +48,6 @@ class StrategySuggestionsRequest(StrategySuggestionsBaseModel):
                 "currentChallenges": ["High churn", "Competition"],
             }
         ],
-    )
-
-    existing_strategies: list[str] = Field(
-        default_factory=list,
-        alias="existingStrategies",
-        description="Current strategies already in place",
-        examples=[["Focus on customer support", "Regular check-ins"]],
     )
 
     constraints: dict[str, Any] | None = Field(

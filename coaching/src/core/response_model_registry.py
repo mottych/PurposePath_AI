@@ -74,6 +74,7 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "AlignmentCheckResponse": AlignmentCheckResponse,
     "StrategySuggestionsResponseV2": StrategySuggestionsResponseV2,
     "KPIRecommendationsResponseV2": KPIRecommendationsResponseV2,
+    "MeasureRecommendationsResponse": KPIRecommendationsResponseV2,  # Alias for measure_recommendations
     "ActionSuggestionsResponse": ActionSuggestionsResponse,
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,

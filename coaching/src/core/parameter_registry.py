@@ -1426,6 +1426,149 @@ _register(
     )
 )
 
+# Position Detail Parameters (from get_position_by_id)
+_register(
+    ParameterDefinition(
+        name="position_id",
+        param_type=ParameterType.STRING,
+        description="The unique identifier of a position.",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position",
+        param_type=ParameterType.DICT,
+        description="Complete position data.",
+        retrieval_method="get_position_by_id",
+        extraction_path="position",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position_name",
+        param_type=ParameterType.STRING,
+        description="The name of the position.",
+        default="",
+        retrieval_method="get_position_by_id",
+        extraction_path="position_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position_role_id",
+        param_type=ParameterType.STRING,
+        description="The role ID associated with the position.",
+        default="",
+        retrieval_method="get_position_by_id",
+        extraction_path="position_role_id",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position_role_name",
+        param_type=ParameterType.STRING,
+        description="The role name associated with the position.",
+        default="",
+        retrieval_method="get_position_by_id",
+        extraction_path="position_role_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position_organization_unit_id",
+        param_type=ParameterType.STRING,
+        description="The organization unit ID for the position.",
+        default="",
+        retrieval_method="get_position_by_id",
+        extraction_path="position_organization_unit_id",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="position_person_id",
+        param_type=ParameterType.STRING,
+        description="The person ID assigned to the position.",
+        default="",
+        retrieval_method="get_position_by_id",
+        extraction_path="position_person_id",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Role Parameters (from get_roles or get_role_by_id)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="role_id",
+        param_type=ParameterType.STRING,
+        description="The unique identifier of a role.",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="roles",
+        param_type=ParameterType.LIST,
+        description="List of all roles.",
+        default=[],
+        retrieval_method="get_roles",
+        extraction_path="roles",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="roles_count",
+        param_type=ParameterType.INTEGER,
+        description="Total number of roles.",
+        default=0,
+        retrieval_method="get_roles",
+        extraction_path="roles_count",
+    )
+)
+
+# -----------------------------------------------------------------------------
+# Measure Catalog Parameters (from get_measure_catalog)
+# -----------------------------------------------------------------------------
+_register(
+    ParameterDefinition(
+        name="measure_catalog",
+        param_type=ParameterType.DICT,
+        description="Complete measure catalog data (catalogMeasures and tenantCustomMeasures).",
+        default={},
+        retrieval_method="get_measure_catalog",
+        extraction_path="measure_catalog",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="catalog_measures",
+        param_type=ParameterType.LIST,
+        description="List of available catalog measures from the measure library.",
+        default=[],
+        retrieval_method="get_measure_catalog",
+        extraction_path="catalog_measures",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="tenant_custom_measures",
+        param_type=ParameterType.LIST,
+        description="List of tenant custom measures.",
+        default=[],
+        retrieval_method="get_measure_catalog",
+        extraction_path="tenant_custom_measures",
+    )
+)
+
 # -----------------------------------------------------------------------------
 # Conversation Context Parameters (from get_conversation_context)
 # -----------------------------------------------------------------------------
