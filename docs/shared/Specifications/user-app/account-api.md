@@ -363,11 +363,18 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
         "email": "john.doe@example.com"
       },
       "tenantId": "uuid",
+      "tenant": {
+        "id": "uuid",
+        "name": "Acme Corp",
+        "status": "Active"
+      },
       "status": "Sent",
       "expiresAt": "2026-01-19T00:00:00Z"
     }
   }
 }
+```
+- **Note**: `tenant.name` is populated from the business foundation's company name if available, otherwise falls back to the tenant's name field (Issue #577).
 ```
 - Invalid token response:
 ```json
