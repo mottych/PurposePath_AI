@@ -237,7 +237,7 @@ async def get_strategy_suggestions(
     logger.info(
         "Generating strategy suggestions",
         user_id=user.user_id,
-        goal_intent=request.goal_intent[:100],
+        goal_intent=request.goal_intent[:100] if request.goal_intent else None,
     )
 
     template_processor = create_template_processor(jwt_token) if jwt_token else None
