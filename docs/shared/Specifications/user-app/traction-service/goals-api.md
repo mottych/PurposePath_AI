@@ -304,6 +304,44 @@ All fields are optional (only include fields to update):
 
 **Note:** Status is updated via dedicated endpoints (activate, pause, close)
 
+#### Owner Change Propagation
+
+When the `ownerId` field is updated, the system automatically propagates the ownership change to related entities following the **unified measure ownership model**:
+
+**Propagation Logic:**
+1. System identifies all Measures linked to this goal
+2. For each Measure where `Measure.OwnerId` equals the goal's **previous owner**:
+   - Updates `Measure.OwnerId` to the new owner
+   - Fetches **ALL MeasureLinks** for that Measure (across all goals and strategies)
+   - Updates `MeasureLink.personId` to the new owner for every link
+
+**Example Scenario:**
+```
+Initial State:
+- Goal A (owner: Alice)
+- Measure M1 (owner: Alice) linked to Goal A
+- MeasureLinks: Link1→Goal A, Link2→Goal B, Link3→Strategy S1 (all with personId: Alice)
+
+After updating Goal A owner to Bob:
+- Goal A (owner: Bob)
+- Measure M1 (owner: Bob) - UPDATED because it matched old owner
+- MeasureLinks: Link1, Link2, Link3 (all with personId: Bob) - ALL updated
+
+If Measure M2 had a different owner (Charlie), it would NOT be affected.
+```
+
+**Key Behaviors:**
+- ✅ Only affects Measures that were owned by the previous goal owner
+- ✅ Updates ALL links for affected Measures (maintains unified ownership)
+- ✅ Preserves explicitly assigned owners (Measures not matching old owner remain unchanged)
+- ✅ Handles multi-goal scenarios correctly (Measure linked to multiple goals)
+- ✅ Operation is atomic and logged for audit purposes
+
+**Logging:** The operation logs:
+- Number of Measures updated
+- Number of MeasureLinks updated
+- Individual Measure updates with owner transition details
+
 #### Response 200
 
 ```json
