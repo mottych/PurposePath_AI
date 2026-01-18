@@ -4,7 +4,7 @@ This service provides the application logic for managing coaching sessions,
 coordinating between domain entities, infrastructure services, and LLM providers.
 
 Architecture:
-- Topic definition from ENDPOINT_REGISTRY (EndpointDefinition)
+- Topic definition from TOPIC_REGISTRY (TopicDefinition)
 - Runtime config from TopicRepository (LLMTopic from DynamoDB)
 - Templates from S3PromptStorage
 - Parameter resolution via TemplateParameterProcessor
@@ -25,9 +25,9 @@ from coaching.src.core.structured_output import (
     get_structured_output_instructions,
 )
 from coaching.src.core.topic_registry import (
-    EndpointDefinition,
     TemplateType,
-    list_endpoints_by_topic_type,
+    TopicDefinition,
+    list_topics_by_topic_type,
 )
 from coaching.src.core.types import TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingMessage, CoachingSession
@@ -271,13 +271,13 @@ class CoachingSessionService:
         self.provider_factory = provider_factory
 
         # Build topic index for quick lookup
-        self._topic_index: dict[str, EndpointDefinition] = {}
+        self._topic_index: dict[str, TopicDefinition] = {}
         self._build_topic_index()
 
     def _build_topic_index(self) -> None:
         """Build index of coaching topics from ENDPOINT_REGISTRY."""
-        coaching_endpoints = list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING)
-        for endpoint in coaching_endpoints:
+        coaching_topics = list_topics_by_topic_type(TopicType.CONVERSATION_COACHING)
+        for endpoint in coaching_topics:
             self._topic_index[endpoint.topic_id] = endpoint
         logger.debug(
             "coaching_service.topic_index_built",
@@ -289,14 +289,14 @@ class CoachingSessionService:
     # Configuration Loading
     # =========================================================================
 
-    def _get_endpoint_definition(self, topic_id: str) -> EndpointDefinition:
-        """Get EndpointDefinition from the topic index.
+    def _get_endpoint_definition(self, topic_id: str) -> TopicDefinition:
+        """Get TopicDefinition from the topic index.
 
         Args:
             topic_id: Topic identifier (e.g., "core_values")
 
         Returns:
-            EndpointDefinition for the topic
+            TopicDefinition for the topic
 
         Raises:
             InvalidTopicError: If topic not found in registry
@@ -332,7 +332,7 @@ class CoachingSessionService:
             raise TopicNotActiveError(topic_id=topic_id)
         return llm_topic
 
-    async def _load_topic_config(self, topic_id: str) -> tuple[EndpointDefinition, LLMTopic]:
+    async def _load_topic_config(self, topic_id: str) -> tuple[TopicDefinition, LLMTopic]:
         """Load complete topic configuration.
 
         Combines static definition from ENDPOINT_REGISTRY with
@@ -342,7 +342,7 @@ class CoachingSessionService:
             topic_id: Topic identifier
 
         Returns:
-            Tuple of (EndpointDefinition, LLMTopic)
+            Tuple of (TopicDefinition, LLMTopic)
 
         Raises:
             InvalidTopicError: If topic not found
@@ -518,7 +518,7 @@ class CoachingSessionService:
         tenant_id: str,
         user_id: str,
         parameters: dict[str, Any],
-        endpoint_def: EndpointDefinition,
+        endpoint_def: TopicDefinition,
         llm_topic: LLMTopic,
     ) -> SessionResponse:
         """Create a new coaching session.
@@ -649,7 +649,7 @@ class CoachingSessionService:
         self,
         *,
         session: CoachingSession,
-        endpoint_def: EndpointDefinition,  # noqa: ARG002
+        endpoint_def: TopicDefinition,  # noqa: ARG002
         llm_topic: LLMTopic,
     ) -> SessionResponse:
         """Resume an existing paused or active session.
@@ -986,7 +986,7 @@ class CoachingSessionService:
         self,
         *,
         session: CoachingSession,
-        endpoint_def: EndpointDefinition,
+        endpoint_def: TopicDefinition,
         llm_topic: LLMTopic,
     ) -> SessionCompletionResponse:
         """Extract results and complete session.
@@ -1524,10 +1524,10 @@ class CoachingSessionService:
 # =============================================================================
 
 
-def list_coaching_topics() -> list[EndpointDefinition]:
+def list_coaching_topics() -> list[TopicDefinition]:
     """List all coaching topic definitions.
 
     Returns:
-        List of EndpointDefinition for coaching topics
+        List of TopicDefinition for coaching topics
     """
-    return list(list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING))
+    return list(list_topics_by_topic_type(TopicType.CONVERSATION_COACHING))

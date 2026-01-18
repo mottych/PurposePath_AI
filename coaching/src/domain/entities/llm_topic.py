@@ -458,14 +458,14 @@ class LLMTopic:
 
     @classmethod
     def create_default_from_endpoint(cls, endpoint_def: Any) -> "LLMTopic":
-        """Create a default LLMTopic from ENDPOINT_REGISTRY definition.
+        """Create a default LLMTopic from TOPIC_REGISTRY definition.
 
         This is the preferred method for creating default topics from the
         centralized endpoint registry. Creates an inactive topic with default
         configuration that can be activated and configured by admins.
 
         Args:
-            endpoint_def: EndpointDefinition from ENDPOINT_REGISTRY
+            endpoint_def: TopicDefinition from TOPIC_REGISTRY
 
         Returns:
             LLMTopic: Default topic instance with endpoint metadata

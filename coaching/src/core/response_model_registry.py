@@ -1,7 +1,7 @@
 """Response Model Registry - Mapping of model names to Pydantic classes.
 
 This module provides a central registry for resolving response model names
-(stored as strings in EndpointDefinition) to actual Pydantic model classes.
+(stored as strings in TopicDefinition) to actual Pydantic model classes.
 
 Used by the generic AI execute endpoint to:
 1. Validate AI responses against expected schemas

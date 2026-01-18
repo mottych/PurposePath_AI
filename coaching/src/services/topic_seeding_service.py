@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 import structlog
-from coaching.src.core.topic_registry import list_all_endpoints
+from coaching.src.core.topic_registry import list_all_topics
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
@@ -133,7 +133,7 @@ class TopicSeedingService:
         )
 
         # Get all active endpoints
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
 
         # Seed each endpoint's topic
         for endpoint in endpoints:
@@ -275,7 +275,7 @@ class TopicSeedingService:
         all_topics = await self.topic_repo.list_all(include_inactive=False)
 
         # Get all endpoint topic IDs
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
         endpoint_topic_ids = {endpoint.topic_id for endpoint in endpoints}
 
         # Find orphaned topics
@@ -309,7 +309,7 @@ class TopicSeedingService:
         report = ValidationReport()
 
         # Get all endpoints and topics
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
         all_topics = await self.topic_repo.list_all(include_inactive=False)
         endpoint_topic_ids = {endpoint.topic_id for endpoint in endpoints}
 
@@ -334,7 +334,7 @@ class TopicSeedingService:
                 if prompt_content is None:
                     report.missing_prompts.append(f"{topic.topic_id}:{prompt_info.prompt_type}")
 
-        # Note: Parameter validation now uses PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # Note: Parameter validation now uses PARAMETER_REGISTRY and TOPIC_REGISTRY
         # instead of topic.allowed_parameters
 
         logger.info(
@@ -459,7 +459,7 @@ class TopicSeedingService:
         existing_topic.display_order = seed_data.display_order
         existing_topic.updated_at = now
 
-        # Note: Parameters are now managed in PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # Note: Parameters are now managed in PARAMETER_REGISTRY and TOPIC_REGISTRY
         # No need to update allowed_parameters on the topic entity
 
         # Update prompts in S3 (if they have content)

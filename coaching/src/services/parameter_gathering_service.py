@@ -10,8 +10,8 @@ import structlog
 from coaching.src.core.constants import ParameterSource
 from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
 from coaching.src.core.topic_registry import (
-    EndpointDefinition,
     ParameterRef,
+    TopicDefinition,
     get_parameters_by_source_for_endpoint,
 )
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
@@ -43,7 +43,7 @@ class ParameterGatheringService:
 
     async def gather_parameters(
         self,
-        endpoint: EndpointDefinition,
+        endpoint: TopicDefinition,
         request_data: dict[str, Any],
         user_id: str,
         tenant_id: str,
@@ -58,7 +58,7 @@ class ParameterGatheringService:
         4. Applies defaults for missing optional parameters
 
         Args:
-            endpoint: EndpointDefinition specifying required parameters
+            endpoint: TopicDefinition specifying required parameters
             request_data: Data from the API request body
             user_id: Current user's ID
             tenant_id: Current tenant's ID
@@ -475,7 +475,7 @@ class ParameterGatheringService:
         return current
 
     def _apply_defaults(
-        self, endpoint: EndpointDefinition, gathered: dict[str, Any]
+        self, endpoint: TopicDefinition, gathered: dict[str, Any]
     ) -> dict[str, Any]:
         """Apply default values for missing optional parameters.
 
@@ -503,7 +503,7 @@ class ParameterGatheringService:
         return result
 
     def _validate_required_params(
-        self, endpoint: EndpointDefinition, gathered: dict[str, Any]
+        self, endpoint: TopicDefinition, gathered: dict[str, Any]
     ) -> None:
         """Validate that all required parameters are present.
 

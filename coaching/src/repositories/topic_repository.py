@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
-from coaching.src.core.topic_registry import ENDPOINT_REGISTRY
+from coaching.src.core.topic_registry import TOPIC_REGISTRY
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
@@ -132,13 +132,13 @@ class TopicRepository:
                 flush=True,
             )
             print(
-                f"[DEBUG] ENDPOINT_REGISTRY count: {len(ENDPOINT_REGISTRY)}",
+                f"[DEBUG] TOPIC_REGISTRY count: {len(TOPIC_REGISTRY)}",
                 file=sys.stderr,
                 flush=True,
             )
 
             logger.info("list_all_with_enum_defaults called", include_inactive=include_inactive)
-            logger.info("ENDPOINT_REGISTRY count", count=len(ENDPOINT_REGISTRY))
+            logger.info("TOPIC_REGISTRY count", count=len(TOPIC_REGISTRY))
 
             # Get existing topics from database
             db_topics = await self.list_all(include_inactive=include_inactive)
@@ -158,7 +158,7 @@ class TopicRepository:
             # Create default topics from endpoint registry for any not in database
             default_topics = [
                 LLMTopic.create_default_from_endpoint(endpoint_def)
-                for endpoint_def in ENDPOINT_REGISTRY.values()
+                for endpoint_def in TOPIC_REGISTRY.values()
                 if endpoint_def.topic_id not in existing_ids
             ]
             logger.info(
