@@ -25,6 +25,7 @@ All endpoints have changed from `/measures/{measureId}/*` to `/measures/{measure
 | `GET /measures/{measureId}/actuals` | `GET /measures/{measureId}/actuals` |
 | `POST /measures/{measureId}/actuals` | `POST /measures/{measureId}/actuals` |
 | `PUT /measures/{measureId}/actuals/{actualId}/override` | `PUT /measures/{measureId}/actuals/{actualId}/override` |
+| `DELETE /measures/{measureId}/actuals/{actualId}` | `DELETE /measures/{measureId}/actuals/{actualId}` |
 | `GET /measures/{measureId}/all-series` | `GET /measures/{measureId}/all-series` |
 
 ### Response Field Changes (REQUIRED UPDATE)
@@ -639,9 +640,52 @@ Manually override an actual value with a correction.
 
 ---
 
+### 8. Delete Actual
+
+Remove an actual measurement entry.
+
+**Endpoint:** `DELETE /measures/{measureId}/actuals/{actualId}`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `measureId` | string (GUID) | **Yes** | Measure identifier |
+| `actualId` | string (GUID) | **Yes** | Actual entry identifier |
+
+#### Request Example
+
+```http
+DELETE /measures/measure-456/actuals/actual-001
+Authorization: Bearer {token}
+X-Tenant-Id: {tenantId}
+```
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Actual deleted successfully"
+  },
+  "error": null
+}
+```
+
+#### Business Rules
+
+- **Soft delete:** Actual is marked as deleted but preserved for historical analysis
+- **Cascade:** Does not affect targets or the Measure itself
+- **Audit trail:** Deletion is logged with user and timestamp
+
+---
+
 ## Combined Data Endpoint
 
-### 8. Get All Series
+### 9. Get All Series
 
 Retrieve all targets and actuals for a Measure link in one request.
 
