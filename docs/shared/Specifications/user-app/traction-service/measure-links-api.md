@@ -200,7 +200,7 @@ Create a new link between a Measure and person, optionally associating with a go
 
 ### 3. Update Measure Link
 
-Update link configuration (threshold, weight, priority, etc.).
+Update link configuration (person, goal, strategy, threshold, weight, priority, etc.).
 
 **Endpoint:** `PUT /measure-links/{linkId}`
 
@@ -214,6 +214,9 @@ Update link configuration (threshold, weight, priority, etc.).
 
 ```json
 {
+  "personId": "person-789e1234-e89b-12d3-a456-426614174002",
+  "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
+  "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
   "thresholdPct": 85.0,
   "weight": 2.0,
   "displayOrder": 1,
@@ -227,14 +230,23 @@ All fields are optional. Only provided fields will be updated.
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `personId` | string (GUID) | Person responsible for this link. **When changed, propagates to the Measure and all other links for that Measure.** |
+| `goalId` | string (GUID) | Goal association. Set to associate with a goal or change association. Note: Removing goal (by setting to null) will also remove strategy. |
+| `strategyId` | string (GUID) | Strategy association. Requires a goal to be set. Must belong to the specified goal. |
 | `thresholdPct` | decimal | Threshold percentage (0-100) |
 | `weight` | decimal | Relative weight/importance |
 | `displayOrder` | int | Sort order in UI |
 | `isPrimary` | boolean | Mark as primary Measure |
 
-**Note:** 
-- You cannot change `measureId`, `goalId`, `personId`, or `strategyId` via update. Delete and recreate the link instead.
+**Notes:** 
+- You cannot change `measureId` via update. Delete and recreate the link instead.
 - `linkType` is a calculated field and cannot be provided in requests. It is automatically derived from the presence of `goalId` and `strategyId`.
+- **PersonId Propagation:** When `personId` is updated, the change propagates to:
+  - The Measure's `ownerId` field
+  - All other MeasureLinks associated with the same Measure
+- **Strategy Validation:** When `strategyId` is provided, the system validates that:
+  - A `goalId` is set (either in the request or already on the link)
+  - The strategy exists and belongs to the specified goal
 
 #### Response
 
@@ -263,10 +275,44 @@ All fields are optional. Only provided fields will be updated.
 #### Business Rules
 
 - **Partial Updates:** Only provided fields are updated
+- **PersonId Propagation:** Updating `personId` cascades to Measure and all related links atomically
+- **Goal Association:** Can be set or changed; removing goal also removes strategy
+- **Strategy Validation:** 
+  - Strategy requires a goal to be present
+  - Strategy must belong to the specified goal
+  - System validates strategy-goal relationship before update
 - **Primary Measure:** Setting `isPrimary: true` may unset other primary Measures for the same goal
 - **Threshold Range:** Must be between 0 and 100 if provided
 - **Display Order:** Used for UI sorting, can be any positive integer
-- **Calculated linkType:** Automatically derived - cannot be set via API
+- **Calculated linkType:** Automatically derived from `goalId` and `strategyId` presence - cannot be set via API
+
+#### Error Responses
+
+**404 Not Found** - Link, Goal, or Strategy not found:
+```json
+{
+  "success": false,
+  "error": "MEASURE link not found",
+  "code": "MEASURE_LINK_NOT_FOUND"
+}
+```
+
+**400 Bad Request** - Validation errors:
+```json
+{
+  "success": false,
+  "error": "Strategy requires a Goal to be set",
+  "code": "STRATEGY_REQUIRES_GOAL"
+}
+```
+
+```json
+{
+  "success": false,
+  "error": "Strategy 345e6789... does not belong to Goal 012e3456...",
+  "code": "STRATEGY_GOAL_MISMATCH"
+}
+```
 
 ---
 
