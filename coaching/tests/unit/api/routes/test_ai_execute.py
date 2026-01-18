@@ -16,7 +16,7 @@ from coaching.src.api.models.ai_execute import (
     TopicParameter,
 )
 from coaching.src.core.constants import TopicCategory, TopicType
-from coaching.src.core.topic_registry import EndpointDefinition
+from coaching.src.core.topic_registry import TopicDefinition
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -243,17 +243,17 @@ class TestEndpointRegistryHelpers:
 
     def test_list_all_endpoints_active_only(self) -> None:
         """Test listing only active endpoints."""
-        from coaching.src.core.topic_registry import list_all_endpoints
+        from coaching.src.core.topic_registry import list_all_topics
 
-        endpoints = list_all_endpoints(active_only=True)
+        endpoints = list_all_topics(active_only=True)
         assert all(e.is_active for e in endpoints)
 
     def test_list_all_endpoints_include_inactive(self) -> None:
         """Test listing all endpoints including inactive."""
-        from coaching.src.core.topic_registry import list_all_endpoints
+        from coaching.src.core.topic_registry import list_all_topics
 
-        all_endpoints = list_all_endpoints(active_only=False)
-        active_endpoints = list_all_endpoints(active_only=True)
+        all_endpoints = list_all_topics(active_only=False)
+        active_endpoints = list_all_topics(active_only=True)
         # Should have more or equal endpoints when including inactive
         assert len(all_endpoints) >= len(active_endpoints)
 
@@ -277,7 +277,7 @@ class TestExecuteAIEndpoint:
     @patch("coaching.src.api.routes.ai_execute.get_endpoint_by_topic_id")
     def test_topic_inactive(self, mock_get_endpoint: MagicMock, client: TestClient) -> None:
         """Test error when topic is inactive."""
-        mock_get_endpoint.return_value = EndpointDefinition(
+        mock_get_endpoint.return_value = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="inactive_topic",
@@ -299,7 +299,7 @@ class TestExecuteAIEndpoint:
     @patch("coaching.src.api.routes.ai_execute.get_endpoint_by_topic_id")
     def test_wrong_topic_type(self, mock_get_endpoint: MagicMock, client: TestClient) -> None:
         """Test error when topic is conversation type."""
-        mock_get_endpoint.return_value = EndpointDefinition(
+        mock_get_endpoint.return_value = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="conversation_topic",
@@ -327,7 +327,7 @@ class TestExecuteAIEndpoint:
         client: TestClient,
     ) -> None:
         """Test error when required parameters are missing."""
-        mock_get_endpoint.return_value = EndpointDefinition(
+        mock_get_endpoint.return_value = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="test_topic",
@@ -358,7 +358,7 @@ class TestExecuteAIEndpoint:
         client: TestClient,
     ) -> None:
         """Test error when response model not configured."""
-        mock_get_endpoint.return_value = EndpointDefinition(
+        mock_get_endpoint.return_value = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="test_topic",

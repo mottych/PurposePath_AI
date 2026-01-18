@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from coaching.src.core.constants import ParameterSource, TopicCategory, TopicType
-from coaching.src.core.topic_registry import EndpointDefinition, ParameterRef
+from coaching.src.core.topic_registry import ParameterRef, TopicDefinition
 from coaching.src.services.parameter_gathering_service import ParameterGatheringService
 
 
@@ -50,9 +50,9 @@ class TestGatherParameters:
         return ParameterGatheringService(business_api_client=mock_client)
 
     @pytest.fixture
-    def simple_endpoint(self) -> EndpointDefinition:
+    def simple_endpoint(self) -> TopicDefinition:
         """Create simple endpoint with request parameters only."""
-        return EndpointDefinition(
+        return TopicDefinition(
             endpoint_path="/test/simple",
             http_method="POST",
             topic_id="test_simple",
@@ -67,9 +67,9 @@ class TestGatherParameters:
         )
 
     @pytest.fixture
-    def mixed_endpoint(self) -> EndpointDefinition:
+    def mixed_endpoint(self) -> TopicDefinition:
         """Create endpoint with multiple sources."""
-        return EndpointDefinition(
+        return TopicDefinition(
             endpoint_path="/test/mixed",
             http_method="POST",
             topic_id="test_mixed",
@@ -90,7 +90,7 @@ class TestGatherParameters:
 
     @pytest.mark.asyncio
     async def test_gather_request_parameters(
-        self, service: ParameterGatheringService, simple_endpoint: EndpointDefinition
+        self, service: ParameterGatheringService, simple_endpoint: TopicDefinition
     ) -> None:
         """Test gathering parameters from request data."""
         request_data = {"url": "https://example.com", "depth": 3}
@@ -109,7 +109,7 @@ class TestGatherParameters:
     async def test_gather_mixed_parameters(
         self,
         service: ParameterGatheringService,
-        mixed_endpoint: EndpointDefinition,
+        mixed_endpoint: TopicDefinition,
         mock_client: MagicMock,
     ) -> None:
         """Test gathering parameters from multiple sources."""
@@ -132,7 +132,7 @@ class TestGatherParameters:
         self, service: ParameterGatheringService, mock_client: MagicMock
     ) -> None:
         """Test that source data is cached within a single gather call."""
-        endpoint = EndpointDefinition(
+        endpoint = TopicDefinition(
             endpoint_path="/test/cached",
             http_method="POST",
             topic_id="test_cached",
@@ -165,7 +165,7 @@ class TestGatherParameters:
         self, service: ParameterGatheringService
     ) -> None:
         """Test that missing required parameter raises ValueError."""
-        endpoint = EndpointDefinition(
+        endpoint = TopicDefinition(
             endpoint_path="/test/required",
             http_method="POST",
             topic_id="test_required",
@@ -476,7 +476,7 @@ class TestApplyDefaults:
     def test_apply_defaults_from_registry(self, service: ParameterGatheringService) -> None:
         """Test defaults are applied from parameter registry."""
         # scan_depth has default of "standard" in PARAMETER_REGISTRY
-        endpoint = EndpointDefinition(
+        endpoint = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="test",
@@ -502,7 +502,7 @@ class TestApplyDefaults:
         self, service: ParameterGatheringService
     ) -> None:
         """Test defaults don't override provided values."""
-        endpoint = EndpointDefinition(
+        endpoint = TopicDefinition(
             endpoint_path="/test",
             http_method="POST",
             topic_id="test",
