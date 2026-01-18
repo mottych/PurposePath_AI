@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from coaching.src.core.constants import ConversationStatus, TopicCategory, TopicType
 from coaching.src.core.topic_registry import (
-    EndpointDefinition,
     TemplateType,
+    TopicDefinition,
 )
 from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingSession
@@ -95,9 +95,9 @@ class TestCoachingSessionService:
         return factory
 
     @pytest.fixture
-    def sample_endpoint_definition(self) -> EndpointDefinition:
+    def sample_endpoint_definition(self) -> TopicDefinition:
         """Create a sample endpoint definition."""
-        return EndpointDefinition(
+        return TopicDefinition(
             topic_id="core_values",
             description="Discover your core values",
             topic_type=TopicType.CONVERSATION_COACHING,
@@ -181,7 +181,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that initiating a session creates a new one when none exists."""
@@ -224,7 +224,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -280,7 +280,7 @@ class TestCoachingSessionService:
         self,
         service: CoachingSessionService,
         mock_topic_repository: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that initiating with inactive topic raises TopicNotActiveError."""
@@ -308,7 +308,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -371,7 +371,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -426,7 +426,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -558,7 +558,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that sending message when max turns reached raises MaxTurnsReachedError."""
@@ -605,7 +605,7 @@ class TestCoachingSessionService:
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
         mock_provider_factory: Mock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
