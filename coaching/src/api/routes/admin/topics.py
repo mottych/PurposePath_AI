@@ -44,9 +44,9 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
 from coaching.src.core.constants import TopicType
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
-    ENDPOINT_REGISTRY,
-    get_endpoint_by_topic_id,
+    TOPIC_REGISTRY,
     get_parameters_for_topic,
+    get_topic_by_topic_id,
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
@@ -240,7 +240,7 @@ def _get_allowed_prompt_types(topic_id: str) -> list[str]:
     """
     from coaching.src.core.constants import PromptType
 
-    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    endpoint_def = get_topic_by_topic_id(topic_id)
     if endpoint_def:
         # Topic is in registry - use its allowed prompt types
         return [pt.value for pt in endpoint_def.allowed_prompt_types]
@@ -272,7 +272,7 @@ async def _get_or_create_topic_from_registry(
         return topic
 
     # Not in DB - check if it's in the registry
-    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    endpoint_def = get_topic_by_topic_id(topic_id)
     if not endpoint_def:
         # Topic doesn't exist anywhere
         return None
@@ -328,7 +328,7 @@ async def list_topics(
 
         registry_topics = [
             LLMTopic.create_default_from_endpoint(endpoint_def)
-            for endpoint_def in ENDPOINT_REGISTRY.values()
+            for endpoint_def in TOPIC_REGISTRY.values()
             if endpoint_def.topic_id not in db_topic_ids
         ]
 
@@ -425,7 +425,7 @@ async def get_topic(
         response_schema: dict[str, Any] | None = None
         if include_schema:
             # Get response model name from endpoint registry
-            endpoint_def = get_endpoint_by_topic_id(topic_id)
+            endpoint_def = get_topic_by_topic_id(topic_id)
             if endpoint_def:
                 response_schema = get_response_schema(endpoint_def.response_model)
 
@@ -439,7 +439,7 @@ async def get_topic(
             )
 
         # Topic not in database, try to get from registry
-        endpoint_def = get_endpoint_by_topic_id(topic_id)
+        endpoint_def = get_topic_by_topic_id(topic_id)
         if not endpoint_def:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -626,7 +626,7 @@ async def upsert_topic(
 
         else:
             # CREATE new topic - try to get defaults from registry
-            endpoint_def = get_endpoint_by_topic_id(topic_id)
+            endpoint_def = get_topic_by_topic_id(topic_id)
 
             if endpoint_def:
                 # Use registry defaults as base
@@ -816,7 +816,7 @@ async def get_prompt_content(
         topic = await repository.get(topic_id=topic_id)
         if not topic:
             # Check if it exists in registry (for better error message)
-            endpoint_def = get_endpoint_by_topic_id(topic_id)
+            endpoint_def = get_topic_by_topic_id(topic_id)
             if endpoint_def:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -1271,7 +1271,7 @@ async def test_topic(
 
     start_time = time.time()
 
-    endpoint_def = get_endpoint_by_topic_id(topic_id)
+    endpoint_def = get_topic_by_topic_id(topic_id)
     if endpoint_def is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

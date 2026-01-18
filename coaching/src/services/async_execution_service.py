@@ -20,8 +20,8 @@ from coaching.src.core.config import settings
 from coaching.src.core.constants import TopicType
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
-    get_endpoint_by_topic_id,
     get_required_parameter_names_for_topic,
+    get_topic_by_topic_id,
 )
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
@@ -116,7 +116,7 @@ class AsyncAIExecutionService:
             JobValidationError: If topic or parameters are invalid
         """
         # Validate topic exists and is active
-        endpoint = get_endpoint_by_topic_id(topic_id)
+        endpoint = get_topic_by_topic_id(topic_id)
         if endpoint is None:
             raise JobValidationError(f"Topic not found: {topic_id}")
 
@@ -301,7 +301,7 @@ class AsyncAIExecutionService:
                 )
 
             # Get response model
-            endpoint = get_endpoint_by_topic_id(job.topic_id)
+            endpoint = get_topic_by_topic_id(job.topic_id)
             if endpoint is None:
                 raise TopicNotFoundError(job.topic_id)
 

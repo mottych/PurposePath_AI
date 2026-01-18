@@ -37,10 +37,10 @@ from coaching.src.core.response_model_registry import (
     list_available_schemas,
 )
 from coaching.src.core.topic_registry import (
-    get_endpoint_by_topic_id,
     get_parameters_for_topic,
     get_required_parameter_names_for_topic,
-    list_all_endpoints,
+    get_topic_by_topic_id,
+    list_all_topics,
 )
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
@@ -142,7 +142,7 @@ async def execute_ai(
     )
 
     # Step 1: Validate topic exists and is active
-    endpoint = get_endpoint_by_topic_id(request.topic_id)
+    endpoint = get_topic_by_topic_id(request.topic_id)
     if endpoint is None:
         logger.warning("ai_execute.topic_not_found", topic_id=request.topic_id)
         raise HTTPException(
@@ -371,7 +371,7 @@ async def list_available_topics() -> list[TopicInfo]:
     topics: list[TopicInfo] = []
 
     # Add single-shot topics from ENDPOINT_REGISTRY
-    for endpoint in list_all_endpoints(active_only=True):
+    for endpoint in list_all_topics(active_only=True):
         # Only include single-shot topics
         if endpoint.topic_type != TopicType.SINGLE_SHOT:
             continue
