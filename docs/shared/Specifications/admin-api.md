@@ -10,9 +10,95 @@
 
 ## Overview
 
-The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, and discount codes.
+The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, discount codes, and tenant ownership.
 
 **Authentication Required:** Admin role (JWT with "Admin" role claim)
+
+---
+
+## Admin Tenant Management Endpoints
+
+### PUT /admin/tenants/{tenantId}/owner
+
+Change the owner of a tenant (admin only).
+
+**Path Parameters:**
+
+- `tenantId` (string, GUID) - The tenant ID
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+- `Content-Type: application/json`
+
+**Request:**
+
+```json
+{
+  "newOwnerPersonId": "string (GUID)"
+}
+```
+
+**Request Validation:**
+
+- `newOwnerPersonId`: Required, must be a valid GUID
+- Person must exist and belong to the tenant
+- Person must be linked to an active user account
+- New owner must be different from current owner (if any)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Example Tenant",
+    "ownerUserId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "updatedAt": "2026-01-21T15:30:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Tenant owner changed successfully
+- `400 Bad Request` - Invalid request or validation error
+  - Invalid tenant ID format
+  - Invalid person ID format
+  - Person not linked to user account
+  - User not active
+  - Person doesn't belong to tenant
+  - New owner same as current owner
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Tenant or person not found
+
+**Error Response Example:**
+
+```json
+{
+  "success": false,
+  "error": "Person must be linked to an active user account"
+}
+```
+
+**Notes:**
+
+- The endpoint accepts a `personId` (not `userId`) because the admin portal works with people records
+- Backend validates that the person is linked to an active user and resolves the user ID automatically
+- Person must belong to the same tenant whose owner is being changed
+- User linked to the person must be in Active status
+- Operation is logged for audit purposes
+- Can change owner even if owner was already set (unlike initial owner setup)
+
+**Implementation:**
+
+- Controller: `TenantManagementController.ChangeTenantOwner()`
+- Command: `ChangeTenantOwnerCommand`
+- Handler: `ChangeTenantOwnerCommandHandler`
+- Domain: `Tenant.ChangeOwner(UserId)`
 
 ---
 
