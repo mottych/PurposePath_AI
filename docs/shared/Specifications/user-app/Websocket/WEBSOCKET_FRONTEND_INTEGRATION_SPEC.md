@@ -85,7 +85,7 @@ interface WebSocketMessage<T = any> {
 
 | Entity | Field Names (camelCase) |
 |--------|-------------------------|
-| **IDs** | `goalId`, `kpiId`, `actionId`, `issueId`, `tenantId`, `userId` |
+| **IDs** | `goalId`, `measureId`, `actionId`, `issueId`, `tenantId`, `userId` |
 | **Timestamps** | `createdAt`, `updatedAt`, `deletedAt`, `completedAt`, `pausedAt` |
 | **Actions** | `createdBy`, `updatedBy`, `deletedBy`, `completedBy`, `assignedTo` |
 | **Nested** | `targetDate`, `targetValue`, `currentValue`, `dueDate`, `achievementRate` |
@@ -405,7 +405,7 @@ interface WebSocketMessage<T = any> {
 ```typescript
 {
   readingId: string;
-  kpiId: string;
+  measureId: string;
   tenantId: string;
   value: number;               // The actual Measure value
   date: string;                // ISO 8601 date (e.g., "2025-11-03")
@@ -423,7 +423,7 @@ interface WebSocketMessage<T = any> {
   "timestamp": "2025-11-03T16:30:00.000Z",
   "data": {
     "readingId": "reading-333",
-    "kpiId": "measure-111",
+    "measureId": "measure-111",
     "tenantId": "tenant-123",
     "value": 125000,
     "date": "2025-11-03",
@@ -922,7 +922,7 @@ X-Tenant-Id: tenant-123
   "timestamp": "2025-11-03T16:30:00.000Z",
   "data": {
     "readingId": "reading-333",
-    "kpiId": "measure-111",
+    "measureId": "measure-111",
     "tenantId": "tenant-123",
     "value": 125000,
     "date": "2025-11-03",
@@ -1047,7 +1047,7 @@ export interface ActionCreatedEventData {
 
 export interface MeasureReadingCreatedEventData {
   readingId: string;
-  kpiId: string;
+  measureId: string;
   tenantId: string;
   value: number;
   date: string;

@@ -54,10 +54,10 @@ interface CommandCenterParams {
 ```typescript
 interface CommandCenterDashboardResponse {
   alerts: {
-    kpisAtRisk: Array<{
-      kpiLinkId: string;
-      kpiId: string;
-      kpiName: string;
+    measuresAtRisk: Array<{
+      measureLinkId: string;
+      measureId: string;
+      measureName: string;
       currentValue: number | null;
       targetValue: number | null;
       variance: number | null;
@@ -113,7 +113,7 @@ interface CommandCenterDashboardResponse {
     }>;
     
     primaryMeasure?: {
-      kpiId: string;
+      measureId: string;
       name: string;
       currentValue: number | null;
       targetValue: number | null;
@@ -150,9 +150,9 @@ interface CommandCenterDashboardResponse {
     goalsAtRisk: number;
     goalsBehind: number;
     totalMeasures: number;
-    kpisOnTrack: number;
-    kpisAtRisk: number;
-    kpisBehind: number;
+    measuresOnTrack: number;
+    measuresAtRisk: number;
+    measuresBehind: number;
     totalActiveActions: number;
     actionsPastDue: number;
     actionsThisWeek: number;
@@ -179,11 +179,11 @@ X-Tenant-Id: {tenantId}
   "success": true,
   "data": {
     "alerts": {
-      "kpisAtRisk": [
+      "measuresAtRisk": [
         {
-          "kpiLinkId": "link_abc123",
-          "kpiId": "measure_revenue",
-          "kpiName": "Monthly Recurring Revenue",
+          "measureLinkId": "link_abc123",
+          "measureId": "measure_revenue",
+          "measureName": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
           "variance": -15000,
@@ -247,7 +247,7 @@ X-Tenant-Id: {tenantId}
         ],
         
         "primaryMeasure": {
-          "kpiId": "measure_revenue",
+          "measureId": "measure_revenue",
           "name": "Monthly Recurring Revenue",
           "currentValue": 85000,
           "targetValue": 100000,
@@ -287,9 +287,9 @@ X-Tenant-Id: {tenantId}
       "goalsAtRisk": 1,
       "goalsBehind": 1,
       "totalMeasures": 18,
-      "kpisOnTrack": 12,
-      "kpisAtRisk": 4,
-      "kpisBehind": 2,
+      "measuresOnTrack": 12,
+      "measuresAtRisk": 4,
+      "measuresBehind": 2,
       "totalActiveActions": 34,
       "actionsPastDue": 3,
       "actionsThisWeek": 12,
@@ -654,7 +654,7 @@ async function getCommandCenter(
   const { alerts, summaryStats, myTasks } = response.data.data;
   
   console.log(`Critical Alerts: ${alerts.criticalIssues.length}`);
-  console.log(`Measures At Risk: ${alerts.kpisAtRisk.length}`);
+  console.log(`Measures At Risk: ${alerts.measuresAtRisk.length}`);
   console.log(`Past Due Actions: ${alerts.actionsPastDue.length}`);
   console.log(`My Tasks This Week: ${myTasks.length}`);
   

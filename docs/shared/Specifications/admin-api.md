@@ -102,6 +102,412 @@ Change the owner of a tenant (admin only).
 
 ---
 
+### DELETE /admin/tenants/{tenantId}
+
+Delete or anonymize a tenant and all associated data (admin only).
+
+**Path Parameters:**
+
+- `tenantId` (string, GUID) - The tenant ID to delete
+
+**Query Parameters:**
+
+- `deletionMode` (string, default: "Soft") - Deletion mode:
+  - `"Soft"`: Anonymize personally identifiable information while preserving business/financial data for compliance (GDPR right to be forgotten)
+  - `"Hard"`: Remove all non-financial tenant data (preserves subscriptions, billing, audit logs for 7-year retention)
+- `dryRun` (boolean, default: false) - If true, simulates deletion and returns what would be deleted without making changes
+- `confirmation` (string, required) - Must be exactly `"DELETE:{tenantId}"` to prevent accidental deletions
+
+**Headers Required:**
+
+```http
+Authorization: Bearer {adminJwtToken}
+Content-Type: application/json
+```
+
+**Request URL Example:**
+
+```
+DELETE /admin/tenants/7c9e6679-7425-40de-944b-e07fc1f90ae7?deletionMode=Soft&dryRun=false&confirmation=DELETE:7c9e6679-7425-40de-944b-e07fc1f90ae7
+```
+
+**Soft Delete Behavior:**
+- Anonymizes: User emails, names, PII fields
+- Retains: Subscription records, billing history, audit logs, business metrics
+- Compliance: GDPR right to be forgotten while maintaining financial records
+
+**Hard Delete Behavior:**
+- Removes: All tenant-related data across all tables (Users, Goals, Measures, Actions, Issues, People, etc.)
+- Preserves: Subscription records, payment history, audit logs (7-year retention requirement)
+- Tables affected: 25+ DynamoDB tables including Users, Tenants, Goals, Strategies, Measures, Actions, Issues, People, OrgStructure, Products, and more
+
+**Success Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Tenant 7c9e6679-7425-40de-944b-e07fc1f90ae7 deleted successfully using Soft mode",
+  "data": {
+    "tenantId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "deletionMode": "Soft",
+    "itemsDeleted": 145,
+    "itemsRetained": 8,
+    "totalDeleted": 145,
+    "totalRetained": 8,
+    "deletedAt": "2025-01-03T10:30:00Z",
+    "isDryRun": false
+  }
+}
+```
+
+**Success Response (Dry Run):**
+
+```json
+{
+  "success": true,
+  "message": "Dry run completed. Tenant 7c9e6679-7425-40de-944b-e07fc1f90ae7 would be deleted using Hard mode. No actual changes made.",
+  "data": {
+    "tenantId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "deletionMode": "Hard",
+    "itemsDeleted": 0,
+    "itemsRetained": 0,
+    "totalDeleted": 152,
+    "totalRetained": 8,
+    "deletedAt": "2025-01-03T10:30:00Z",
+    "isDryRun": true
+  }
+}
+```
+
+**Response Fields:**
+
+- `tenantId`: The tenant ID that was deleted
+- `deletionMode`: "Soft" or "Hard"
+- `itemsDeleted`: Number of items actually deleted (0 for dry run)
+- `itemsRetained`: Number of items retained for compliance
+- `totalDeleted`: Total items that would be deleted (dry run) or were deleted
+- `totalRetained`: Total items retained for compliance
+- `deletedAt`: Timestamp of deletion operation
+- `isDryRun`: Whether this was a simulation
+
+**Error Responses:**
+
+- `400 Bad Request` - Validation errors:
+  ```json
+  {
+    "success": false,
+    "message": "Invalid deletion mode. Must be 'Soft' or 'Hard'."
+  }
+  ```
+  ```json
+  {
+    "success": false,
+    "message": "Confirmation string must be in format 'DELETE:{tenantId}'"
+  }
+  ```
+
+- `404 Not Found` - Tenant doesn't exist:
+  ```json
+  {
+    "success": false,
+    "message": "Tenant 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found"
+  }
+  ```
+
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User doesn't have admin role
+
+**Validation Rules:**
+
+- `confirmation` parameter must exactly match format `DELETE:{tenantId}`
+- `deletionMode` must be "Soft" or "Hard" (case-insensitive)
+- `dryRun` accepts true/false or 1/0
+- Tenant must exist before deletion
+
+**Business Rules:**
+
+- **Compliance**: Both modes preserve subscription/billing data for 7 years (regulatory requirement)
+- **GDPR**: Soft delete satisfies "right to be forgotten" by anonymizing PII
+- **Safety**: Confirmation string prevents accidental deletions
+- **Audit Trail**: All deletions logged in audit tables (preserved indefinitely)
+- **Dry Run**: Test deletion impact before committing changes
+
+**Tables Affected (25+):**
+
+Tenant-related tables scanned for deletion:
+- Core: Users, Tenants, Subscriptions
+- Traction: Goals, Strategies, Measures, MeasureLinks, MeasureData, Actions, Issues
+- People & Org: People, OrgStructure, PersonTypes, PersonTags
+- Business Foundation: Products, Services, ICAs, CoreValues
+- Activity & Audit: Activities, AuditLogs
+- System: Notifications, EmailVerifications, PasswordResets
+
+Tables **always preserved**:
+- Subscriptions (includes billing history)
+- AuditLogs (compliance requirement)
+- Payment transactions (7-year retention)
+
+**Implementation:**
+
+- Controller: `TenantManagementController.DeleteTenant()`
+- Command: `DeleteTenantCommand`
+- Handler: `DeleteTenantCommandHandler`
+- Service: `ITenantDeletionService` → `TenantDeletionService`
+- Domain: `DeletionMode` enum, `TenantDeletionResult` model
+
+**Testing Notes:**
+
+- Use `dryRun=true` to preview deletion impact
+- Test with non-production tenants first
+- Verify audit logs capture deletion events
+- Confirm financial data preserved in both modes
+- Test confirmation string validation thoroughly
+
+---
+
+## Admin Subscriber Management Endpoints
+
+### GET /admin/subscribers
+
+Get paginated list of subscribers (tenants with subscriptions) with filtering and sorting.
+
+**Query Parameters:**
+
+- `page` (number, default: 1) - Page number (1-based)
+- `pageSize` (number, default: 50) - Items per page (1-100)
+- `search` (string, optional) - Search by tenant name or email (case-insensitive partial match)
+- `status` (string, optional) - Filter by subscription status ("Active", "Trialing", "PastDue", "Canceled", "Expired")
+- `tier` (string, optional) - Filter by subscription tier ID (GUID)
+- `renewalFrequency` (string, optional) - Filter by billing frequency ("Monthly", "Yearly")
+- `sortBy` (string, default: "CreatedAt") - Sort field ("Name", "CreatedAt", "Status", "TierId", "Frequency")
+- `sortOrder` (string, default: "Descending") - Sort direction ("Ascending", "Descending")
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "items": [
+    {
+      "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+      "businessName": "Acme Corporation",
+      "contactName": "John Doe",
+      "contactEmail": "john.doe@acme.com",
+      "owner": {
+        "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "personId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "name": "Jane Smith",
+        "email": "jane.smith@acme.com"
+      },
+      "subscription": {
+        "subscriptionId": "123e4567-e89b-12d3-a456-426614174000",
+        "status": "Active",
+        "currentTier": {
+          "id": "tier-professional",
+          "name": "professional",
+          "displayName": "Professional"
+        },
+        "billingInfo": {
+          "frequency": "Monthly",
+          "monthlyRecurringRevenue": 99.99,
+          "currentPeriodStart": "2025-12-01T00:00:00Z",
+          "currentPeriodEnd": "2026-01-01T00:00:00Z",
+          "nextBillingDate": "2026-01-01T00:00:00Z"
+        }
+      },
+      "usage": {
+        "goalsCount": 12,
+        "goalsLimit": 50,
+        "measuresCount": 35,
+        "measuresLimit": 200,
+        "actionsCount": 87,
+        "actionsLimit": null,
+        "usersCount": 5
+      },
+      "createdAt": "2025-10-01T12:00:00Z",
+      "lastActivityAt": "2025-12-30T15:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 50,
+    "totalCount": 150,
+    "totalPages": 3
+  }
+}
+```
+
+**Field Descriptions:**
+
+- `owner`: Optional. The designated owner of the tenant (set via PUT /admin/tenants/{tenantId}/owner)
+  - `userId`: User ID of the owner
+  - `personId`: Person ID of the owner
+  - `name`: Full name of the owner (from Person record)
+  - `email`: Email address of the owner (from Person record)
+  - Will be `null` if no owner has been explicitly assigned
+
+**Status Codes:**
+
+- `200 OK` - Success
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+**Notes:**
+
+- Requires admin authentication
+- Returns only tenants that have active subscriptions
+- Contact info represents the primary/first active user in the tenant
+- Owner info represents the explicitly designated owner (may differ from contact)
+- Last activity is determined by the most recent user login
+
+**Implementation:**
+
+- Controller: `AdminController.GetSubscribers()`
+- Query: `GetSubscribersQuery`
+- Handler: `GetSubscribersQueryHandler`
+
+---
+
+### GET /admin/subscribers/{tenantId}
+
+Get comprehensive details about a specific subscriber including payment history, users, and audit logs.
+
+**Path Parameters:**
+
+- `tenantId` (string, GUID) - The tenant ID
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}`
+
+**Response:**
+
+```json
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "businessName": "Acme Corporation",
+  "contactName": "John Doe",
+  "contactEmail": "john.doe@acme.com",
+  "owner": {
+    "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "personId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "name": "Jane Smith",
+    "email": "jane.smith@acme.com"
+  },
+  "subscription": {
+    "subscriptionId": "123e4567-e89b-12d3-a456-426614174000",
+    "status": "Active",
+    "currentTier": {
+      "id": "tier-professional",
+      "name": "professional",
+      "displayName": "Professional"
+    },
+    "billingInfo": {
+      "frequency": "Monthly",
+      "monthlyRecurringRevenue": 99.99,
+      "currentPeriodStart": "2025-12-01T00:00:00Z",
+      "currentPeriodEnd": "2026-01-01T00:00:00Z",
+      "nextBillingDate": "2026-01-01T00:00:00Z"
+    },
+    "lifetimeValue": 599.94,
+    "totalPayments": 6
+  },
+  "users": [
+    {
+      "userId": "user-1",
+      "email": "john.doe@acme.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "status": "Active",
+      "role": "User",
+      "createdAt": "2025-10-01T12:00:00Z",
+      "lastLoginAt": "2025-12-30T15:30:00Z"
+    }
+  ],
+  "paymentHistory": [
+    {
+      "paymentId": "payment-123",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "Succeeded",
+      "paymentMethod": "Card",
+      "createdAt": "2025-12-01T00:00:00Z",
+      "invoiceUrl": "https://stripe.com/invoices/..."
+    }
+  ],
+  "recentAudit": [
+    {
+      "action": "owner_changed",
+      "resourceType": "Tenant",
+      "resourceId": "550e8400-e29b-41d4-a716-446655440000",
+      "userId": "admin-123",
+      "userName": "Admin User",
+      "timestamp": "2025-12-28T10:00:00Z",
+      "details": "Changed owner to Jane Smith"
+    }
+  ],
+  "usage": {
+    "goalsCount": 12,
+    "goalsLimit": 50,
+    "measuresCount": 35,
+    "measuresLimit": 200,
+    "actionsCount": 87,
+    "actionsLimit": null,
+    "usersCount": 5,
+    "storageUsed": 1024.5,
+    "storageLimit": 10240,
+    "apiCallsThisMonth": 1523,
+    "featureUsage": {
+      "coaching": 45,
+      "traction": 120
+    }
+  },
+  "createdAt": "2025-10-01T12:00:00Z",
+  "lastActivityAt": "2025-12-30T15:30:00Z",
+  "subscriptionHistory": [],
+  "featureGrants": [],
+  "supportTickets": []
+}
+```
+
+**Field Descriptions:**
+
+- `owner`: Optional. The designated owner of the tenant (set via PUT /admin/tenants/{tenantId}/owner)
+  - `userId`: User ID of the owner
+  - `personId`: Person ID of the owner
+  - `name`: Full name of the owner (from Person record)
+  - `email`: Email address of the owner (from Person record)
+  - Will be `null` if no owner has been explicitly assigned
+
+**Status Codes:**
+
+- `200 OK` - Success
+- `400 Bad Request` - Invalid tenant ID format
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Tenant not found
+
+**Notes:**
+
+- Requires admin authentication
+- Returns comprehensive subscriber information for admin dashboard
+- Includes last 20 payment history entries
+- Includes last 50 audit log entries
+- Contact info represents the primary/first active user
+- Owner info represents the explicitly designated owner
+
+**Implementation:**
+
+- Controller: `AdminController.GetSubscriberDetails()`
+- Query: `GetSubscriberDetailsQuery`
+- Handler: `GetSubscriberDetailsQueryHandler`
+
+---
+
 ## Admin Trial Management Endpoints
 
 ### PUT /admin/users/{userId}/subscription/trial/extend

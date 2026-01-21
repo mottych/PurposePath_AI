@@ -38,22 +38,21 @@ This directory contains detailed API specifications for the Traction Service, or
 
 | Document | Controller | Endpoints | Description |
 |----------|------------|-----------|-------------|
-| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management, strategies |
-| [Measures API](./measures-api.md) | MeasuresController | 5 endpoints | Measure instance management |
+| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management |
+| [Strategies API](./strategies-api.md) | StrategiesController | 6 endpoints | Strategy management and alignment |
+| [Alignment API](./alignment-api.md) | AlignmentController | 1 endpoint | Cached goal alignment lookup |
+| [Measures API](./measures-api.md) | MeasuresController | 7 endpoints | Measure instance management |
 | [Measure Links API](./measure-links-api.md) | MeasureLinksController | 6 endpoints | Link Measures to goals, people, strategies |
 | [Measure Data API](./measure-data-api.md) | MeasureDataController | 8 endpoints | Targets, actuals, projections |
 | [Actions API](./actions-api.md) | ActionsController | 7 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
-| [People API](./people-api.md) | PeopleController | 4 endpoints | People/team management |
-| [Dashboard API](./dashboard-api.md) | DashboardController | 3 endpoints | Command center data |
-| [Reports API](./reports-api.md) | ReportsController | 2 endpoints | Reporting and analytics |
-| [Activities API](./activities-api.md) | ActivitiesController | 2 endpoints | Activity feeds |
+| [Dashboard, Reports & Activities](./dashboard-reports-activities-api.md) | Multiple | 5 endpoints | Command center, reports, activity feeds |
+
+> **Note:** People API has been deferred and moved to Account Service for better organizational alignment.
 
 ### Reference Data APIs
 
-| Document | Description |
-|----------|-------------|
-| [Reference Data API](./reference-data-api.md) | Issue types, statuses, person types, tags, roles |
+> **Note:** Reference data endpoints (issue types, statuses, tags) are integrated within their respective API documents above.
 
 ---
 
