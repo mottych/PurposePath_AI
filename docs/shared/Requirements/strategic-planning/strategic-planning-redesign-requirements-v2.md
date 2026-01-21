@@ -1053,7 +1053,7 @@ type ActualSubtype = 'Estimate' | 'Measured';
 ```typescript
 interface MeasureLink {
   id: string;
-  measureId: string;
+  kpiId: string;
   personId: string;        // Required - owner
   goalId?: string;         // Optional - goal context
   strategyId?: string;     // Optional - strategy context
@@ -1065,7 +1065,7 @@ interface MeasureLink {
 
 interface MeasureData {
   id: string;
-  measureLinkId: string;
+  kpiLinkId: string;
   dataCategory: 'Target' | 'Actual';
   targetSubtype?: TargetSubtype;
   actualSubtype?: ActualSubtype;
@@ -1126,7 +1126,7 @@ interface MeasureData {
   "success": true,
   "data": {
     "alerts": {
-      "measuresAtRisk": [{ "measureId": "...", "name": "...", "variance": -15 }],
+      "kpisAtRisk": [{ "kpiId": "...", "name": "...", "variance": -15 }],
       "actionsPastDue": [{ "actionId": "...", "title": "...", "daysPastDue": 2 }],
       "criticalIssues": [{ "issueId": "...", "title": "..." }]
     },

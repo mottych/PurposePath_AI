@@ -178,8 +178,6 @@ Create a new action item.
   "startDate": "2025-12-20T00:00:00Z",
   "dueDate": "2025-12-31T00:00:00Z",
   "priority": "high",
-  "status": "in_progress",
-  "progress": 25,
   "assignedPersonId": "person-123",
   "estimatedHours": 40,
   "tags": ["marketing", "website", "Q4"],
@@ -201,8 +199,6 @@ Create a new action item.
 | `startDate` | datetime (ISO 8601) | **Yes** | Start date |
 | `dueDate` | datetime (ISO 8601) | **Yes** | Due date |
 | `priority` | enum | **Yes** | `low`, `medium`, `high`, `critical` |
-| `status` | enum | No | Initial status: `not_started`, `in_progress`, `completed`, `blocked`, `cancelled` (defaults to `not_started`) |
-| `progress` | int | No | Initial progress percentage (0-100, defaults to 0) |
 | `assignedPersonId` | string (GUID) | **Yes** | Person responsible |
 | `estimatedHours` | decimal | No | Estimated effort in hours |
 | `tags` | string[] | No | Tags for categorization |
@@ -224,13 +220,13 @@ Create a new action item.
     "tenantId": "tenant-123",
     "title": "Launch new pricing page",
     "description": "Design and deploy updated pricing page with new tier structure",
-    "status": "in_progress",
+    "status": "not_started",
     "priority": "high",
     "startDate": "2025-12-20T00:00:00Z",
     "dueDate": "2025-12-31T00:00:00Z",
     "assignedPersonId": "person-123",
     "assignedPersonName": "John Doe",
-    "progress": 25,
+    "progress": 0,
     "estimatedHours": 40,
     "actualHours": 0,
     "tags": ["marketing", "website", "Q4"],
@@ -248,10 +244,7 @@ Create a new action item.
 
 #### Business Rules
 
-- **Default status:** New actions default to `not_started` status if not provided
-- **Default progress:** New actions default to 0% progress if not provided
-- **Completed actions:** If status is `completed`, progress is automatically set to 100% regardless of provided value
-- **Progress validation:** Progress must be between 0 and 100 (inclusive)
+- **Default status:** New actions start with `not_started` status
 - **Date validation:** `dueDate` must be after `startDate`
 - **Person validation:** `assignedPersonId` must exist in tenant
 - **Connections:** Goals, strategies, issues are linked after action creation

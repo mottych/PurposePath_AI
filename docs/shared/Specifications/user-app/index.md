@@ -10,55 +10,24 @@ This specification is split into multiple documents for efficient AI assistant c
 
 ### Core Service Specifications
 
-1. **[User & Tenant Management Service](./user-tenant-service.md)** ⭐ NEW (v1.0)
-   - Authentication (Login, Register, Google OAuth, Password Reset)
-   - User Profile Management
-   - Email Verification
-   - Subscription & Billing Integration
-   - User Features & Limits
+1. **[Account Service](./account-service.md)**
+   - Authentication & Authorization
+   - User Management
+   - Subscription & Billing
+   - Onboarding Workflows
 
-2. **[Account API (Auth/Billing/Subscriptions)](./account-api.md)** ⭐ Consolidated (v2.0)
-   - Auth flows, profile, tenant endpoints
-   - Subscription tiers, user subscriptions
-   - Billing portal, payment intents, provider webhooks
-   - Health endpoints
-
-3. **[Business Foundation Service](./business-foundation-service.md)** ⭐ NEW (v1.0)
-   - Business Profile, Identity, Market, Proposition, Model
-   - Core Values Management
-   - Ideal Customer Avatars (ICAs)
-   - Products & Services Inventory
-   - Wizard Progress Tracking
-
-4. **[People Service](./people-service.md)**
-   - Person CRUD operations
-   - Person tags and types
-   - User-person relationships
-
-5. **[Org Structure Service](./org-structure-service.md)**
-   - Organization roles and permissions
-   - Organization chart and relationships
-   - User org structure endpoints
-
-6. **[Coaching Service](./coaching-service.md)**
+2. **[Coaching Service](./coaching-service.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
    - Strategic Planning AI
 
-7. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
+3. **[Traction Service](./traction-service/README.md)** ⭐ NEW STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
    - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
-8. **[Dashboard Service](./dashboard-service.md)** ⭐ NEW (v1.0)
-   - User Dashboard Configuration CRUD
-   - System Templates Management
-   - Widget Catalog & Registry
-   - Dynamic Widget Data Retrieval
-   - Responsive Grid Layouts
-
-9. **[Common Patterns & Data Models](./common-patterns.md)**
+4. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations
@@ -66,26 +35,32 @@ This specification is split into multiple documents for efficient AI assistant c
 
 ---
 
-## 🎉 What's New in v1.0 (December 30, 2025)
+## 🎉 What's New in v7 (December 23, 2025)
 
-### Account Service Split & Cleanup
-- **Extracted Account Service into two focused documents:**
-  - User & Tenant Management - Authentication, user profile, subscriptions, billing
-  - Business Foundation - Foundation sections, wizard, core values, ICAs, products
-- **Removed deprecated endpoints:** Onboarding endpoints (moved to Business Foundation), Admin discount codes (not user-frontend), People/Org structure endpoints (out of scope)
-- **Standardized naming:** All property names now use camelCase (not snake_case) to match frontend implementation
-- **Specification now reflects implementation:** Documents describe actual working code, not aspirational features
+### Traction Service Reorganization
+- **Split into controller-based documents** - Each API (Goals, Measures, Actions, etc.) has its own specification file
+- **Removed deprecated endpoints** - Cleaned 15,902 lines of deprecated code
+- **New MeasureLink & MeasureData design** - Replaced old GoalMeasureLink, MeasureMilestone, MeasureActual patterns
+- **Complete documentation** - Full request/response examples, validation rules, business rules
 
-### Documentation Standards
-- ✅ All endpoints with actual implementation reference
-- ✅ Field-by-field request/response examples
-- ✅ Frontend service file locations documented
-- ✅ Error handling patterns explained
-- ✅ CamelCase property names throughout
+### Status
+- ✅ **Goals API** - Complete (13 endpoints documented)
+- ✅ **Measures API** - Complete (7 endpoints documented)
+- ✅ **Measure Links API** - Complete (8 endpoints documented)
+- ✅ **Measure Data API** - Complete (9 endpoints documented)
+- ✅ **Actions API** - Complete (9 endpoints documented)
+- ✅ **Issues API** - Complete (15 endpoints documented)
+- ✅ **Dashboard/Reports/Activities APIs** - Complete (5 endpoints documented)
+- ⏭️ **People API** - Deferred (moving to Account service)
 
-**Total User/Tenant Endpoints:** 16  
-**Total Business Foundation Endpoints:** 25  
-**Total Documented:** 41 endpoints across 2 new service specs
+**Total Documented:** 66 endpoints across 7 API groups
+
+### Migration Notes
+- Old v5/v6 monolithic specs archived in `./archive/`
+- New v7 modular controller-based specifications
+- Complete with request/response examples, TypeScript types, business rules
+
+See [Traction Service Index](./traction-service/README.md) for complete details.
 
 ## Architecture Overview
 
@@ -123,39 +98,14 @@ PurposePath frontend integrates with three backend microservices through RESTful
 
 ### Service Responsibilities
 
-#### Account Service (User & Tenant Management)
+#### Account Service
 
 - User authentication (email/password, Google OAuth)
 - User profile management
-- Email verification and password reset
 - Subscription tiers and billing
 - Payment processing (Stripe integration)
-- User feature access and usage limits
-- Token refresh and session management
-
-#### Account Service (Business Foundation)
-
-- Business profile (name, website, address, industry)
-- Core identity (vision, purpose, core values)
-- Target market (niche, key problems, ideal customer avatars)
-- Value proposition (offer, audience, differentiator)
-- Business model (revenue, pricing, partnerships)
-- Products and services inventory
-- Multi-step wizard progress tracking
-
-#### People Service
-
-- Person CRUD operations
-- Person attributes and tags
-- Person type definitions
-- User-person relationships
-
-#### Org Structure Service
-
-- Organization roles and permissions
-- Org chart management
-- Reporting relationships
-- Access control structures
+- Onboarding data management
+- Feature flags and user limits
 
 #### Coaching Service
 
@@ -184,10 +134,7 @@ PurposePath frontend integrates with three backend microservices through RESTful
 
 | Service | Primary Client | Implementation Files |
 |---------|----------------|---------------------|
-| User & Tenant Mgmt | `api.ts` → `accountClient` | `src/services/api.ts` |
-| Business Foundation | `business-foundation-service.ts` → `accountClient` | `src/services/business-foundation-service.ts`, `src/types/business-foundation.ts` |
-| People | TBD | TBD |
-| Org Structure | TBD | TBD |
+| Account | `api.ts` → `accountClient` | `src/services/api.ts`, `src/services/account.ts`, `src/services/subscriptions.ts`, `src/services/users.ts` |
 | Coaching | `api.ts` → `coachingClient` | `src/services/api.ts`, `src/services/alignment-engine-service.ts`, `src/services/strategy-suggestion-service.ts`, `src/services/measure-recommendation-service.ts`, `src/services/operations-ai-service.ts` |
 | Traction | `traction.ts` → `traction` | `src/services/traction.ts`, `src/services/goal-service.ts`, `src/services/action-service.ts`, `src/services/issue-service.ts`, `src/services/operations-traction-service.ts`, `src/services/measure-planning-service.ts`, `src/services/realtime.ts` |
 

@@ -80,7 +80,7 @@ Calculate alignment score for a goal against business foundation.
     "componentScores": {
       "intentAlignment": 90,
       "strategyAlignment": 85,
-      "measureRelevance": 80
+      "kpiRelevance": 80
     },
     "breakdown": {
       "visionAlignment": 88,

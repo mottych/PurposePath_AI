@@ -212,11 +212,11 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 | # | Endpoint | Current | Change Required |
 |---|----------|---------|-----------------|
 | 18 | `GET /goals/{goalId}/measures` | Lists goal Measures | Add `personId` filter, include `PersonId` in response |
-| 19 | `PUT /goals/{goalId}/measures/{measureId}:setPrimary` | Set primary | No change needed |
+| 19 | `PUT /goals/{goalId}/measures/{kpiId}:setPrimary` | Set primary | No change needed |
 | 20 | `POST /goals/{goalId}/measures:link` | Link to goal | Add `personId` to request, support Strategy linking |
 | 21 | `POST /goals/{goalId}/measures:unlink` | Unlink from goal | No structural change |
-| 22 | `POST /goals/{goalId}/measures/{measureId}:setThreshold` | Set threshold | No change needed |
-| 23 | `GET /goals/{goalId}/measures/{measureId}:link` | Get link details | Include `PersonId`, `StrategyId` in response |
+| 22 | `POST /goals/{goalId}/measures/{kpiId}:setThreshold` | Set threshold | No change needed |
+| 23 | `GET /goals/{goalId}/measures/{kpiId}:link` | Get link details | Include `PersonId`, `StrategyId` in response |
 | 24 | `GET /goals/{goalId}/available-measures` | Available Measures | No change needed |
 
 #### New Endpoints Needed (Person-based Measure Linking)
@@ -256,8 +256,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "id": "measurelink_123",
-  "measureId": "measure_456",
+  "id": "kpilink_123",
+  "kpiId": "measure_456",
   "personId": "person_789",
   "personName": "John Doe",
   "goalId": "goal_101",
@@ -274,8 +274,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "id": "measuredata_123",
-  "measureLinkId": "measurelink_456",
+  "id": "kpidata_123",
+  "kpiLinkId": "kpilink_456",
   "dataCategory": "Target" | "Actual",
   "targetSubtype": "Expected" | "Optimal" | "Minimal",
   "actualSubtype": "Estimate" | "Measured",
@@ -292,8 +292,8 @@ Based on the archived `backend-integration-traction-service-v5.md` (now supersed
 
 ```json
 {
-  "measureId": "measure_123",
-  "measureLinkId": "measurelink_456",
+  "kpiId": "measure_123",
+  "kpiLinkId": "kpilink_456",
   "currentValue": 42000,
   "targets": {
     "expected": [

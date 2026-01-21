@@ -82,7 +82,7 @@ public class MeasureLink : FullyAuditableEntity
     public MeasureLink(
         MeasureLinkId id,
         TenantId tenantId,
-        MeasureId measureId,
+        MeasureId kpiId,
         PersonId personId,
         UserId createdBy,
         GoalId? goalId = null,
@@ -100,7 +100,7 @@ public class MeasureLink : FullyAuditableEntity
 
         Id = id ?? throw new ArgumentNullException(nameof(id));
         TenantId = tenantId ?? throw new ArgumentNullException(nameof(tenantId));
-        MeasureId = measureId ?? throw new ArgumentNullException(nameof(measureId));
+        MeasureId = kpiId ?? throw new ArgumentNullException(nameof(kpiId));
         PersonId = personId ?? throw new ArgumentNullException(nameof(personId));
         CreatedBy = createdBy ?? throw new ArgumentNullException(nameof(createdBy));
         GoalId = goalId;
@@ -121,7 +121,7 @@ public class MeasureLink : FullyAuditableEntity
     public static MeasureLink Restore(
         MeasureLinkId id,
         TenantId tenantId,
-        MeasureId measureId,
+        MeasureId kpiId,
         PersonId personId,
         UserId createdBy,
         DateTime linkedAt,
@@ -138,7 +138,7 @@ public class MeasureLink : FullyAuditableEntity
         {
             Id = id,
             TenantId = tenantId,
-            MeasureId = measureId,
+            MeasureId = kpiId,
             PersonId = personId,
             GoalId = goalId,
             StrategyId = strategyId,
@@ -158,7 +158,7 @@ public class MeasureLink : FullyAuditableEntity
     /// </summary>
     public static MeasureLink Create(
         TenantId tenantId,
-        MeasureId measureId,
+        MeasureId kpiId,
         PersonId personId,
         UserId createdBy,
         GoalId? goalId = null,
@@ -172,7 +172,7 @@ public class MeasureLink : FullyAuditableEntity
         return new MeasureLink(
             MeasureLinkId.New(),
             tenantId,
-            measureId,
+            kpiId,
             personId,
             createdBy,
             goalId,
@@ -187,7 +187,7 @@ public class MeasureLink : FullyAuditableEntity
     // Query methods
     public bool BelongsToGoal(GoalId goalId) => GoalId == goalId;
     public bool BelongsToStrategy(StrategyId strategyId) => StrategyId == strategyId;
-    public bool BelongsToMeasure(MeasureId measureId) => MeasureId == measureId;
+    public bool BelongsToMeasure(MeasureId kpiId) => MeasureId == kpiId;
     public bool BelongsToPerson(PersonId personId) => PersonId == personId;
     public bool IsPersonOnly => GoalId == null && StrategyId == null;
     public bool IsGoalLevel => GoalId != null && StrategyId == null;

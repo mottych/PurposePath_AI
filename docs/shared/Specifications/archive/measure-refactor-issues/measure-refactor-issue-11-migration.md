@@ -52,13 +52,13 @@ public class MigrateGoalMeasureLinksScript
         {
             // 2. Determine PersonId
             // Strategy: Use the Measure's OwnerId, or the user who created the link
-            var measure = await _measureRepo.GetByIdAsync(oldLink.MeasureId);
+            var measure = await _kpiRepo.GetByIdAsync(oldLink.MeasureId);
             var personId = await ResolvePersonId(measure?.OwnerId ?? oldLink.CreatedBy);
             
             // 3. Create new MeasureLink
             var newLink = MeasureLink.Create(
                 tenantId: oldLink.TenantId,
-                measureId: oldLink.MeasureId,
+                kpiId: oldLink.MeasureId,
                 personId: personId,
                 createdBy: oldLink.CreatedBy,
                 goalId: oldLink.GoalId,
@@ -119,7 +119,7 @@ public class MigrateMeasureMilestonesScript
                 // 2. Create MeasureData as Expected target
                 var target = MeasureData.Restore(
                     id: MeasureDataId.From(milestone.Id.ToString()),  // Keep original ID
-                    measureLinkId: link.Id,
+                    kpiLinkId: link.Id,
                     dataCategory: MeasureDataCategory.Target,
                     targetSubtype: TargetSubtype.Expected,  // Default to Expected
                     actualSubtype: null,
@@ -144,7 +144,7 @@ public class MigrateMeasureMilestonesScript
                     updatedBy: milestone.UpdatedBy,
                     updatedAt: milestone.UpdatedAt);
                 
-                await _measureDataRepo.CreateAsync(target);
+                await _kpiDataRepo.CreateAsync(target);
                 
                 _logger.LogInformation("Migrated MeasureMilestone {MilestoneId} to MeasureData {DataId} for Link {LinkId}",
                     milestone.Id, target.Id, link.Id);
@@ -173,7 +173,7 @@ public class MigrateMeasureActualsScript
             {
                 var data = MeasureData.Restore(
                     id: MeasureDataId.From(actual.Id.ToString()),
-                    measureLinkId: link.Id,
+                    kpiLinkId: link.Id,
                     dataCategory: MeasureDataCategory.Actual,
                     targetSubtype: null,
                     actualSubtype: ActualSubtype.Measured,  // Existing actuals are "Measured"
@@ -198,7 +198,7 @@ public class MigrateMeasureActualsScript
                     updatedBy: null,
                     updatedAt: null);
                 
-                await _measureDataRepo.CreateAsync(data);
+                await _kpiDataRepo.CreateAsync(data);
                 
                 _logger.LogInformation("Migrated MeasureActual {ActualId} to MeasureData {DataId}",
                     actual.Id, data.Id);
@@ -232,8 +232,8 @@ public class ValidateMigrationScript
         
         var oldMilestoneCount = await _milestoneRepo.CountAsync();
         var oldActualCount = await _actualRepo.CountAsync();
-        var newTargetCount = await _measureDataRepo.CountTargetsAsync();
-        var newActualCount = await _measureDataRepo.CountActualsAsync();
+        var newTargetCount = await _kpiDataRepo.CountTargetsAsync();
+        var newActualCount = await _kpiDataRepo.CountActualsAsync();
         result.AddCheck("Milestone count", oldMilestoneCount <= newTargetCount);
         result.AddCheck("Actual count", oldActualCount <= newActualCount);
         
@@ -249,7 +249,7 @@ public class ValidateMigrationScript
         }
         
         // 3. Orphan check
-        var orphanedData = await _measureDataRepo.FindOrphanedAsync();
+        var orphanedData = await _kpiDataRepo.FindOrphanedAsync();
         result.AddCheck("No orphaned MeasureData", !orphanedData.Any());
         
         return result;

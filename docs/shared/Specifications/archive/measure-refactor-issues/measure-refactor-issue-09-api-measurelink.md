@@ -186,7 +186,7 @@ public class MeasureLinksController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<MeasureLinkListResponse>), 200)]
     public async Task<IActionResult> GetLinks(
-        [FromQuery] string? measureId,
+        [FromQuery] string? kpiId,
         [FromQuery] string? goalId,
         [FromQuery] string? strategyId,
         [FromQuery] string? personId,
@@ -273,7 +273,7 @@ public class MeasureLinksController : ControllerBase
 - [ ] POST /measure-links - create with Person + Goal + Strategy
 - [ ] POST /measure-links - validation error for Strategy without Goal
 - [ ] POST /measure-links - conflict for duplicate Goal link
-- [ ] GET /measure-links - filter by measureId
+- [ ] GET /measure-links - filter by kpiId
 - [ ] GET /measure-links - filter by goalId
 - [ ] GET /measure-links - filter by personId
 - [ ] GET /measure-links - filter personalOnly=true

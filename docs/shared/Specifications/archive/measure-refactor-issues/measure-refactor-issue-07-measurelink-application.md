@@ -191,7 +191,7 @@ if (command.StrategyId != null && command.GoalId == null)
 // Check uniqueness for Goal-level link
 if (command.GoalId != null && command.StrategyId == null)
 {
-    var exists = await _measureLinkRepository.ExistsForGoalAsync(command.MeasureId, command.GoalId, ct);
+    var exists = await _kpiLinkRepository.ExistsForGoalAsync(command.MeasureId, command.GoalId, ct);
     if (exists)
         throw new ConflictException($"Measure {command.MeasureId} is already linked to Goal {command.GoalId}");
 }
@@ -199,7 +199,7 @@ if (command.GoalId != null && command.StrategyId == null)
 // Check uniqueness for Strategy-level link
 if (command.StrategyId != null)
 {
-    var exists = await _measureLinkRepository.ExistsForStrategyAsync(command.MeasureId, command.StrategyId, ct);
+    var exists = await _kpiLinkRepository.ExistsForStrategyAsync(command.MeasureId, command.StrategyId, ct);
     if (exists)
         throw new ConflictException($"Measure {command.MeasureId} is already linked to Strategy {command.StrategyId}");
 }

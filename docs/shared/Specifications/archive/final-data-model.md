@@ -948,20 +948,20 @@ public class Seeder
    POST /api/v1/measures
    {
      "name": "Machinery Revenue",
-     "measureCatalogId": "{revenue-by-category-id}",
+     "kpiCatalogId": "{revenue-by-category-id}",
      "isCustom": false
    }
    → Creates Measure record
 
 3. User views available integrations
-   GET /api/v1/measures/{measureId}/available-integrations
+   GET /api/v1/measures/{kpiId}/available-integrations
    
    Backend queries:
    SELECT skc.*
    FROM SystemMeasureConfig skc
    JOIN ConnectionConfiguration cc ON cc.SystemKey = skc.SystemKey
    WHERE cc.TenantId = @tenantId
-   AND skc.MeasureCatalogId = @measureCatalogId
+   AND skc.MeasureCatalogId = @kpiCatalogId
    AND skc.IsActive = 1
    
    Returns: "QuickBooks supports this Measure"
@@ -1006,7 +1006,7 @@ public class Seeder
 7. User saves integration
    POST /api/v1/measure-integrations
    {
-     "measureId": "...",
+     "kpiId": "...",
      "connectionId": "...",
      "systemMeasureConfigId": "...",
      "parameterValues": {
@@ -1074,7 +1074,7 @@ public class Seeder
 7. Integration Service stores result
    POST /internal/measure-readings
    {
-     "measureId": "...",
+     "kpiId": "...",
      "value": 45000.50,
      "integrationId": "...",
      "dataSource": "integration"

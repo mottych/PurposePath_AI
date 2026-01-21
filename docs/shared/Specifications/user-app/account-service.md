@@ -1,18 +1,11 @@
 # Account Service Backend Integration Specifications
 
-**Version:** 5.2  
-**Last Updated:** December 29, 2025  
-**Audit Summary:** Added Core Values Management endpoints (POST, GET, PUT, DELETE, PUT:reorder) at `/business/foundation/values`. Core values now support detailed fields: name, meaning, implementation, and behaviors (max 10). These CRUD endpoints provide full management separate from the legacy PATCH endpoint which only handles core value names as string arrays.
-
-**Previous Changes:**
-- **v5.1 (December 28, 2025):** Added `personId` field to authentication and user profile responses
-- **v5.0 (December 26, 2025):** Added complete Business Foundation endpoints with section-specific PATCH endpoints
-
+**Version:** 3.0  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`  
 **Dev Environment:** `https://api.dev.purposepath.app/account/api/v1`
 
-[← Back to Index](./index.md)
+[← Back to Index](./backend-integration-index.md)
 
 ## Overview
 
@@ -50,19 +43,18 @@ User authentication with email/password.
 {
   "success": true,
   "data": {
-    "accessToken": "string",
-    "refreshToken": "string",
+    "access_token": "string",
+    "refresh_token": "string",
     "user": {
-      "userId": "string",
+      "user_id": "string",
       "email": "string",
-      "firstName": "string",
-      "lastName": "string",
-      "personId": "string?",
-      "avatarUrl": "string?",
-      "createdAt": "string",
-      "updatedAt": "string",
+      "first_name": "string",
+      "last_name": "string",
+      "avatar_url": "string?",
+      "created_at": "string",
+      "updated_at": "string",
       "status": "string",
-      "isEmailVerified": "boolean",
+      "email_verified": "boolean",
       "preferences": {}
     },
     "tenant": {
@@ -79,9 +71,10 @@ User authentication with email/password.
 
 **Frontend Handling:**
 
-- Stores `accessToken` → `localStorage.accessToken`
-- Stores `refreshToken` → `localStorage.refreshToken`
+- Stores `access_token` → `localStorage.accessToken`
+- Stores `refresh_token` → `localStorage.refreshToken`
 - Stores `tenant.id` → `localStorage.tenantId`
+- Maps backend snake_case to frontend camelCase
 
 **Implementation:** `src/services/api.ts` → `ApiClient.login()`
 
@@ -120,8 +113,8 @@ New user registration.
 {
   "email": "string",
   "password": "string",
-  "firstName": "string",
-  "lastName": "string",
+  "first_name": "string",
+  "last_name": "string",
   "phone": "string?"
 }
 ```
@@ -132,8 +125,8 @@ New user registration.
 {
   "success": true,
   "data": {
-    "accessToken": "string",
-    "refreshToken": "string",
+    "access_token": "string",
+    "refresh_token": "string",
     "user": "UserProfile",
     "tenant": "TenantInfo"
   }
@@ -146,8 +139,8 @@ New user registration.
 {
   "success": true,
   "data": {
-    "requiresEmailVerification": true,
-    "tenantId": "string"
+    "requires_email_verification": true,
+    "tenant_id": "string"
   }
 }
 ```
@@ -197,7 +190,7 @@ Complete password reset with token.
 ```json
 {
   "token": "string",
-  "newPassword": "string"
+  "new_password": "string"
 }
 ```
 
@@ -221,7 +214,7 @@ Refresh access token using refresh token.
 
 ```json
 {
-  "refreshToken": "string"
+  "refresh_token": "string"
 }
 ```
 
@@ -231,8 +224,8 @@ Refresh access token using refresh token.
 {
   "success": true,
   "data": {
-    "accessToken": "string",
-    "refreshToken": "string"
+    "access_token": "string",
+    "refresh_token": "string"
   }
 }
 ```
@@ -303,7 +296,7 @@ Validate email confirmation token without consuming it.
 {
   "success": true,
   "data": {
-    "status": "valid|used|expired|notFound"
+    "status": "valid|used|expired|not_found"
   }
 }
 ```
@@ -316,7 +309,7 @@ User logout (invalidates refresh token).
 
 **Query Parameters:**
 
-- `refreshToken` - Refresh token to invalidate
+- `refresh_token` - Refresh token to invalidate
 
 **Response:**
 
@@ -350,25 +343,19 @@ Get current authenticated user's profile.
 {
   "success": true,
   "data": {
-    "userId": "string",
+    "user_id": "string",
     "email": "string",
-    "firstName": "string",
-    "lastName": "string",
-    "personId": "string?",
-    "avatarUrl": "string?",
-    "createdAt": "string",
-    "updatedAt": "string",
+    "first_name": "string",
+    "last_name": "string",
+    "avatar_url": "string?",
+    "created_at": "string",
+    "updated_at": "string",
     "status": "string",
-    "isEmailVerified": "boolean",
+    "email_verified": "boolean",
     "preferences": {}
   }
 }
 ```
-
-**Notes:**
-- `personId` links to the Person entity in the organization structure
-- May be `null` if Person record not yet created for user
-- Frontend should use `personId` (not `userId`) for Traction API calls that require Person identification
 
 **Implementation:** `src/services/api.ts` → `ApiClient.getUserProfile()`
 
@@ -382,10 +369,10 @@ Update user profile.
 
 ```json
 {
-  "firstName": "string?",
-  "lastName": "string?",
+  "first_name": "string?",
+  "last_name": "string?",
   "phone": "string?",
-  "avatarUrl": "string?",
+  "avatar_url": "string?",
   "preferences": {}
 }
 ```
@@ -395,25 +382,9 @@ Update user profile.
 ```json
 {
   "success": true,
-  "data": {
-    "userId": "string",
-    "email": "string",
-    "firstName": "string",
-    "lastName": "string",
-    "personId": "string?",
-    "avatarUrl": "string?",
-    "createdAt": "string",
-    "updatedAt": "string",
-    "status": "string",
-    "isEmailVerified": "boolean",
-    "preferences": {}
-  }
+  "data": "UserProfile"
 }
 ```
-
-**Notes:**
-- Returns updated profile with same structure as GET /user/profile
-- `personId` included in response
 
 **Implementation:** `src/services/api.ts` → `ApiClient.updateUserProfile()`
 
@@ -491,11 +462,11 @@ Get user by ID (for display purposes like assignee names).
 {
   "success": true,
   "data": {
-    "userId": "string",
+    "user_id": "string",
     "email": "string",
-    "firstName": "string",
-    "lastName": "string",
-    "avatarUrl": "string?"
+    "first_name": "string",
+    "last_name": "string",
+    "avatar_url": "string?"
   }
 }
 ```
@@ -773,7 +744,7 @@ Get Stripe billing portal URL for subscription management.
 
 ```json
 {
-  "returnUrl": "string?"
+  "return_url": "string?"
 }
 ```
 
@@ -889,7 +860,7 @@ Extend trial subscription for a user (admin only).
 {
   "newExpirationDate": "2025-12-01T00:00:00Z",
   "reason": "Customer success initiative",
-  "extendedBy": "adminUserId"
+  "extendedBy": "admin_user_id"
 }
 ```
 
@@ -1092,33 +1063,18 @@ Update onboarding data (partial or complete).
 
 ### POST /business/onboarding/products
 
-Create a new product during onboarding.
+Create new product entry in onboarding.
 
 **URL:** `POST /business/onboarding/products`
 
-**Request (current schema):**
-
-Only `name` is required. All other fields are optional.
+**Request:**
 
 ```json
 {
   "name": "string",
-  "tagline": "string",
-  "description": "string",
-  "problemSolved": "string",
-  "type": "Product|Service|Subscription|Hybrid",
-  "status": "Active|InDevelopment|Planned|Retired",
-  "targetAudienceIcaId": "guid",
-  "keyFeatures": ["string"],
-  "pricingTier": "Premium|MidMarket|EntryLevel|Free",
-  "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom",
-  "revenueContribution": "Primary|Secondary|Emerging",
-  "differentiators": "string",
-  "displayOrder": 0
+  "problem": "string"
 }
 ```
-
-Legacy input `problem` is accepted and mapped to `problemSolved`.
 
 **Response:**
 
@@ -1127,25 +1083,8 @@ Legacy input `problem` is accepted and mapped to `problemSolved`.
   "success": true,
   "data": {
     "id": "string",
-    "tenantId": "guid",
-    "businessFoundationId": "guid|null",
     "name": "string",
-    "tagline": "string|null",
-    "description": "string|null",
-    "problemSolved": "string|null",
-    "type": "Product|Service|Subscription|Hybrid",
-    "status": "Active|InDevelopment|Planned|Retired",
-    "targetAudienceIcaId": "guid|null",
-    "keyFeatures": ["string"],
-    "pricingTier": "Premium|MidMarket|EntryLevel|Free|null",
-    "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom|null",
-    "revenueContribution": "Primary|Secondary|Emerging|null",
-    "differentiators": "string|null",
-    "displayOrder": 0,
-    "isFlagship": false,
-    "isActive": true,
-    "createdAt": "ISO-8601",
-    "updatedAt": "ISO-8601|null"
+    "problem": "string"
   }
 }
 ```
@@ -1156,7 +1095,7 @@ Legacy input `problem` is accepted and mapped to `problemSolved`.
 
 ### PUT /business/onboarding/products/{id}
 
-Update an existing onboarding product.
+Update product entry.
 
 **URL:** `PUT /business/onboarding/products/{id}`
 
@@ -1164,33 +1103,27 @@ Update an existing onboarding product.
 
 - `id` - Product ID
 
-**Request (current schema):**
-
-Only `name` is required. All other fields are optional.
+**Request:**
 
 ```json
 {
   "name": "string",
-  "tagline": "string",
-  "description": "string",
-  "problemSolved": "string",
-  "type": "Product|Service|Subscription|Hybrid",
-  "status": "Active|InDevelopment|Planned|Retired",
-  "targetAudienceIcaId": "guid",
-  "keyFeatures": ["string"],
-  "pricingTier": "Premium|MidMarket|EntryLevel|Free",
-  "pricingModel": "OneTime|Subscription|UsageBased|Freemium|Custom",
-  "revenueContribution": "Primary|Secondary|Emerging",
-  "differentiators": "string",
-  "displayOrder": 0
+  "problem": "string"
 }
 ```
 
-Legacy input `problem` is accepted and mapped to `problemSolved`.
-
 **Response:**
 
-Same as POST response schema.
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "name": "string",
+    "problem": "string"
+  }
+}
+```
 
 **Implementation:** `src/services/api.ts` → `ApiClient.updateOnboardingProduct()`
 
@@ -1221,19 +1154,11 @@ Delete product entry.
 
 ## Business Foundation Endpoints
 
-The Business Foundation endpoints manage the strategic foundation of the business including company profile, core identity (vision, purpose, mission), target market, value proposition, and business model. This data is used by the strategic planning module and AI alignment engine.
-
-**Base Path:** `/business/foundation`
+The Business Foundation endpoints manage the strategic foundation of the business including vision, purpose, core values, and market positioning. This data is used by the strategic planning module and AI alignment engine.
 
 ### GET /business/foundation
 
-Get complete business foundation with all sections and related entities.
-
-**Query Parameters:**
-
-- `includeCoreValues` (boolean, default: true) - Include related core values
-- `includeProducts` (boolean, default: true) - Include related products
-- `includeIdealCustomerAvatars` (boolean, default: false) - Include related ICAs
+Get business identity and strategic foundation.
 
 **Response:**
 
@@ -1241,349 +1166,52 @@ Get complete business foundation with all sections and related entities.
 {
   "success": true,
   "data": {
-    "id": "string (GUID)",
-    "tenantId": "string (GUID)",
-    "completionPercentage": "number (0-100)",
-    "version": "number",
-    "profile": {
-      "companyName": "string",
-      "companyDescription": "string?",
-      "industry": "string?",
-      "subIndustry": "string?",
-      "stage": "CompanyStage?",
-      "size": "CompanySize?",
-      "revenueRange": "RevenueRange?",
-      "yearFounded": "number?",
-      "geographicFocus": "GeographicFocus?",
-      "website": "string?",
-      "address": {
-        "street": "string?",
-        "city": "string?",
-        "state": "string?",
-        "postalCode": "string?",
-        "country": "string?"
-      }
-    },
-    "coreIdentity": {
-      "purpose": "string?",
-      "vision": "string?",
-      "visionTimeframe": "number?",
-      "mission": "string?",
-      "whoWeServe": "string?",
-      "coreValueIds": ["string (GUID)"]
-    },
-    "targetMarket": {
-      "niche": "string?",
-      "primaryAudience": "string?",
-      "marketSize": "string?",
-      "growthTrend": "GrowthTrend?",
-      "painPoints": ["string"],
-      "desires": ["string"],
-      "idealCustomerAvatarIds": ["string (GUID)"]
-    },
-    "valueProposition": {
-      "statement": "string?",
-      "uniqueSellingProposition": "string?",
-      "keyBenefits": ["string"],
-      "differentiators": ["string"],
-      "proofPoints": ["string"],
-      "customerOutcomes": ["string"],
-      "brandPromise": "string?",
-      "primaryCompetitors": ["string"],
-      "competitiveAdvantage": "string?",
-      "marketPosition": "MarketPosition?"
-    },
-    "businessModel": {
-      "type": "BusinessModelType?",
-      "secondaryTypes": ["BusinessModelType"],
-      "primaryRevenueStream": "string?",
-      "revenueStreams": ["string"],
-      "pricingStrategy": "string?",
-      "keyPartners": ["string"],
-      "distributionChannels": ["string"],
-      "customerAcquisitionStrategy": "string?",
-      "marketPosition": "MarketPosition?",
-      "productIds": ["string (GUID)"]
-    },
-    "coreValues": [
-      {
-        "id": "string (GUID)",
-        "tenantId": "string (GUID)",
-        "businessFoundationId": "string (GUID)",
-        "name": "string",
-        "description": "string?",
-        "behaviors": ["string"],
-        "displayOrder": "number",
-        "isActive": "boolean",
-        "createdAt": "string (ISO 8601)",
-        "updatedAt": "string (ISO 8601)?"
-      }
-    ],
-    "idealCustomerAvatars": [
-      {
-        "id": "string (GUID)",
-        "tenantId": "string (GUID)",
-        "businessFoundationId": "string (GUID)",
-        "name": "string",
-        "description": "string?",
-        "isPrimary": "boolean",
-        "isActive": "boolean",
-        "ageRange": "string?",
-        "gender": "string?",
-        "location": "string?",
-        "education": "string?",
-        "incomeRange": "string?",
-        "jobTitle": "string?",
-        "industry": "string?",
-        "companySize": "string?",
-        "goals": ["string"],
-        "challenges": ["string"],
-        "values": ["string"],
-        "objections": ["string"],
-        "motivations": ["string"],
-        "onlineChannels": ["string"],
-        "contentPreferences": ["string"],
-        "communicationPreference": "string?",
-        "buyingProcess": "string?",
-        "createdAt": "string (ISO 8601)",
-        "updatedAt": "string (ISO 8601)?"
-      }
-    ],
-    "products": [
-      {
-        "id": "string (GUID)",
-        "tenantId": "string (GUID)",
-        "businessFoundationId": "string (GUID)?",
-        "name": "string",
-        "description": "string?",
-        "type": "ProductType",
-        "status": "ProductStatus",
-        "displayOrder": "number",
-        "isFlagship": "boolean",
-        "pricingTier": "PricingTier?",
-        "pricingModel": "PricingModel?",
-        "revenueContribution": "RevenueContribution?",
-        "features": ["string"],
-        "targetSegments": ["string"],
-        "createdAt": "string (ISO 8601)",
-        "updatedAt": "string (ISO 8601)?"
-      }
-    ],
-    "createdAt": "string (ISO 8601)",
-    "updatedAt": "string (ISO 8601)?"
+    "businessName": "string",
+    "vision": "string",
+    "purpose": "string",
+    "coreValues": ["string"],
+    "targetMarket": "string?",
+    "valueProposition": "string?"
   }
 }
 ```
+
+**Response Fields:**
+
+- `businessName` - Company name
+- `vision` - Long-term vision statement
+- `purpose` - Company purpose/mission
+- `coreValues` - Array of core values (e.g., ["Innovation", "Integrity", "Customer Focus"])
+- `targetMarket` - Target market description (optional)
+- `valueProposition` - Unique value proposition (optional)
+
+**Frontend Handling:**
+
+- Cached for 5 minutes by `BusinessFoundationService`
+- Used by alignment engine for strategic alignment calculations
+- Required for strategic planning module
+- Used in onboarding completeness checks
 
 **Implementation:** `src/services/business-foundation-service.ts` → `getBusinessFoundation()`
 
 ---
 
-### PATCH /business/foundation
+### PUT /business/foundation
 
-Update a single field of business foundation using field/value pattern.
-
-**Request:**
-
-```json
-{
-  "field": "string (required)",
-  "value": "any (required)"
-}
-```
-
-**Field Options:**
-
-| Field | Value Type | Description |
-|-------|-----------|-------------|
-| `vision` | string | Long-term vision statement |
-| `purpose` | string | Company purpose/mission |
-| `coreValues` | string[] | Array of core value names |
-| `valueProposition` | string | Unique value proposition |
-| `businessName` | string | Company name |
-| `targetMarket` | string | Target market description |
-
-**Response:** Complete `BusinessFoundationResponse` (see GET response above)
-
-**Implementation:** `src/services/business-foundation-service.ts` → `patchBusinessFoundation()`
-
----
-
-### PATCH /business/foundation/profile
-
-Update the business profile section.
+Update business foundation information (partial updates supported).
 
 **Request:**
 
 ```json
 {
   "businessName": "string?",
-  "businessDescription": "string? (max 2000 chars)",
-  "industry": "string?",
-  "subIndustry": "string?",
-  "website": "string?",
-  "address": {
-    "street": "string?",
-    "city": "string?",
-    "state": "string?",
-    "zip": "string?",
-    "country": "string?"
-  },
-  "headquartersLocation": "string?",
-  "companyStage": "CompanyStage?",
-  "companySize": "CompanySize?",
-  "revenueRange": "RevenueRange?",
-  "yearFounded": "number?",
-  "geographicFocus": ["GeographicFocus"]?"
-}
-```
-
-**Response:** Complete `BusinessFoundationResponse`
-
----
-
-### PATCH /business/foundation/identity
-
-Update the core identity section (purpose, vision, mission).
-
-**Request:**
-
-```json
-{
-  "purpose": "string?",
   "vision": "string?",
-  "visionTimeframe": "string? (e.g., '5 years' → parsed to 5)",
-  "mission": "string?",
-  "whoWeServe": "string?"
+  "purpose": "string?",
+  "coreValues": ["string"]?,
+  "targetMarket": "string?",
+  "valueProposition": "string?"
 }
 ```
-
-**Response:** Complete `BusinessFoundationResponse`
-
----
-
-### PATCH /business/foundation/market
-
-Update the target market section.
-
-**Request:**
-
-```json
-{
-  "niche": "string?",
-  "primaryAudience": "string?",
-  "marketSize": "string?",
-  "growthTrend": "GrowthTrend?",
-  "painPoints": ["string"]?,
-  "desires": ["string"]?"
-}
-```
-
-**GrowthTrend Enum Values:**
-
-- `Declining` - Market is shrinking
-- `Stable` - Market is stable
-- `Growing` - Market is growing
-- `RapidlyGrowing` - Market is rapidly expanding
-
-**Response:** Complete `BusinessFoundationResponse`
-
----
-
-### PATCH /business/foundation/proposition
-
-Update the value proposition section.
-
-**Request:**
-
-```json
-{
-  "statement": "string?",
-  "uniqueSellingProposition": "string?",
-  "keyBenefits": ["string"]?,
-  "differentiators": ["string"]?,
-  "proofPoints": ["string"]?,
-  "customerOutcomes": ["string"]?,
-  "brandPromise": "string?",
-  "primaryCompetitors": ["string"]?,
-  "competitiveAdvantage": "string?",
-  "marketPosition": "MarketPosition?"
-}
-```
-
-**MarketPosition Enum Values:**
-
-- `Leader` - Market leader
-- `Challenger` - Challenging the leader
-- `Niche` - Specialized niche player
-- `Emerging` - New market entrant
-
-**Response:** Complete `BusinessFoundationResponse`
-
----
-
-### PATCH /business/foundation/model
-
-Update the business model section.
-
-**Request:**
-
-```json
-{
-  "type": "BusinessModelType?",
-  "secondaryTypes": ["BusinessModelType"]?,
-  "primaryRevenueStream": "string?",
-  "revenueStreams": ["string"]?,
-  "pricingStrategy": "string?",
-  "keyPartners": ["string"]?,
-  "distributionChannels": ["string"]?,
-  "customerAcquisitionStrategy": "string?",
-  "marketPosition": "MarketPosition?"
-}
-```
-
-**BusinessModelType Enum Values:**
-
-- `B2B` - Business to Business
-- `B2C` - Business to Consumer
-- `B2B2C` - Business to Business to Consumer
-- `Marketplace` - Two-sided marketplace
-- `SaaS` - Software as a Service
-- `Consulting` - Consulting/Advisory services
-- `Ecommerce` - E-commerce/online retail
-- `Other` - Other business model
-
-**Response:** Complete `BusinessFoundationResponse`
-
----
-
-## Core Values Management Endpoints
-
-The following endpoints manage the detailed core values for a business foundation. Core values can have name, meaning, implementation, and behaviors. These endpoints provide full CRUD operations for managing core values separately from the foundation PATCH endpoints which only handle core value names.
-
-### POST /business/foundation/values
-
-Create a new core value for the business foundation.
-
-**Request:**
-
-```json
-{
-  "name": "string (required, max 100 chars)",
-  "meaning": "string? (max 500 chars)",
-  "implementation": "string? (max 500 chars)",
-  "behaviors": ["string"]? (max 10 items, each max 500 chars)",
-  "displayOrder": "number?"
-}
-```
-
-**Field Descriptions:**
-
-- `name` - The name of the core value (e.g., "Integrity", "Innovation", "Excellence")
-- `meaning` - What this core value means to the organization
-- `implementation` - How this core value is implemented in practice
-- `behaviors` - Observable behaviors that demonstrate this core value (max 10)
-- `displayOrder` - Sorting position (optional, defaults to next available)
 
 **Response:**
 
@@ -1591,423 +1219,24 @@ Create a new core value for the business foundation.
 {
   "success": true,
   "data": {
-    "id": "string",
-    "tenantId": "string",
-    "businessFoundationId": "string",
-    "name": "string",
-    "meaning": "string?",
-    "implementation": "string?",
-    "behaviors": ["string"],
-    "displayOrder": "number",
-    "isActive": "boolean",
-    "createdAt": "string (ISO 8601)",
-    "updatedAt": "string? (ISO 8601)"
+    "businessName": "string",
+    "vision": "string",
+    "purpose": "string",
+    "coreValues": ["string"],
+    "targetMarket": "string?",
+    "valueProposition": "string?"
   }
 }
 ```
-
-**Status Codes:**
-
-- `201 Created` - Core value created successfully
-- `400 Bad Request` - Validation error (invalid data)
-- `404 Not Found` - Business foundation not found
-- `401 Unauthorized` - Missing or invalid authentication
-
----
-
-### GET /business/foundation/values/{id}
-
-Get a specific core value by ID.
-
-**Path Parameters:**
-
-- `id` - Core value ID (GUID)
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "tenantId": "string",
-    "businessFoundationId": "string",
-    "name": "string",
-    "meaning": "string?",
-    "implementation": "string?",
-    "behaviors": ["string"],
-    "displayOrder": "number",
-    "isActive": "boolean",
-    "createdAt": "string (ISO 8601)",
-    "updatedAt": "string? (ISO 8601)"
-  }
-}
-```
-
-**Status Codes:**
-
-- `200 OK` - Core value retrieved successfully
-- `404 Not Found` - Core value not found
-- `401 Unauthorized` - Missing or invalid authentication
-
----
-
-### PUT /business/foundation/values/{id}
-
-Update an existing core value.
-
-**Path Parameters:**
-
-- `id` - Core value ID (GUID)
-
-**Request:**
-
-```json
-{
-  "name": "string? (max 100 chars)",
-  "meaning": "string? (max 500 chars)",
-  "implementation": "string? (max 500 chars)",
-  "behaviors": ["string"]? (max 10 items)",
-  "displayOrder": "number?",
-  "isActive": "boolean?"
-}
-```
-
-**Note:** All fields are optional. Only provided fields will be updated.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "tenantId": "string",
-    "businessFoundationId": "string",
-    "name": "string",
-    "meaning": "string?",
-    "implementation": "string?",
-    "behaviors": ["string"],
-    "displayOrder": "number",
-    "isActive": "boolean",
-    "createdAt": "string (ISO 8601)",
-    "updatedAt": "string (ISO 8601)"
-  }
-}
-```
-
-**Status Codes:**
-
-- `200 OK` - Core value updated successfully
-- `400 Bad Request` - Validation error
-- `404 Not Found` - Core value not found
-- `401 Unauthorized` - Missing or invalid authentication
-
----
-
-### DELETE /business/foundation/values/{id}
-
-Delete (deactivate) a core value.
-
-**Path Parameters:**
-
-- `id` - Core value ID (GUID)
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string",
-    "deleted": true
-  }
-}
-```
-
-**Status Codes:**
-
-- `200 OK` - Core value deleted successfully
-- `404 Not Found` - Core value not found
-- `401 Unauthorized` - Missing or invalid authentication
-
-**Note:** Core values are soft-deleted (marked inactive) rather than permanently removed.
-
----
-
-### PUT /business/foundation/values:reorder
-
-Reorder core values by specifying the desired sequence of IDs.
-
-**Request:**
-
-```json
-{
-  "coreValueIds": ["string"] (required, array of core value IDs in desired order)
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "string",
-      "tenantId": "string",
-      "businessFoundationId": "string",
-      "name": "string",
-      "meaning": "string?",
-      "implementation": "string?",
-      "behaviors": ["string"],
-      "displayOrder": "number",
-      "isActive": "boolean",
-      "createdAt": "string (ISO 8601)",
-      "updatedAt": "string (ISO 8601)"
-    }
-  ]
-}
-```
-
-**Status Codes:**
-
-- `200 OK` - Core values reordered successfully
-- `400 Bad Request` - Invalid request (missing or invalid core value IDs)
-- `401 Unauthorized` - Missing or invalid authentication
 
 **Notes:**
 
-- All core values must belong to the same business foundation
-- Display order is automatically assigned based on array position (1, 2, 3, ...)
-- Only active core values in the provided array will be updated
+- All fields are optional (partial update pattern)
+- Returns complete updated foundation
+- Updates invalidate the cache in `BusinessFoundationService`
+- Typically called during onboarding or business settings
 
----
-
-### GET /business/foundation/wizard-progress
-
-Get the current wizard progress state for the business foundation wizard.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "string (GUID)",
-    "tenantId": "string (GUID)",
-    "businessFoundationId": "string (GUID)",
-    "currentStep": "number",
-    "completedSteps": ["number"],
-    "stepData": {
-      "step1": { ... },
-      "step2": { ... }
-    },
-    "lastActiveAt": "string (ISO 8601)",
-    "createdAt": "string (ISO 8601)",
-    "updatedAt": "string (ISO 8601)?"
-  }
-}
-```
-
----
-
-### PUT /business/foundation/wizard-progress
-
-Update the wizard progress state.
-
-**Request:**
-
-```json
-{
-  "currentStep": "number",
-  "completedSteps": ["number"]?,
-  "stepData": "object?"
-}
-```
-
-**Response:** Complete wizard progress response (see GET response above)
-
----
-
-## Tenant Settings Endpoints
-
-### GET /tenants/settings
-
-Get current tenant settings (Measure configuration, etc).
-
-**Authentication:** Required  
-**Headers:**
-- `Authorization: Bearer {accessToken}`
-- `X-Tenant-Id: {tenantId}` (auto-injected by frontend)
-
-**Request:** None
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "targetLineMode": "single" | "three"
-  }
-}
-```
-
-**Response Fields:**
-- `targetLineMode` (string): Measure target line configuration
-  - `"single"` - Only expected target line (default)
-  - `"three"` - Expected, optimal, and minimal target lines
-
-**Status Codes:**
-- `200` - Success
-- `401` - Unauthorized (missing/invalid token)
-- `404` - Tenant not found
-- `500` - Server error
-
-**Frontend Handling:** `src/services/account.ts`
-
----
-
-### PUT /tenants/settings
-
-Update current tenant settings.
-
-**Authentication:** Required  
-**Headers:**
-- `Authorization: Bearer {accessToken}`
-- `X-Tenant-Id: {tenantId}` (auto-injected by frontend)
-
-**Request:**
-
-```json
-{
-  "targetLineMode": "single" | "three"
-}
-```
-
-**Request Fields:**
-- `targetLineMode` (string, required): Target line mode configuration
-  - Valid values: `"single"` or `"three"`
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "targetLineMode": "single" | "three"
-  }
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `400` - Invalid request (missing field or invalid value)
-- `401` - Unauthorized (missing/invalid token)
-- `404` - Tenant not found
-- `500` - Server error
-
-**Business Rules:**
-- Mode change does NOT affect existing Measure data
-- Single mode: UI hides optimal/minimal target inputs
-- Three mode: UI shows all three target inputs
-- Charts always show expected line; optional lines only if data exists
-
-**Frontend Handling:** `src/services/account.ts`
-
----
-
-## Business Foundation Enumerations Reference
-
-### CompanyStage
-
-| Value | Description |
-````
-|-------|-------------|
-| `Startup` | 0-2 years, finding product-market fit |
-| `Growth` | 2-5 years, scaling operations |
-| `Scale` | 5-10 years, expanding markets |
-| `Mature` | 10+ years, optimizing operations |
-
-### CompanySize
-
-| Value | Description |
-|-------|-------------|
-| `Solo` | 1 employee (solopreneur) |
-| `Micro` | 2-9 employees |
-| `Small` | 10-49 employees |
-| `Medium` | 50-249 employees |
-| `Large` | 250-999 employees |
-| `Enterprise` | 1000+ employees |
-
-### RevenueRange
-
-| Value | Description |
-|-------|-------------|
-| `PreRevenue` | No revenue yet |
-| `Under100K` | $1 - $100K annually |
-| `From100KTo500K` | $100K - $500K annually |
-| `From500KTo1M` | $500K - $1M annually |
-| `From1MTo5M` | $1M - $5M annually |
-| `From5MTo10M` | $5M - $10M annually |
-| `From10MTo50M` | $10M - $50M annually |
-| `Over50M` | $50M+ annually |
-| `NotDisclosed` | Prefer not to disclose |
-
-### GeographicFocus
-
-| Value | Description |
-|-------|-------------|
-| `Local` | Single city or local region |
-| `Regional` | Multiple regions within a country |
-| `National` | Entire country |
-| `Global` | Multiple countries/international |
-
-### ProductType
-
-| Value | Description |
-|-------|-------------|
-| `Product` | Physical or digital product |
-| `Service` | Professional service |
-| `Subscription` | Recurring subscription offering |
-| `Hybrid` | Combination of product and service |
-
-### ProductStatus
-
-| Value | Description |
-|-------|-------------|
-| `Active` | Currently available and active |
-| `InDevelopment` | Currently being developed |
-| `Planned` | Planned for future release |
-| `Retired` | No longer offered |
-
-### PricingTier
-
-| Value | Description |
-|-------|-------------|
-| `Premium` | High-end/premium pricing |
-| `MidMarket` | Middle-tier pricing |
-| `EntryLevel` | Budget-friendly/entry-level pricing |
-| `Free` | Free offering |
-
-### PricingModel
-
-| Value | Description |
-|-------|-------------|
-| `OneTime` | One-time purchase |
-| `Subscription` | Recurring subscription |
-| `UsageBased` | Pay per use/consumption |
-| `Freemium` | Free tier with paid features |
-| `Custom` | Custom/negotiated pricing |
-
-### RevenueContribution
-
-| Value | Description |
-|-------|-------------|
-| `Primary` | Main revenue source |
-| `Secondary` | Supporting revenue stream |
-| `Emerging` | New/growing revenue stream |
+**Implementation:** `src/services/business-foundation-service.ts` → `updateBusinessFoundation()`
 
 ---
 

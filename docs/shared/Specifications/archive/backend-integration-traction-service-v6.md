@@ -58,13 +58,13 @@ This specification documents **ALL** Traction API endpoints currently called by 
 16. `DELETE /measures/{id}` - Delete Measure instance
 17. `GET /measures` - List Measures
 18. `GET /goals/{goalId}/measures` - List Measures for goal
-19. `PUT /goals/{goalId}/measures/{measureId}:setPrimary` - Set Measure as primary
+19. `PUT /goals/{goalId}/measures/{kpiId}:setPrimary` - Set Measure as primary
 
 ### Measure Linking (9 endpoints)
 20. `POST /goals/{goalId}/measures:link` - Link Measure to goal (with person and optional strategy)
 21. `POST /goals/{goalId}/measures:unlink` - Unlink Measure from goal
-22. `POST /goals/{goalId}/measures/{measureId}:setThreshold` - Set Measure threshold
-23. `GET /goals/{goalId}/measures/{measureId}:link` - Get Measure linkage details
+22. `POST /goals/{goalId}/measures/{kpiId}:setThreshold` - Set Measure threshold
+23. `GET /goals/{goalId}/measures/{kpiId}:link` - Get Measure linkage details
 24. `GET /goals/{goalId}/available-measures` - Get available Measures for goal
 25. `GET /people/{personId}/measures` - List personal scorecard Measures
 26. `POST /people/{personId}/measures:link` - Link Measure to person (personal scorecard)
@@ -81,7 +81,7 @@ This specification documents **ALL** Traction API endpoints currently called by 
 35. `GET /measure-links/{linkId}/all-series` - Get all target lines + actuals
 36. `GET /measure-planning/goals/{goalId}/measure-planning` - Get goal Measure planning overview
 37. `POST /measure-planning/measures/{id}/adjust` - Adjust Measure plan
-38. `GET /measure-planning/measures/{measureId}/cross-goal-impact` - Get cross-goal impact
+38. `GET /measure-planning/measures/{kpiId}/cross-goal-impact` - Get cross-goal impact
 39. `GET /measure-planning/measures/{id}/replan-rule` - Get replan rule
 40. `PUT /measure-planning/measures/{id}/replan-rule` - Update replan rule
 
@@ -305,7 +305,7 @@ List goals with optional filtering.
           {
             "id": "goalmeasure_101",
             "goalId": "goal_456",
-            "measureId": "measure_202",
+            "kpiId": "measure_202",
             "order": 1,
             "createdAt": "2025-01-15T11:30:00Z",
             "updatedAt": "2025-01-15T11:30:00Z"
@@ -373,7 +373,7 @@ Get detailed goal information.
       {
         "id": "goalmeasure_101",
         "goalId": "goal_456",
-        "measureId": "measure_202",
+        "kpiId": "measure_202",
         "order": 1,
         "createdAt": "2025-01-15T11:30:00Z",
         "updatedAt": "2025-01-15T11:30:00Z"
@@ -1055,7 +1055,7 @@ List all Measures linked to a specific goal with primary indicator.
     "measures": [
       {
         "linkId": "goalmeasure_101",
-        "measureId": "measure_456",
+        "kpiId": "measure_456",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
         "direction": "up",
@@ -1071,7 +1071,7 @@ List all Measures linked to a specific goal with primary indicator.
       },
       {
         "linkId": "goalmeasure_102",
-        "measureId": "measure_457",
+        "kpiId": "measure_457",
         "name": "Customer Retention Rate",
         "unit": "%",
         "direction": "up",
@@ -1089,7 +1089,7 @@ List all Measures linked to a specific goal with primary indicator.
     "totalMeasures": 2,
     "hasPrimary": true,
     "primaryMeasure": {
-      "measureId": "measure_456",
+      "kpiId": "measure_456",
       "name": "Monthly Recurring Revenue"
     }
   }
@@ -1108,13 +1108,13 @@ List all Measures linked to a specific goal with primary indicator.
 
 ---
 
-### 19. PUT /goals/{goalId}/measures/{measureId}:setPrimary
+### 19. PUT /goals/{goalId}/measures/{kpiId}:setPrimary
 
 Set a specific Measure as the primary Measure for this goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `measureId`: string, required - Measure ID to set as primary
+- `kpiId`: string, required - Measure ID to set as primary
 
 **Request Body:**
 ```json
@@ -1158,7 +1158,7 @@ Link a Measure to a goal with a responsible person.
 **Request Body:**
 ```json
 {
-  "measureId": "measure_456",
+  "kpiId": "measure_456",
   "personId": "person_789",
   "strategyId": null,
   "thresholdPct": 80,
@@ -1170,7 +1170,7 @@ Link a Measure to a goal with a responsible person.
 ```
 
 **Request Constraints:**
-- `measureId`: string, required, valid Measure ID (existing Measure instance)
+- `kpiId`: string, required, valid Measure ID (existing Measure instance)
 - `personId`: string, required, valid Person ID (person responsible for targets/actuals)
 - `strategyId`: string, optional, valid Strategy ID (only if linking to a specific strategy within the goal)
 - `thresholdPct`: number, optional, 0-100, percentage threshold for goal achievement
@@ -1187,8 +1187,8 @@ Link a Measure to a goal with a responsible person.
 {
   "success": true,
   "data": {
-    "id": "measurelink_101",
-    "measureId": "measure_456",
+    "id": "kpilink_101",
+    "kpiId": "measure_456",
     "personId": "person_789",
     "personName": "John Doe",
     "goalId": "goal_456",
@@ -1228,17 +1228,17 @@ Unlink a Measure from a goal.
 **Request Body:**
 ```json
 {
-  "measureId": "measure_456",
+  "kpiId": "measure_456",
   "newPrimaryMeasureId": "measure_789"
 }
 ```
 
 **Request Constraints:**
-- `measureId`: string, required, Measure ID to unlink
+- `kpiId`: string, required, Measure ID to unlink
 - `newPrimaryMeasureId`: string, optional
-  - **REQUIRED** if `measureId` is the current primary Measure AND goal has other Measures linked
-  - **FORBIDDEN** if `measureId` is not the current primary Measure
-  - **FORBIDDEN** if `measureId` is the only Measure linked to goal
+  - **REQUIRED** if `kpiId` is the current primary Measure AND goal has other Measures linked
+  - **FORBIDDEN** if `kpiId` is not the current primary Measure
+  - **FORBIDDEN** if `kpiId` is the only Measure linked to goal
 
 **Response:**
 ```json
@@ -1266,13 +1266,13 @@ Unlink a Measure from a goal.
 
 ---
 
-### 22. POST /goals/{goalId}/measures/{measureId}:setThreshold
+### 22. POST /goals/{goalId}/measures/{kpiId}:setThreshold
 
 Set threshold percentage for a Measure linked to a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `measureId`: string, required - Measure ID
+- `kpiId`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1293,21 +1293,21 @@ Set threshold percentage for a Measure linked to a goal.
 
 ---
 
-### 23. GET /goals/{goalId}/measures/{measureId}:link
+### 23. GET /goals/{goalId}/measures/{kpiId}:link
 
 Get Measure linkage information including threshold, person, and strategy.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `measureId`: string, required - Measure ID
+- `kpiId`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "measurelink_101",
-    "measureId": "measure_456",
+    "id": "kpilink_101",
+    "kpiId": "measure_456",
     "personId": "person_789",
     "personName": "John Doe",
     "goalId": "goal_456",
@@ -1402,8 +1402,8 @@ List all Measures linked to a person (personal scorecard).
     "personName": "John Doe",
     "measures": [
       {
-        "linkId": "measurelink_101",
-        "measureId": "measure_456",
+        "linkId": "kpilink_101",
+        "kpiId": "measure_456",
         "name": "Billable Hours",
         "unit": "hours",
         "direction": "up",
@@ -1433,7 +1433,7 @@ Link a Measure to a person as a personal scorecard metric.
 **Request Body:**
 ```json
 {
-  "measureId": "measure_456",
+  "kpiId": "measure_456",
   "thresholdPct": 80,
   "isPrimary": true,
   "linkType": "primary",
@@ -1447,8 +1447,8 @@ Link a Measure to a person as a personal scorecard metric.
 {
   "success": true,
   "data": {
-    "id": "measurelink_101",
-    "measureId": "measure_456",
+    "id": "kpilink_101",
+    "kpiId": "measure_456",
     "personId": "person_789",
     "goalId": null,
     "strategyId": null,
@@ -1475,7 +1475,7 @@ Unlink a Measure from a person's personal scorecard.
 **Request Body:**
 ```json
 {
-  "measureLinkId": "measurelink_101"
+  "kpiLinkId": "kpilink_101"
 }
 ```
 
@@ -1504,8 +1504,8 @@ List all Measures linked to a specific strategy.
     "goalId": "goal_123",
     "measures": [
       {
-        "linkId": "measurelink_102",
-        "measureId": "measure_789",
+        "linkId": "kpilink_102",
+        "kpiId": "measure_789",
         "name": "Conversion Rate",
         "unit": "%",
         "personId": "person_123",
@@ -1538,8 +1538,8 @@ Get all targets for a Measure link (supports filtering by subtype).
   "success": true,
   "data": [
     {
-      "id": "measuredata_123",
-      "measureLinkId": "measurelink_101",
+      "id": "kpidata_123",
+      "kpiLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Expected",
       "postValue": 50000,
@@ -1552,8 +1552,8 @@ Get all targets for a Measure link (supports filtering by subtype).
       "updatedAt": "2025-01-15T10:00:00Z"
     },
     {
-      "id": "measuredata_124",
-      "measureLinkId": "measurelink_101",
+      "id": "kpidata_124",
+      "kpiLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Optimal",
       "postValue": 60000,
@@ -1562,8 +1562,8 @@ Get all targets for a Measure link (supports filtering by subtype).
       "confidenceLevel": 3
     },
     {
-      "id": "measuredata_125",
-      "measureLinkId": "measurelink_101",
+      "id": "kpidata_125",
+      "kpiLinkId": "kpilink_101",
       "dataCategory": "Target",
       "targetSubtype": "Minimal",
       "postValue": 40000,
@@ -1617,8 +1617,8 @@ Create a new target for a Measure link.
 {
   "success": true,
   "data": {
-    "id": "measuredata_123",
-    "measureLinkId": "measurelink_101",
+    "id": "kpidata_123",
+    "kpiLinkId": "kpilink_101",
     "dataCategory": "Target",
     "targetSubtype": "Expected",
     "postValue": 50000,
@@ -1688,8 +1688,8 @@ Get all actuals for a Measure link.
   "success": true,
   "data": [
     {
-      "id": "measuredata_200",
-      "measureLinkId": "measurelink_101",
+      "id": "kpidata_200",
+      "kpiLinkId": "kpilink_101",
       "dataCategory": "Actual",
       "actualSubtype": "Measured",
       "postValue": 45000,
@@ -1749,8 +1749,8 @@ Record an actual value for a Measure link.
   "success": true,
   "data": {
     "actual": {
-      "id": "measuredata_200",
-      "measureLinkId": "measurelink_101",
+      "id": "kpidata_200",
+      "kpiLinkId": "kpilink_101",
       "dataCategory": "Actual",
       "actualSubtype": "Measured",
       "postValue": 45000,
@@ -1790,7 +1790,7 @@ Get all target lines (Expected, Optimal, Minimal) plus actuals for charting.
 {
   "success": true,
   "data": {
-    "measureLinkId": "measurelink_101",
+    "kpiLinkId": "kpilink_101",
     "measure": {
       "id": "measure_456",
       "name": "Monthly Recurring Revenue",
@@ -1855,11 +1855,11 @@ Get complete Measure planning summary for a goal (all Measure links associated w
       "name": "Increase Revenue",
       "intent": "We want to increase revenue by 50%..."
     },
-    "measureLinks": [
+    "kpiLinks": [
       {
-        "linkId": "measurelink_101",
-        "measureId": "measure_456",
-        "measureName": "Monthly Recurring Revenue",
+        "linkId": "kpilink_101",
+        "kpiId": "measure_456",
+        "kpiName": "Monthly Recurring Revenue",
         "unit": "USD",
         "personId": "person_789",
         "personName": "John Doe",
@@ -1867,14 +1867,14 @@ Get complete Measure planning summary for a goal (all Measure links associated w
         "isPrimary": true,
         "targetCount": 12,
         "nextTarget": {
-          "id": "measuredata_123",
+          "id": "kpidata_123",
           "targetSubtype": "Expected",
           "postDate": "2025-03-31",
           "postValue": 50000,
           "label": "Q1 Target"
         },
         "latestActual": {
-          "id": "measuredata_200",
+          "id": "kpidata_200",
           "actualSubtype": "Measured",
           "postDate": "2025-01-15",
           "postValue": 42000
@@ -1938,7 +1938,7 @@ Apply a Measure plan adjustment (replanning based on actuals).
   "data": {
     "adjustment": {
       "id": "adjustment_789",
-      "measureId": "measure_456",
+      "kpiId": "measure_456",
       "adjustmentDate": "2025-02-01T15:00:00Z",
       "effectiveDate": "2025-02-01",
       "adjustmentType": "milestone_updated",
@@ -1968,20 +1968,20 @@ Apply a Measure plan adjustment (replanning based on actuals).
 
 ---
 
-### 38. GET /measure-planning/measures/{measureId}/cross-goal-impact
+### 38. GET /measure-planning/measures/{kpiId}/cross-goal-impact
 
 Shows which goals use this Measure and their impact level.
 
 **Path Parameters:**
-- `measureId`: string, required - Measure ID
+- `kpiId`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "measureId": "measure_123",
-    "measureName": "Monthly Recurring Revenue",
+    "kpiId": "measure_123",
+    "kpiName": "Monthly Recurring Revenue",
     "affectedGoals": [
       {
         "goalId": "goal_456",
@@ -2016,7 +2016,7 @@ Get auto-replan configuration for a Measure.
   "success": true,
   "data": {
     "id": "rule_123",
-    "measureId": "measure_456",
+    "kpiId": "measure_456",
     "varianceThresholdPercentage": 10.0,
     "consecutiveMissesRequired": 2,
     "autoAdjustEnabled": true,
@@ -2968,7 +2968,7 @@ Sync Measure update from an action.
 ```json
 {
   "actionId": "action_123",
-  "measureId": "measure_456",
+  "kpiId": "measure_456",
   "horizonId": "horizon_789",
   "newValue": 1000,
   "updateDate": "2025-02-01",
@@ -2978,8 +2978,8 @@ Sync Measure update from an action.
 
 **Request Constraints:**
 - `actionId`: string, required, valid action ID
-- `measureId`: string, required, valid Measure ID
-- `measureId`: string, required, valid Measure ID
+- `kpiId`: string, required, valid Measure ID
+- `kpiId`: string, required, valid Measure ID
 - `horizonId`: string, required, valid time horizon ID
 - `newValue`: number, required
 - `updateDate`: string, required, ISO date (YYYY-MM-DD)
@@ -3083,7 +3083,7 @@ Get Measures for specific goals.
   "data": [
     {
       "id": "measure_456",
-      "measureId": "measure_catalog_1",
+      "kpiId": "measure_catalog_1",
       "name": "Monthly Recurring Revenue",
       "unit": "USD",
       "direction": "up",

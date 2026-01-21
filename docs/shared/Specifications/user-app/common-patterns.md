@@ -1,17 +1,9 @@
 # Common Patterns & Data Models
 
-**Version:** 4.0  
-**Last Updated:** December 26, 2025  
+**Version:** 3.0  
 **Purpose:** Shared patterns, authentication, error handling, and data models across all services
 
 [← Back to Index](./index.md)
-
-## Changelog
-
-| Version | Date | Changes |
-|---------|------|----------|
-| 4.0 | December 26, 2025 | **BREAKING:** Standardized all enum values and type definitions to camelCase (e.g., `'not_started'` → `'notStarted'`, `'in_progress'` → `'inProgress'`). Updated pagination query parameter from `limit` to `pageSize`. Added comprehensive data models section with common camelCase field names. |
-| 3.0 | October 13, 2025 | Multi-service documentation split |
 
 ---
 
@@ -324,7 +316,7 @@ type TimeHorizon = 'year' | 'quarter' | 'month';
 ### Operations Status and Priority
 
 ```typescript
-type ActionStatus = 'notStarted' | 'inProgress' | 'completed' | 'blocked' | 'cancelled';
+type ActionStatus = 'not_started' | 'in_progress' | 'completed' | 'blocked' | 'cancelled';
 type ActionPriority = 'low' | 'medium' | 'high' | 'critical';
 type IssueImpact = 'low' | 'medium' | 'high' | 'critical';
 type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
@@ -333,7 +325,7 @@ type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
 ### Activity Types
 
 ```typescript
-type ActivityType = 'weeklyReview' | 'note' | 'system' | 'decision' | 'attachment';
+type ActivityType = 'weekly_review' | 'note' | 'system' | 'decision' | 'attachment';
 ```
 
 ### Coaching and Insights
@@ -341,7 +333,7 @@ type ActivityType = 'weeklyReview' | 'note' | 'system' | 'decision' | 'attachmen
 ```typescript
 type InsightCategory = 'strategy' | 'operations' | 'finance' | 'marketing' | 'leadership';
 type InsightPriority = 'low' | 'medium' | 'high' | 'critical';
-type InsightStatus = 'pending' | 'inProgress' | 'completed';
+type InsightStatus = 'pending' | 'in_progress' | 'completed';
 ```
 
 ### Onboarding
@@ -349,7 +341,7 @@ type InsightStatus = 'pending' | 'inProgress' | 'completed';
 ```typescript
 type OnboardingSuggestionKind = 'niche' | 'ica' | 'valueProposition';
 type OnboardingCoachingTopic = 'coreValues' | 'purpose' | 'vision';
-type OnboardingStatus = 'notStarted' | 'inProgress' | 'completed';
+type OnboardingStatus = 'Not started' | 'In progress' | 'Completed';
 ```
 
 ### Measure
@@ -362,7 +354,7 @@ type MeasureDirection = 'up' | 'down'; // up = higher is better, down = lower is
 
 ```typescript
 type SubscriptionFrequency = 'monthly' | 'yearly';
-type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'pastDue', 'cancelled'
+type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'past_due', 'cancelled'
 
 // Note: Use isActive boolean for access control, not status string
 ```
@@ -385,9 +377,9 @@ interface PromoDiscount {
 
 ```typescript
 type PaymentIntentStatus = 
-  | 'requiresPaymentMethod'
-  | 'requiresConfirmation'
-  | 'requiresAction'
+  | 'requires_payment_method'
+  | 'requires_confirmation'
+  | 'requires_action'
   | 'processing'
   | 'succeeded'
   | 'canceled';
@@ -396,7 +388,7 @@ type PaymentIntentStatus =
 ### Email Confirmation
 
 ```typescript
-type TokenStatus = 'valid' | 'used' | 'expired' | 'notFound';
+type TokenStatus = 'valid' | 'used' | 'expired' | 'not_found';
 ```
 
 ### Reports
@@ -409,10 +401,10 @@ type ReportFormat = 'pdf' | 'docx';
 
 ```typescript
 type RealtimeEventType = 
-  | 'activityCreated'
-  | 'decisionCreated'
-  | 'attachmentCreated'
-  | 'measureReadingCreated';
+  | 'activity.created'
+  | 'decision.created'
+  | 'attachment.created'
+  | 'measure.reading.created';
 ```
 
 ---
@@ -485,7 +477,7 @@ interface PaginatedResponse<T> {
   data: T[];
   pagination: {
     page: number;
-    pageSize: number;
+    limit: number;
     total: number;
     totalPages: number;
   };
@@ -505,41 +497,48 @@ interface ErrorResponse {
 
 ---
 
-## Data Models
+## Frontend-Backend Data Mapping
 
-### Standard Field Naming
+The frontend uses camelCase while the backend uses snake_case. Mappings are handled in service layers:
 
-All API responses use **camelCase** for JSON property names:
+### Common Mappings
 
-**Common Fields:**
-- `accessToken`, `refreshToken` - Authentication tokens
-- `userId`, `tenantId` - Entity identifiers
-- `firstName`, `lastName` - User name fields
-- `avatarUrl` - User profile picture URL
-- `createdAt`, `updatedAt` - Timestamps
-- `ownerId` - Resource owner identifier
-- `valueTags` - Array of value identifiers
-- `sharedMeasureId` - Shared Measure identifier
-- `thresholdPct` - Percentage threshold value
-- `businessImpact` - Business impact description
-- `assignedPersonId` - Person assignment identifier
-- `newPassword` - New password for updates
+| Backend (snake_case) | Frontend (camelCase) |
+|---------------------|----------------------|
+| `access_token` | `accessToken` |
+| `refresh_token` | `refreshToken` |
+| `user_id` | `userId` |
+| `tenant_id` | `tenantId` |
+| `first_name` | `firstName` |
+| `last_name` | `lastName` |
+| `avatar_url` | `avatarUrl` |
+| `created_at` | `createdAt` |
+| `updated_at` | `updatedAt` |
+| `owner_id` | `ownerId` |
+| `value_tags` | `valueTags` |
+| `shared_measure_id` | `sharedMeasureId` |
+| `threshold_pct` | `threshold` or `thresholdPct` |
+| `business_impact` | `businessImpact` |
+| `assigned_person_id` | `assignedPersonId` |
+| `new_password` | `newPassword` |
 
-### TypeScript Model Example
+### Mapping Functions
 
-**User Profile** (`api.ts`):
+**User Profile Mapping** (`api.ts`):
 ```typescript
-interface UserProfile {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  status: string;
-  emailVerified: boolean;
-  preferences: Record<string, any>;
+private mapBackendUserProfileToFrontend(backendUser: any): UserProfile {
+  return {
+    userId: backendUser.user_id,
+    email: backendUser.email,
+    firstName: backendUser.first_name,
+    lastName: backendUser.last_name,
+    avatarUrl: backendUser.avatar_url,
+    createdAt: backendUser.created_at,
+    updatedAt: backendUser.updated_at,
+    status: backendUser.status,
+    emailVerified: backendUser.email_verified,
+    preferences: backendUser.preferences || {}
+  };
 }
 ```
 
@@ -624,11 +623,11 @@ class RealtimeService {
   
   subscribe(goalId: string, callback: (event) => void) {
     const url = `${SSE_BASE_URL}/realtime/goals/${goalId}/activity?` +
-      `accessToken=${token}&tenantId=${tenantId}`;
+      `access_token=${token}&tenant=${tenantId}`;
     
     const eventSource = new EventSource(url);
     
-    eventSource.addEventListener('activityCreated', callback);
+    eventSource.addEventListener('activity.created', callback);
     eventSource.addEventListener('error', () => {
       // Auto-reconnect with exponential backoff
       this.reconnect(goalId, callback);

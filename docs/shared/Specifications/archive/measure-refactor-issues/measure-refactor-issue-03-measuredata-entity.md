@@ -83,7 +83,7 @@ public class MeasureData : FullyAuditableEntity
     /// Create an Expected target (primary target)
     /// </summary>
     public static MeasureData CreateExpectedTarget(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -92,7 +92,7 @@ public class MeasureData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(measureLinkId, TargetSubtype.Expected, targetValue, targetDate, 
+        return CreateTarget(kpiLinkId, TargetSubtype.Expected, targetValue, targetDate, 
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
@@ -100,7 +100,7 @@ public class MeasureData : FullyAuditableEntity
     /// Create an Optimal target (stretch goal)
     /// </summary>
     public static MeasureData CreateOptimalTarget(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -109,7 +109,7 @@ public class MeasureData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(measureLinkId, TargetSubtype.Optimal, targetValue, targetDate,
+        return CreateTarget(kpiLinkId, TargetSubtype.Optimal, targetValue, targetDate,
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
@@ -117,7 +117,7 @@ public class MeasureData : FullyAuditableEntity
     /// Create a Minimal target (floor/threshold)
     /// </summary>
     public static MeasureData CreateMinimalTarget(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         decimal targetValue,
         string targetDate,
         string recordedBy,
@@ -126,12 +126,12 @@ public class MeasureData : FullyAuditableEntity
         int? confidenceLevel = null,
         string? rationale = null)
     {
-        return CreateTarget(measureLinkId, TargetSubtype.Minimal, targetValue, targetDate,
+        return CreateTarget(kpiLinkId, TargetSubtype.Minimal, targetValue, targetDate,
             recordedBy, periodStartDate, label, confidenceLevel, rationale);
     }
 
     private static MeasureData CreateTarget(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         TargetSubtype targetSubtype,
         decimal targetValue,
         string targetDate,
@@ -148,7 +148,7 @@ public class MeasureData : FullyAuditableEntity
         var data = new MeasureData
         {
             Id = MeasureDataId.New(),
-            MeasureLinkId = measureLinkId ?? throw new ArgumentNullException(nameof(measureLinkId)),
+            MeasureLinkId = kpiLinkId ?? throw new ArgumentNullException(nameof(kpiLinkId)),
             DataCategory = MeasureDataCategory.Target,
             TargetSubtype = targetSubtype,
             ActualSubtype = null,
@@ -177,7 +177,7 @@ public class MeasureData : FullyAuditableEntity
     /// Create an Estimated actual (forecast/estimate)
     /// </summary>
     public static MeasureData CreateEstimate(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         decimal estimatedValue,
         string measurementDate,
         string recordedBy,
@@ -185,7 +185,7 @@ public class MeasureData : FullyAuditableEntity
         DateTime? periodStartDate = null,
         string? sourceReferenceId = null)
     {
-        return CreateActual(measureLinkId, ActualSubtype.Estimate, estimatedValue, measurementDate,
+        return CreateActual(kpiLinkId, ActualSubtype.Estimate, estimatedValue, measurementDate,
             recordedBy, dataSource, periodStartDate, sourceReferenceId);
     }
 
@@ -193,7 +193,7 @@ public class MeasureData : FullyAuditableEntity
     /// Create a Measured actual (recorded value)
     /// </summary>
     public static MeasureData CreateMeasured(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         decimal measuredValue,
         string measurementDate,
         string recordedBy,
@@ -201,12 +201,12 @@ public class MeasureData : FullyAuditableEntity
         DateTime? periodStartDate = null,
         string? sourceReferenceId = null)
     {
-        return CreateActual(measureLinkId, ActualSubtype.Measured, measuredValue, measurementDate,
+        return CreateActual(kpiLinkId, ActualSubtype.Measured, measuredValue, measurementDate,
             recordedBy, dataSource, periodStartDate, sourceReferenceId);
     }
 
     private static MeasureData CreateActual(
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         ActualSubtype actualSubtype,
         decimal value,
         string measurementDate,
@@ -221,7 +221,7 @@ public class MeasureData : FullyAuditableEntity
         var data = new MeasureData
         {
             Id = MeasureDataId.New(),
-            MeasureLinkId = measureLinkId ?? throw new ArgumentNullException(nameof(measureLinkId)),
+            MeasureLinkId = kpiLinkId ?? throw new ArgumentNullException(nameof(kpiLinkId)),
             DataCategory = MeasureDataCategory.Actual,
             TargetSubtype = null,
             ActualSubtype = actualSubtype,
@@ -319,7 +319,7 @@ public class MeasureData : FullyAuditableEntity
     /// </summary>
     public static MeasureData Restore(
         MeasureDataId id,
-        MeasureLinkId measureLinkId,
+        MeasureLinkId kpiLinkId,
         MeasureDataCategory dataCategory,
         TargetSubtype? targetSubtype,
         ActualSubtype? actualSubtype,
@@ -347,7 +347,7 @@ public class MeasureData : FullyAuditableEntity
         return new MeasureData
         {
             Id = id,
-            MeasureLinkId = measureLinkId,
+            MeasureLinkId = kpiLinkId,
             DataCategory = dataCategory,
             TargetSubtype = targetSubtype,
             ActualSubtype = actualSubtype,

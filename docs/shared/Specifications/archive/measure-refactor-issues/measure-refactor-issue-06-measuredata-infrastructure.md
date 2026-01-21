@@ -180,7 +180,7 @@ public static class MeasureDataMapper
     {
         return MeasureData.Restore(
             id: MeasureDataId.From(dataModel.Id),
-            measureLinkId: MeasureLinkId.From(dataModel.MeasureLinkId),
+            kpiLinkId: MeasureLinkId.From(dataModel.MeasureLinkId),
             dataCategory: Enum.Parse<MeasureDataCategory>(dataModel.DataCategory),
             targetSubtype: string.IsNullOrEmpty(dataModel.TargetSubtype) 
                 ? null 
@@ -229,39 +229,39 @@ public interface IMeasureDataRepository
     Task<MeasureData?> GetByIdAsync(MeasureDataId id, CancellationToken ct = default);
     
     // Get all data for a link
-    Task<IEnumerable<MeasureData>> GetByMeasureLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetByMeasureLinkIdAsync(MeasureLinkId kpiLinkId, CancellationToken ct = default);
     
     // Get targets for a link
-    Task<IEnumerable<MeasureData>> GetTargetsAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetTargetsAsync(MeasureLinkId kpiLinkId, CancellationToken ct = default);
     
     // Get specific target type
     Task<IEnumerable<MeasureData>> GetTargetsBySubtypeAsync(
-        MeasureLinkId measureLinkId, 
+        MeasureLinkId kpiLinkId, 
         TargetSubtype subtype, 
         CancellationToken ct = default);
     
     // Get actuals for a link
-    Task<IEnumerable<MeasureData>> GetActualsAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task<IEnumerable<MeasureData>> GetActualsAsync(MeasureLinkId kpiLinkId, CancellationToken ct = default);
     
     // Get actuals by subtype (Estimate or Measured)
     Task<IEnumerable<MeasureData>> GetActualsBySubtypeAsync(
-        MeasureLinkId measureLinkId, 
+        MeasureLinkId kpiLinkId, 
         ActualSubtype subtype, 
         CancellationToken ct = default);
     
     // Get data within date range
     Task<IEnumerable<MeasureData>> GetByDateRangeAsync(
-        MeasureLinkId measureLinkId, 
+        MeasureLinkId kpiLinkId, 
         DateTime startDate, 
         DateTime endDate, 
         CancellationToken ct = default);
     
     // Get latest actual (Measured wins over Estimate for same date)
-    Task<MeasureData?> GetLatestActualAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task<MeasureData?> GetLatestActualAsync(MeasureLinkId kpiLinkId, CancellationToken ct = default);
     
     // Get target for specific date
     Task<MeasureData?> GetTargetForDateAsync(
-        MeasureLinkId measureLinkId, 
+        MeasureLinkId kpiLinkId, 
         TargetSubtype subtype, 
         string postDate, 
         CancellationToken ct = default);
@@ -269,7 +269,7 @@ public interface IMeasureDataRepository
     Task CreateAsync(MeasureData data, CancellationToken ct = default);
     Task UpdateAsync(MeasureData data, CancellationToken ct = default);
     Task DeleteAsync(MeasureDataId id, CancellationToken ct = default);
-    Task DeleteByMeasureLinkIdAsync(MeasureLinkId measureLinkId, CancellationToken ct = default);
+    Task DeleteByMeasureLinkIdAsync(MeasureLinkId kpiLinkId, CancellationToken ct = default);
 }
 ```
 

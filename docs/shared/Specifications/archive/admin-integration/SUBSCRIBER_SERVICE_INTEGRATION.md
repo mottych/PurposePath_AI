@@ -94,8 +94,8 @@ interface Subscriber {
     currentPeriodEnd: string;      // ISO date string
     goalsUsed: number;
     goalsLimit: number | null;     // null = unlimited
-    measuresUsed: number;
-    measuresLimit: number | null;
+    kpisUsed: number;
+    kpisLimit: number | null;
     actionsUsed: number;
     actionsLimit: number | null;
   };
@@ -436,7 +436,7 @@ function SubscriberDetailsPage({ tenantId }: { tenantId: string }) {
       <div>
         <h2>Current Usage</h2>
         <p>Goals: {details?.usage.goalsUsed} / {details?.usage.goalsLimit || 'Unlimited'}</p>
-        <p>Measures: {details?.usage.measuresUsed} / {details?.usage.measuresLimit || 'Unlimited'}</p>
+        <p>Measures: {details?.usage.kpisUsed} / {details?.usage.kpisLimit || 'Unlimited'}</p>
         <p>Actions: {details?.usage.actionsUsed} / {details?.usage.actionsLimit || 'Unlimited'}</p>
       </div>
 
@@ -765,7 +765,7 @@ function SubscriberDashboard() {
 
               <div style={{ fontSize: '12px', color: '#666' }}>
                 Goals: {subscriber.usage.goalsUsed} / {subscriber.usage.goalsLimit || '∞'} | 
-                Measures: {subscriber.usage.measuresUsed} / {subscriber.usage.measuresLimit || '∞'} |
+                Measures: {subscriber.usage.kpisUsed} / {subscriber.usage.kpisLimit || '∞'} |
                 Actions: {subscriber.usage.actionsUsed} / {subscriber.usage.actionsLimit || '∞'}
               </div>
             </div>
@@ -834,7 +834,7 @@ function SubscriberDashboard() {
               <div style={{ marginBottom: '20px' }}>
                 <h3>Usage</h3>
                 <div>Goals: {selectedSubscriber.usage.goalsUsed} / {selectedSubscriber.usage.goalsLimit || 'Unlimited'}</div>
-                <div>Measures: {selectedSubscriber.usage.measuresUsed} / {selectedSubscriber.usage.measuresLimit || 'Unlimited'}</div>
+                <div>Measures: {selectedSubscriber.usage.kpisUsed} / {selectedSubscriber.usage.kpisLimit || 'Unlimited'}</div>
                 <div>Actions: {selectedSubscriber.usage.actionsUsed} / {selectedSubscriber.usage.actionsLimit || 'Unlimited'}</div>
               </div>
 

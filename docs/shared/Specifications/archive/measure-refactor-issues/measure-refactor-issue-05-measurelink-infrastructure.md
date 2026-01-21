@@ -147,7 +147,7 @@ public static class MeasureLinkMapper
         return MeasureLink.Restore(
             id: MeasureLinkId.From(dataModel.Id),
             tenantId: TenantId.From(dataModel.TenantId),
-            measureId: MeasureId.From(dataModel.MeasureId),
+            kpiId: MeasureId.From(dataModel.MeasureId),
             personId: PersonId.From(dataModel.PersonId),
             createdBy: UserId.From(dataModel.CreatedBy),
             linkedAt: DateTime.Parse(dataModel.LinkedAt),
@@ -163,16 +163,16 @@ public static class MeasureLinkMapper
 
     private static string BuildUniquenessKey(MeasureLink entity)
     {
-        var measureId = entity.MeasureId.ToString();
+        var kpiId = entity.MeasureId.ToString();
         
         if (entity.StrategyId != null)
-            return $"{measureId}#STRATEGY#{entity.StrategyId}";
+            return $"{kpiId}#STRATEGY#{entity.StrategyId}";
         
         if (entity.GoalId != null)
-            return $"{measureId}#GOAL#{entity.GoalId}";
+            return $"{kpiId}#GOAL#{entity.GoalId}";
         
         // Personal scorecard - allow multiple per person
-        return $"{measureId}#PERSON#{entity.PersonId}#{entity.Id}";
+        return $"{kpiId}#PERSON#{entity.PersonId}#{entity.Id}";
     }
 }
 ```
@@ -211,10 +211,10 @@ public class DynamoDbMeasureLinkRepository : IMeasureLinkRepository
         return dataModel == null ? null : MeasureLinkMapper.ToDomain(dataModel);
     }
 
-    public async Task<IEnumerable<MeasureLink>> GetByMeasureIdAsync(MeasureId measureId, CancellationToken ct = default)
+    public async Task<IEnumerable<MeasureLink>> GetByMeasureIdAsync(MeasureId kpiId, CancellationToken ct = default)
     {
         var query = _context.QueryAsync<MeasureLinkDataModel>(
-            measureId.ToString(),
+            kpiId.ToString(),
             new DynamoDBOperationConfig { IndexName = "measure-index" });
 
         var results = await query.GetRemainingAsync(ct);
@@ -251,16 +251,16 @@ public class DynamoDbMeasureLinkRepository : IMeasureLinkRepository
         return results.Select(MeasureLinkMapper.ToDomain);
     }
 
-    public async Task<MeasureLink?> GetByGoalAndMeasureAsync(GoalId goalId, MeasureId measureId, CancellationToken ct = default)
+    public async Task<MeasureLink?> GetByGoalAndMeasureAsync(GoalId goalId, MeasureId kpiId, CancellationToken ct = default)
     {
         var links = await GetByGoalIdAsync(goalId, ct);
-        return links.FirstOrDefault(l => l.MeasureId == measureId && l.StrategyId == null);
+        return links.FirstOrDefault(l => l.MeasureId == kpiId && l.StrategyId == null);
     }
 
-    public async Task<MeasureLink?> GetByStrategyAndMeasureAsync(StrategyId strategyId, MeasureId measureId, CancellationToken ct = default)
+    public async Task<MeasureLink?> GetByStrategyAndMeasureAsync(StrategyId strategyId, MeasureId kpiId, CancellationToken ct = default)
     {
         var links = await GetByStrategyIdAsync(strategyId, ct);
-        return links.FirstOrDefault(l => l.MeasureId == measureId);
+        return links.FirstOrDefault(l => l.MeasureId == kpiId);
     }
 
     public async Task CreateAsync(MeasureLink link, CancellationToken ct = default)
@@ -280,15 +280,15 @@ public class DynamoDbMeasureLinkRepository : IMeasureLinkRepository
         await _context.DeleteAsync<MeasureLinkDataModel>(id.ToString(), ct);
     }
 
-    public async Task<bool> ExistsForGoalAsync(MeasureId measureId, GoalId goalId, CancellationToken ct = default)
+    public async Task<bool> ExistsForGoalAsync(MeasureId kpiId, GoalId goalId, CancellationToken ct = default)
     {
-        var link = await GetByGoalAndMeasureAsync(goalId, measureId, ct);
+        var link = await GetByGoalAndMeasureAsync(goalId, kpiId, ct);
         return link != null;
     }
 
-    public async Task<bool> ExistsForStrategyAsync(MeasureId measureId, StrategyId strategyId, CancellationToken ct = default)
+    public async Task<bool> ExistsForStrategyAsync(MeasureId kpiId, StrategyId strategyId, CancellationToken ct = default)
     {
-        var link = await GetByStrategyAndMeasureAsync(strategyId, measureId, ct);
+        var link = await GetByStrategyAndMeasureAsync(strategyId, kpiId, ct);
         return link != null;
     }
 }
