@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Verified Against Implementation  
-**Last Updated:** December 30, 2025  
+**Last Updated:** January 22, 2026  
 **Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
@@ -10,13 +10,131 @@
 
 ## Overview
 
-The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, discount codes, and tenant ownership.
+The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, discount codes, tenant ownership, and tenant people.
 
 **Authentication Required:** Admin role (JWT with "Admin" role claim)
 
 ---
 
 ## Admin Tenant Management Endpoints
+
+### GET /admin/tenants/{tenantId}/people
+
+Get paginated list of people within a specific tenant (admin only).
+
+**Path Parameters:**
+
+- `tenantId` (string, GUID) - The tenant ID
+
+**Query Parameters:**
+
+- `pageNumber` (integer, optional) - Page number (1-based, default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 20, max: 100)
+- `personTypeId` (string, GUID, optional) - Filter by person type ID
+- `status` (string, optional) - Filter by status ('active' or 'inactive')
+- `tagId` (string, GUID, optional) - Filter by tag ID
+- `search` (string, optional) - Search term (searches firstName, lastName, email)
+- `includeRoles` (boolean, optional) - Include role assignments (default: false)
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `X-Tenant-Id: {tenantId}` (optional for admin context)
+- `Content-Type: application/json`
+
+**Request:**
+
+No request body.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com",
+        "isEmailVerified": true,
+        "phone": "+1234567890",
+        "title": "Chief Executive Officer",
+        "personType": {
+          "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "name": "Employee",
+          "description": "Full-time employee"
+        },
+        "isActive": true,
+        "isAssignable": true,
+        "primaryRole": {
+          "id": "8d9e6679-7425-40de-944b-e07fc1f90ae8",
+          "name": "CEO",
+          "description": "Chief Executive Officer"
+        },
+        "tags": [
+          {
+            "id": "9e0f6679-7425-40de-944b-e07fc1f90ae9",
+            "name": "Leadership",
+            "color": "#FF5722"
+          }
+        ],
+        "hasSystemAccess": true,
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-20T14:45:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "pageSize": 20,
+      "totalCount": 45,
+      "totalPages": 3
+    }
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - People retrieved successfully
+- `400 Bad Request` - Invalid request parameters
+  - Invalid tenant ID format
+  - Invalid person type ID format
+  - Invalid tag ID format
+  - Invalid status value (must be 'active' or 'inactive')
+  - Invalid pagination values
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Tenant not found
+- `500 Internal Server Error` - Server error
+
+**Error Response Example:**
+
+```json
+{
+  "error": "Invalid tenant ID format"
+}
+```
+
+**Notes:**
+
+- Endpoint accepts same filtering and pagination options as the user-facing people endpoint
+- Admin can view people from any tenant (cross-tenant access)
+- Results include system access status (whether person is linked to a user account)
+- Role information is included when `includeRoles=true`
+- Operation is logged for audit trail
+- Pagination is enforced (max 100 items per page)
+
+**Implementation:**
+
+- Controller: `AdminController.GetTenantPeople()`
+- Query: `GetPeopleQuery` (via MediatR)
+- Handler: `GetPeopleQueryHandler`
+- Models: `PersonListResponse`, `PersonListItemModel`
+- Mapper: `PeopleMappingProfile`
+
+---
 
 ### PUT /admin/tenants/{tenantId}/owner
 
