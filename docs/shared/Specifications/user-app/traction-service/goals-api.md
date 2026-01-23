@@ -241,7 +241,8 @@ Retrieve detailed information about a specific goal, including strategies, Measu
         "catalogId": "catalog-mrr-001",
         "aggregationType": "sum",
         "aggregationPeriod": "monthly",
-        "type": "quantitative"
+        "type": "quantitative",
+        "ownerId": "user-456"
       }
     ],
     "statistics": {
@@ -300,6 +301,7 @@ The `measures` array contains enriched measure data combining both MeasureLink a
 | `aggregationType` | string | Yes | How values aggregate: "sum", "average", "count", "min", "max", "latest", "point_in_time" |
 | `aggregationPeriod` | string | Yes | Time period: "daily", "weekly", "monthly", "quarterly", "yearly" |
 | `type` | string | No | Input type: "quantitative" (numeric), "qualitative" (options), "binary" (yes/no) |
+| `ownerId` | string (UUID) | Yes | Measure owner - the person responsible for this measure |
 
 **Note:** `progress` and `variance` are currently returned as `null` since target values are stored separately in the system. Clients should calculate these using target data from other endpoints.
 
