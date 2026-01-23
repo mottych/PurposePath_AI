@@ -224,14 +224,24 @@ Retrieve detailed information about a specific goal, including strategies, Measu
     ],
     "measures": [
       {
-        "id": "measure-001",
+        "measureLinkId": "link-001",
+        "strategyId": null,
+        "isPrimary": true,
+        "thresholdPct": 10.0,
+        "progressStatus": "on_track",
+        "measureId": "measure-001",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
+        "direction": "up",
         "currentValue": 125000,
-        "targetValue": 150000,
-        "progress": 83.3,
-        "status": "on_track",
-        "isPrimary": true
+        "targetValue": null,
+        "progress": null,
+        "variance": null,
+        "category": "revenue",
+        "catalogId": "catalog-mrr-001",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "type": "quantitative"
       }
     ],
     "statistics": {
@@ -263,6 +273,35 @@ Retrieve detailed information about a specific goal, including strategies, Measu
   "timestamp": "2025-12-23T10:30:00.000Z"
 }
 ```
+
+#### Measure Response Fields
+
+The `measures` array contains enriched measure data combining both MeasureLink and Measure properties:
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| **MeasureLink Properties** | | | |
+| `measureLinkId` | string (UUID) | No | Unique identifier for the measure-goal link |
+| `strategyId` | string (UUID) | Yes | Strategy this measure is linked to (null for goal-level measures) |
+| `isPrimary` | boolean | No | Whether this is the primary measure for the goal |
+| `thresholdPct` | number | Yes | Variance threshold percentage for alerts (0-100) |
+| `progressStatus` | string | Yes | Calculated status: "on_track", "at_risk", "behind" |
+| **Measure Properties** | | | |
+| `measureId` | string (UUID) | No | Unique identifier for the measure |
+| `name` | string | No | Measure name |
+| `unit` | string | No | Unit of measurement (e.g., "USD", "users", "%") |
+| `direction` | string | No | Expected direction: "up", "down", "maintain" |
+| `currentValue` | number | Yes | Current/latest measured value |
+| `targetValue` | number | Yes | (Deprecated) Target value - now stored separately |
+| `progress` | number | Yes | Progress percentage toward target (calculated separately) |
+| `variance` | number | Yes | Difference from target (calculated separately) |
+| `category` | string | Yes | Business category (e.g., "revenue", "growth", "efficiency") |
+| `catalogId` | string (UUID) | Yes | Reference to measure catalog entry |
+| `aggregationType` | string | Yes | How values aggregate: "sum", "average", "count", "min", "max", "latest", "point_in_time" |
+| `aggregationPeriod` | string | Yes | Time period: "daily", "weekly", "monthly", "quarterly", "yearly" |
+| `type` | string | No | Input type: "quantitative" (numeric), "qualitative" (options), "binary" (yes/no) |
+
+**Note:** `progress` and `variance` are currently returned as `null` since target values are stored separately in the system. Clients should calculate these using target data from other endpoints.
 
 ---
 
