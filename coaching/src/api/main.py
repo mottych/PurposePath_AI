@@ -16,17 +16,11 @@ from coaching.src.api.routes import (
     admin,
     ai_execute,
     ai_execute_async,
-    analysis,
     business_data,
-    coaching_ai,
     coaching_sessions,
     health,
     insights,
     multitenant_conversations,
-    operations_ai,
-    suggestions,
-    topics,
-    website,
 )
 from coaching.src.core.config_multitenant import settings
 from fastapi import FastAPI, Request, Response

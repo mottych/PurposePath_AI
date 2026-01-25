@@ -6,6 +6,7 @@ into DynamoDB and S3, enabling consistent topic configuration and easy updates.
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from coaching.src.core.topic_registry import list_all_topics
@@ -18,7 +19,7 @@ logger = structlog.get_logger()
 
 
 # Backwards compatibility alias for tests
-def list_all_endpoints(active_only: bool = True) -> list:
+def list_all_endpoints(active_only: bool = True) -> list[Any]:
     """List all endpoints (backwards compatibility alias)."""
     return list_all_topics(active_only=active_only)
 
