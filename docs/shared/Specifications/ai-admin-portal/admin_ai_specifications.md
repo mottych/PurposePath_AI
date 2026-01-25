@@ -61,7 +61,7 @@ GET /api/v1/admin/topics
 |-----------|------|----------|---------|-------------|----------------|
 | `page` | integer | No | 1 | Page number | >= 1 |
 | `page_size` | integer | No | 50 | Items per page (max 100) | 1-100 |
-| `category` | string | No | - | Filter by category | `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
+| `category` | string | No | - | Filter by category | `onboarding`, `conversation`, `insights`, `strategic_planning`, `operations_ai`, `operations_strategic_integration`, `analysis` |
 | `topic_type` | string | No | - | Filter by type | `conversation_coaching`, `single_shot`, `measure_system` |
 | `is_active` | boolean | No | - | Filter by active status | `true`, `false` |
 | `search` | string | No | - | Search in name/description | Max 100 chars |
@@ -371,7 +371,7 @@ POST /api/v1/admin/topics
 |-------|-------|------------------------|
 | `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
 | `topic_name` | Required, 3-100 chars | Any printable characters |
-| `category` | Required | Enum: `core_values`, `purpose`, `vision`, `goals`, `strategy`, `measure`, `custom` |
+| `category` | Required | Enum: `onboarding`, `conversation`, `insights`, `strategic_planning`, `operations_ai`, `operations_strategic_integration`, `analysis` |
 | `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `measure_system` |
 | `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
 | `temperature` | Required, float | 0.0-2.0 |
