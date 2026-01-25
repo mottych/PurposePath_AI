@@ -1,6 +1,16 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: December 25, 2025
+- Last Updated: January 25, 2026
+- Version: 2.0
+
+## Revision History
+
+| Date | Version | Description |
+|------|---------|-------------|
+| 2026-01-25 | 2.0 | **Issue #196 Completion:** Fixed category enum values to match actual TopicCategory implementation, verified all field values match constants.py |
+| 2025-12-25 | 1.0 | Initial admin specification |
+
+---
 
 ## Overview
 

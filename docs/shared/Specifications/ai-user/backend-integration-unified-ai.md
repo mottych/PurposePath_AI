@@ -1,7 +1,7 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 2.1  
-**Last Updated:** January 15, 2026  
+**Version:** 2.2  
+**Last Updated:** January 25, 2026  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -14,6 +14,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-01-25 | 2.2 | **Issue #196 Completion:** Fixed measure_recommendations field name (kpiName → name), verified all field names match Pydantic models, ensured prompt templates align with validation schemas |
 | 2026-01-15 | 2.1 | Major restructure: Added revision log, index, reorganized topics by category, moved async and coaching endpoints to Core Endpoints section, verified all topics from registry |
 | 2026-01-11 | 2.0 | Terminology update: Replaced all "KPI" references with "Measure", added new topics and parameter enrichment documentation |
 | 2025-12-15 | 1.2 | Added async execution endpoints and coaching conversation sessions |
