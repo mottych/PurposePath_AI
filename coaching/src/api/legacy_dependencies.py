@@ -10,7 +10,7 @@ import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
-from coaching.src.application.analysis.kpi_service import KPIAnalysisService
+from coaching.src.application.analysis.measure_service import MeasureAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
@@ -290,16 +290,16 @@ async def get_strategy_service() -> StrategyAnalysisService:
     return StrategyAnalysisService(llm_service=llm_service)
 
 
-async def get_kpi_service() -> KPIAnalysisService:
-    """Get KPI analysis service (Phase 5).
+async def get_measure_service() -> MeasureAnalysisService:
+    """Get Measure analysis service (Phase 5).
 
-    This service analyzes KPI effectiveness and recommends improvements.
+    This service analyzes Measure effectiveness and recommends improvements.
 
     Returns:
-        KPIAnalysisService instance
+        MeasureAnalysisService instance
     """
     llm_service = await get_llm_service()
-    return KPIAnalysisService(llm_service=llm_service)
+    return MeasureAnalysisService(llm_service=llm_service)
 
 
 async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisService:
@@ -308,7 +308,7 @@ async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisServic
     Factory function to get the appropriate analysis service based on type.
 
     Args:
-        analysis_type: Type of analysis (alignment, strategy, kpi)
+        analysis_type: Type of analysis (alignment, strategy, measure)
 
     Returns:
         Appropriate analysis service instance
@@ -320,8 +320,8 @@ async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisServic
         return await get_alignment_service()
     elif analysis_type.lower() in ("strategy", "strategy_analysis"):
         return await get_strategy_service()
-    elif analysis_type.lower() in ("kpi", "kpi_analysis"):
-        return await get_kpi_service()
+    elif analysis_type.lower() in ("measure", "measure_analysis"):
+        return await get_measure_service()
     else:
         raise ValueError(f"Unknown analysis type: {analysis_type}")
 

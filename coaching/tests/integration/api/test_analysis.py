@@ -1,6 +1,6 @@
 """Integration tests for analysis API routes (Phase 7).
 
-Tests the analysis routes including alignment, strategy, KPI, and
+Tests the analysis routes including alignment, strategy, Measure, and
 operational analysis endpoints.
 """
 
@@ -12,7 +12,7 @@ from coaching.src.api.dependencies.ai_engine import get_generic_handler
 from coaching.src.api.main import app
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
-    KPIAnalysisResponse,
+    MeasureAnalysisResponse,
     OperationsAnalysisResponse,
     StrategyAnalysisResponse,
 )
@@ -176,22 +176,22 @@ class TestKPIAnalysis:
     def test_kpi_analysis_success(self, client, mock_generic_handler):
         """Test successful KPI analysis."""
         # Setup mock response
-        mock_response = KPIAnalysisResponse(
-            analysis_id="test-kpi-id",
-            analysis_type=AnalysisType.KPI,
-            kpi_effectiveness_score=70.0,
-            overall_assessment="Current KPIs cover key areas but miss important metrics",
-            current_kpi_analysis=[
+        mock_response = MeasureAnalysisResponse(
+            analysis_id="test-measure-id",
+            analysis_type=AnalysisType.MEASURE,
+            measure_effectiveness_score=70.0,
+            overall_assessment="Current Measures cover key areas but miss important metrics",
+            current_measure_analysis=[
                 {
-                    "kpi": "Monthly Recurring Revenue",
+                    "measure": "Monthly Recurring Revenue",
                     "assessment": "Good financial metric",
                     "relevance": "high",
                 }
             ],
-            missing_kpis=["Customer Churn Rate", "Net Promoter Score"],
-            recommended_kpis=[
+            missing_measures=["Customer Churn Rate", "Net Promoter Score"],
+            recommended_measures=[
                 {
-                    "kpi_name": "Customer Churn Rate",
+                    "measure_name": "Customer Churn Rate",
                     "description": "Percentage of customers who cancel",
                     "rationale": "Critical for SaaS business health",
                     "target_range": "< 5% monthly",
@@ -204,9 +204,9 @@ class TestKPIAnalysis:
 
         # Make request
         response = client.post(
-            "/api/v1/analysis/kpi",
+            "/api/v1/analysis/measure",
             json={
-                "current_kpis": ["Monthly Recurring Revenue", "Active Users"],
+                "current_measures": ["Monthly Recurring Revenue", "Active Users"],
                 "context": {
                     "business_goals": ["Grow revenue", "Improve retention"],
                 },
@@ -217,17 +217,17 @@ class TestKPIAnalysis:
         # Assertions
         assert response.status_code == 200
         data = response.json()
-        assert data["analysis_type"] == "kpi"
-        assert "kpi_effectiveness_score" in data
-        assert "recommended_kpis" in data
-        assert isinstance(data["recommended_kpis"], list)
+        assert data["analysis_type"] == "measure"
+        assert "measure_effectiveness_score" in data
+        assert "recommended_measures" in data
+        assert isinstance(data["recommended_measures"], list)
 
-    def test_kpi_analysis_empty_kpis(self, client):
-        """Test KPI analysis with empty KPI list."""
+    def test_measure_analysis_empty_measures(self, client):
+        """Test Measure analysis with empty Measure list."""
         response = client.post(
-            "/api/v1/analysis/kpi",
+            "/api/v1/analysis/measure",
             json={
-                "current_kpis": [],
+                "current_measures": [],
             },
             headers={"Authorization": "Bearer test_token"},
         )

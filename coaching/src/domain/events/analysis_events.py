@@ -13,7 +13,7 @@ class AnalysisRequested(DomainEvent):
     """
     Event emitted when an analysis is requested.
 
-    Marks the start of an analysis operation (alignment, strategy, KPI, etc.).
+    Marks the start of an analysis operation (alignment, strategy, Measure, etc.).
 
     Attributes:
         analysis_type: Type of analysis being requested

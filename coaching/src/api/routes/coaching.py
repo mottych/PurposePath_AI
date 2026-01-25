@@ -110,7 +110,7 @@ async def strategic_planning_coaching(
     TODO: Implement strategic planning coaching including:
     - Goal setting methodology coaching
     - Strategy development guidance
-    - OKR/KPI selection assistance
+    - OKR/Measure selection assistance
     - Risk assessment coaching
     - Timeline and milestone planning
     """

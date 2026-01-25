@@ -1,6 +1,6 @@
-"""KPI analysis service.
+"""Measure analysis service.
 
-Recommends Key Performance Indicators for measuring progress toward goals.
+Recommends Measures for measuring progress toward goals.
 """
 
 import json
@@ -13,32 +13,32 @@ from coaching.src.core.constants import AnalysisType
 logger = structlog.get_logger()
 
 
-class KPIAnalysisService(BaseAnalysisService):
+class MeasureAnalysisService(BaseAnalysisService):
     """
-    Service for KPI recommendations.
+    Service for Measure recommendations.
 
     Analyzes goals and recommends:
-    - Relevant KPIs to track
+    - Relevant Measures to track
     - Measurement methods
     - Target values
     - Tracking frequency
     """
 
     def get_analysis_type(self) -> AnalysisType:
-        """Return KPI analysis type."""
+        """Return Measure analysis type."""
         return AnalysisType.MEASURE
 
     def build_prompt(self, context: dict[str, Any]) -> str:
         """
-        Build KPI analysis prompt.
+        Build Measure analysis prompt.
 
         Required context:
-        - goal: Goal to create KPIs for
+        - goal: Goal to create Measures for
         - goal_timeline: Timeline for goal achievement
         - current_metrics: Existing metrics (optional)
 
         Returns:
-            Formatted prompt for KPI analysis
+            Formatted prompt for Measure analysis
         """
         goal = context.get("goal", "")
         goal_timeline = context.get("goal_timeline", "Not specified")
@@ -48,7 +48,7 @@ class KPIAnalysisService(BaseAnalysisService):
             "\n".join([f"- {m}" for m in current_metrics]) if current_metrics else "None"
         )
 
-        prompt = f"""You are an expert business coach helping a user define Key Performance Indicators (KPIs) for their goals.
+        prompt = f"""You are an expert business coach helping a user define Measures for their goals.
 
 **Goal:**
 {goal}
@@ -59,24 +59,24 @@ class KPIAnalysisService(BaseAnalysisService):
 **Current Metrics:**
 {current_metrics_str}
 
-Please recommend KPIs in the following JSON format:
+Please recommend Measures in the following JSON format:
 
 {{
-    "recommended_kpis": [
+    "recommended_measures": [
         {{
-            "kpi_name": "<clear KPI name>",
+            "measure_name": "<clear Measure name>",
             "description": "<what this measures>",
             "measurement_method": "<how to measure>",
             "target_value": "<specific target>",
             "current_baseline": "<current value if known, or 'TBD'>",
             "tracking_frequency": "<daily/weekly/monthly/quarterly>",
             "category": "<leading/lagging indicator>",
-            "rationale": "<why this KPI matters>"
+            "rationale": "<why this Measure matters>"
         }}
     ],
     "dashboard_structure": {{
-        "primary_kpis": ["<most important KPIs>"],
-        "secondary_kpis": ["<supporting KPIs>"]
+        "primary_measures": ["<most important Measures>"],
+        "secondary_measures": ["<supporting Measures>"]
     }},
     "tracking_recommendations": [
         "<best practice for tracking>"
@@ -84,19 +84,19 @@ Please recommend KPIs in the following JSON format:
     "success_criteria": "<what success looks like>"
 }}
 
-Recommend 5-8 specific, measurable KPIs."""
+Recommend 5-8 specific, measurable Measures."""
 
         return prompt
 
     def parse_response(self, llm_response: str) -> dict[str, Any]:
         """
-        Parse KPI analysis response.
+        Parse Measure analysis response.
 
         Args:
             llm_response: Raw LLM JSON response
 
         Returns:
-            Structured KPI analysis result
+            Structured Measure analysis result
         """
         try:
             # Clean response
@@ -112,7 +112,7 @@ Recommend 5-8 specific, measurable KPIs."""
 
             # Validate required fields
             required_fields = [
-                "recommended_kpis",
+                "recommended_measures",
                 "dashboard_structure",
                 "tracking_recommendations",
                 "success_criteria",
@@ -122,24 +122,24 @@ Recommend 5-8 specific, measurable KPIs."""
                     raise ValueError(f"Missing required field: {field}")
 
             logger.debug(
-                "KPI response parsed",
-                kpis_count=len(result["recommended_kpis"]),
+                "Measure response parsed",
+                measures_count=len(result["recommended_measures"]),
             )
 
             return result
 
         except json.JSONDecodeError as e:
-            logger.error("Failed to parse KPI JSON response", error=str(e))
+            logger.error("Failed to parse Measure JSON response", error=str(e))
             return {
-                "recommended_kpis": [],
-                "dashboard_structure": {"primary_kpis": [], "secondary_kpis": []},
+                "recommended_measures": [],
+                "dashboard_structure": {"primary_measures": [], "secondary_measures": []},
                 "tracking_recommendations": [],
                 "success_criteria": "Error parsing response",
                 "parse_error": str(e),
             }
         except Exception as e:
-            logger.error("Failed to parse KPI response", error=str(e))
+            logger.error("Failed to parse Measure response", error=str(e))
             raise
 
 
-__all__ = ["KPIAnalysisService"]
+__all__ = ["MeasureAnalysisService"]

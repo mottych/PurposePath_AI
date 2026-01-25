@@ -427,62 +427,6 @@ TASKS:
 Provide actionable, concrete strategies that will help achieve this goal.""",
         display_order=40,
     ),
-    "kpi_recommendations": TopicSeedData(
-        topic_id="kpi_recommendations",
-        topic_name="KPI Recommendations",
-        topic_type=TopicType.SINGLE_SHOT.value,
-        category=TopicCategory.STRATEGIC_PLANNING.value,
-        description="Recommend KPIs for measuring goal progress based on business context",
-        temperature=0.7,
-        max_tokens=3072,
-        default_system_prompt="""You are a KPI and business metrics expert specializing in measurable goal tracking.
-
-KPI QUALITY CRITERIA:
-- Every KPI must be truly MEASURABLE (quantifiable, trackable)
-- Prefer leading indicators over lagging indicators where possible
-- Include both outcome metrics and process metrics
-- Consider data availability and tracking feasibility
-
-PRIORITIZATION (high/medium/low):
-- High: Core metric directly measuring goal success
-- Medium: Supporting metric providing important context
-- Low: Nice-to-have metric for comprehensive view
-
-OUTPUT FORMAT:
-Return a JSON object with this exact structure:
-{
-  "kpis": [
-    {
-      "name": "<clear metric name, 5-50 chars>",
-      "description": "<what it measures and why it matters, 20-300 chars>",
-      "measurementMethod": "<specific tracking approach, 20-200 chars>",
-      "suggestedTarget": {
-        "value": "<specific target, e.g., '85%', '$100K', '< 2 hours'>",
-        "timeframe": "<when to achieve, e.g., 'Q4 2025', '6 months'>",
-        "rationale": "<why this target, 20-200 chars>"
-      },
-      "priority": "high" | "medium" | "low"
-    }
-  ],
-  "totalKPIs": <number of KPIs, 3-6 recommended>
-}""",
-        default_user_prompt="""Recommend KPIs for measuring progress toward this goal.
-
-GOAL:
-{goal}
-
-BUSINESS CONTEXT:
-- Business Name: {businessName}
-- Vision: {vision}
-- Purpose: {purpose}
-- Core Values: {coreValues}
-
-ADDITIONAL CONTEXT (if provided):
-{additionalContext}
-
-Provide 3-6 measurable, actionable KPIs that enable effective goal tracking.""",
-        display_order=41,
-    ),
     "measure_recommendations": TopicSeedData(
         topic_id="measure_recommendations",
         topic_name="Measure Recommendations",
@@ -491,7 +435,7 @@ Provide 3-6 measurable, actionable KPIs that enable effective goal tracking.""",
         description="Recommend catalog measures for a goal or strategy, with suggested owner assignment",
         temperature=0.7,
         max_tokens=4096,
-        default_system_prompt="""You are a business metrics expert specializing in recommending measures (KPIs) from a catalog of proven measures.
+        default_system_prompt="""You are a business metrics expert specializing in recommending measures from a catalog of proven measures.
 
 CRITICAL REQUIREMENTS:
 1. **ALWAYS recommend catalog measures** from the provided catalog_measures list when available
@@ -521,7 +465,7 @@ Return a JSON object with this exact structure:
 {
   "recommendations": [
     {
-      "kpiName": "<measure name from catalog or custom, 5-50 chars>",
+      "measureName": "<measure name from catalog or custom, 5-50 chars>",
       "description": "<what it measures and why it matters, 20-300 chars>",
       "unit": "<unit of measurement, e.g., 'USD', '%', 'count'>",
       "direction": "up" | "down",
@@ -545,7 +489,7 @@ Return a JSON object with this exact structure:
   ],
   "analysisNotes": "<overall analysis and reasoning, 50-300 chars>"
 }""",
-        default_user_prompt="""Recommend measures (KPIs) for tracking progress toward this goal or strategy.
+        default_user_prompt="""Recommend measures for tracking progress toward this goal or strategy.
 
 GOAL INFORMATION:
 - Goal ID: {goal_id}
@@ -996,54 +940,54 @@ New connections: {connections}
 Validate and confirm connection updates.""",
         display_order=63,
     ),
-    "analyze_kpi_impact": TopicSeedData(
-        topic_id="analyze_kpi_impact",
-        topic_name="Analyze KPI Impact",
+    "analyze_measure_impact": TopicSeedData(
+        topic_id="analyze_measure_impact",
+        topic_name="Analyze Measure Impact",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Analyze KPI impact of proposed actions",
+        description="Analyze Measure impact of proposed actions",
         temperature=0.7,
         max_tokens=3072,
-        default_system_prompt="""You are a KPI impact analyst.
+        default_system_prompt="""You are a Measure impact analyst.
 
-Analyze how proposed actions will affect key performance indicators, providing quantitative and qualitative assessments.""",
+Analyze how proposed actions will affect key performance measures, providing quantitative and qualitative assessments.""",
         default_user_prompt="""Action: {action}
 
-KPIs: {kpis}
+Measures: {measures}
 
-Analyze expected impact on each KPI.""",
+Analyze expected impact on each Measure.""",
         display_order=64,
     ),
-    "record_kpi_update": TopicSeedData(
-        topic_id="record_kpi_update",
-        topic_name="Record KPI Update",
+    "record_measure_update": TopicSeedData(
+        topic_id="record_measure_update",
+        topic_name="Record Measure Update",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Record a KPI update event with validation",
+        description="Record a Measure update event with validation",
         temperature=0.5,
         max_tokens=1024,
-        default_system_prompt="""You are a KPI update validator.
+        default_system_prompt="""You are a Measure update validator.
 
-Validate KPI updates for consistency, reasonableness, and strategic alignment.""",
-        default_user_prompt="""KPI: {kpi_id}
+Validate Measure updates for consistency, reasonableness, and strategic alignment.""",
+        default_user_prompt="""Measure: {measure_id}
 
 Update data: {update_data}
 
 Validate and record the update.""",
         display_order=65,
     ),
-    "get_kpi_updates": TopicSeedData(
-        topic_id="get_kpi_updates",
-        topic_name="Get KPI Updates",
+    "get_measure_updates": TopicSeedData(
+        topic_id="get_measure_updates",
+        topic_name="Get Measure Updates",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Retrieve and summarize KPI update history",
+        description="Retrieve and summarize Measure update history",
         temperature=0.5,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI historian.
+        default_system_prompt="""You are a Measure historian.
 
-Provide clear summaries of KPI update history with trend analysis.""",
-        default_user_prompt="""KPI: {kpi_id}
+Provide clear summaries of Measure update history with trend analysis.""",
+        default_user_prompt="""Measure: {measure_id}
 
 Time range: {time_range}
 
@@ -1105,42 +1049,42 @@ Completion data: {completion_data}
 Assess completion and strategic impact.""",
         display_order=69,
     ),
-    "kpi_update_prompt": TopicSeedData(
-        topic_id="kpi_update_prompt",
-        topic_name="KPI Update Prompt",
+    "measure_update_prompt": TopicSeedData(
+        topic_id="measure_update_prompt",
+        topic_name="Measure Update Prompt",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Get prompt for KPI update after action completion",
+        description="Get prompt for Measure update after action completion",
         temperature=0.7,
         max_tokens=1024,
-        default_system_prompt="""You are a KPI update facilitator.
+        default_system_prompt="""You are a Measure update facilitator.
 
-Generate helpful prompts to guide users in updating KPIs after action completion.""",
+Generate helpful prompts to guide users in updating Measures after action completion.""",
         default_user_prompt="""Action: {action_id}
 
 Details: {action_details}
-Related KPIs: {related_kpis}
+Related Measures: {related_measures}
 
-Generate KPI update prompt.""",
+Generate Measure update prompt.""",
         display_order=70,
     ),
-    "update_kpi_from_action": TopicSeedData(
-        topic_id="update_kpi_from_action",
-        topic_name="Update KPI from Action",
+    "update_measure_from_action": TopicSeedData(
+        topic_id="update_measure_from_action",
+        topic_name="Update Measure from Action",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Update KPI based on action completion",
+        description="Update Measure based on action completion",
         temperature=0.6,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI update processor.
+        default_system_prompt="""You are a Measure update processor.
 
-Process and validate KPI updates resulting from action completions.""",
+Process and validate Measure updates resulting from action completions.""",
         default_user_prompt="""Action: {action_id}
 
-KPI: {kpi_id}
+Measure: {measure_id}
 Update value: {update_value}
 
-Process KPI update.""",
+Process Measure update.""",
         display_order=71,
     ),
     "convert_issue_to_actions": TopicSeedData(
@@ -1249,65 +1193,65 @@ Map strategic relationships showing how actions connect to goals, KPIs, and othe
 Provide relationship map.""",
         display_order=77,
     ),
-    "kpi_sync_to_strategic": TopicSeedData(
-        topic_id="kpi_sync_to_strategic",
-        topic_name="KPI Sync to Strategic",
+    "measure_sync_to_strategic": TopicSeedData(
+        topic_id="measure_sync_to_strategic",
+        topic_name="Measure Sync to Strategic",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Sync operational KPI updates to strategic planning",
+        description="Sync operational Measure updates to strategic planning",
         temperature=0.6,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI synchronization manager.
+        default_system_prompt="""You are a Measure synchronization manager.
 
-Sync operational KPI updates to strategic planning, identifying impacts and misalignments.""",
-        default_user_prompt="""KPI updates: {kpi_updates}
+Sync operational Measure updates to strategic planning, identifying impacts and misalignments.""",
+        default_user_prompt="""Measure updates: {measure_updates}
 
 Sync to strategic planning.""",
         display_order=78,
     ),
-    "kpi_sync_from_strategic": TopicSeedData(
-        topic_id="kpi_sync_from_strategic",
-        topic_name="KPI Sync from Strategic",
+    "measure_sync_from_strategic": TopicSeedData(
+        topic_id="measure_sync_from_strategic",
+        topic_name="Measure Sync from Strategic",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Sync strategic KPIs to operational tracking",
+        description="Sync strategic Measures to operational tracking",
         temperature=0.6,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI synchronization manager.
+        default_system_prompt="""You are a Measure synchronization manager.
 
-Sync strategic KPIs to operational tracking, ensuring consistency and traceability.""",
-        default_user_prompt="""Strategic KPIs: {strategic_kpis}
+Sync strategic Measures to operational tracking, ensuring consistency and traceability.""",
+        default_user_prompt="""Strategic Measures: {strategic_measures}
 
 Sync to operations.""",
         display_order=79,
     ),
-    "detect_kpi_conflicts": TopicSeedData(
-        topic_id="detect_kpi_conflicts",
-        topic_name="Detect KPI Conflicts",
+    "detect_measure_conflicts": TopicSeedData(
+        topic_id="detect_measure_conflicts",
+        topic_name="Detect Measure Conflicts",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Detect KPI conflicts between operations and strategy",
+        description="Detect Measure conflicts between operations and strategy",
         temperature=0.6,
         max_tokens=3072,
-        default_system_prompt="""You are a KPI conflict detector.
+        default_system_prompt="""You are a Measure conflict detector.
 
-Identify conflicts, discrepancies, and misalignments between operational and strategic KPIs.""",
-        default_user_prompt="""Operational KPIs: {operational_kpis}
+Identify conflicts, discrepancies, and misalignments between operational and strategic Measures.""",
+        default_user_prompt="""Operational Measures: {operational_measures}
 
-Strategic KPIs: {strategic_kpis}
+Strategic Measures: {strategic_measures}
 
 Detect conflicts and misalignments.""",
         display_order=80,
     ),
-    "resolve_kpi_conflict": TopicSeedData(
-        topic_id="resolve_kpi_conflict",
-        topic_name="Resolve KPI Conflict",
+    "resolve_measure_conflict": TopicSeedData(
+        topic_id="resolve_measure_conflict",
+        topic_name="Resolve Measure Conflict",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.OPERATIONS_AI.value,
-        description="Resolve KPI conflict with AI recommendations",
+        description="Resolve Measure conflict with AI recommendations",
         temperature=0.7,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI conflict resolution expert.
+        default_system_prompt="""You are a Measure conflict resolution expert.
 
 Recommend resolution strategies that maintain strategic alignment while respecting operational realities.""",
         default_user_prompt="""Conflict: {conflict_id}
@@ -1366,26 +1310,26 @@ Context: {context}
 Analyze strategy effectiveness.""",
         display_order=91,
     ),
-    "kpi_analysis": TopicSeedData(
-        topic_id="kpi_analysis",
-        topic_name="KPI Analysis",
+    "measure_analysis": TopicSeedData(
+        topic_id="measure_analysis",
+        topic_name="Measure Analysis",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.ANALYSIS.value,
-        description="Analyze KPI effectiveness",
+        description="Analyze Measure effectiveness",
         temperature=0.6,
         max_tokens=2048,
-        default_system_prompt="""You are a KPI analyst.
+        default_system_prompt="""You are a Measure analyst.
 
-Analyze KPIs for:
+Analyze Measures for:
 - Relevance to goals
 - Measurability
 - Actionability
 - Performance trends""",
-        default_user_prompt="""KPIs: {kpis}
+        default_user_prompt="""Measures: {measures}
 
 Performance data: {performance_data}
 
-Analyze KPI effectiveness.""",
+Analyze Measure effectiveness.""",
         display_order=92,
     ),
     "operations_analysis": TopicSeedData(

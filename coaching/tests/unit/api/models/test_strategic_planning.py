@@ -12,9 +12,9 @@ from coaching.src.api.models.strategic_planning import (
     AlignmentBreakdown,
     AlignmentCheckData,
     AlignmentCheckResponse,
-    KPIRecommendation,
-    KPIRecommendationsData,
-    KPIRecommendationsResponseV2,
+    MeasureRecommendation,
+    MeasureRecommendationsData,
+    MeasureRecommendationsResponseV2,
     StrategySuggestion,
     StrategySuggestionsData,
     StrategySuggestionsResponseV2,
@@ -193,20 +193,20 @@ class TestStrategySuggestionsResponseV2:
 
 
 @pytest.mark.unit
-class TestKPIRecommendationsResponseV2:
-    """Tests for KPIRecommendationsResponseV2 model."""
+class TestMeasureRecommendationsResponseV2:
+    """Tests for MeasureRecommendationsResponseV2 model."""
 
-    def test_valid_kpi_recommendations(self):
-        """Test creating valid KPI recommendations."""
-        response = KPIRecommendationsResponseV2(
-            data=KPIRecommendationsData(
+    def test_valid_measure_recommendations(self):
+        """Test creating valid Measure recommendations."""
+        response = MeasureRecommendationsResponseV2(
+            data=MeasureRecommendationsData(
                 recommendations=[
-                    KPIRecommendation(
+                    MeasureRecommendation(
                         name="Customer Retention Rate",
                         description="Measures the percentage of customers retained over a given period.",
                         unit="%",
                         direction="up",
-                        kpi_type="quantitative",
+                        measure_type="quantitative",
                         reasoning="Critical for sustainable growth as it measures customer satisfaction and loyalty.",
                         suggested_target=SuggestedTarget(
                             value=85.0,
@@ -217,18 +217,18 @@ class TestKPIRecommendationsResponseV2:
                         measurement_frequency="monthly",
                         is_primary_candidate=True,
                     ),
-                    KPIRecommendation(
+                    MeasureRecommendation(
                         name="Net Promoter Score",
                         description="Gauges customer loyalty and satisfaction through survey.",
                         unit="points",
                         direction="up",
-                        kpi_type="quantitative",
+                        measure_type="quantitative",
                         reasoning="Leading indicator of growth potential through word-of-mouth and referrals.",
                         measurement_approach="Survey customers with 0-10 scale, calculate promoters minus detractors",
                         measurement_frequency="quarterly",
                     ),
                 ],
-                analysis_notes="These KPIs focus on customer-centric metrics that drive sustainable growth.",
+                analysis_notes="These Measures focus on customer-centric metrics that drive sustainable growth.",
             )
         )
 
@@ -239,46 +239,46 @@ class TestKPIRecommendationsResponseV2:
     def test_direction_options(self):
         """Test valid direction options."""
         for direction in ["up", "down"]:
-            kpi = KPIRecommendation(
-                name=f"Test {direction} KPI",
-                description=f"A KPI with {direction} direction for testing purposes.",
+            measure = MeasureRecommendation(
+                name=f"Test {direction} Measure",
+                description=f"A Measure with {direction} direction for testing purposes.",
                 unit="%",
                 direction=direction,
-                kpi_type="quantitative",
+                measure_type="quantitative",
                 reasoning="Testing that both direction options are accepted by the model validation.",
                 measurement_approach="Standard tracking method via analytics dashboard.",
                 measurement_frequency="monthly",
             )
-            assert kpi.direction == direction
+            assert measure.direction == direction
 
     def test_invalid_direction(self):
         """Test that invalid direction is rejected."""
         with pytest.raises(ValidationError):
-            KPIRecommendation(
-                name="Invalid direction KPI",
-                description="This KPI has an invalid direction value.",
+            MeasureRecommendation(
+                name="Invalid direction Measure",
+                description="This Measure has an invalid direction value.",
                 unit="%",
                 direction="sideways",  # Invalid
-                kpi_type="quantitative",
+                measure_type="quantitative",
                 reasoning="Testing that invalid direction values are rejected by validation.",
                 measurement_approach="Standard measurement approach.",
                 measurement_frequency="monthly",
             )
 
-    def test_kpi_type_options(self):
-        """Test valid KPI type options."""
-        for kpi_type in ["quantitative", "qualitative", "binary"]:
-            kpi = KPIRecommendation(
-                name=f"Test {kpi_type} KPI",
-                description=f"A KPI with {kpi_type} type for testing purposes.",
+    def test_measure_type_options(self):
+        """Test valid Measure type options."""
+        for measure_type in ["quantitative", "qualitative", "binary"]:
+            measure = MeasureRecommendation(
+                name=f"Test {measure_type} Measure",
+                description=f"A Measure with {measure_type} type for testing purposes.",
                 unit="units",
                 direction="up",
-                kpi_type=kpi_type,
-                reasoning="Testing that all KPI type options are accepted by the model validation.",
+                measure_type=measure_type,
+                reasoning="Testing that all Measure type options are accepted by the model validation.",
                 measurement_approach="Standard tracking method via analytics dashboard.",
                 measurement_frequency="monthly",
             )
-            assert kpi.kpi_type == kpi_type
+            assert measure.measure_type == measure_type
 
 
 @pytest.mark.unit

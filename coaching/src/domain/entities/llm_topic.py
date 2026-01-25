@@ -1,7 +1,7 @@
 """LLM Topic domain entity.
 
 This module defines the unified topic entity for all LLM prompts across
-conversation coaching, single-shot analysis, and KPI system templates.
+conversation coaching, single-shot analysis, and Measure system templates.
 """
 
 from dataclasses import dataclass, field
@@ -132,7 +132,7 @@ class LLMTopic:
 
     Represents a complete topic configuration including metadata, prompts,
     parameters, and configuration. Supports conversation coaching, single-shot
-    analysis, and KPI system use cases.
+    analysis, and Measure system use cases.
 
     Business Rules:
         - topic_id must be unique across all topics
@@ -148,8 +148,8 @@ class LLMTopic:
     Attributes:
         topic_id: Unique identifier (snake_case)
         topic_name: Human-readable display name
-        topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
-        category: Grouping category (coaching, analysis, strategy, kpi)
+        topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
+        category: Grouping category (coaching, analysis, strategy, measure)
         is_active: Whether topic is active and available
         model_code: LLM model identifier (e.g., 'claude-3-5-sonnet-20241022')
         temperature: LLM temperature parameter (0.0-2.0)

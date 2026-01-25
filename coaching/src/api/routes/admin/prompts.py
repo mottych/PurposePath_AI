@@ -209,9 +209,9 @@ async def create_topic(
     context: RequestContext = Depends(require_admin_access),
 ) -> ApiResponse[TopicResponse]:
     """
-    Create a new KPI-system topic.
+    Create a new Measure-system topic.
 
-    Only kpi_system topics can be created via API.
+    Only measure_system topics can be created via API.
     Coaching topics are seeded at deployment.
 
     Args:

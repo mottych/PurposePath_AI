@@ -186,25 +186,25 @@ class Strategy(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
         return v.strip()
 
 
-class KPI(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
-    """Key Performance Indicator entity."""
+class Measure(BaseDomainModel, IdentifiedMixin, TenantScopedMixin):
+    """Measure entity."""
 
-    name: str = Field(..., min_length=1, max_length=100, description="KPI name")
-    description: str | None = Field(None, max_length=1000, description="KPI description")
+    name: str = Field(..., min_length=1, max_length=100, description="Measure name")
+    description: str | None = Field(None, max_length=1000, description="Measure description")
 
     # Measurement
-    current_value: float = Field(..., description="Current KPI value")
-    target_value: float | None = Field(None, description="Target KPI value")
+    current_value: float = Field(..., description="Current Measure value")
+    target_value: float | None = Field(None, description="Target Measure value")
     unit: str = Field(..., max_length=50, description="Unit of measurement")
 
     # Relationships
     goal_id: str | None = Field(None, description="Associated goal ID")
-    owner_id: str | None = Field(None, description="KPI owner user ID")
+    owner_id: str | None = Field(None, description="Measure owner user ID")
 
     # Configuration
     measurement_frequency: str = Field(default="monthly", description="How often it's measured")
-    data_source: str | None = Field(None, description="Source of KPI data")
-    calculation_method: str | None = Field(None, description="How KPI is calculated")
+    data_source: str | None = Field(None, description="Source of Measure data")
+    calculation_method: str | None = Field(None, description="How Measure is calculated")
 
     # Tracking
     last_measured: datetime | None = Field(None, description="Last measurement date")
