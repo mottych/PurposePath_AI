@@ -16,7 +16,7 @@ from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
     AlignmentExplanationResponse,
     AlignmentSuggestionsResponse,
-    KPIRecommendationsResponse,
+    MeasureRecommendationsResponse,
     OperationsAnalysisResponse,
 )
 from coaching.src.api.models.business_data import BusinessMetricsResponse
@@ -39,7 +39,7 @@ from coaching.src.api.models.operations import (
 from coaching.src.api.models.strategic_planning import (
     ActionSuggestionsResponse,
     AlignmentCheckResponse,
-    KPIRecommendationsResponseV2,
+    MeasureRecommendationsResponseV2,
     StrategySuggestionsResponseV2,
 )
 from coaching.src.api.models.strategy_suggestions import (
@@ -66,15 +66,14 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "MessageResponse": MessageResponse,
     # === Strategic Planning ===
     "StrategySuggestionsResponse": StrategySuggestionsResponse,
-    "KPIRecommendationsResponse": KPIRecommendationsResponse,
+    "MeasureRecommendationsResponse": MeasureRecommendationsResponse,
     "AlignmentAnalysisResponse": AlignmentAnalysisResponse,
     "AlignmentExplanationResponse": AlignmentExplanationResponse,
     "AlignmentSuggestionsResponse": AlignmentSuggestionsResponse,
     # Strategic Planning AI Topics (Issue #182)
     "AlignmentCheckResponse": AlignmentCheckResponse,
     "StrategySuggestionsResponseV2": StrategySuggestionsResponseV2,
-    "KPIRecommendationsResponseV2": KPIRecommendationsResponseV2,
-    "MeasureRecommendationsResponse": KPIRecommendationsResponseV2,  # Alias for measure_recommendations
+    "MeasureRecommendationsResponseV2": MeasureRecommendationsResponseV2,
     "ActionSuggestionsResponse": ActionSuggestionsResponse,
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,
@@ -98,11 +97,11 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     # - UpdateConnectionsResponse
     # - CreateIssueResponse, CreateActionResponse, CompleteActionResponse, CloseIssueResponse
     # - IssueStatusResponse, RelatedActionsResponse
-    # - UpdateKPIResponse, CalculateKPIResponse, KPIHistoryResponse
-    # - KPIImpactResponse, ActionKPIImpactResponse, SyncKPIsResponse
-    # - KPIConflictsResponse, ResolveConflictResponse
+    # - UpdateMeasureResponse, CalculateMeasureResponse, MeasureHistoryResponse
+    # - MeasureImpactResponse, ActionMeasureImpactResponse, SyncMeasuresResponse
+    # - MeasureConflictsResponse, ResolveConflictResponse
     # - CascadeUpdateResponse
-    # - TopicStrategicContextResponse, GoalAlignmentResponse, KPIPerformanceResponse
+    # - TopicStrategicContextResponse, GoalAlignmentResponse, MeasurePerformanceResponse
 }
 
 
