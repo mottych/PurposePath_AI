@@ -465,7 +465,7 @@ Return a JSON object with this exact structure:
 {
   "recommendations": [
     {
-      "measureName": "<measure name from catalog or custom, 5-50 chars>",
+      "name": "<measure name from catalog or custom, 5-50 chars>",
       "description": "<what it measures and why it matters, 20-300 chars>",
       "unit": "<unit of measurement, e.g., 'USD', '%', 'count'>",
       "direction": "up" | "down",

@@ -1246,7 +1246,7 @@ The `data` field contains:
 {
   "recommendations": [
     {
-      "kpiName": "string",
+      "name": "string",
       "description": "string",
       "unit": "string",
       "direction": "up" | "down",
@@ -1288,16 +1288,16 @@ The `data` field contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `kpiName` | string (5-50 chars) | Measure name |
+| `name` | string (5-50 chars) | Measure name |
 | `description` | string (20-300 chars) | What it measures and why it matters |
 | `unit` | string (1-20 chars) | Unit of measurement (e.g., '%', 'USD', 'count') |
 | `direction` | string | Desired direction: "up" or "down" |
-| `type` | string | KPI type: "quantitative", "qualitative", or "binary" |
-| `reasoning` | string (50-300 chars) | Why this KPI is recommended |
+| `type` | string | Measure type: "quantitative", "qualitative", or "binary" |
+| `reasoning` | string (50-300 chars) | Why this measure is recommended |
 | `suggestedTarget` | SuggestedTarget \| null | Optional suggested target |
-| `measurementApproach` | string (20-200 chars) | How to measure this KPI |
+| `measurementApproach` | string (20-200 chars) | How to measure this measure |
 | `measurementFrequency` | string | Measurement frequency: "daily", "weekly", "monthly", or "quarterly" |
-| `isPrimaryCandidate` | boolean | Whether this should be the primary KPI |
+| `isPrimaryCandidate` | boolean | Whether this should be the primary measure |
 | `catalogMeasureId` | string \| null | ID of recommended catalog measure (if from catalog) |
 | `suggestedOwnerId` | string \| null | Suggested person ID to assign as measure owner |
 | `suggestedOwnerName` | string \| null | Suggested person name to assign as measure owner |
@@ -1322,7 +1322,7 @@ The `data` field contains:
   "data": {
     "recommendations": [
       {
-        "kpiName": "Monthly Recurring Revenue",
+        "name": "Monthly Recurring Revenue",
         "description": "Total predictable revenue from subscriptions, critical for tracking revenue growth",
         "unit": "USD",
         "direction": "up",
