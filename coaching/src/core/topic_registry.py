@@ -1303,7 +1303,12 @@ def get_registry_statistics() -> dict[str, int]:
     }
 
 
+# Backwards compatibility alias
+ENDPOINT_REGISTRY = TOPIC_REGISTRY
+
+
 __all__: list[str] = [
+    "ENDPOINT_REGISTRY",  # Backwards compatibility
     "TOPIC_REGISTRY",
     "ParameterInfo",
     "ParameterRef",

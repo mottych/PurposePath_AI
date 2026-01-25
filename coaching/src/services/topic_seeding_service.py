@@ -17,6 +17,12 @@ from coaching.src.services.s3_prompt_storage import S3PromptStorage
 logger = structlog.get_logger()
 
 
+# Backwards compatibility alias for tests
+def list_all_endpoints(active_only: bool = True):
+    """List all endpoints (backwards compatibility alias)."""
+    return list_all_topics(active_only=active_only)
+
+
 @dataclass
 class SeedingResult:
     """Results of topic seeding operation.
