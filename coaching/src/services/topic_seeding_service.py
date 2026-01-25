@@ -18,7 +18,7 @@ logger = structlog.get_logger()
 
 
 # Backwards compatibility alias for tests
-def list_all_endpoints(active_only: bool = True):
+def list_all_endpoints(active_only: bool = True) -> list:
     """List all endpoints (backwards compatibility alias)."""
     return list_all_topics(active_only=active_only)
 

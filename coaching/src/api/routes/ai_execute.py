@@ -50,7 +50,7 @@ router = APIRouter(prefix="/ai", tags=["AI Execute"])
 
 
 # Backwards compatibility alias for tests
-def get_endpoint_by_topic_id(topic_id: str):
+def get_endpoint_by_topic_id(topic_id: str) -> Any:
     """Get endpoint definition by topic_id (backwards compatibility alias)."""
     return get_topic_by_topic_id(topic_id)
 
