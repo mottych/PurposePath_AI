@@ -641,7 +641,7 @@ class IntegrityAlertResponse(BaseResponseModel):
 IssuesPaginatedResponse = PaginatedResponse[IssueSummary]
 GoalsPaginatedResponse = PaginatedResponse[GoalSummary]
 StrategiesPaginatedResponse = PaginatedResponse[StrategyResponse]
-KPIsPaginatedResponse = PaginatedResponse[KPIResponse]
+MeasuresPaginatedResponse = PaginatedResponse[MeasureResponse]
 ReviewsPaginatedResponse = PaginatedResponse[ReviewResponse]
 DecisionsPaginatedResponse = PaginatedResponse[DecisionResponse]
 ActivitiesPaginatedResponse = PaginatedResponse[ActivityResponse]

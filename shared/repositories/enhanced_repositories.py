@@ -11,7 +11,7 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel
 
 from shared.domain_types.common import JSONDict
-from shared.models.domain import Measure, Goal, Issue
+from shared.models.domain import Goal, Issue, Measure
 from shared.models.multitenant import User
 
 # Generic type for domain models

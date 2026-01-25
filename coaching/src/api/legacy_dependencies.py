@@ -397,7 +397,7 @@ __all__ = [
     "get_conversation_repository",
     "get_conversation_service",
     "get_insights_service",
-    "get_kpi_service",
+    "get_measure_service",
     "get_llm_configuration_repository",
     "get_llm_configuration_service",
     "get_llm_service",
