@@ -90,7 +90,7 @@ class GoalResponse(TypedDict):
     due_date: NotRequired[ISODateString]
     owner_id: NotRequired[UserId]
     strategies: NotRequired[list[StrategyResponse]]
-    kpis: NotRequired[list[dict[str, JSONValue]]]  # KPI types can be defined later
+    measures: NotRequired[list[dict[str, JSONValue]]]  # Measure types can be defined later
 
 
 class GoalListResponse(TypedDict):

@@ -57,7 +57,7 @@ class CreateTopicRequest(BaseModel):
     )
     category: str = Field(
         ...,
-        pattern=r"^(coaching|analysis|strategy|kpi)$",
+        pattern=r"^(coaching|analysis|strategy|measure)$",
         description="Topic category for grouping",
     )
     description: str | None = Field(None, max_length=1000, description="Detailed topic description")

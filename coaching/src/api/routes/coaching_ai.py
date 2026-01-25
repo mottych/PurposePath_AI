@@ -33,8 +33,6 @@ from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
     AlignmentExplanationResponse,
     AlignmentSuggestionsResponse,
-    KPIRecommendationsRequest,
-    KPIRecommendationsResponse,
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.onboarding import (
@@ -178,38 +176,6 @@ async def get_alignment_suggestions(
             request_body=request,
             user_context=user,
             response_model=AlignmentSuggestionsResponse,
-            template_processor=template_processor,
-        ),
-    )
-
-
-@router.post(
-    "/kpi-recommendations",
-    response_model=KPIRecommendationsResponse,
-    status_code=status.HTTP_200_OK,
-)
-async def get_kpi_recommendations(
-    request: KPIRecommendationsRequest,
-    user: UserContext = Depends(get_current_user),
-    handler: GenericAIHandler = Depends(get_generic_handler),
-    jwt_token: str | None = Depends(get_jwt_token),
-) -> KPIRecommendationsResponse:
-    """Generate KPI recommendations using topic-driven architecture.
-
-    Uses 'kpi_recommendations' topic.
-    """
-    logger.info("Generating KPI recommendations", user_id=user.user_id)
-
-    template_processor = create_template_processor(jwt_token) if jwt_token else None
-
-    return cast(
-        KPIRecommendationsResponse,
-        await handler.handle_single_shot(
-            http_method="POST",
-            endpoint_path="/coaching/kpi-recommendations",
-            request_body=request,
-            user_context=user,
-            response_model=KPIRecommendationsResponse,
             template_processor=template_processor,
         ),
     )

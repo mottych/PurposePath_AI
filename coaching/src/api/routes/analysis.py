@@ -11,7 +11,7 @@ Status: Safe to remove.
 This module provides REST API endpoints for various analysis types:
 - Alignment analysis (goals vs purpose/values)
 - Strategy analysis (effectiveness and recommendations)
-- KPI analysis (metric effectiveness)
+- Measure analysis (metric effectiveness)
 - Operational analysis (SWOT, root cause, action plans)
 """
 
@@ -28,8 +28,8 @@ from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
-    KPIAnalysisRequest,
-    KPIAnalysisResponse,
+    MeasureAnalysisRequest,
+    MeasureAnalysisResponse,
     OperationsAnalysisRequest,
     OperationsAnalysisResponse,
     StrategyAnalysisRequest,
@@ -136,48 +136,48 @@ async def analyze_strategy(
     )
 
 
-# KPI Analysis Routes
+# Measure Analysis Routes
 
 
-@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_200_OK)
-async def analyze_kpis(
-    request: KPIAnalysisRequest,
+@router.post("/measure", response_model=MeasureAnalysisResponse, status_code=status.HTTP_200_OK)
+async def analyze_measures(
+    request: MeasureAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
     jwt_token: str | None = Depends(get_jwt_token),
-) -> KPIAnalysisResponse:
-    """Analyze KPI effectiveness and provide recommendations.
+) -> MeasureAnalysisResponse:
+    """Analyze Measure effectiveness and provide recommendations.
 
-    This endpoint evaluates the user's current KPIs and suggests improvements
+    This endpoint evaluates the user's current Measures and suggests improvements
     or additional metrics based on business goals and industry best practices.
 
     **Authentication**: Bearer token required
 
     Args:
-        request: KPI analysis request
+        request: Measure analysis request
         user: Authenticated user context
         handler: Generic AI handler
 
     Returns:
-        KPIAnalysisResponse with analysis and recommendations
+        MeasureAnalysisResponse with analysis and recommendations
     """
     logger.info(
-        "Starting KPI analysis",
+        "Starting Measure analysis",
         user_id=user.user_id,
         tenant_id=user.tenant_id,
-        kpi_count=len(request.current_kpis),
+        measure_count=len(request.current_measures),
     )
 
     template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
-        KPIAnalysisResponse,
+        MeasureAnalysisResponse,
         await handler.handle_single_shot(
             http_method="POST",
-            endpoint_path="/analysis/kpi",
+            endpoint_path="/analysis/measure",
             request_body=request,
             user_context=user,
-            response_model=KPIAnalysisResponse,
+            response_model=MeasureAnalysisResponse,
             template_processor=template_processor,
         ),
     )

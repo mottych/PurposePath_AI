@@ -3,7 +3,7 @@
 Response models for strategic planning AI topics:
 - alignment_check: Goal alignment with business foundation
 - strategy_suggestions: Strategy recommendations
-- kpi_recommendations: KPI suggestions
+- measure_recommendations: Measure suggestions
 - action_suggestions: Action plan recommendations
 
 These models match the specifications in Issue #182.
@@ -133,11 +133,11 @@ class StrategySuggestion(StrategicPlanningBaseModel):
         le=100,
         description="How well this strategy aligns with business foundation",
     )
-    suggested_kpis: list[str] = Field(
+    suggested_measures: list[str] = Field(
         default_factory=list,
-        alias="suggestedKpis",
+        alias="suggestedMeasures",
         max_length=3,
-        description="Brief KPI names to track this strategy (0-3 items)",
+        description="Brief Measure names to track this strategy (0-3 items)",
     )
 
 
@@ -190,7 +190,7 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
 
 
 class SuggestedTarget(StrategicPlanningBaseModel):
-    """Suggested target for a KPI."""
+    """Suggested target for a Measure."""
 
     value: float = Field(
         ...,
@@ -206,20 +206,20 @@ class SuggestedTarget(StrategicPlanningBaseModel):
     )
 
 
-class KPIRecommendation(StrategicPlanningBaseModel):
-    """Individual KPI recommendation."""
+class MeasureRecommendation(StrategicPlanningBaseModel):
+    """Individual Measure recommendation."""
 
     name: str = Field(
         ...,
         min_length=5,
         max_length=100,
-        description="KPI name",
+        description="Measure name",
     )
     description: str = Field(
         ...,
         min_length=20,
         max_length=300,
-        description="What this KPI measures",
+        description="What this Measure measures",
     )
     unit: str = Field(
         ...,
@@ -232,17 +232,17 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         description="Desired direction: 'up' or 'down'",
         pattern="^(up|down)$",
     )
-    kpi_type: str = Field(
+    measure_type: str = Field(
         ...,
         alias="type",
-        description="KPI type: 'quantitative', 'qualitative', or 'binary'",
+        description="Measure type: 'quantitative', 'qualitative', or 'binary'",
         pattern="^(quantitative|qualitative|binary)$",
     )
     reasoning: str = Field(
         ...,
         min_length=50,
         max_length=300,
-        description="Why this KPI is recommended",
+        description="Why this Measure is recommended",
     )
     suggested_target: SuggestedTarget | None = Field(
         default=None,
@@ -254,7 +254,7 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         alias="measurementApproach",
         min_length=20,
         max_length=200,
-        description="How to measure this KPI",
+        description="How to measure this Measure",
     )
     measurement_frequency: str = Field(
         ...,
@@ -265,7 +265,7 @@ class KPIRecommendation(StrategicPlanningBaseModel):
     is_primary_candidate: bool = Field(
         default=False,
         alias="isPrimaryCandidate",
-        description="Whether this should be the primary KPI",
+        description="Whether this should be the primary Measure",
     )
     catalog_measure_id: str | None = Field(
         default=None,
@@ -300,14 +300,14 @@ class KPIRecommendation(StrategicPlanningBaseModel):
     )
 
 
-class KPIRecommendationsData(StrategicPlanningBaseModel):
-    """Data payload for KPI recommendations response."""
+class MeasureRecommendationsData(StrategicPlanningBaseModel):
+    """Data payload for Measure recommendations response."""
 
-    recommendations: list[KPIRecommendation] = Field(
+    recommendations: list[MeasureRecommendation] = Field(
         ...,
         min_length=1,
         max_length=5,
-        description="List of KPI recommendations (1-5 items)",
+        description="List of Measure recommendations (1-5 items)",
     )
     analysis_notes: str = Field(
         ...,
@@ -318,33 +318,33 @@ class KPIRecommendationsData(StrategicPlanningBaseModel):
     )
 
 
-class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
-    """Response for kpi_recommendations topic.
+class MeasureRecommendationsResponseV2(StrategicPlanningBaseModel):
+    """Response for measure_recommendations topic.
 
-    Recommends KPIs for measuring goal or strategy success.
-    Note: Named V2 to distinguish from existing KPIRecommendationsResponse.
+    Recommends Measures for measuring goal or strategy success.
+    Note: Named V2 to distinguish from existing MeasureRecommendationsResponse.
     """
 
     topic_id: str = Field(
-        default="kpi_recommendations",
+        default="measure_recommendations",
         description="Topic identifier",
     )
     success: bool = Field(
         default=True,
         description="Whether the request succeeded",
     )
-    data: KPIRecommendationsData = Field(
+    data: MeasureRecommendationsData = Field(
         ...,
-        description="KPI recommendations",
+        description="Measure recommendations",
     )
     schema_ref: str = Field(
-        default="KPIRecommendationsResponseV2",
+        default="MeasureRecommendationsResponseV2",
         description="Reference to this schema",
     )
 
 
-# Alias for measure_recommendations topic
-MeasureRecommendationsResponse = KPIRecommendationsResponseV2
+# Renamed from KPIRecommendationsResponseV2
+MeasureRecommendationsResponse = MeasureRecommendationsResponseV2
 
 
 # =============================================================================

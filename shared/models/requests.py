@@ -236,32 +236,32 @@ class UpdateStrategyRequest(BaseRequestModel):
     dependencies: list[str] | None = Field(default=None, description="Dependencies")
 
 
-# KPI Request Models
-class CreateKPIRequest(BaseRequestModel):
-    """Request to create a new KPI."""
+# Measure Request Models
+class CreateMeasureRequest(BaseRequestModel):
+    """Request to create a new Measure."""
 
-    name: str = Field(min_length=1, max_length=100, description="KPI name")
-    description: str | None = Field(default=None, max_length=1000, description="KPI description")
-    current_value: float = Field(description="Current KPI value")
-    target_value: float | None = Field(default=None, description="Target KPI value")
+    name: str = Field(min_length=1, max_length=100, description="Measure name")
+    description: str | None = Field(default=None, max_length=1000, description="Measure description")
+    current_value: float = Field(description="Current Measure value")
+    target_value: float | None = Field(default=None, description="Target Measure value")
     unit: str = Field(max_length=50, description="Unit of measurement")
     goal_id: str | None = Field(default=None, description="Associated goal ID")
-    owner_id: str | None = Field(default=None, description="KPI owner user ID")
+    owner_id: str | None = Field(default=None, description="Measure owner user ID")
     measurement_frequency: str = Field(default="monthly", description="Measurement frequency")
-    data_source: str | None = Field(default=None, description="Source of KPI data")
+    data_source: str | None = Field(default=None, description="Source of Measure data")
     calculation_method: str | None = Field(default=None, description="Calculation method")
 
 
-class UpdateKPIRequest(BaseRequestModel):
-    """Request to update an existing KPI."""
+class UpdateMeasureRequest(BaseRequestModel):
+    """Request to update an existing Measure."""
 
-    name: str | None = Field(default=None, min_length=1, max_length=100, description="KPI name")
-    description: str | None = Field(default=None, max_length=1000, description="KPI description")
-    current_value: float | None = Field(default=None, description="Current KPI value")
-    target_value: float | None = Field(default=None, description="Target KPI value")
+    name: str | None = Field(default=None, min_length=1, max_length=100, description="Measure name")
+    description: str | None = Field(default=None, max_length=1000, description="Measure description")
+    current_value: float | None = Field(default=None, description="Current Measure value")
+    target_value: float | None = Field(default=None, description="Target Measure value")
     unit: str | None = Field(default=None, max_length=50, description="Unit of measurement")
     measurement_frequency: str | None = Field(default=None, description="Measurement frequency")
-    data_source: str | None = Field(default=None, description="Source of KPI data")
+    data_source: str | None = Field(default=None, description="Source of Measure data")
     calculation_method: str | None = Field(default=None, description="Calculation method")
 
 
@@ -415,20 +415,20 @@ class CreateProposalRequest(BaseRequestModel):
         return v.strip()
 
 
-class LinkKPIRequest(BaseRequestModel):
-    """Request to link a KPI to a goal."""
+class LinkMeasureRequest(BaseRequestModel):
+    """Request to link a Measure to a goal."""
 
-    kpi_id: str = Field(min_length=1, description="KPI identifier to link")
+    measure_id: str = Field(min_length=1, description="Measure identifier to link")
     threshold_pct: float | None = Field(
         default=None, ge=0, le=100, description="Threshold percentage"
     )
 
-    @field_validator("kpi_id")
+    @field_validator("measure_id")
     @classmethod
-    def validate_kpi_id(cls, v: str) -> str:
-        """Ensure KPI ID is not empty after stripping."""
+    def validate_measure_id(cls, v: str) -> str:
+        """Ensure Measure ID is not empty after stripping."""
         if not v.strip():
-            raise ValueError("KPI ID cannot be empty")
+            raise ValueError("Measure ID cannot be empty")
         return v.strip()
 
 
