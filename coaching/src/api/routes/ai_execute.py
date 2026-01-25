@@ -148,7 +148,7 @@ async def execute_ai(
     )
 
     # Step 1: Validate topic exists and is active
-    endpoint = get_topic_by_topic_id(request.topic_id)
+    endpoint = get_endpoint_by_topic_id(request.topic_id)
     if endpoint is None:
         logger.warning("ai_execute.topic_not_found", topic_id=request.topic_id)
         raise HTTPException(
