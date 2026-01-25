@@ -383,6 +383,155 @@ Tables **always preserved**:
 
 ---
 
+### POST /admin/maintenance/cleanup-orphaned-users
+
+Clean up users whose tenants no longer exist (admin only maintenance endpoint).
+
+**Query Parameters:**
+
+- `dryRun` (boolean, default: false) - If true, simulates cleanup and returns what would be deleted without making changes
+
+**Headers Required:**
+
+```http
+Authorization: Bearer {adminJwtToken}
+Content-Type: application/json
+```
+
+**Request URL Example:**
+
+```
+POST /admin/maintenance/cleanup-orphaned-users?dryRun=false
+```
+
+**Description:**
+
+This maintenance endpoint scans all users in the system and identifies orphaned users (users whose tenant no longer exists in the database). These orphaned records can occur due to:
+- Manual database operations
+- Incomplete deletion processes
+- Data migration issues
+- System bugs that left orphaned records
+
+The endpoint provides a safe way to clean up these orphaned users independently of tenant deletion operations.
+
+**Success Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "orphanedUsersFound": 5,
+    "orphanedUsersDeleted": 5,
+    "deletedUsers": [
+      {
+        "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "username": "john.doe@example.com",
+        "formerTenantId": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      {
+        "userId": "8d0f7789-8536-51ef-b827-f18gd2g01bf8",
+        "username": "jane.smith@example.com",
+        "formerTenantId": "660f9511-f30c-52e5-c938-557766551111"
+      }
+    ],
+    "wasDryRun": false,
+    "cleanupCompletedAt": "2026-01-25T15:30:00Z"
+  }
+}
+```
+
+**Success Response (Dry Run):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "orphanedUsersFound": 5,
+    "orphanedUsersDeleted": 0,
+    "deletedUsers": [
+      {
+        "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "username": "john.doe@example.com",
+        "formerTenantId": "550e8400-e29b-41d4-a716-446655440000"
+      }
+    ],
+    "wasDryRun": true,
+    "cleanupCompletedAt": "2026-01-25T15:30:00Z"
+  }
+}
+```
+
+**Response Fields:**
+
+- `orphanedUsersFound`: Number of orphaned users identified in the system
+- `orphanedUsersDeleted`: Number of orphaned users actually deleted (0 for dry run)
+- `deletedUsers`: Array of deleted user details (limited to first 100 for performance)
+  - `userId`: The orphaned user's ID
+  - `username`: The orphaned user's username/email
+  - `formerTenantId`: The tenant ID that no longer exists
+- `wasDryRun`: Whether this was a simulation
+- `cleanupCompletedAt`: Timestamp of cleanup operation
+
+**Error Responses:**
+
+- `401 Unauthorized` - Missing or invalid admin token:
+  ```json
+  {
+    "success": false,
+    "error": "Unauthorized"
+  }
+  ```
+
+- `403 Forbidden` - User doesn't have admin role:
+  ```json
+  {
+    "success": false,
+    "error": "Forbidden: Admin role required"
+  }
+  ```
+
+- `500 Internal Server Error` - Unexpected error during cleanup:
+  ```json
+  {
+    "success": false,
+    "error": "An error occurred during orphaned user cleanup"
+  }
+  ```
+
+**Business Rules:**
+
+- **Safety**: Use `dryRun=true` first to preview impact before actual deletion
+- **Performance**: Scans all users in the database (can be slow for large datasets)
+- **Audit Trail**: All deletions logged in audit tables
+- **Verification**: Checks tenant existence before marking user as orphaned
+- **Independence**: Can be run without deleting a specific tenant
+- **Idempotent**: Safe to run multiple times (subsequent runs find 0 orphaned users)
+
+**When to Use:**
+
+- After manual database operations
+- Periodic maintenance to ensure database integrity
+- After data migration or restoration
+- When audit logs indicate orphaned user issues
+- Before database performance optimization
+
+**Implementation:**
+
+- Controller: `MaintenanceController.CleanupOrphanedUsers()`
+- Command: `CleanupOrphanedUsersCommand`
+- Handler: `CleanupOrphanedUsersCommandHandler`
+- Service: `ITenantDeletionService.CleanupOrphanedUsersAsync()`
+
+**Testing Notes:**
+
+- Always use `dryRun=true` first to preview results
+- Monitor performance on production (can be slow for millions of users)
+- Verify audit logs capture all deletions
+- Test with known orphaned users in staging environment
+- Confirm orphaned user count decreases after actual cleanup
+
+---
+
 ## Admin Subscriber Management Endpoints
 
 ### GET /admin/subscribers
