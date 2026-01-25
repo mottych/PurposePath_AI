@@ -75,11 +75,11 @@ class TestListTopics:
     def test_list_topics_filtered(self, client, mock_topic_repo, sample_topic):
         mock_topic_repo.list_by_type.return_value = [sample_topic]
 
-        response = client.get("/prompts?topic_type=kpi_system")
+        response = client.get("/prompts?topic_type=measure_system")
 
         assert response.status_code == status.HTTP_200_OK
         mock_topic_repo.list_by_type.assert_called_once_with(
-            topic_type="kpi_system", include_inactive=False
+            topic_type="measure_system", include_inactive=False
         )
 
     def test_list_topics_error(self, client, mock_topic_repo):
@@ -98,8 +98,8 @@ class TestCreateTopic:
         payload = {
             "topic_id": "new_topic",
             "topic_name": "New Topic",
-            "topic_type": "kpi_system",
-            "category": "kpi",
+            "topic_type": "measure_system",
+            "category": "measure",
             "description": "New Description",
             "display_order": 2,
             "config": {

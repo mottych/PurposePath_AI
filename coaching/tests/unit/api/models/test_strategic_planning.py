@@ -385,7 +385,7 @@ class TestResponseModelRegistry:
         expected_models = [
             "AlignmentCheckResponse",
             "StrategySuggestionsResponseV2",
-            "KPIRecommendationsResponseV2",
+            "MeasureRecommendationsResponseV2",
             "ActionSuggestionsResponse",
         ]
 
