@@ -410,7 +410,9 @@ class MeasureRecommendationsRequest(BaseModel):
 class MeasureRecommendationsResponse(BaseModel):
     """Response for Measure recommendations."""
 
-    recommended_measures: list[MeasureRecommendation] = Field(..., description="List of recommended Measures")
+    recommended_measures: list[MeasureRecommendation] = Field(
+        ..., description="List of recommended Measures"
+    )
     rationale: str = Field(..., description="Overall rationale for recommendations")
 
 
@@ -445,9 +447,13 @@ class StrategyAnalysisAIContent(BaseModel):
 class MeasureAnalysisAIContent(BaseModel):
     """AI-generated content for Measure analysis."""
 
-    measure_effectiveness_score: float = Field(..., description="Overall Measure effectiveness score")
+    measure_effectiveness_score: float = Field(
+        ..., description="Overall Measure effectiveness score"
+    )
     overall_assessment: str = Field(..., description="Summary assessment")
-    current_measure_analysis: list[dict[str, Any]] = Field(..., description="Analysis of current Measures")
+    current_measure_analysis: list[dict[str, Any]] = Field(
+        ..., description="Analysis of current Measures"
+    )
     missing_measures: list[str] = Field(default_factory=list, description="Missing Measures")
     recommended_measures: list[MeasureRecommendation] = Field(
         default_factory=list, description="Recommended Measures"

@@ -259,7 +259,10 @@ class MeasureRepository(BaseRepository[Measure]):
         try:
             query_kwargs: dict[str, Any] = {
                 "KeyConditionExpression": "pk = :pk AND begins_with(sk, :sk_prefix)",
-                "ExpressionAttributeValues": {":pk": f"TENANT#{tenant_id}", ":sk_prefix": "MEASURE#"},
+                "ExpressionAttributeValues": {
+                    ":pk": f"TENANT#{tenant_id}",
+                    ":sk_prefix": "MEASURE#",
+                },
                 "Limit": limit,
             }
 

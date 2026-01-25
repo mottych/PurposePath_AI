@@ -402,6 +402,7 @@ class TestResponseModelRegistry:
             is StrategySuggestionsResponseV2
         )
         assert (
-            RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponseV2"] is MeasureRecommendationsResponseV2
+            RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponseV2"]
+            is MeasureRecommendationsResponseV2
         )
         assert RESPONSE_MODEL_REGISTRY["ActionSuggestionsResponse"] is ActionSuggestionsResponse

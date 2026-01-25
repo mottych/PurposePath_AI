@@ -587,7 +587,9 @@ class MeasureLinkResponse(BaseResponseModel):
 class AlignmentDriversResponse(BaseResponseModel):
     """Response model for alignment drivers."""
 
-    measure_performance: float = Field(..., alias="measurePerformance", description="Measure performance score")
+    measure_performance: float = Field(
+        ..., alias="measurePerformance", description="Measure performance score"
+    )
     plan_health: float = Field(..., alias="planHealth", description="Plan health score")
     cadence_adherence: float = Field(
         ..., alias="cadenceAdherence", description="Cadence adherence score"

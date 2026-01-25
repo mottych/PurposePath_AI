@@ -241,7 +241,9 @@ class CreateMeasureRequest(BaseRequestModel):
     """Request to create a new Measure."""
 
     name: str = Field(min_length=1, max_length=100, description="Measure name")
-    description: str | None = Field(default=None, max_length=1000, description="Measure description")
+    description: str | None = Field(
+        default=None, max_length=1000, description="Measure description"
+    )
     current_value: float = Field(description="Current Measure value")
     target_value: float | None = Field(default=None, description="Target Measure value")
     unit: str = Field(max_length=50, description="Unit of measurement")
@@ -256,7 +258,9 @@ class UpdateMeasureRequest(BaseRequestModel):
     """Request to update an existing Measure."""
 
     name: str | None = Field(default=None, min_length=1, max_length=100, description="Measure name")
-    description: str | None = Field(default=None, max_length=1000, description="Measure description")
+    description: str | None = Field(
+        default=None, max_length=1000, description="Measure description"
+    )
     current_value: float | None = Field(default=None, description="Current Measure value")
     target_value: float | None = Field(default=None, description="Target Measure value")
     unit: str | None = Field(default=None, max_length=50, description="Unit of measurement")
