@@ -226,7 +226,7 @@ Technology, Healthcare, Finance, Education, Retail, Manufacturing, Real Estate, 
     "proposition": {
       "uniqueSellingProposition": "string",
       "keyDifferentiators": "string",
-      "proofPoints": "string|null",
+      "proofPoints": ["string"] | null,
       "customerOutcomes": "string|null",
       "brandPromise": "string|null",
       "primaryCompetitors": ["string"] | null,
@@ -503,7 +503,7 @@ These endpoints update individual sections without affecting others. They may fa
 {
   "uniqueSellingProposition": "string|null",
   "keyDifferentiators": "string|null",
-  "proofPoints": "string|null",
+  "proofPoints": ["string"]|null,
   "customerOutcomes": "string|null",
   "brandPromise": "string|null",
   "primaryCompetitors": ["string"]|null,
