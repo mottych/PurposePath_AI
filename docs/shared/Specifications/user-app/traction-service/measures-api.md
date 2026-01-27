@@ -112,6 +112,7 @@ Retrieve comprehensive MEASURE summary with filtering, aggregations, and detaile
             "goalStatus": "active",
             "isPrimary": true,
             "thresholdPct": 80,
+            "riskThresholdPct": 50,
             "weight": 1.0,
             "displayOrder": 0,
             "linkedAt": "2025-01-01T00:00:00Z",
@@ -140,6 +141,7 @@ Retrieve comprehensive MEASURE summary with filtering, aggregations, and detaile
             "goalId": "goal-001",
             "goalTitle": "Increase Revenue",
             "thresholdPct": 85,
+            "riskThresholdPct": 50,
             "weight": 0.7,
             "displayOrder": 0,
             "linkedAt": "2025-01-02T00:00:00Z",
@@ -294,27 +296,21 @@ Retrieve comprehensive MEASURE summary with filtering, aggregations, and detaile
 The `progress.status` field is calculated using the following algorithm:
 
 ```
-status = f(progressPercentage, thresholdPct, timeRemaining, isOverdue)
+Given:
+- thresholdPct (e.g., 80)
+- riskThresholdPct (e.g., 50)
+- variancePercentage = ((currentValue - expectedValue) / |totalChange|) * 100
 
-Where:
-1. progressPercentage = (currentValue / targetValue) × 100
-   - For direction="up": Higher is better
-   - For direction="down": Invert the logic (2×target - current) / target × 100
+Status determination:
+- If variancePercentage >= (thresholdPct - 100) -> on_track
+- If variancePercentage < (thresholdPct - 100) AND variancePercentage >= (riskThresholdPct - 100) -> behind
+- If variancePercentage < (riskThresholdPct - 100) -> at_risk
+- No data -> no_data
 
-2. Apply thresholds:
-   - progressPercentage ≥ thresholdPct → on_track
-   - progressPercentage ≥ (thresholdPct × 0.625) → at_risk
-   - progressPercentage < (thresholdPct × 0.625) → behind
-   - No data → no_data
-
-3. Time-based adjustment:
-   - If isOverdue = true AND progressPercentage < 100 → behind
-   - If daysUntilTarget < 7 AND progressPercentage < thresholdPct → at_risk
-
-Example with thresholdPct = 80:
-   - ≥80% → on_track
-   - ≥50% (80 × 0.625) → at_risk
-   - <50% → behind
+Example with thresholdPct = 80, riskThresholdPct = 50:
+- variancePercentage >= -20 -> on_track
+- -50 <= variancePercentage < -20 -> behind
+- variancePercentage < -50 -> at_risk
 ```
 
 **Response 400 Bad Request**

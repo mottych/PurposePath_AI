@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.4  
-**Last Updated:** January 15, 2026  
+**Version:** 8.5  
+**Last Updated:** January 27, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -70,6 +70,7 @@ X-Tenant-Id: {tenantId}
     "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
     "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
     "thresholdPct": 80.0,
+    "riskThresholdPct": 50.0,
     "linkType": "strategy",
     "weight": 1.5,
     "displayOrder": 1,
@@ -98,6 +99,7 @@ X-Tenant-Id: {tenantId}
 | `goalId` | string (GUID) | Goal linked to (nullable) |
 | `strategyId` | string (GUID) | Strategy linked to (nullable) |
 | `thresholdPct` | decimal | Completion threshold percentage (0-100) |
+| `riskThresholdPct` | decimal | Risk threshold percentage (0-100) |
 | `linkType` | string | **Calculated field** - Type of link: `"personal"` (only personId), `"goal"` (personId + goalId), `"strategy"` (personId + goalId + strategyId) |
 | `weight` | decimal | Relative importance (for weighted calculations, 0.0-1.0) |
 | `displayOrder` | int | Sort order in UI (lower = first) |
@@ -142,6 +144,7 @@ Create a new link between a Measure and person, optionally associating with a go
   "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
   "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
   "thresholdPct": 85.0,
+  "riskThresholdPct": 50.0,
   "weight": 1.5,
   "displayOrder": 1,
   "isPrimary": false
@@ -157,6 +160,7 @@ Create a new link between a Measure and person, optionally associating with a go
 | `goalId` | string (GUID) | No | Goal to associate (required if strategyId provided) |
 | `strategyId` | string (GUID) | No | Strategy to associate (requires goalId) |
 | `thresholdPct` | decimal | No | Threshold percentage (0-100, default: 80.0) |
+| `riskThresholdPct` | decimal | No | Risk threshold percentage (0-100, default: 50.0) |
 | `weight` | decimal | No | Relative weight (default: 1.0) |
 | `displayOrder` | int | No | Sort order (default: auto-assigned) |
 | `isPrimary` | boolean | No | Mark as primary Measure (default: false) |
@@ -177,6 +181,7 @@ Create a new link between a Measure and person, optionally associating with a go
     "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
     "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
     "thresholdPct": 85.0,
+    "riskThresholdPct": 50.0,
     "linkType": "strategy",
     "weight": 0.5,
     "displayOrder": 1,
@@ -218,6 +223,7 @@ Update link configuration (person, goal, strategy, threshold, weight, priority, 
   "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
   "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
   "thresholdPct": 85.0,
+  "riskThresholdPct": 50.0,
   "weight": 2.0,
   "displayOrder": 1,
   "isPrimary": true
@@ -234,6 +240,7 @@ All fields are optional. Only provided fields will be updated.
 | `goalId` | string (GUID) | Goal association. Set to associate with a goal or change association. Note: Removing goal (by setting to null) will also remove strategy. |
 | `strategyId` | string (GUID) | Strategy association. Requires a goal to be set. Must belong to the specified goal. |
 | `thresholdPct` | decimal | Threshold percentage (0-100) |
+| `riskThresholdPct` | decimal | Risk threshold percentage (0-100) |
 | `weight` | decimal | Relative weight/importance |
 | `displayOrder` | int | Sort order in UI |
 | `isPrimary` | boolean | Mark as primary Measure |
@@ -262,6 +269,7 @@ All fields are optional. Only provided fields will be updated.
     "goalId": "goal-012e3456-e89b-12d3-a456-426614174003",
     "strategyId": "strategy-345e6789-e89b-12d3-a456-426614174004",
     "thresholdPct": 85.0,
+    "riskThresholdPct": 50.0,
     "linkType": "strategy",
     "weight": 0.8,
     "displayOrder": 1,
@@ -599,6 +607,13 @@ type LinkType = "personal" | "goal" | "strategy";
 - **Meaning:** Completion threshold for the Measure (e.g., 80% = "on track" at 80% of target)
 - **Usage:** UI can show red/yellow/green status based on `currentValue` vs `targetValue` at threshold
 
+### Risk Threshold Percentage
+
+- **Range:** 0 - 100
+- **Meaning:** Risk threshold for the Measure (e.g., 50% = "at risk" below 50% of expected)
+- **Default:** 50.0 when not provided
+- **Usage:** Progress status uses both `thresholdPct` and `riskThresholdPct`
+
 ### Weight
 
 - **Range:** 0.0 - 1.0
@@ -674,6 +689,7 @@ const response = await traction.post('/measure-links', {
   measureId: 'measure-123',
   personId: 'person-456',
   thresholdPct: 85.0,
+  riskThresholdPct: 50.0,
   weight: 0.8,  // Must be between 0.0 and 1.0
   displayOrder: 1
 });
@@ -684,6 +700,7 @@ await traction.post('/measure-links', {
   personId: 'person-456',
   goalId: 'goal-789',
   thresholdPct: 80.0,
+  riskThresholdPct: 50.0,
   weight: 0.9,  // Must be between 0.0 and 1.0
   isPrimary: true
 });
@@ -695,6 +712,7 @@ await traction.post('/measure-links', {
   goalId: 'goal-789',
   strategyId: 'strategy-101',
   thresholdPct: 75.0,
+  riskThresholdPct: 50.0,
   weight: 0.7  // Must be between 0.0 and 1.0
 });
 
@@ -722,6 +740,7 @@ const goalAllMeasures = await traction.get('/measure-links', {
 // Update link configuration
 await traction.put(`/measure-links/${linkId}`, {
   thresholdPct: 90.0,
+  riskThresholdPct: 50.0,
   isPrimary: true,
   weight: 0.95  // Must be between 0.0 and 1.0
 });
@@ -743,6 +762,11 @@ await traction.delete(`/measure-links/${linkId}`);
 ---
 
 ## Changelog
+
+### v8.5 (January 27, 2026) - Issue #604: Risk Threshold & Unified Progress Status
+- ✨ **Added:** `riskThresholdPct` to Measure Link request/response payloads
+- 📊 **Updated:** Progress status calculation uses both `thresholdPct` and `riskThresholdPct`
+- 🧠 **DDD:** Progress status calculation centralized in domain layer only
 
 ### v8.3 (January 15, 2026) - Issue #569: Goal and Strategy Titles
 - ✨ **Added:** `goalTitle` and `strategyTitle` fields to all Measure Link response payloads
