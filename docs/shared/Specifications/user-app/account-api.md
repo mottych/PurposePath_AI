@@ -127,7 +127,8 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
   "data": {
     "available": false,
     "username": "johndoe",
-    "message": "Username is already taken"
+    "message": "Username is already taken",
+    "reasonCode": "TAKEN"
   }
 }
 ```
@@ -139,15 +140,22 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
   "code": "VALIDATION_ERROR",
   "details": {
     "field": "username",
-    "message": "Username must be 3-50 characters, start with alphanumeric, and contain only alphanumeric, '.', '_', '-', '@'"
+    "message": "Username must be 3-50 characters, start with alphanumeric, and contain only alphanumeric, '.', '_', '-', '@'",
+    "reasonCode": "INVALID_FORMAT"
   }
 }
 ```
+- Reason Codes (data.reasonCode when `available: false`):
+  - `TAKEN`: Username is already in use.
+  - `RESERVED`: Username is a reserved system name (admin, support, system, etc.).
+  - `PREVIOUSLY_USED`: Username is reserved for 90 days after a change.
+  - `CHANGE_RATE_LIMITED`: Authenticated user is within the 30‑day username change cooldown.
 - **Notes**: 
   - This is a public endpoint (no authentication required) for use during registration and invitation activation.
   - Returns success with `available: false` for taken usernames (not an error state).
   - Returns error only for invalid format or server errors.
   - Reserved usernames (admin, support, system, etc.) are considered unavailable.
+  - If an authenticated user context is available, the response may return `CHANGE_RATE_LIMITED`.
 
 ## Users (Single User Operations)
 
