@@ -106,6 +106,49 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Query: `refreshToken` (camelCase). Legacy `refresh_token` still accepted.
 - Response: `{ "success": true }`.
 
+### GET /auth/check-username (Public)
+**No Auth Required** - Check if a username is available for registration or invitation activation.
+
+- Query: `username` (string, required).
+- Response (Available):
+```json
+{
+  "success": true,
+  "data": {
+    "available": true,
+    "username": "johndoe"
+  }
+}
+```
+- Response (Not Available):
+```json
+{
+  "success": true,
+  "data": {
+    "available": false,
+    "username": "johndoe",
+    "message": "Username is already taken"
+  }
+}
+```
+- Response (Invalid Format):
+```json
+{
+  "success": false,
+  "error": "Invalid username format",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "field": "username",
+    "message": "Username must be 3-50 characters, start with alphanumeric, and contain only alphanumeric, '.', '_', '-', '@'"
+  }
+}
+```
+- **Notes**: 
+  - This is a public endpoint (no authentication required) for use during registration and invitation activation.
+  - Returns success with `available: false` for taken usernames (not an error state).
+  - Returns error only for invalid format or server errors.
+  - Reserved usernames (admin, support, system, etc.) are considered unavailable.
+
 ## Users (Single User Operations)
 
 ### GET /user/{id}
