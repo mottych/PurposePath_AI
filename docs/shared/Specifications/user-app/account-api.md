@@ -79,8 +79,9 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Response: `AuthResponse` (auto-login path) or validation error. Email verification links use `X-Frontend-Base-Url` if provided.
 
 ### POST /auth/forgot-password
-- Body: `{ "email": "string" }`.
+- Body: `{ "username": "string" }`.
 - Response: `{ "success": true, "message": "Password reset email sent" }`.
+- Notes: Password reset email is sent to the email address of the Person linked to the username.
 
 ### POST /auth/reset-password
 - Body: `{ "token": "string", "newPassword": "string" }`.
