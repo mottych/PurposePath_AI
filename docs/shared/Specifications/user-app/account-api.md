@@ -392,6 +392,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ```json
 {
   "token": "64-char-token",
+  "username": "johndoe",
   "password": "SecurePassword123!"
 }
 ```
@@ -399,11 +400,17 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ```json
 {
   "token": "64-char-token",
+  "username": "johndoe",
   "googleUserId": "google-oauth-id",
   "googleEmail": "john.doe@example.com",
   "googleProfilePictureUrl": "https://..."
 }
 ```
+- Username rules:
+  - 3-50 characters
+  - Must start with a letter or number
+  - Allowed characters: letters, numbers, `.`, `_`, `-`, `@`
+  - Reserved usernames are not allowed (e.g., admin, support, system)
 - Response:
 ```json
 {
@@ -436,6 +443,30 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ```
 - **Note**: `tenant.name` is populated from the business foundation's company name if available, otherwise falls back to the tenant's name field.
 - Errors: 400 invalid token/expired/already used/person already linked/email mismatch (OAuth).
+
+**Error Responses:**
+
+```json
+{
+  "success": false,
+  "error": "Username is already taken",
+  "code": "DUPLICATE_RESOURCE",
+  "details": {
+    "field": "username"
+  }
+}
+```
+
+```json
+{
+  "success": false,
+  "error": "Username is invalid",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "field": "username"
+  }
+}
+```
 
 ## Users (Multi-User Operations - Owner Only)
 
