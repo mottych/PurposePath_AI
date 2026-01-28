@@ -1,7 +1,7 @@
 # Measure Links API Specification
 
-**Version:** 8.5  
-**Last Updated:** January 27, 2026  
+**Version:** 8.4  
+**Last Updated:** January 15, 2026  
 **Base Path:** `/measure-links`  
 **Controller:** `MeasureLinksController.cs`
 
@@ -291,6 +291,7 @@ All fields are optional. Only provided fields will be updated.
   - System validates strategy-goal relationship before update
 - **Primary Measure:** Setting `isPrimary: true` may unset other primary Measures for the same goal
 - **Threshold Range:** Must be between 0 and 100 if provided
+- **Risk Threshold Range:** Must be between 0 and 100 if provided and must be <= thresholdPct
 - **Display Order:** Used for UI sorting, can be any positive integer
 - **Calculated linkType:** Automatically derived from `goalId` and `strategyId` presence - cannot be set via API
 
@@ -609,10 +610,9 @@ type LinkType = "personal" | "goal" | "strategy";
 
 ### Risk Threshold Percentage
 
-- **Range:** 0 - 100
-- **Meaning:** Risk threshold for the Measure (e.g., 50% = "at risk" below 50% of expected)
-- **Default:** 50.0 when not provided
-- **Usage:** Progress status uses both `thresholdPct` and `riskThresholdPct`
+- **Range:** 0 - 100 (must be ≤ `thresholdPct`)
+- **Meaning:** Risk threshold for "at risk" status (e.g., 50% = "at risk" when variance percentage < -50)
+- **Usage:** Determines split between "behind" and "at_risk" statuses
 
 ### Weight
 
@@ -689,7 +689,6 @@ const response = await traction.post('/measure-links', {
   measureId: 'measure-123',
   personId: 'person-456',
   thresholdPct: 85.0,
-  riskThresholdPct: 50.0,
   weight: 0.8,  // Must be between 0.0 and 1.0
   displayOrder: 1
 });
@@ -700,7 +699,6 @@ await traction.post('/measure-links', {
   personId: 'person-456',
   goalId: 'goal-789',
   thresholdPct: 80.0,
-  riskThresholdPct: 50.0,
   weight: 0.9,  // Must be between 0.0 and 1.0
   isPrimary: true
 });
@@ -712,7 +710,6 @@ await traction.post('/measure-links', {
   goalId: 'goal-789',
   strategyId: 'strategy-101',
   thresholdPct: 75.0,
-  riskThresholdPct: 50.0,
   weight: 0.7  // Must be between 0.0 and 1.0
 });
 
@@ -740,7 +737,6 @@ const goalAllMeasures = await traction.get('/measure-links', {
 // Update link configuration
 await traction.put(`/measure-links/${linkId}`, {
   thresholdPct: 90.0,
-  riskThresholdPct: 50.0,
   isPrimary: true,
   weight: 0.95  // Must be between 0.0 and 1.0
 });
@@ -762,11 +758,6 @@ await traction.delete(`/measure-links/${linkId}`);
 ---
 
 ## Changelog
-
-### v8.5 (January 27, 2026) - Issue #604: Risk Threshold & Unified Progress Status
-- ✨ **Added:** `riskThresholdPct` to Measure Link request/response payloads
-- 📊 **Updated:** Progress status calculation uses both `thresholdPct` and `riskThresholdPct`
-- 🧠 **DDD:** Progress status calculation centralized in domain layer only
 
 ### v8.3 (January 15, 2026) - Issue #569: Goal and Strategy Titles
 - ✨ **Added:** `goalTitle` and `strategyTitle` fields to all Measure Link response payloads
