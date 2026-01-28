@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.3  
-**Last Updated:** January 12, 2026 (Issue #545: Tenant owner status in JWT + AuthResponse)  
+**Version:** 2.4  
+**Last Updated:** January 28, 2026 (Username support in invitation activation + conflict error)  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -403,9 +403,14 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
   "username": "johndoe",
   "googleUserId": "google-oauth-id",
   "googleEmail": "john.doe@example.com",
-  "googleProfilePictureUrl": "https://..."
+  "googleProfilePictureUrl": "https://...",
+  "username": "johndoe"
 }
 ```
+- **Field Constraints:**
+  - `username` (optional): 3-50 characters, must start with alphanumeric, can contain alphanumeric + `.` `_` `-` `@`. Regex: `/^[a-zA-Z0-9][a-zA-Z0-9._@-]{2,49}$/`. When omitted, username is auto-generated from email (backward compatibility).
+  - `password` (password-based only): Required for password activation.
+  - `googleUserId`, `googleEmail`, `googleProfilePictureUrl` (OAuth-based only): Required for OAuth activation.
 - Username rules:
   - 3-50 characters
   - Must start with a letter or number
@@ -442,7 +447,10 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 }
 ```
 - **Note**: `tenant.name` is populated from the business foundation's company name if available, otherwise falls back to the tenant's name field.
-- Errors: 400 invalid token/expired/already used/person already linked/email mismatch (OAuth).
+- Errors:
+  - 400 `VALIDATION_ERROR`: Invalid token/expired/already used/person already linked/email mismatch (OAuth)/invalid username format.
+  - 409 `USERNAME_NOT_AVAILABLE`: The specified username is already taken by another user (global uniqueness check).
+- **Backward Compatibility**: When `username` is omitted, the system auto-generates a username from the person's email address (existing behavior).
 
 **Error Responses:**
 
