@@ -28,8 +28,8 @@ from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
-    KPIAnalysisRequest,
-    KPIAnalysisResponse,
+    MeasureAnalysisRequest,
+    MeasureAnalysisResponse,
     OperationsAnalysisRequest,
     OperationsAnalysisResponse,
     StrategyAnalysisRequest,
@@ -139,14 +139,14 @@ async def analyze_strategy(
 # KPI Analysis Routes
 
 
-@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_200_OK)
+@router.post("/kpi", response_model=MeasureAnalysisResponse, status_code=status.HTTP_200_OK)
 async def analyze_kpis(
-    request: KPIAnalysisRequest,
+    request: MeasureAnalysisRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
     jwt_token: str | None = Depends(get_jwt_token),
-) -> KPIAnalysisResponse:
-    """Analyze KPI effectiveness and provide recommendations.
+) -> MeasureAnalysisResponse:
+    """Analyze Measure effectiveness and provide recommendations.
 
     This endpoint evaluates the user's current KPIs and suggests improvements
     or additional metrics based on business goals and industry best practices.
@@ -159,7 +159,7 @@ async def analyze_kpis(
         handler: Generic AI handler
 
     Returns:
-        KPIAnalysisResponse with analysis and recommendations
+        MeasureAnalysisResponse with analysis and recommendations
     """
     logger.info(
         "Starting KPI analysis",
@@ -171,13 +171,13 @@ async def analyze_kpis(
     template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
-        KPIAnalysisResponse,
+        MeasureAnalysisResponse,
         await handler.handle_single_shot(
             http_method="POST",
             endpoint_path="/analysis/kpi",
             request_body=request,
             user_context=user,
-            response_model=KPIAnalysisResponse,
+            response_model=MeasureAnalysisResponse,
             template_processor=template_processor,
         ),
     )

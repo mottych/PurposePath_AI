@@ -33,8 +33,8 @@ from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
     AlignmentExplanationResponse,
     AlignmentSuggestionsResponse,
-    KPIRecommendationsRequest,
-    KPIRecommendationsResponse,
+    MeasureRecommendationsRequest,
+    MeasureRecommendationsResponse,
 )
 from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.onboarding import (
@@ -185,16 +185,16 @@ async def get_alignment_suggestions(
 
 @router.post(
     "/kpi-recommendations",
-    response_model=KPIRecommendationsResponse,
+    response_model=MeasureRecommendationsResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_kpi_recommendations(
-    request: KPIRecommendationsRequest,
+    request: MeasureRecommendationsRequest,
     user: UserContext = Depends(get_current_user),
     handler: GenericAIHandler = Depends(get_generic_handler),
     jwt_token: str | None = Depends(get_jwt_token),
-) -> KPIRecommendationsResponse:
-    """Generate KPI recommendations using topic-driven architecture.
+) -> MeasureRecommendationsResponse:
+    """Generate Measure recommendations using topic-driven architecture.
 
     Uses 'kpi_recommendations' topic.
     """
@@ -203,13 +203,13 @@ async def get_kpi_recommendations(
     template_processor = create_template_processor(jwt_token) if jwt_token else None
 
     return cast(
-        KPIRecommendationsResponse,
+        MeasureRecommendationsResponse,
         await handler.handle_single_shot(
             http_method="POST",
             endpoint_path="/coaching/kpi-recommendations",
             request_body=request,
             user_context=user,
-            response_model=KPIRecommendationsResponse,
+            response_model=MeasureRecommendationsResponse,
             template_processor=template_processor,
         ),
     )
@@ -237,7 +237,7 @@ async def get_strategy_suggestions(
     logger.info(
         "Generating strategy suggestions",
         user_id=user.user_id,
-        goal_intent=request.goal_intent[:100],
+        goal_intent=request.goal_intent[:100] if request.goal_intent else None,
     )
 
     template_processor = create_template_processor(jwt_token) if jwt_token else None
