@@ -19,7 +19,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from coaching.src.core.constants import ConversationStatus, MessageRole, TopicType
+from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
@@ -1435,7 +1435,7 @@ class CoachingSessionService:
         messages: list[dict[str, str]],
         llm_topic: LLMTopic,
         temperature_override: float | None = None,
-        user_tier: "TierLevel | None" = None,
+        user_tier: TierLevel | None = None,
     ) -> tuple[str, ResponseMetadata]:
         """Execute LLM call through provider factory with dynamic model resolution.
 
