@@ -1,12 +1,13 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: January 25, 2026
-- Version: 2.0
+- Last Updated: January 30, 2026
+- Version: 3.0
 
 ## Revision History
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-01-30 | 3.0 | **Issue #158 Completion:** Added tier-based LLM model selection and topic access control. Replaced `model_code` with `basic_model_code` and `premium_model_code`. Added `tier_level` field (FREE, BASIC, PREMIUM, ULTIMATE). |
 | 2026-01-25 | 2.0 | **Issue #196 Completion:** Fixed category enum values to match actual TopicCategory implementation, verified all field values match constants.py |
 | 2025-12-25 | 1.0 | Initial admin specification |
 
@@ -17,9 +18,26 @@
 This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, and test topics.
 
 **Important:** Topics are defined in the code-based `endpoint_registry` and cannot be created or deleted by admins. Admins can only:
-- Update topic configurations (model, temperature, prompts, etc.)
+- Update topic configurations (tier level, dual LLM models, temperature, prompts, etc.)
 - Manage prompt content (system, user, assistant prompts)
 - Test topic configurations before activation
+
+### Tier-Based Access Control (Issue #158)
+
+Each topic has a `tier_level` that controls:
+1. **Topic Access**: Which subscription tiers can access the topic
+2. **Model Selection**: Which LLM model to use based on user's tier
+
+**Tier Levels:**
+- **FREE**: Users can access only FREE topics, uses `basic_model_code`
+- **BASIC**: Users can access FREE + BASIC topics, uses `basic_model_code`
+- **PREMIUM**: Users can access FREE + BASIC + PREMIUM topics, uses `premium_model_code`
+- **ULTIMATE**: Users can access all topics, uses `premium_model_code`
+
+**Dual Model Configuration:**
+- `basic_model_code`: LLM model for FREE and BASIC tier users
+- `premium_model_code`: LLM model for PREMIUM and ULTIMATE tier users
+- Admins can set different models for each tier (e.g., Claude Haiku for basic, Claude Sonnet for premium)
 
 --- 
 
@@ -86,7 +104,9 @@ GET /api/v1/admin/topics
       "topic_name": "Core Values - Coaching Session",
       "category": "core_values",
       "topic_type": "conversation_coaching",
-      "model_code": "claude-3-5-sonnet-20241022",
+      "tier_level": "free",
+      "basic_model_code": "claude-3-5-sonnet-20241022",
+      "premium_model_code": "claude-3-5-sonnet-20241022",
       "temperature": 0.7,
       "max_tokens": 2000,
       "is_active": true,
@@ -155,7 +175,9 @@ GET /api/v1/admin/topics/{topic_id}
   "category": "core_values",
   "topic_type": "conversation_coaching",
   "description": "Explore your core values through conversation",
-  "model_code": "claude-3-5-sonnet-20241022",
+  "tier_level": "free",
+  "basic_model_code": "claude-3-5-sonnet-20241022",
+  "premium_model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
   "max_tokens": 2000,
   "top_p": 1.0,
@@ -330,7 +352,9 @@ POST /api/v1/admin/topics
   "category": "purpose",
   "topic_type": "conversation_coaching",
   "description": "Discover your life's purpose through guided conversation",
-  "model_code": "claude-3-5-sonnet-20241022",
+  "tier_level": "free",
+  "basic_model_code": "claude-3-5-sonnet-20241022",
+  "premium_model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
   "max_tokens": 2000,
   "top_p": 1.0,
@@ -383,7 +407,9 @@ POST /api/v1/admin/topics
 | `topic_name` | Required, 3-100 chars | Any printable characters |
 | `category` | Required | Enum: `onboarding`, `conversation`, `insights`, `strategic_planning`, `operations_ai`, `operations_strategic_integration`, `analysis` |
 | `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `measure_system` |
-| `model_code` | Required, must be valid model code | See "Supported Model Codes" below |
+| `tier_level` | Optional, default `free` | Enum: `free`, `basic`, `premium`, `ultimate` |
+| `basic_model_code` | Required, must be valid model code | See "Supported Model Codes" below (used for FREE/BASIC tiers) |
+| `premium_model_code` | Required, must be valid model code | See "Supported Model Codes" below (used for PREMIUM/ULTIMATE tiers) |
 | `temperature` | Required, float | 0.0-2.0 |
 | `max_tokens` | Required, integer | 1-100000 (model dependent) |
 | `top_p` | Optional, float, default 1.0 | 0.0-1.0 |
@@ -486,7 +512,9 @@ PUT /api/v1/admin/topics/{topic_id}
 {
   "topic_name": "Core Values - Updated Name",
   "description": "Updated description",
-  "model_code": "claude-3-5-haiku-20241022",
+  "tier_level": "basic",
+  "basic_model_code": "claude-3-5-haiku-20241022",
+  "premium_model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.5,
   "max_tokens": 1500,
   "is_active": true,
@@ -806,7 +834,9 @@ POST /api/v1/admin/topics/validate
   "topic_name": "Test Topic",
   "category": "custom",
   "topic_type": "single_shot",
-  "model_code": "claude-3-5-sonnet-20241022",
+  "tier_level": "free",
+  "basic_model_code": "claude-3-5-sonnet-20241022",
+  "premium_model_code": "claude-3-5-sonnet-20241022",
   "temperature": 0.7,
   "max_tokens": 2000,
   "prompts": [
