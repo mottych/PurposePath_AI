@@ -16,6 +16,520 @@ The Admin API provides administrative capabilities for managing user subscriptio
 
 ---
 
+## Admin Email Template Management Endpoints
+
+These endpoints manage transactional email templates used by the platform.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `Content-Type: application/json`
+
+---
+
+### GET /admin/api/v1/email-templates
+
+List email templates with pagination and optional filtering.
+
+**Query Parameters:**
+
+- `page` (integer, optional) - Page number (1-based, default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 20, max: 100)
+- `category` (string, optional) - Filter by category
+- `isActive` (boolean, optional) - Filter by active status
+
+**Response (200 OK):**
+
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Welcome Email",
+      "subject": "Welcome Email",
+      "description": "Welcome new users",
+      "category": "welcome",
+      "language": "en",
+      "isActive": true,
+      "isDefault": false,
+      "usageCount": 12,
+      "lastUsed": "2026-01-20T14:45:00Z",
+      "createdAt": "2026-01-01T10:00:00Z",
+      "updatedAt": "2026-01-10T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 45,
+    "totalPages": 3
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Templates retrieved successfully
+- `400 Bad Request` - Invalid pagination parameters
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.ListTemplates()`
+- Query: `ListEmailTemplatesQuery`
+- Handler: `ListEmailTemplatesQueryHandler`
+
+---
+
+### GET /admin/api/v1/email-templates/{id}
+
+Get a single email template by ID.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Welcome Email",
+  "subject": "Welcome Email",
+  "description": "Welcome new users",
+  "category": "welcome",
+  "language": "en",
+  "htmlContent": "<h1>Welcome</h1>",
+  "textContent": "Welcome",
+  "variables": [
+    {
+      "name": "UserName",
+      "description": "Recipient name",
+      "type": "string",
+      "required": true,
+      "defaultValue": null,
+      "example": null,
+      "syntaxHint": "@Model.UserName"
+    }
+  ],
+  "isActive": true,
+  "isDefault": false,
+  "lastUsed": "2026-01-20T14:45:00Z",
+  "usageCount": 12,
+  "createdAt": "2026-01-01T10:00:00Z",
+  "updatedAt": "2026-01-10T10:00:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": 0,
+    "clickRate": 0,
+    "bounceRate": 0,
+    "lastPerformanceUpdate": null,
+    "tags": ["onboarding"],
+    "notes": null
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Template retrieved successfully
+- `404 Not Found` - Template not found
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.GetTemplate()`
+- Query: `GetEmailTemplateQuery`
+- Handler: `GetEmailTemplateQueryHandler`
+
+---
+
+### POST /admin/api/v1/email-templates
+
+Create a new email template.
+
+**Request:**
+
+```json
+{
+  "name": "Welcome Email",
+  "subject": "Welcome Email",
+  "description": "Welcome new users",
+  "category": "welcome",
+  "language": "en",
+  "htmlContent": "<h1>Welcome @Model.UserName</h1>",
+  "textContent": "Welcome @Model.UserName",
+  "variables": [
+    {
+      "name": "UserName",
+      "description": "Recipient name",
+      "type": "string",
+      "required": true,
+      "defaultValue": null,
+      "example": null,
+      "syntaxHint": "@Model.UserName"
+    }
+  ],
+  "isActive": true,
+  "isDefault": false,
+  "tags": ["onboarding"],
+  "notes": null
+}
+```
+
+**Response (201 Created):**
+
+Returns the created template in the same shape as GET by ID.
+
+**Notes (current implementation):**
+
+- `subject` is accepted but ignored; response `subject` uses the template name.
+- `language`, `isActive`, `isDefault`, and `notes` are accepted but currently ignored.
+
+**Status Codes:**
+
+- `201 Created` - Template created successfully
+- `400 Bad Request` - Validation error (invalid category, duplicate name, etc.)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.CreateTemplate()`
+- Command: `CreateEmailTemplateCommand`
+- Handler: `CreateEmailTemplateCommandHandler`
+
+---
+
+### PATCH /admin/api/v1/email-templates/{id}
+
+Update an existing email template (partial update supported).
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Request:**
+
+```json
+{
+  "name": "Welcome Email (Updated)",
+  "description": "Updated description",
+  "category": "welcome",
+  "htmlContent": "<h1>Updated</h1>",
+  "textContent": "Updated",
+  "variables": [
+    {
+      "name": "UserName",
+      "description": "Recipient name",
+      "type": "string",
+      "required": true,
+      "defaultValue": null,
+      "example": null,
+      "syntaxHint": "@Model.UserName"
+    }
+  ],
+  "tags": ["onboarding"]
+}
+```
+
+**Response (200 OK):**
+
+Returns the updated template in the same shape as GET by ID.
+
+**Notes (current implementation):**
+
+- `subject`, `language`, `isActive`, `isDefault`, and `notes` are accepted but currently ignored.
+
+**Status Codes:**
+
+- `200 OK` - Template updated successfully
+- `400 Bad Request` - Validation error
+- `404 Not Found` - Template not found
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.UpdateTemplate()`
+- Command: `UpdateEmailTemplateCommand`
+- Handler: `UpdateEmailTemplateCommandHandler`
+
+---
+
+### POST /admin/api/v1/email-templates/{id}/clone
+
+Clone an existing email template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Request:**
+
+```json
+{
+  "name": "Welcome Email (Copy)",
+  "description": "Optional description",
+  "language": "en"
+}
+```
+
+**Response (201 Created):**
+
+Returns the cloned template in the same shape as GET by ID.
+
+**Notes (current implementation):**
+
+- Only `name` is used. `description` and `language` are accepted but ignored.
+
+**Status Codes:**
+
+- `201 Created` - Template cloned successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.CloneTemplate()`
+- Command: `CloneEmailTemplateCommand`
+- Handler: `CloneEmailTemplateCommandHandler`
+
+---
+
+### POST /admin/api/v1/email-templates/{id}/preview
+
+Generate a preview of the template with provided variables.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Request:**
+
+```json
+{
+  "variables": { "UserName": "Jane" },
+  "format": "both"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "subject": "Preview",
+  "htmlContent": "<h1>Welcome Jane</h1>",
+  "textContent": "Welcome Jane",
+  "variables": { "UserName": "Jane" },
+  "previewUrl": null
+}
+```
+
+**Notes (current implementation):**
+
+- `subject` is a placeholder (`"Preview"`).
+- If `format` is `html`, `textContent` is `null`. If `format` is `text`, `htmlContent` is `null`.
+
+**Status Codes:**
+
+- `200 OK` - Preview generated successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.PreviewTemplate()`
+- Command: `PreviewEmailTemplateCommand`
+- Handler: `PreviewEmailTemplateCommandHandler`
+
+---
+
+### POST /admin/api/v1/email-templates/{id}/test
+
+Send a test email using the specified template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Request:**
+
+```json
+{
+  "toEmail": "test@example.com",
+  "variables": { "UserName": "Jane" },
+  "fromName": "PurposePath",
+  "fromEmail": "noreply@purposepath.app"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "sent": true,
+  "messageId": "0000000000000000-000000",
+  "to": "test@example.com"
+}
+```
+
+**Notes (current implementation):**
+
+- `fromName` and `fromEmail` are accepted but currently ignored.
+
+**Status Codes:**
+
+- `200 OK` - Test email sent
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.TestTemplate()`
+- Command: `TestEmailTemplateCommand`
+- Handler: `TestEmailTemplateCommandHandler`
+
+---
+
+### GET /admin/api/v1/email-templates/{id}/analytics
+
+Get usage analytics for a template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Query Parameters:**
+
+- `period` (string, optional) - "day", "week", "month", "year" (default: "month")
+- `startDate` (string, optional) - ISO 8601 timestamp
+- `endDate` (string, optional) - ISO 8601 timestamp
+
+**Response (200 OK):**
+
+```json
+{
+  "templateId": "550e8400-e29b-41d4-a716-446655440000",
+  "templateName": "Analytics Coming Soon",
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-31T23:59:59Z"
+  },
+  "metrics": {
+    "sent": 0,
+    "delivered": 0,
+    "opened": 0,
+    "clicked": 0,
+    "bounced": 0,
+    "unsubscribed": 0
+  },
+  "rates": {
+    "deliveryRate": 0,
+    "openRate": 0,
+    "clickRate": 0,
+    "bounceRate": 0,
+    "unsubscribeRate": 0
+  },
+  "timeline": []
+}
+```
+
+**Notes (current implementation):**
+
+- Analytics are placeholders until tracking is implemented.
+
+**Status Codes:**
+
+- `200 OK` - Analytics retrieved successfully
+- `404 Not Found` - Template not found
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.GetAnalytics()`
+- Query: `GetEmailTemplateAnalyticsQuery`
+- Handler: `GetEmailTemplateAnalyticsQueryHandler`
+
+---
+
+### GET /admin/api/v1/email-templates/categories
+
+Get available email template categories with counts.
+
+**Response (200 OK):**
+
+```json
+{
+  "categories": [
+    {
+      "name": "welcome",
+      "description": "Welcome and onboarding emails",
+      "templateCount": 3,
+      "requiredVariables": []
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Categories retrieved successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.GetCategories()`
+- Query: `GetEmailTemplateCategoriesQuery`
+- Handler: `GetEmailTemplateCategoriesQueryHandler`
+
+---
+
+### DELETE /admin/api/v1/email-templates/{id}
+
+Delete an email template (soft delete).
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Email template ID
+
+**Response:**
+
+- `204 No Content`
+
+**Status Codes:**
+
+- `204 No Content` - Template deleted successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `EmailTemplatesController.DeleteTemplate()`
+- Command: `DeleteEmailTemplateCommand`
+- Handler: `DeleteEmailTemplateCommandHandler`
+
+---
+
 ## Admin Tenant Management Endpoints
 
 ### GET /admin/tenants/{tenantId}/people
