@@ -1,6 +1,6 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 2.3  
+**Version:** 2.4  
 **Last Updated:** January 29, 2026  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
@@ -14,6 +14,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-01-29 | 2.4 | **Issue #201 Completion:** Redesigned website_scan response structure to align with BusinessFoundation data model - now extracts industry, founding year, vision/purpose hints, core values, and structures data for direct population of business foundation fields |
 | 2026-01-29 | 2.3 | **Issue #200 Completion:** Enriched alignment_check topic with strategies parameter - alignment analysis now considers implementation strategies alongside goal and business foundation |
 | 2026-01-25 | 2.2 | **Issue #196 Completion:** Fixed measure_recommendations field name (kpiName → name), verified all field names match Pydantic models, ensured prompt templates align with validation schemas |
 | 2026-01-15 | 2.1 | Major restructure: Added revision log, index, reorganized topics by category, moved async and coaching endpoints to Core Endpoints section, verified all topics from registry |
@@ -751,7 +752,7 @@ These parameters are automatically fetched from the Account Service:
 
 #### Topic: `website_scan`
 
-Scan a website URL and extract business information for onboarding.
+Scan a website URL and extract business foundation information for onboarding. The response structure aligns with the BusinessFoundation data model to facilitate direct population of business foundation fields.
 
 **Request Payload Structure:**
 
@@ -778,51 +779,75 @@ Scan a website URL and extract business information for onboarding.
   "success": true,
   "data": {
     "scan_id": "scan_f3c9ab",
-    "captured_at": "2026-01-11T03:12:54Z",
+    "captured_at": "2026-01-29T18:45:00Z",
     "source_url": "https://example.com",
-    "company_profile": {
-      "company_name": "Example Corp",
-      "legal_name": "Example Corporation, Inc.",
-      "tagline": "Data-driven growth for modern teams",
-      "overview": "Example Corp provides analytics-driven marketing platforms..."
+    "business_profile": {
+      "business_name": "Example Corp",
+      "business_description": "Example Corp provides AI-powered strategic planning tools that help growing businesses achieve clarity and focus.",
+      "industry": "Technology",
+      "year_founded": 2018,
+      "headquarters_location": "San Francisco, CA",
+      "website": "https://example.com"
+    },
+    "core_identity": {
+      "vision_hint": "To be the leading platform for strategic business planning",
+      "purpose_hint": "We empower businesses to achieve their full potential through clarity and focus",
+      "inferred_values": ["Innovation", "Integrity", "Customer Success", "Continuous Improvement"]
     },
     "target_market": {
-      "primary_audience": "Marketing and revenue leaders at mid-market SaaS companies",
-      "segments": ["B2B SaaS (ARR $5M-$50M)", "Hybrid go-to-market teams"],
-      "pain_points": ["Fragmented channel analytics", "Slow experimentation cycles"]
+      "niche_statement": "Mid-market B2B SaaS companies seeking strategic planning and execution tools",
+      "segments": ["B2B SaaS (ARR $5M-$50M)", "Growth-stage technology companies", "Professional services firms"],
+      "pain_points": ["Fragmented strategic planning tools", "Lack of goal-execution alignment", "Difficulty measuring progress"]
     },
-    "offers": {
-      "primary_product": "Growth Experimentation Platform",
-      "categories": ["Marketing analytics", "Campaign orchestration"],
-      "features": ["Channel performance dashboards", "Experiment templates"],
-      "differentiators": ["Playbooks tuned for B2B SaaS", "Fast setup"]
-    },
-    "credibility": {
-      "notable_clients": ["Northwind Analytics", "Contoso Labs"],
-      "testimonials": [{"quote": "We doubled qualified pipeline...", "attribution": "VP Growth, Northwind"}]
-    },
-    "conversion": {
-      "primary_cta_text": "Book a growth audit",
-      "primary_cta_url": "https://example.com/demo"
+    "products": [
+      {
+        "name": "PurposePath Pro",
+        "description": "AI-powered strategic planning platform with goal setting, measure tracking, and team alignment",
+        "problem_solved": "Businesses struggle to translate vision into actionable plans and measure progress effectively",
+        "key_features": ["Goal wizard", "Measure tracking", "AI recommendations", "Team collaboration"]
+      },
+      {
+        "name": "Executive Coaching",
+        "description": "One-on-one strategic coaching for business leaders",
+        "problem_solved": "Leaders need guidance to develop effective strategies and overcome execution challenges",
+        "key_features": ["Personalized coaching", "Strategic frameworks", "Accountability system"]
+      }
+    ],
+    "value_proposition": {
+      "unique_selling_proposition": "The only strategic planning platform that combines AI insights with proven business frameworks",
+      "key_differentiators": ["AI-powered recommendations", "Integrated coaching", "Built specifically for strategic planning"],
+      "proof_points": ["500+ businesses served", "78% goal completion rate", "92% report better strategic clarity"]
     }
   },
   "schema_ref": "WebsiteScanResponse",
   "metadata": {
     "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "tokens_used": 1850,
-    "processing_time_ms": 8500,
+    "tokens_used": 2100,
+    "processing_time_ms": 9200,
     "finish_reason": "stop"
   }
 }
 ```
+
+**Response Structure Details:**
+
+| Section | Fields | Description |
+|---------|--------|-------------|
+| `business_profile` | business_name, business_description, industry, year_founded, headquarters_location, website | Core business information aligned with BusinessFoundation.profile |
+| `core_identity` | vision_hint, purpose_hint, inferred_values | Vision, purpose, and values inferred from website content, aligned with BusinessFoundation.identity |
+| `target_market` | niche_statement, segments, pain_points | Target market information aligned with BusinessFoundation.market |
+| `products` | name, description, problem_solved, key_features | Product/service array aligned with BusinessFoundation.products |
+| `value_proposition` | unique_selling_proposition, key_differentiators, proof_points | Value proposition aligned with BusinessFoundation.proposition |
 
 **Notes:**
 
 - This topic uses a **retrieval method** (`get_website_content`) to fetch and parse the website
 - The `website_url` parameter is passed from the frontend payload
 - The retrieval method scrapes the website and provides `website_content`, `website_title`, and `meta_description` to the prompt template
-- Results used to pre-fill onboarding form
+- **Response structure aligns with BusinessFoundation data model** - extracted data can be directly mapped to business foundation fields
+- Optional fields (industry, year_founded, vision_hint, purpose_hint, etc.) return null if not found on website
 - May return partial results if website has anti-scraping measures
+- Use extracted data to pre-populate business foundation onboarding wizard
 
 ---
 

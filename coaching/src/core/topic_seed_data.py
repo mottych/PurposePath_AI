@@ -76,59 +76,74 @@ TOPIC_SEED_DATA: dict[str, TopicSeedData] = {
         model_code="anthropic.claude-3-5-sonnet-20241022-v1:0",
         temperature=0.7,
         max_tokens=4096,
-        default_system_prompt="""You are an expert business analyst performing structured extraction from website content.
-- Read provided content only; avoid speculation.
-- Populate every field with concise, factual statements; if absent, leave the list empty or use a short placeholder such as "Unknown".
-- Return JSON using the exact field names requested.
-- Prefer bullet-friendly phrasing for lists; keep overview sentences tight.""",
-        default_user_prompt="""Analyze this website content and produce a structured JSON object.
+        default_system_prompt="""You are an expert business analyst extracting structured business foundation information from website content.
+
+EXTRACTION FOCUS:
+- Extract factual information that helps populate business foundation fields
+- Infer vision, purpose, and values from mission statements, about us, and company culture sections
+- Classify industry and identify founding information when available
+- Structure product/service information clearly
+- Prioritize information relevant to strategic planning and business identity
+
+GUIDELINES:
+- Extract only what's present; use null for missing optional fields, empty arrays for lists
+- Keep descriptions concise (1-3 sentences for business_description)
+- Return valid JSON with exact field names as specified
+- Avoid speculation; base inferences on actual website content""",
+        default_user_prompt="""Extract business foundation information from this website content:
 
 URL: {website_url}
 Title: {website_title}
-Meta description: {meta_description}
-Body: {website_content}
+Meta Description: {meta_description}
+Body Content: {website_content}
 
-Return JSON with this exact shape:
+Return JSON with this exact structure:
 {
-        "scan_id": "<new short id>",
-        "captured_at": "<ISO8601 timestamp>",
-        "source_url": "{website_url}",
-        "company_profile": {
-                "company_name": "<public name>",
-                "legal_name": "<registered legal name>",
-                "tagline": "<marketing headline>",
-                "overview": "<1-3 sentence business overview>"
-        },
-        "target_market": {
-                "primary_audience": "<primary buyer persona>",
-                "segments": ["<segment>", "<segment>", "<segment>", ...],
-                "pain_points": ["<pain point>", "<pain point>", "<pain point>", ...]
-        },
-        "offers": {
-                "primary_product": "<main offer>",
-                "categories": ["<category>", ...],
-                "features": ["<feature>", ...],
-                "differentiators": ["<differentiator>", ...]
-        },
-        "credibility": {
-                "notable_clients": ["<client>", ...],
-                "testimonials": [
-                        {"quote": "<short quote>", "attribution": "<name or role>"}
-                ]
-        },
-        "conversion": {
-                "primary_cta_text": "<CTA text>",
-                "primary_cta_url": "<CTA URL>",
-                "supporting_assets": [
-                        {"label": "<asset label>", "url": "<asset URL>"}
-                ]
-        }
+  "scan_id": "<generate short unique id>",
+  "captured_at": "<current ISO8601 timestamp>",
+  "source_url": "{website_url}",
+  "business_profile": {
+    "business_name": "<company name>",
+    "business_description": "<1-3 sentence business overview>",
+    "industry": "<primary industry classification or null>",
+    "year_founded": <year as integer or null>,
+    "headquarters_location": "<City, State/Country or null>",
+    "website": "{website_url}"
+  },
+  "core_identity": {
+    "vision_hint": "<inferred vision/long-term aspiration from mission or about sections, or null>",
+    "purpose_hint": "<inferred purpose/mission statement, or null>",
+    "inferred_values": ["<value 1>", "<value 2>", ...]
+  },
+  "target_market": {
+    "niche_statement": "<target market or niche description>",
+    "segments": ["<segment 1>", "<segment 2>", ...],
+    "pain_points": ["<pain point 1>", "<pain point 2>", ...]
+  },
+  "products": [
+    {
+      "name": "<product/service name>",
+      "description": "<product description or null>",
+      "problem_solved": "<problem this solves>",
+      "key_features": ["<feature 1>", "<feature 2>", ...]
+    }
+  ],
+  "value_proposition": {
+    "unique_selling_proposition": "<main USP/headline or null>",
+    "key_differentiators": ["<differentiator 1>", ...],
+    "proof_points": ["<metric, testimonial, achievement>", ...]
+  }
 }
 
-Rules:
-- Keep lists meaningful (3-5 items when available); use empty arrays if nothing is present.
-- Do not add extra top-level keys or narrative outside the JSON.
-- Provide real URLs only when present in content; otherwise omit rather than fabricate.""",
+EXTRACTION PRIORITIES:
+1. Company name and description (required)
+2. Target market/niche statement (required)
+3. Products/services with problems solved (at least 1)
+4. Vision, purpose, and values (if present in content)
+5. Industry, founding year, location (if available)
+6. Value proposition and differentiators
+
+Return only the JSON object, no additional narrative.""",
         display_order=10,
     ),
     "onboarding_suggestions": TopicSeedData(

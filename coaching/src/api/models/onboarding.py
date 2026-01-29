@@ -46,93 +46,79 @@ class WebsiteScanRequest(BaseModel):
     )
 
 
-class ProductInfo(BaseModel):
-    """Product or service information extracted from website."""
+class WebsiteScanBusinessProfile(BaseModel):
+    """Business profile information aligned with BusinessFoundation.profile."""
 
-    id: str = Field(
-        ...,
-        description="Unique identifier (lowercase, hyphenated)",
+    business_name: str = Field(..., description="Public-facing company name")
+    business_description: str = Field(..., description="1-3 sentence business overview")
+    industry: str | None = Field(None, description="Primary industry classification")
+    year_founded: int | None = Field(None, description="Year the company was founded")
+    headquarters_location: str | None = Field(None, description="City, State or City, Country")
+    website: str = Field(..., description="Company website URL")
+
+
+class WebsiteScanCoreIdentity(BaseModel):
+    """Core identity hints aligned with BusinessFoundation.identity."""
+
+    vision_hint: str | None = Field(
+        None, description="Inferred vision or long-term aspiration from website content"
     )
-    name: str = Field(
-        ...,
-        description="Product or service name",
+    purpose_hint: str | None = Field(None, description="Inferred purpose or mission statement")
+    inferred_values: list[str] = Field(
+        default_factory=list,
+        description="Core values inferred from company culture, about us, or values sections",
     )
-    problem: str = Field(
-        ...,
-        description="Problem this product/service solves",
-    )
-
-
-class WebsiteScanCompanyProfile(BaseModel):
-    """Company profile details extracted from the website."""
-
-    company_name: str = Field(..., description="Public-facing company name")
-    legal_name: str = Field(..., description="Registered legal entity name")
-    tagline: str = Field(..., description="Marketing tagline or headline")
-    overview: str = Field(..., description="One-paragraph business overview")
 
 
 class WebsiteScanTargetMarket(BaseModel):
-    """Target market insights."""
+    """Target market insights aligned with BusinessFoundation.market."""
 
-    primary_audience: str = Field(..., description="Primary audience or buyer persona")
-    segments: list[str] = Field(..., description="Market segments served")
-    pain_points: list[str] = Field(..., description="Key pain points addressed")
-
-
-class WebsiteScanOffers(BaseModel):
-    """Products and offers highlighted on the site."""
-
-    primary_product: str = Field(..., description="Main product or offer")
-    categories: list[str] = Field(..., description="Product/solution categories")
-    features: list[str] = Field(..., description="Notable features or capabilities")
-    differentiators: list[str] = Field(..., description="Differentiators vs competitors")
+    niche_statement: str = Field(..., description="Target market or niche description")
+    segments: list[str] = Field(
+        default_factory=list, description="Specific market segments or customer types"
+    )
+    pain_points: list[str] = Field(default_factory=list, description="Key pain points addressed")
 
 
-class WebsiteScanTestimonial(BaseModel):
-    """Customer testimonial snippet."""
+class WebsiteScanProduct(BaseModel):
+    """Product or service information aligned with BusinessFoundation.products."""
 
-    quote: str = Field(..., description="Customer quote")
-    attribution: str = Field(..., description="Attribution for the quote")
-
-
-class WebsiteScanCredibility(BaseModel):
-    """Signals that build trust."""
-
-    notable_clients: list[str] = Field(..., description="List of notable clients")
-    testimonials: list[WebsiteScanTestimonial] = Field(
-        default_factory=list, description="Testimonials pulled from the site"
+    name: str = Field(..., description="Product or service name")
+    description: str | None = Field(None, description="Product description")
+    problem_solved: str = Field(..., description="Problem this product/service solves")
+    key_features: list[str] = Field(
+        default_factory=list, description="Key features or capabilities"
     )
 
 
-class WebsiteScanSupportingAsset(BaseModel):
-    """Supporting asset promoted on the page."""
+class WebsiteScanValueProposition(BaseModel):
+    """Value proposition aligned with BusinessFoundation.proposition."""
 
-    label: str = Field(..., description="Display label for the asset")
-    url: str = Field(..., description="URL to the asset")
-
-
-class WebsiteScanConversion(BaseModel):
-    """Conversion-oriented content from the site."""
-
-    primary_cta_text: str = Field(..., description="Primary call-to-action text")
-    primary_cta_url: str = Field(..., description="Primary call-to-action URL")
-    supporting_assets: list[WebsiteScanSupportingAsset] = Field(
-        default_factory=list, description="Supporting assets for conversion"
+    unique_selling_proposition: str | None = Field(
+        None, description="Main unique selling proposition or headline"
+    )
+    key_differentiators: list[str] = Field(
+        default_factory=list, description="Key differentiators vs competitors"
+    )
+    proof_points: list[str] = Field(
+        default_factory=list,
+        description="Social proof, testimonials, metrics, or achievements",
     )
 
 
 class WebsiteScanResponse(BaseModel):
-    """Data payload for website_scan topic results (no wrappers)."""
+    """Data payload for website_scan topic results aligned with BusinessFoundation structure."""
 
     scan_id: str = Field(..., description="Unique identifier for this scan run")
     captured_at: str = Field(..., description="ISO8601 timestamp when the scan was captured")
     source_url: str = Field(..., description="URL that was scanned")
-    company_profile: WebsiteScanCompanyProfile
+    business_profile: WebsiteScanBusinessProfile
+    core_identity: WebsiteScanCoreIdentity
     target_market: WebsiteScanTargetMarket
-    offers: WebsiteScanOffers
-    credibility: WebsiteScanCredibility
-    conversion: WebsiteScanConversion
+    products: list[WebsiteScanProduct] = Field(
+        default_factory=list, description="Products or services offered"
+    )
+    value_proposition: WebsiteScanValueProposition
 
 
 # Coaching endpoint models
@@ -217,11 +203,11 @@ __all__ = [
     "OnboardingSuggestionRequest",
     "OnboardingSuggestionResponse",
     "SuggestionVariation",
-    "WebsiteScanCompanyProfile",
-    "WebsiteScanConversion",
-    "WebsiteScanCredibility",
-    "WebsiteScanOffers",
+    "WebsiteScanBusinessProfile",
+    "WebsiteScanCoreIdentity",
+    "WebsiteScanProduct",
     "WebsiteScanRequest",
     "WebsiteScanResponse",
     "WebsiteScanTargetMarket",
+    "WebsiteScanValueProposition",
 ]
