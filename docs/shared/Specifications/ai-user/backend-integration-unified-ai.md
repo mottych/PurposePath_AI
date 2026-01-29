@@ -1,7 +1,7 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 2.2  
-**Last Updated:** January 25, 2026  
+**Version:** 2.3  
+**Last Updated:** January 29, 2026  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -14,6 +14,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-01-29 | 2.3 | **Issue #200 Completion:** Enriched alignment_check topic with strategies parameter - alignment analysis now considers implementation strategies alongside goal and business foundation |
 | 2026-01-25 | 2.2 | **Issue #196 Completion:** Fixed measure_recommendations field name (kpiName → name), verified all field names match Pydantic models, ensured prompt templates align with validation schemas |
 | 2026-01-15 | 2.1 | Major restructure: Added revision log, index, reorganized topics by category, moved async and coaching endpoints to Core Endpoints section, verified all topics from registry |
 | 2026-01-11 | 2.0 | Terminology update: Replaced all "KPI" references with "Measure", added new topics and parameter enrichment documentation |
@@ -1355,7 +1356,7 @@ The `data` field contains:
 
 #### Topic: `alignment_check`
 
-Calculate alignment score between a goal and business foundation.
+Calculate alignment score between a goal and business foundation, considering both the goal itself and the strategies chosen to implement it.
 
 **Request Payload Structure:**
 
@@ -1374,7 +1375,7 @@ Calculate alignment score between a goal and business foundation.
 |-----------|------|----------|-------------|
 | `goal_id` | string | Yes | ID of goal to check alignment for |
 
-**Auto-enriched Parameters:** `goal`, `business_foundation` (vision, purpose, core_values)
+**Auto-enriched Parameters:** `goal`, `business_foundation` (vision, purpose, core_values), `strategies` (implementation strategies for the goal)
 
 **Response Model:** `AlignmentAnalysisResponse`
 
