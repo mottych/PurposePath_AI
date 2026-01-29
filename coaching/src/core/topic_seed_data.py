@@ -554,7 +554,11 @@ ANALYSIS APPROACH:
 1. Analyze vision alignment: Does the goal support the long-term vision?
 2. Analyze purpose alignment: Does the goal serve the organization's purpose?
 3. Analyze values alignment: Does the goal reflect and uphold core values?
-4. Consider conflicts: Does anything in the goal contradict the foundation?
+4. Analyze strategy alignment: Do the implementation strategies support or undermine alignment?
+   - Strategies that align with values can boost the overall score
+   - Strategies that conflict with values or purpose can reduce alignment
+   - Consider whether the chosen approach to achieving the goal is value-aligned
+5. Consider conflicts: Does anything in the goal or its strategies contradict the foundation?
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
@@ -568,7 +572,7 @@ Return a JSON object with this exact structure:
     "valuesAlignment": <0-100>
   }
 }""",
-        default_user_prompt="""Analyze the alignment of this goal with the business foundation.
+        default_user_prompt="""Analyze the alignment of this goal with the business foundation, considering both the goal itself and the strategies chosen to implement it.
 
 GOAL INTENT:
 {goalIntent}
@@ -578,6 +582,16 @@ BUSINESS CONTEXT:
 - Vision: {vision}
 - Purpose: {purpose}
 - Core Values: {coreValues}
+
+IMPLEMENTATION STRATEGIES FOR THIS GOAL:
+{strategies_for_goal}
+
+Note: Filter the strategies list to only include strategies where strategy_goal_id matches the goal_id. If no strategies exist for this goal, base alignment solely on the goal itself.
+
+IMPORTANT: When strategies are present, consider how they impact alignment:
+- Do the strategies align with the organization's values and purpose?
+- Are the chosen approaches ethical and value-consistent?
+- Do the implementation methods enhance or diminish the goal's alignment?
 
 Calculate alignment scores and provide specific, actionable suggestions for improvement.""",
         display_order=42,

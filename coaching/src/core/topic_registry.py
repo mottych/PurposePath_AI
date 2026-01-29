@@ -405,6 +405,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         parameter_refs=(
             _goal("goal"),
             _onb("business_foundation"),
+            _strategies("strategies"),
         ),
     ),
     "alignment_explanation": TopicDefinition(
