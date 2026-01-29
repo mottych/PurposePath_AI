@@ -228,8 +228,9 @@ class PromptService:
             PromptTemplate in legacy format
         """
         # Build LLMConfig from explicit LLMTopic fields
+        # For backward compatibility, use premium_model_code (most capable model)
         llm_config = LLMConfig(
-            model=topic.model_code,
+            model=topic.premium_model_code,
             temperature=topic.temperature,
             max_tokens=topic.max_tokens,
             top_p=topic.top_p,

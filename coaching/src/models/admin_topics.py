@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from coaching.src.core.constants import PromptType
+from coaching.src.core.constants import PromptType, TierLevel
 from pydantic import BaseModel, Field, field_validator
 
 # Conversation Config (for coaching topics only)
@@ -52,7 +52,9 @@ class CreateTopicRequest(BaseModel):
     category: str = Field(..., min_length=3, max_length=50, description="Topic category")
     topic_type: str = Field(..., description="Topic type")
     description: str | None = Field(None, max_length=500, description="Topic description")
-    model_code: str = Field(..., description="LLM model code")
+    tier_level: TierLevel = Field(TierLevel.FREE, description="Subscription tier required to access")
+    basic_model_code: str = Field(..., description="LLM model for Free/Basic tiers")
+    premium_model_code: str = Field(..., description="LLM model for Premium/Ultimate tiers")
     temperature: float = Field(..., ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int = Field(..., gt=0, description="Maximum tokens")
     top_p: float = Field(1.0, ge=0.0, le=1.0, description="Top-p sampling")
@@ -84,7 +86,9 @@ class UpdateTopicRequest(BaseModel):
 
     topic_name: str | None = Field(None, min_length=3, max_length=100, description="Display name")
     description: str | None = Field(None, max_length=500, description="Topic description")
-    model_code: str | None = Field(None, description="LLM model code")
+    tier_level: TierLevel | None = Field(None, description="Subscription tier required to access")
+    basic_model_code: str | None = Field(None, description="LLM model for Free/Basic tiers")
+    premium_model_code: str | None = Field(None, description="LLM model for Premium/Ultimate tiers")
     temperature: float | None = Field(None, ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int | None = Field(None, gt=0, description="Maximum tokens")
     top_p: float | None = Field(None, ge=0.0, le=1.0, description="Top-p sampling")
@@ -132,7 +136,9 @@ class ValidateTopicRequest(BaseModel):
     topic_name: str = Field(..., description="Display name")
     category: str = Field(..., description="Topic category")
     topic_type: str = Field(..., description="Topic type")
-    model_code: str = Field(..., description="LLM model code")
+    tier_level: TierLevel = Field(TierLevel.FREE, description="Subscription tier required")
+    basic_model_code: str = Field(..., description="LLM model for Free/Basic tiers")
+    premium_model_code: str = Field(..., description="LLM model for Premium/Ultimate tiers")
     temperature: float = Field(..., description="Model temperature")
     max_tokens: int = Field(..., description="Maximum tokens")
     prompts: list[dict[str, str]] = Field(default_factory=list, description="Prompts to validate")
@@ -185,7 +191,9 @@ class TopicSummary(BaseModel):
     topic_name: str = Field(..., description="Display name")
     category: str = Field(..., description="Topic category")
     topic_type: str = Field(..., description="Topic type")
-    model_code: str = Field(..., description="LLM model code")
+    tier_level: str = Field(..., description="Subscription tier required to access")
+    basic_model_code: str = Field(..., description="LLM model for Free/Basic tiers")
+    premium_model_code: str = Field(..., description="LLM model for Premium/Ultimate tiers")
     temperature: float = Field(..., description="Model temperature")
     max_tokens: int = Field(..., description="Maximum tokens")
     is_active: bool = Field(..., description="Whether topic is active")
@@ -210,7 +218,9 @@ class TopicDetail(BaseModel):
     category: str = Field(..., description="Topic category")
     topic_type: str = Field(..., description="Topic type")
     description: str | None = Field(None, description="Topic description")
-    model_code: str = Field(..., description="LLM model code")
+    tier_level: str = Field(..., description="Subscription tier required to access")
+    basic_model_code: str = Field(..., description="LLM model for Free/Basic tiers")
+    premium_model_code: str = Field(..., description="LLM model for Premium/Ultimate tiers")
     temperature: float = Field(..., description="Model temperature")
     max_tokens: int = Field(..., description="Maximum tokens")
     top_p: float = Field(..., description="Top-p sampling")

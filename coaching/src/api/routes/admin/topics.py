@@ -113,7 +113,9 @@ def _map_topic_to_summary(
         topic_name=topic.topic_name,
         category=topic.category,
         topic_type=topic.topic_type,
-        model_code=topic.model_code,
+        tier_level=topic.tier_level.value,
+        basic_model_code=topic.basic_model_code,
+        premium_model_code=topic.premium_model_code,
         temperature=topic.temperature,
         max_tokens=topic.max_tokens,
         is_active=topic.is_active,
@@ -189,7 +191,9 @@ def _map_topic_to_detail(
         category=topic.category,
         topic_type=topic.topic_type,
         description=topic.description,
-        model_code=topic.model_code,
+        tier_level=topic.tier_level.value,
+        basic_model_code=topic.basic_model_code,
+        premium_model_code=topic.premium_model_code,
         temperature=topic.temperature,
         max_tokens=topic.max_tokens,
         top_p=topic.top_p,
@@ -492,7 +496,9 @@ async def create_topic(
             topic_type=request.topic_type,
             category=request.category,
             is_active=request.is_active,
-            model_code=request.model_code,
+            tier_level=request.tier_level,
+            basic_model_code=request.basic_model_code,
+            premium_model_code=request.premium_model_code,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
             top_p=request.top_p,
@@ -578,8 +584,12 @@ async def upsert_topic(
                 updates["topic_name"] = request.topic_name
             if request.description is not None:
                 updates["description"] = request.description
-            if request.model_code is not None:
-                updates["model_code"] = request.model_code
+            if request.tier_level is not None:
+                updates["tier_level"] = request.tier_level
+            if request.basic_model_code is not None:
+                updates["basic_model_code"] = request.basic_model_code
+            if request.premium_model_code is not None:
+                updates["premium_model_code"] = request.premium_model_code
             if request.temperature is not None:
                 updates["temperature"] = request.temperature
             if request.max_tokens is not None:
@@ -640,7 +650,15 @@ async def upsert_topic(
                         if request.description is not None
                         else base_topic.description
                     ),
-                    model_code=request.model_code or base_topic.model_code,
+                    tier_level=(
+                        request.tier_level if request.tier_level is not None else base_topic.tier_level
+                    ),
+                    basic_model_code=(
+                        request.basic_model_code or base_topic.basic_model_code
+                    ),
+                    premium_model_code=(
+                        request.premium_model_code or base_topic.premium_model_code
+                    ),
                     temperature=(
                         request.temperature
                         if request.temperature is not None
@@ -690,6 +708,7 @@ async def upsert_topic(
                     )
 
                 # Create with defaults and provided values
+                from coaching.src.core.constants import TierLevel
                 new_topic = LLMTopic(
                     topic_id=topic_id,
                     topic_name=request.topic_name,
@@ -700,7 +719,9 @@ async def upsert_topic(
                         request.display_order if request.display_order is not None else 100
                     ),
                     is_active=request.is_active if request.is_active is not None else False,
-                    model_code=request.model_code or "claude-3-5-sonnet-20241022",
+                    tier_level=request.tier_level if request.tier_level is not None else TierLevel.FREE,
+                    basic_model_code=request.basic_model_code or "claude-3-5-sonnet-20241022",
+                    premium_model_code=request.premium_model_code or "claude-3-5-sonnet-20241022",
                     temperature=request.temperature if request.temperature is not None else 0.7,
                     max_tokens=request.max_tokens if request.max_tokens is not None else 2000,
                     top_p=request.top_p if request.top_p is not None else 1.0,
