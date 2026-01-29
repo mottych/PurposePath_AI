@@ -6,16 +6,13 @@ from coaching.src.api.models.onboarding import (
     OnboardingCoachingResponse,
     OnboardingSuggestionRequest,
     OnboardingSuggestionResponse,
-    ProductInfo,
-    WebsiteScanCompanyProfile,
-    WebsiteScanConversion,
-    WebsiteScanCredibility,
-    WebsiteScanOffers,
+    WebsiteScanBusinessProfile,
+    WebsiteScanCoreIdentity,
+    WebsiteScanProduct,
     WebsiteScanRequest,
     WebsiteScanResponse,
-    WebsiteScanSupportingAsset,
     WebsiteScanTargetMarket,
-    WebsiteScanTestimonial,
+    WebsiteScanValueProposition,
 )
 from pydantic import ValidationError
 
@@ -202,28 +199,43 @@ class TestWebsiteScanRequest:
 
 
 @pytest.mark.unit
-class TestProductInfo:
-    """Test ProductInfo model."""
+class TestWebsiteScanProduct:
+    """Test WebsiteScanProduct model."""
 
-    def test_valid_product_info(self):
-        """Test valid ProductInfo creation."""
+    def test_valid_product(self):
+        """Test valid WebsiteScanProduct creation."""
         # Arrange & Act
-        product = ProductInfo(
-            id="crm-software",
+        product = WebsiteScanProduct(
             name="CRM Software",
-            problem="Helps manage customer relationships",
+            description="Customer relationship management platform",
+            problem_solved="Helps manage customer relationships effectively",
+            key_features=["Contact management", "Sales pipeline", "Reporting"],
         )
 
         # Assert
-        assert product.id == "crm-software"
         assert product.name == "CRM Software"
-        assert product.problem == "Helps manage customer relationships"
+        assert product.description == "Customer relationship management platform"
+        assert product.problem_solved == "Helps manage customer relationships effectively"
+        assert len(product.key_features) == 3
+
+    def test_product_with_minimal_fields(self):
+        """Test WebsiteScanProduct with only required fields."""
+        # Arrange & Act
+        product = WebsiteScanProduct(
+            name="Basic Service",
+            problem_solved="Solves a specific problem",
+        )
+
+        # Assert
+        assert product.name == "Basic Service"
+        assert product.description is None
+        assert product.key_features == []
 
     def test_missing_required_field(self):
-        """Test ProductInfo requires all fields."""
+        """Test WebsiteScanProduct requires name and problem_solved."""
         # Arrange & Act & Assert
         with pytest.raises(ValidationError):
-            ProductInfo(id="test", name="Test")  # Missing problem
+            WebsiteScanProduct(name="Test")  # Missing problem_solved
 
 
 @pytest.mark.unit
@@ -237,43 +249,45 @@ class TestWebsiteScanResponse:
             scan_id="scan-123",
             captured_at="2024-12-25T00:00:00Z",
             source_url="https://example.com",
-            company_profile=WebsiteScanCompanyProfile(
-                company_name="Acme Corp",
-                legal_name="Acme, Inc.",
-                tagline="We make things",
-                overview="A company that makes things",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Acme Corp",
+                business_description="A company that makes innovative software solutions",
+                industry="Technology",
+                year_founded=2015,
+                headquarters_location="San Francisco, CA",
+                website="https://example.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To be the leading platform in our industry",
+                purpose_hint="We empower businesses to succeed",
+                inferred_values=["Innovation", "Integrity", "Customer Focus"],
             ),
             target_market=WebsiteScanTargetMarket(
-                primary_audience="Mid-market businesses",
-                segments=["B2B", "SaaS"],
+                niche_statement="Mid-market B2B SaaS companies",
+                segments=["B2B", "SaaS", "Enterprise"],
                 pain_points=["Complex workflows", "Manual processes"],
             ),
-            offers=WebsiteScanOffers(
-                primary_product="CRM Software",
-                categories=["Sales", "Marketing"],
-                features=["Contact management", "Pipeline tracking"],
-                differentiators=["AI-powered", "Easy to use"],
-            ),
-            credibility=WebsiteScanCredibility(
-                notable_clients=["ClientA", "ClientB"],
-                testimonials=[
-                    WebsiteScanTestimonial(quote="Great product", attribution="John Doe")
-                ],
-            ),
-            conversion=WebsiteScanConversion(
-                primary_cta_text="Start Free Trial",
-                primary_cta_url="https://example.com/signup",
-                supporting_assets=[
-                    WebsiteScanSupportingAsset(label="Demo Video", url="https://example.com/demo")
-                ],
+            products=[
+                WebsiteScanProduct(
+                    name="CRM Software",
+                    description="Customer relationship management platform",
+                    problem_solved="Helps manage customer relationships effectively",
+                    key_features=["Contact management", "Pipeline tracking", "Reporting"],
+                )
+            ],
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="The only AI-powered CRM built for growing businesses",
+                key_differentiators=["AI-powered", "Easy to use", "Affordable"],
+                proof_points=["500+ customers", "4.8/5 rating", "99.9% uptime"],
             ),
         )
 
         # Assert
         assert response.scan_id == "scan-123"
-        assert response.company_profile.company_name == "Acme Corp"
-        assert "Mid-market" in response.target_market.primary_audience
-        assert response.offers.primary_product == "CRM Software"
+        assert response.business_profile.business_name == "Acme Corp"
+        assert "Mid-market" in response.target_market.niche_statement
+        assert len(response.products) == 1
+        assert response.products[0].name == "CRM Software"
 
     def test_products_as_dicts(self):
         """Test that nested objects can be provided as dicts."""
@@ -282,31 +296,36 @@ class TestWebsiteScanResponse:
             "scan_id": "scan-456",
             "captured_at": "2024-12-25T00:00:00Z",
             "source_url": "https://test.com",
-            "company_profile": {
-                "company_name": "Test Co",
-                "legal_name": "Test Company, Inc.",
-                "tagline": "Test tagline",
-                "overview": "Test overview",
+            "business_profile": {
+                "business_name": "Test Co",
+                "business_description": "Test company description",
+                "industry": "Software",
+                "year_founded": 2020,
+                "headquarters_location": "New York, NY",
+                "website": "https://test.com",
+            },
+            "core_identity": {
+                "vision_hint": "To transform the industry",
+                "purpose_hint": "We make business easier",
+                "inferred_values": ["Excellence", "Teamwork"],
             },
             "target_market": {
-                "primary_audience": "Test audience",
+                "niche_statement": "Small businesses in the tech sector",
                 "segments": ["Segment1"],
                 "pain_points": ["Pain1"],
             },
-            "offers": {
-                "primary_product": "Product One",
-                "categories": ["Category1"],
-                "features": ["Feature1"],
-                "differentiators": ["Diff1"],
-            },
-            "credibility": {
-                "notable_clients": ["Client1"],
-                "testimonials": [],
-            },
-            "conversion": {
-                "primary_cta_text": "Sign Up",
-                "primary_cta_url": "https://test.com/signup",
-                "supporting_assets": [],
+            "products": [
+                {
+                    "name": "Product One",
+                    "description": "Main product offering",
+                    "problem_solved": "Solves business challenges",
+                    "key_features": ["Feature1"],
+                }
+            ],
+            "value_proposition": {
+                "unique_selling_proposition": "Best in class solution",
+                "key_differentiators": ["Diff1"],
+                "proof_points": ["100+ customers"],
             },
         }
 
@@ -315,8 +334,8 @@ class TestWebsiteScanResponse:
 
         # Assert
         assert response.scan_id == "scan-456"
-        assert isinstance(response.company_profile, WebsiteScanCompanyProfile)
-        assert response.offers.primary_product == "Product One"
+        assert isinstance(response.business_profile, WebsiteScanBusinessProfile)
+        assert response.products[0].name == "Product One"
 
     def test_empty_products_list(self):
         """Test response with empty optional lists."""
@@ -325,43 +344,44 @@ class TestWebsiteScanResponse:
             scan_id="scan-789",
             captured_at="2024-12-25T00:00:00Z",
             source_url="https://empty.com",
-            company_profile=WebsiteScanCompanyProfile(
-                company_name="Empty Co",
-                legal_name="Empty Company, Inc.",
-                tagline="Empty tagline",
-                overview="Empty overview",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Empty Co",
+                business_description="A minimal company",
+                website="https://empty.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint=None,
+                purpose_hint=None,
+                inferred_values=[],
             ),
             target_market=WebsiteScanTargetMarket(
-                primary_audience="Empty audience",
+                niche_statement="General market",
                 segments=[],
                 pain_points=[],
             ),
-            offers=WebsiteScanOffers(
-                primary_product="Empty product",
-                categories=[],
-                features=[],
-                differentiators=[],
-            ),
-            credibility=WebsiteScanCredibility(
-                notable_clients=[],
-                testimonials=[],
-            ),
-            conversion=WebsiteScanConversion(
-                primary_cta_text="Empty CTA",
-                primary_cta_url="https://empty.com/cta",
-                supporting_assets=[],
+            products=[],
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition=None,
+                key_differentiators=[],
+                proof_points=[],
             ),
         )
 
         # Assert
-        assert response.credibility.testimonials == []
-        assert response.conversion.supporting_assets == []
+        assert response.products == []
+        assert response.core_identity.inferred_values == []
 
     def test_many_products(self):
-        """Test response with many testimonials."""
+        """Test response with many products."""
         # Arrange
-        testimonials = [
-            WebsiteScanTestimonial(quote=f"Quote {i}", attribution=f"Person {i}") for i in range(20)
+        products = [
+            WebsiteScanProduct(
+                name=f"Product {i}",
+                description=f"Description for product {i}",
+                problem_solved=f"Solves problem {i}",
+                key_features=[f"Feature {i}.1", f"Feature {i}.2"],
+            )
+            for i in range(10)
         ]
 
         # Act
@@ -369,36 +389,32 @@ class TestWebsiteScanResponse:
             scan_id="scan-many",
             captured_at="2024-12-25T00:00:00Z",
             source_url="https://many.com",
-            company_profile=WebsiteScanCompanyProfile(
-                company_name="Many Co",
-                legal_name="Many Company, Inc.",
-                tagline="Many testimonials",
-                overview="We have many happy customers",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Many Products Co",
+                business_description="We offer many products and services",
+                industry="Manufacturing",
+                website="https://many.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To offer the best products",
+                purpose_hint="We solve many problems",
+                inferred_values=["Quality", "Variety"],
             ),
             target_market=WebsiteScanTargetMarket(
-                primary_audience="Everyone",
-                segments=["Industrial buyers"],
-                pain_points=["Quality concerns"],
+                niche_statement="Everyone who needs solutions",
+                segments=["Industrial buyers", "Retail customers"],
+                pain_points=["Quality concerns", "Limited options"],
             ),
-            offers=WebsiteScanOffers(
-                primary_product="Manufacturing services",
-                categories=["Manufacturing"],
-                features=["Quality"],
-                differentiators=["Best quality"],
-            ),
-            credibility=WebsiteScanCredibility(
-                notable_clients=["BigClient"],
-                testimonials=testimonials,
-            ),
-            conversion=WebsiteScanConversion(
-                primary_cta_text="Get Quote",
-                primary_cta_url="https://many.com/quote",
-                supporting_assets=[],
+            products=products,
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="Best variety in the market",
+                key_differentiators=["Wide selection", "Quality", "Service"],
+                proof_points=["1000+ products", "50+ years in business"],
             ),
         )
 
         # Assert
-        assert len(response.credibility.testimonials) == 20
+        assert len(response.products) == 10
 
 
 @pytest.mark.unit
@@ -568,41 +584,44 @@ class TestOnboardingModelsEdgeCases:
             scan_id="scan-special",
             captured_at="2024-12-25T00:00:00Z",
             source_url="https://special.com",
-            company_profile=WebsiteScanCompanyProfile(
-                company_name="Company™ & Co®",
-                legal_name="Company™ & Co® Inc.",
-                tagline="We deliver <results>",
-                overview="B2B SaaS & consulting services™",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Company™ & Co®",
+                business_description="B2B SaaS & consulting services™",
+                industry="Technology & Consulting",
+                website="https://special.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To deliver <results>",
+                purpose_hint="We serve C-level & VP's",
+                inferred_values=["Excellence™", "Innovation®"],
             ),
             target_market=WebsiteScanTargetMarket(
-                primary_audience="C-level & VP's",
+                niche_statement="C-level & VP's at enterprise companies",
                 segments=["<Enterprise>", "Mid-market"],
                 pain_points=["<Complex> problems"],
             ),
-            offers=WebsiteScanOffers(
-                primary_product="Product™ & Service®",
-                categories=["SaaS & Consulting"],
-                features=["100% uptime"],
-                differentiators=["<90 day ROI"],
-            ),
-            credibility=WebsiteScanCredibility(
-                notable_clients=["Client™"],
-                testimonials=[],
-            ),
-            conversion=WebsiteScanConversion(
-                primary_cta_text="Sign Up & Start™",
-                primary_cta_url="https://special.com/signup",
-                supporting_assets=[],
+            products=[
+                WebsiteScanProduct(
+                    name="Product™ & Service®",
+                    description="SaaS & Consulting platform",
+                    problem_solved="Solves <complex> business challenges",
+                    key_features=["100% uptime", "<90 day ROI"],
+                )
+            ],
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="Best-in-class™ solution",
+                key_differentiators=["<90 day ROI", "100% uptime"],
+                proof_points=["Client™ testimonials"],
             ),
         )
 
         # Assert
-        assert "™" in response.company_profile.company_name
-        assert "&" in response.company_profile.company_name
-        assert "<results>" in response.company_profile.tagline
-        assert "&" in response.target_market.primary_audience
+        assert "™" in response.business_profile.business_name
+        assert "&" in response.business_profile.business_name
+        assert "<results>" in response.core_identity.vision_hint
+        assert "&" in response.target_market.niche_statement
         assert "<Complex>" in response.target_market.pain_points[0]
-        assert "<90" in response.offers.differentiators[0]
+        assert "<90" in response.products[0].key_features[1]
 
     def test_coaching_request_with_multiline_message(self):
         """Test CoachingRequest with multiline message."""
