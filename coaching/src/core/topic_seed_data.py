@@ -13,7 +13,7 @@ Usage:
 
 from dataclasses import dataclass
 
-from coaching.src.core.constants import TopicCategory, TopicType
+from coaching.src.core.constants import TierLevel, TopicCategory, TopicType
 
 
 @dataclass
@@ -32,7 +32,9 @@ class TopicSeedData:
         topic_type: Type (conversation_coaching, single_shot, kpi_system)
         category: Grouping category
         description: Detailed description of topic purpose
-        model_code: LLM model identifier
+        tier_level: Subscription tier required to access this topic
+        basic_model_code: LLM model for Free/Basic tiers
+        premium_model_code: LLM model for Premium/Ultimate tiers
         temperature: LLM temperature parameter
         max_tokens: Maximum tokens for response
         top_p: Nucleus sampling parameter
@@ -48,7 +50,9 @@ class TopicSeedData:
     topic_type: str
     category: str
     description: str
-    model_code: str = "anthropic.claude-3-5-sonnet-20241022-v1:0"
+    tier_level: TierLevel = TierLevel.FREE
+    basic_model_code: str = "anthropic.claude-3-5-sonnet-20241022-v1:0"
+    premium_model_code: str = "anthropic.claude-3-5-sonnet-20241022-v1:0"
     temperature: float = 0.7
     max_tokens: int = 4096
     top_p: float = 1.0
@@ -73,7 +77,6 @@ TOPIC_SEED_DATA: dict[str, TopicSeedData] = {
             "Scan a website and return structured company profile, target market, offers, "
             "credibility signals, and conversion assets"
         ),
-        model_code="anthropic.claude-3-5-sonnet-20241022-v1:0",
         temperature=0.7,
         max_tokens=4096,
         default_system_prompt="""You are an expert business analyst extracting structured business foundation information from website content.

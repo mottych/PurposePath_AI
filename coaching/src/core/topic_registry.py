@@ -15,7 +15,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TypedDict
 
-from coaching.src.core.constants import ParameterSource, PromptType, TopicCategory, TopicType
+from coaching.src.core.constants import (
+    ParameterSource,
+    PromptType,
+    TierLevel,
+    TopicCategory,
+    TopicType,
+)
 
 
 class TemplateType(str, Enum):
@@ -172,6 +178,7 @@ class TopicDefinition:
         topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
         category: Grouping category for organization (enum)
         description: Human-readable description of topic purpose
+        tier_level: Subscription tier required to access this topic
         response_model: Response model class name (e.g., "AlignmentAnalysisResponse")
         endpoint_path: API path (optional, for legacy routes only)
         http_method: HTTP method (optional, for legacy routes only)
@@ -186,6 +193,7 @@ class TopicDefinition:
     topic_type: TopicType
     category: TopicCategory
     description: str
+    tier_level: TierLevel = TierLevel.FREE  # Default to FREE tier
     response_model: str = ""
     endpoint_path: str | None = None  # Optional for conversation topics
     http_method: str | None = None  # Optional for conversation topics

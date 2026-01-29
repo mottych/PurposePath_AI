@@ -377,7 +377,9 @@ class TopicSeedingService:
             topic_type=seed_data.topic_type,
             category=seed_data.category,
             is_active=True,
-            model_code=seed_data.model_code,
+            tier_level=seed_data.tier_level,
+            basic_model_code=seed_data.basic_model_code,
+            premium_model_code=seed_data.premium_model_code,
             temperature=seed_data.temperature,
             max_tokens=seed_data.max_tokens,
             top_p=seed_data.top_p,
@@ -457,7 +459,9 @@ class TopicSeedingService:
         existing_topic.topic_type = seed_data.topic_type
         existing_topic.category = seed_data.category
         existing_topic.description = seed_data.description
-        existing_topic.model_code = seed_data.model_code
+        existing_topic.tier_level = seed_data.tier_level
+        existing_topic.basic_model_code = seed_data.basic_model_code
+        existing_topic.premium_model_code = seed_data.premium_model_code
         existing_topic.temperature = seed_data.temperature
         existing_topic.max_tokens = seed_data.max_tokens
         existing_topic.top_p = seed_data.top_p

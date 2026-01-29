@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
-from coaching.src.core.constants import CoachingTopic, MessageRole
+from coaching.src.core.constants import CoachingTopic, MessageRole, TierLevel
 from coaching.src.core.topic_registry import get_required_parameter_names_for_topic
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
@@ -89,6 +89,25 @@ class TopicNotFoundError(UnifiedAIEngineError):
             topic_id: Topic that was not found
         """
         super().__init__(topic_id, "Topic not found or inactive")
+
+
+class TopicAccessDeniedError(UnifiedAIEngineError):
+    """Raised when user tier cannot access topic tier."""
+
+    def __init__(self, topic_id: str, user_tier: TierLevel, topic_tier: TierLevel) -> None:
+        """Initialize topic access denied error.
+
+        Args:
+            topic_id: Topic that was denied
+            user_tier: User's subscription tier
+            topic_tier: Topic's required tier
+        """
+        self.user_tier = user_tier
+        self.topic_tier = topic_tier
+        super().__init__(
+            topic_id,
+            f"Access denied: {user_tier.value} tier cannot access {topic_tier.value} topic",
+        )
 
 
 class ParameterValidationError(UnifiedAIEngineError):
@@ -182,18 +201,20 @@ class UnifiedAIEngine:
         tenant_id: str | None = None,
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
         Flow:
         1. Get topic configuration from DynamoDB
-        2. Load prompts from S3
-        3. Enrich parameters (if template_processor is provided)
-        4. Validate parameters against topic schema
-        5. Render prompts with enriched parameters
-        6. Call LLM using topic model config
-        7. Serialize response to expected model
-        8. Return typed result
+        2. Check user tier can access topic tier
+        3. Load prompts from S3
+        4. Enrich parameters (if template_processor is provided)
+        5. Validate parameters against topic schema
+        6. Render prompts with enriched parameters
+        7. Call LLM using topic model config (selected based on user tier)
+        8. Serialize response to expected model
+        9. Return typed result
 
         Args:
             topic_id: Topic identifier
@@ -203,12 +224,15 @@ class UnifiedAIEngine:
             tenant_id: Optional tenant ID for parameter enrichment
             template_processor: Optional processor for automatic parameter enrichment
                 (created per-request with user's JWT token for API calls)
+            allow_inactive: Allow execution on inactive topics (for testing)
+            user_tier: User's subscription tier (default: ULTIMATE for full access)
 
         Returns:
             Instance of response_model with AI-generated data
 
         Raises:
             TopicNotFoundError: If topic doesn't exist or is inactive
+            TopicAccessDeniedError: If user tier cannot access topic tier
             ParameterValidationError: If required parameters are missing
             PromptRenderError: If prompt rendering fails
             SerializationError: If response serialization fails
@@ -221,6 +245,7 @@ class UnifiedAIEngine:
             tenant_id=tenant_id,
             template_processor=template_processor,
             allow_inactive=allow_inactive,
+            user_tier=user_tier,
         )
 
         return context.serialized_response
@@ -235,8 +260,23 @@ class UnifiedAIEngine:
         tenant_id: str | None = None,
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> SingleShotExecutionContext:
-        """Execute single-shot and return debug context with prompts and metadata."""
+        """Execute single-shot and return debug context with prompts and metadata.
+        
+        Args:
+            topic_id: Topic identifier
+            parameters: Request parameters
+            response_model: Expected response model
+            user_id: Optional user ID
+            tenant_id: Optional tenant ID
+            template_processor: Optional parameter processor
+            allow_inactive: Allow inactive topics
+            user_tier: User's subscription tier (default: ULTIMATE)
+            
+        Returns:
+            Full execution context with debug information
+        """
 
         return await self._build_single_shot_context(
             topic_id=topic_id,
@@ -246,6 +286,7 @@ class UnifiedAIEngine:
             tenant_id=tenant_id,
             template_processor=template_processor,
             allow_inactive=allow_inactive,
+            user_tier=user_tier,
         )
 
     async def _build_single_shot_context(
@@ -258,6 +299,7 @@ class UnifiedAIEngine:
         tenant_id: str | None,
         template_processor: "TemplateParameterProcessor | None",
         allow_inactive: bool,
+        user_tier: TierLevel,
     ) -> SingleShotExecutionContext:
         """Execute single-shot flow and return full context for debugging."""
 
@@ -267,10 +309,21 @@ class UnifiedAIEngine:
             response_model=response_model.__name__,
             param_count=len(parameters),
             allow_inactive=allow_inactive,
+            user_tier=user_tier.value,
         )
 
         # Step 1: Get topic configuration
         topic = await self._get_active_topic(topic_id, allow_inactive=allow_inactive)
+        
+        # Step 1.5: Check tier-based access control
+        if not TierLevel.can_access_topic(user_tier, topic.tier_level):
+            self.logger.warning(
+                "Topic access denied",
+                topic_id=topic_id,
+                user_tier=user_tier.value,
+                topic_tier=topic.tier_level.value,
+            )
+            raise TopicAccessDeniedError(topic_id, user_tier, topic.tier_level)
 
         # Step 2: Load prompts from S3
         system_prompt_content = await self._load_prompt(topic, "system")
@@ -302,8 +355,15 @@ class UnifiedAIEngine:
             rendered_system, response_model
         )
 
-        # Step 6: Get provider and resolved model name from factory
-        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+        # Step 6: Select model based on user tier and get provider
+        model_code = topic.get_model_code_for_tier(user_tier)
+        self.logger.info(
+            "Selected model for tier",
+            user_tier=user_tier.value,
+            model_code=model_code,
+            topic_id=topic_id,
+        )
+        provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
         # Step 7: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
@@ -914,6 +974,7 @@ class UnifiedAIEngine:
         conversation_id: ConversationId,
         user_message: str,
         tenant_id: TenantId,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> dict[str, Any]:
         """Send message in existing conversation.
 
@@ -921,12 +982,14 @@ class UnifiedAIEngine:
             conversation_id: Conversation identifier
             user_message: User's message content
             tenant_id: Tenant identifier for isolation
+            user_tier: User's subscription tier (default: ULTIMATE for full access)
 
         Returns:
             Dictionary with AI response and conversation state
 
         Raises:
             UnifiedAIEngineError: If conversation not found or send fails
+            TopicAccessDeniedError: If user tier cannot access topic tier
         """
         if self.conversation_repo is None:
             raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
@@ -944,6 +1007,16 @@ class UnifiedAIEngine:
 
         # Get topic
         topic = await self._get_active_topic(conversation.topic)
+        
+        # Check tier-based access control
+        if not TierLevel.can_access_topic(user_tier, topic.tier_level):
+            self.logger.warning(
+                "Topic access denied in conversation",
+                conversation_id=conversation_id,
+                user_tier=user_tier.value,
+                topic_tier=topic.tier_level.value,
+            )
+            raise TopicAccessDeniedError(conversation.topic, user_tier, topic.tier_level)
 
         # Build conversation history for context
         messages = self._build_message_history(conversation, user_message)
@@ -957,8 +1030,15 @@ class UnifiedAIEngine:
             conversation.context.model_dump(),
         )
 
-        # Get provider and resolved model name from factory
-        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+        # Select model based on user tier and get provider
+        model_code = topic.get_model_code_for_tier(user_tier)
+        self.logger.info(
+            "Selected model for conversation tier",
+            user_tier=user_tier.value,
+            model_code=model_code,
+            conversation_id=conversation_id,
+        )
+        provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
         # Call LLM with resolved model name
         llm_response = await provider.generate(

@@ -354,7 +354,9 @@ class CoachingSessionService:
         logger.debug(
             "coaching_service.topic_config_loaded",
             topic_id=topic_id,
-            model_code=llm_topic.model_code,
+            tier_level=llm_topic.tier_level.value,
+            basic_model=llm_topic.basic_model_code,
+            premium_model=llm_topic.premium_model_code,
             max_turns=llm_topic.additional_config.get("max_turns", 10),
         )
 
@@ -1433,6 +1435,7 @@ class CoachingSessionService:
         messages: list[dict[str, str]],
         llm_topic: LLMTopic,
         temperature_override: float | None = None,
+        user_tier: "TierLevel | None" = None,
     ) -> tuple[str, ResponseMetadata]:
         """Execute LLM call through provider factory with dynamic model resolution.
 
@@ -1443,20 +1446,28 @@ class CoachingSessionService:
             messages: Messages to send to LLM
             llm_topic: Topic config with model settings
             temperature_override: Optional temperature override
+            user_tier: User's subscription tier (for model selection)
 
         Returns:
             Tuple of (response_content, metadata)
         """
         import time
 
+        from coaching.src.core.constants import TierLevel
         from coaching.src.domain.ports.llm_provider_port import LLMMessage
 
         temperature = temperature_override or llm_topic.temperature
         start_time = time.perf_counter()
+        
+        # Select model based on user tier, default to ULTIMATE for backward compatibility
+        if user_tier is None:
+            user_tier = TierLevel.ULTIMATE
+        model_code = llm_topic.get_model_code_for_tier(user_tier)
 
         logger.debug(
             "coaching_service.executing_llm_call",
-            model_code=llm_topic.model_code,
+            model_code=model_code,
+            user_tier=user_tier.value,
             temperature=temperature,
             message_count=len(messages),
         )
@@ -1466,16 +1477,16 @@ class CoachingSessionService:
         # provider instance and actual model name (e.g., "us.anthropic.claude-3-5-sonnet-...")
         try:
             provider, model_name = self.provider_factory.get_provider_for_model(
-                llm_topic.model_code
+                model_code
             )
         except Exception as e:
             logger.error(
                 "coaching_service.provider_resolution_failed",
-                model_code=llm_topic.model_code,
+                model_code=model_code,
                 error=str(e),
             )
             raise RuntimeError(
-                f"Failed to resolve LLM provider for {llm_topic.model_code}: {e}"
+                f"Failed to resolve LLM provider for {model_code}: {e}"
             ) from e
 
         # Convert messages to LLMMessage format
@@ -1504,7 +1515,7 @@ class CoachingSessionService:
 
         logger.info(
             "coaching_service.llm_call_completed",
-            model_code=llm_topic.model_code,
+            model_code=model_code,
             model_name=model_name,
             tokens_used=response.usage.get("total_tokens", 0),
             processing_time_ms=processing_time_ms,

@@ -9,6 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, ClassVar
 
+from coaching.src.core.constants import TierLevel
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
     InvalidTopicTypeError,
@@ -139,11 +140,12 @@ class LLMTopic:
         - topic_type must be: conversation_coaching, single_shot, or kpi_system
         - At least one prompt must be defined
         - Parameter names must be unique within a topic
-        - model_code must be a valid LLM model identifier
+        - basic_model_code and premium_model_code must be valid LLM model identifiers
         - temperature must be between 0.0 and 2.0
         - max_tokens must be positive
         - top_p must be between 0.0 and 1.0
         - frequency_penalty and presence_penalty must be between -2.0 and 2.0
+        - tier_level determines topic accessibility and model selection
 
     Attributes:
         topic_id: Unique identifier (snake_case)
@@ -151,7 +153,9 @@ class LLMTopic:
         topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
         category: Grouping category (coaching, analysis, strategy, measure)
         is_active: Whether topic is active and available
-        model_code: LLM model identifier (e.g., 'claude-3-5-sonnet-20241022')
+        tier_level: Subscription tier required to access this topic (free, basic, premium, ultimate)
+        basic_model_code: LLM model for Free/Basic tiers (e.g., 'claude-3-5-sonnet-20241022')
+        premium_model_code: LLM model for Premium/Ultimate tiers (e.g., 'claude-3-5-sonnet-20241022')
         temperature: LLM temperature parameter (0.0-2.0)
         max_tokens: Maximum tokens for LLM response (must be positive)
         top_p: Nucleus sampling parameter (0.0-1.0)
@@ -173,10 +177,14 @@ class LLMTopic:
     category: str
     is_active: bool
 
-    # LLM Model Configuration (owned by topic)
-    model_code: str
-    temperature: float
-    max_tokens: int
+    # Tier Level (determines accessibility and model selection)
+    tier_level: TierLevel = TierLevel.FREE
+
+    # LLM Model Configuration (dual models for tier-based selection)
+    basic_model_code: str = "claude-3-5-sonnet-20241022"
+    premium_model_code: str = "claude-3-5-sonnet-20241022"
+    temperature: float = 0.7
+    max_tokens: int = 2000
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
@@ -222,9 +230,13 @@ class LLMTopic:
         """
         errors: list[str] = []
 
-        # Validate model_code
-        if not self.model_code or not self.model_code.strip():
-            errors.append("model_code must not be empty")
+        # Validate basic_model_code
+        if not self.basic_model_code or not self.basic_model_code.strip():
+            errors.append("basic_model_code must not be empty")
+
+        # Validate premium_model_code
+        if not self.premium_model_code or not self.premium_model_code.strip():
+            errors.append("premium_model_code must not be empty")
 
         # Validate temperature
         if not (0.0 <= self.temperature <= 2.0):
@@ -268,7 +280,9 @@ class LLMTopic:
             "topic_type": self.topic_type,
             "category": self.category,
             "is_active": self.is_active,
-            "model_code": self.model_code,
+            "tier_level": self.tier_level.value,
+            "basic_model_code": self.basic_model_code,
+            "premium_model_code": self.premium_model_code,
             # Convert floats to Decimal for DynamoDB
             "temperature": Decimal(str(self.temperature)),
             "max_tokens": self.max_tokens,
@@ -295,7 +309,7 @@ class LLMTopic:
         """Create from DynamoDB item.
 
         Deserializes nested objects and parses ISO 8601 datetime strings.
-        Supports backward compatibility with old 'config' field.
+        Supports backward compatibility with old 'model_code' field and 'config' dict.
 
         Args:
             item: DynamoDB item dictionary
@@ -303,33 +317,55 @@ class LLMTopic:
         Returns:
             LLMTopic: Instance created from DynamoDB item
         """
-        # Handle backward compatibility: extract model config from old 'config' dict if present
-        model_code = item.get("model_code")
-        if model_code is None and "config" in item:
-            # Old format: extract from config dict
-            config = item["config"]
-            model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
-            temperature = float(config.get("temperature", 0.7))
-            max_tokens = int(config.get("max_tokens", 2000))
-            top_p = float(config.get("top_p", 1.0))
-            frequency_penalty = float(config.get("frequency_penalty", 0.0))
-            presence_penalty = float(config.get("presence_penalty", 0.0))
-            additional_config = {
-                k: v
-                for k, v in config.items()
-                if k
-                not in {
-                    "model_code",
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
+        # Handle tier_level (default to FREE if not present)
+        tier_level_value = item.get("tier_level", "free")
+        tier_level = TierLevel(tier_level_value)
+
+        # Handle backward compatibility: migrate from old model_code to dual models
+        basic_model_code = item.get("basic_model_code")
+        premium_model_code = item.get("premium_model_code")
+        
+        # If new fields not present, check for old model_code
+        if basic_model_code is None or premium_model_code is None:
+            # Try to get model_code from item directly or from old 'config' dict
+            old_model_code = item.get("model_code")
+            if old_model_code is None and "config" in item:
+                # Very old format: extract from config dict
+                config = item["config"]
+                old_model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
+                temperature = float(config.get("temperature", 0.7))
+                max_tokens = int(config.get("max_tokens", 2000))
+                top_p = float(config.get("top_p", 1.0))
+                frequency_penalty = float(config.get("frequency_penalty", 0.0))
+                presence_penalty = float(config.get("presence_penalty", 0.0))
+                additional_config = {
+                    k: v
+                    for k, v in config.items()
+                    if k
+                    not in {
+                        "model_code",
+                        "temperature",
+                        "max_tokens",
+                        "top_p",
+                        "frequency_penalty",
+                        "presence_penalty",
+                    }
                 }
-            }
+            else:
+                # Newer format with explicit fields but old model_code
+                temperature = float(item.get("temperature", 0.7))
+                max_tokens = int(item.get("max_tokens", 2000))
+                top_p = float(item.get("top_p", 1.0))
+                frequency_penalty = float(item.get("frequency_penalty", 0.0))
+                presence_penalty = float(item.get("presence_penalty", 0.0))
+                additional_config = item.get("additional_config", {})
+            
+            # Set both models to the old model_code value
+            default_model = old_model_code or "claude-3-5-sonnet-20241022"
+            basic_model_code = basic_model_code or default_model
+            premium_model_code = premium_model_code or default_model
         else:
-            # New format: explicit fields
-            # Convert Decimal to int/float for DynamoDB compatibility
+            # Latest format: dual models present
             temperature = float(item.get("temperature", 0.7))
             max_tokens = int(item.get("max_tokens", 2000))
             top_p = float(item.get("top_p", 1.0))
@@ -343,7 +379,9 @@ class LLMTopic:
             topic_type=item["topic_type"],
             category=item["category"],
             is_active=item["is_active"],
-            model_code=model_code or "claude-3-5-sonnet-20241022",
+            tier_level=tier_level,
+            basic_model_code=basic_model_code,
+            premium_model_code=premium_model_code,
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
@@ -443,7 +481,9 @@ class LLMTopic:
             ),
             display_order=display_order,
             is_active=False,  # Inactive until configured by admin
-            model_code="claude-3-5-sonnet-20241022",  # Default model
+            tier_level=TierLevel.FREE,  # Default to FREE tier
+            basic_model_code="claude-3-5-sonnet-20241022",  # Default basic model
+            premium_model_code="claude-3-5-sonnet-20241022",  # Default premium model
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,
@@ -486,6 +526,9 @@ class LLMTopic:
         # This ensures consistent ordering across environments
         display_order = hash(endpoint_def.topic_id) % 1000
 
+        # Get tier_level from endpoint_def if available, otherwise default to FREE
+        tier_level = getattr(endpoint_def, "tier_level", TierLevel.FREE)
+        
         return cls(
             topic_id=endpoint_def.topic_id,
             topic_name=topic_name,
@@ -494,7 +537,9 @@ class LLMTopic:
             description=endpoint_def.description,
             display_order=display_order,
             is_active=endpoint_def.is_active,  # Respect endpoint's active status
-            model_code="claude-3-5-sonnet-20241022",  # Default model
+            tier_level=tier_level,  # Use endpoint tier or default to FREE
+            basic_model_code="claude-3-5-sonnet-20241022",  # Default basic model
+            premium_model_code="claude-3-5-sonnet-20241022",  # Default premium model
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,
@@ -540,6 +585,19 @@ class LLMTopic:
         manually if needed.
         """
         self.__post_init__()
+    
+    def get_model_code_for_tier(self, user_tier: TierLevel) -> str:
+        """Get the appropriate model code based on user's tier level.
+        
+        Args:
+            user_tier: User's subscription tier level
+            
+        Returns:
+            str: Model code to use (basic_model_code or premium_model_code)
+        """
+        if user_tier.uses_premium_model():
+            return self.premium_model_code
+        return self.basic_model_code
 
 
 __all__ = ["LLMTopic", "ParameterDefinition", "PromptInfo"]
