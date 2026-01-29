@@ -52,7 +52,9 @@ class CreateTopicRequest(BaseModel):
     category: str = Field(..., min_length=3, max_length=50, description="Topic category")
     topic_type: str = Field(..., description="Topic type")
     description: str | None = Field(None, max_length=500, description="Topic description")
-    tier_level: TierLevel = Field(TierLevel.FREE, description="Subscription tier required to access")
+    tier_level: TierLevel = Field(
+        TierLevel.FREE, description="Subscription tier required to access"
+    )
     basic_model_code: str = Field(..., description="LLM model for Free/Basic tiers")
     premium_model_code: str = Field(..., description="LLM model for Premium/Ultimate tiers")
     temperature: float = Field(..., ge=0.0, le=2.0, description="Model temperature")

@@ -651,11 +651,11 @@ async def upsert_topic(
                         else base_topic.description
                     ),
                     tier_level=(
-                        request.tier_level if request.tier_level is not None else base_topic.tier_level
+                        request.tier_level
+                        if request.tier_level is not None
+                        else base_topic.tier_level
                     ),
-                    basic_model_code=(
-                        request.basic_model_code or base_topic.basic_model_code
-                    ),
+                    basic_model_code=(request.basic_model_code or base_topic.basic_model_code),
                     premium_model_code=(
                         request.premium_model_code or base_topic.premium_model_code
                     ),
@@ -709,6 +709,7 @@ async def upsert_topic(
 
                 # Create with defaults and provided values
                 from coaching.src.core.constants import TierLevel
+
                 new_topic = LLMTopic(
                     topic_id=topic_id,
                     topic_name=request.topic_name,
@@ -719,7 +720,9 @@ async def upsert_topic(
                         request.display_order if request.display_order is not None else 100
                     ),
                     is_active=request.is_active if request.is_active is not None else False,
-                    tier_level=request.tier_level if request.tier_level is not None else TierLevel.FREE,
+                    tier_level=request.tier_level
+                    if request.tier_level is not None
+                    else TierLevel.FREE,
                     basic_model_code=request.basic_model_code or "claude-3-5-sonnet-20241022",
                     premium_model_code=request.premium_model_code or "claude-3-5-sonnet-20241022",
                     temperature=request.temperature if request.temperature is not None else 0.7,

@@ -1476,18 +1476,14 @@ class CoachingSessionService:
         # This properly resolves model_code (e.g., "CLAUDE_3_5_SONNET") to
         # provider instance and actual model name (e.g., "us.anthropic.claude-3-5-sonnet-...")
         try:
-            provider, model_name = self.provider_factory.get_provider_for_model(
-                model_code
-            )
+            provider, model_name = self.provider_factory.get_provider_for_model(model_code)
         except Exception as e:
             logger.error(
                 "coaching_service.provider_resolution_failed",
                 model_code=model_code,
                 error=str(e),
             )
-            raise RuntimeError(
-                f"Failed to resolve LLM provider for {model_code}: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to resolve LLM provider for {model_code}: {e}") from e
 
         # Convert messages to LLMMessage format
         llm_messages: list[LLMMessage] = []

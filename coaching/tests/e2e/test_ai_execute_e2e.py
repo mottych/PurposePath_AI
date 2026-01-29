@@ -123,9 +123,9 @@ async def test_niche_review_with_context(
 
     for suggestion in suggestions:
         # Each suggestion should be different from input (not just echoed back)
-        assert (
-            suggestion["text"].lower() != current_value
-        ), "Suggestion should not be identical to input"
+        assert suggestion["text"].lower() != current_value, (
+            "Suggestion should not be identical to input"
+        )
 
 
 # =============================================================================
@@ -290,9 +290,9 @@ async def test_get_available_topics(
     topic_ids = [t["topic_id"] for t in topics]
     assert "niche_review" in topic_ids, "niche_review should be in available topics"
     assert "ica_review" in topic_ids, "ica_review should be in available topics"
-    assert (
-        "value_proposition_review" in topic_ids
-    ), "value_proposition_review should be in available topics"
+    assert "value_proposition_review" in topic_ids, (
+        "value_proposition_review should be in available topics"
+    )
 
 
 @pytest.mark.e2e
@@ -343,9 +343,9 @@ async def test_list_all_schemas(
     assert "schemas" in data
     schemas = data["schemas"]
 
-    assert (
-        "OnboardingReviewResponse" in schemas
-    ), "OnboardingReviewResponse should be in available schemas"
+    assert "OnboardingReviewResponse" in schemas, (
+        "OnboardingReviewResponse should be in available schemas"
+    )
 
 
 # =============================================================================
