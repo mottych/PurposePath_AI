@@ -263,7 +263,7 @@ class UnifiedAIEngine:
         user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> SingleShotExecutionContext:
         """Execute single-shot and return debug context with prompts and metadata.
-        
+
         Args:
             topic_id: Topic identifier
             parameters: Request parameters
@@ -273,7 +273,7 @@ class UnifiedAIEngine:
             template_processor: Optional parameter processor
             allow_inactive: Allow inactive topics
             user_tier: User's subscription tier (default: ULTIMATE)
-            
+
         Returns:
             Full execution context with debug information
         """
@@ -314,7 +314,7 @@ class UnifiedAIEngine:
 
         # Step 1: Get topic configuration
         topic = await self._get_active_topic(topic_id, allow_inactive=allow_inactive)
-        
+
         # Step 1.5: Check tier-based access control
         if not TierLevel.can_access_topic(user_tier, topic.tier_level):
             self.logger.warning(
@@ -1007,7 +1007,7 @@ class UnifiedAIEngine:
 
         # Get topic
         topic = await self._get_active_topic(conversation.topic)
-        
+
         # Check tier-based access control
         if not TierLevel.can_access_topic(user_tier, topic.tier_level):
             self.logger.warning(

@@ -159,11 +159,11 @@ class AnalysisType(str, Enum):
 
 class TierLevel(str, Enum):
     """Subscription tier levels for topic and LLM access control.
-    
+
     Determines:
     1. Which topics are accessible (topics have a tier_level)
     2. Which LLM model to use (topics have basic_model_code and premium_model_code)
-    
+
     Access Rules:
     - FREE: Can access only Free topics, uses basic_model_code
     - BASIC: Can access Free + Basic topics, uses basic_model_code
@@ -175,15 +175,15 @@ class TierLevel(str, Enum):
     BASIC = "basic"
     PREMIUM = "premium"
     ULTIMATE = "ultimate"
-    
+
     @classmethod
     def can_access_topic(cls, user_tier: "TierLevel", topic_tier: "TierLevel") -> bool:
         """Check if a user tier can access a topic tier.
-        
+
         Args:
             user_tier: User's subscription tier
             topic_tier: Topic's tier level requirement
-            
+
         Returns:
             bool: True if user can access the topic
         """
@@ -194,10 +194,10 @@ class TierLevel(str, Enum):
             cls.ULTIMATE: [cls.FREE, cls.BASIC, cls.PREMIUM, cls.ULTIMATE],
         }
         return topic_tier in tier_hierarchy.get(user_tier, [])
-    
+
     def uses_premium_model(self) -> bool:
         """Check if this tier uses premium LLM model.
-        
+
         Returns:
             bool: True if tier uses premium_model_code, False if uses basic_model_code
         """

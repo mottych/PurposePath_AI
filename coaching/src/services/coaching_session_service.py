@@ -1458,7 +1458,7 @@ class CoachingSessionService:
 
         temperature = temperature_override or llm_topic.temperature
         start_time = time.perf_counter()
-        
+
         # Select model based on user tier, default to ULTIMATE for backward compatibility
         if user_tier is None:
             user_tier = TierLevel.ULTIMATE

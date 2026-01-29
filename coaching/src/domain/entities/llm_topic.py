@@ -324,7 +324,7 @@ class LLMTopic:
         # Handle backward compatibility: migrate from old model_code to dual models
         basic_model_code = item.get("basic_model_code")
         premium_model_code = item.get("premium_model_code")
-        
+
         # If new fields not present, check for old model_code
         if basic_model_code is None or premium_model_code is None:
             # Try to get model_code from item directly or from old 'config' dict
@@ -359,7 +359,7 @@ class LLMTopic:
                 frequency_penalty = float(item.get("frequency_penalty", 0.0))
                 presence_penalty = float(item.get("presence_penalty", 0.0))
                 additional_config = item.get("additional_config", {})
-            
+
             # Set both models to the old model_code value
             default_model = old_model_code or "claude-3-5-sonnet-20241022"
             basic_model_code = basic_model_code or default_model
@@ -528,7 +528,7 @@ class LLMTopic:
 
         # Get tier_level from endpoint_def if available, otherwise default to FREE
         tier_level = getattr(endpoint_def, "tier_level", TierLevel.FREE)
-        
+
         return cls(
             topic_id=endpoint_def.topic_id,
             topic_name=topic_name,
@@ -585,13 +585,13 @@ class LLMTopic:
         manually if needed.
         """
         self.__post_init__()
-    
+
     def get_model_code_for_tier(self, user_tier: TierLevel) -> str:
         """Get the appropriate model code based on user's tier level.
-        
+
         Args:
             user_tier: User's subscription tier level
-            
+
         Returns:
             str: Model code to use (basic_model_code or premium_model_code)
         """
