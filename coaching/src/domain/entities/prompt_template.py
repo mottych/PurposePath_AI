@@ -52,7 +52,7 @@ class PromptTemplate(BaseModel):
         - System prompt sets the LLM's behavior and context
 
     Architecture Note:
-        - Model selection comes from LLMConfiguration, not stored here
+        - Model selection comes from topic configuration, not stored here
         - Template focuses on prompt content, config handles runtime parameters
     """
 
