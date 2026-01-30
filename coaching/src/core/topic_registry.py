@@ -1165,14 +1165,19 @@ def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
     return required_names
 
 
-def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
+def get_parameters_for_topic(topic_id: str, *, include_enrichment_keys: bool = False) -> list[ParameterInfo]:
     """Get basic parameter info for a topic (for API responses).
 
     Returns parameter definitions with basic info only (name, type, required, description).
     This is used for GET /admin/topics responses where full retrieval details are not needed.
 
+    By default, excludes enrichment keys (REQUEST source params with no retrieval_method)
+    which are required in API payloads but not used in templates.
+
     Args:
         topic_id: Topic identifier
+        include_enrichment_keys: If True, include REQUEST params without retrieval_method.
+            Default False for admin UI (template designers don't need to see enrichment keys).
 
     Returns:
         List of ParameterInfo dicts with name, type, required, description.
@@ -1186,6 +1191,15 @@ def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
     result: list[ParameterInfo] = []
     for ref in param_refs:
         param_def = PARAMETER_REGISTRY.get(ref.name)
+        
+        # Filter out enrichment keys unless explicitly requested
+        if not include_enrichment_keys:
+            # Enrichment keys are REQUIRED REQUEST params with no retrieval_method
+            # Optional REQUEST params (business_context, constraints) are for templates
+            is_required = ref.name in required_names
+            if ref.source == ParameterSource.REQUEST and param_def and not param_def.retrieval_method and is_required:
+                continue  # Skip enrichment keys like goal_id, url, measure_id
+        
         if param_def:
             result.append(
                 ParameterInfo(
