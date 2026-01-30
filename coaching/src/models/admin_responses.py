@@ -302,75 +302,6 @@ class ParameterAnalysisResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-# Configuration Validation Responses
-
-
-class ConfigurationConflict(BaseModel):
-    """A configuration conflict."""
-
-    type: str = Field(..., description="Conflict type")
-    message: str = Field(..., description="Conflict message")
-    existing_config_id: str | None = Field(
-        None, description="Existing config ID", alias="existingConfigId"
-    )
-
-    model_config = {"populate_by_name": True}
-
-
-class ConfigurationDependencies(BaseModel):
-    """Configuration dependency checks."""
-
-    template_exists: bool = Field(..., description="Template exists", alias="templateExists")
-    model_exists: bool = Field(..., description="Model exists", alias="modelExists")
-    interaction_exists: bool = Field(
-        ..., description="Interaction exists", alias="interactionExists"
-    )
-
-    model_config = {"populate_by_name": True}
-
-
-class ParameterCompatibility(BaseModel):
-    """Parameter compatibility analysis."""
-
-    template_parameters: list[str] = Field(
-        ..., description="Template parameters", alias="templateParameters"
-    )
-    interaction_required: list[str] = Field(
-        ..., description="Interaction required params", alias="interactionRequired"
-    )
-    interaction_optional: list[str] = Field(
-        ..., description="Interaction optional params", alias="interactionOptional"
-    )
-    missing_required: list[str] = Field(
-        ..., description="Missing required params", alias="missingRequired"
-    )
-    undeclared_used: list[str] = Field(
-        ..., description="Undeclared but used params", alias="undeclaredUsed"
-    )
-    extra_parameters: list[str] = Field(
-        ..., description="Extra template parameters", alias="extraParameters"
-    )
-
-    model_config = {"populate_by_name": True}
-
-
-class ConfigurationValidationResponse(BaseModel):
-    """Response for configuration validation."""
-
-    is_valid: bool = Field(..., description="Whether configuration is valid", alias="isValid")
-    warnings: list[str] = Field(default_factory=list, description="Validation warnings")
-    errors: list[str] = Field(default_factory=list, description="Validation errors")
-    conflicts: list[ConfigurationConflict] = Field(
-        default_factory=list, description="Configuration conflicts"
-    )
-    dependencies: ConfigurationDependencies = Field(..., description="Dependency checks")
-    parameter_compatibility: ParameterCompatibility = Field(
-        ..., description="Parameter compatibility analysis", alias="parameterCompatibility"
-    )
-
-    model_config = {"populate_by_name": True}
-
-
 # LLM Interactions Responses
 
 
@@ -427,69 +358,11 @@ class LLMInteractionsResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-# Configuration Management Responses
-
-
-class ConfigurationDetail(BaseModel):
-    """Detailed configuration information."""
-
-    config_id: str = Field(..., description="Configuration identifier", alias="configId")
-    interaction_code: str = Field(..., description="Interaction code", alias="interactionCode")
-    template_id: str = Field(..., description="Template ID", alias="templateId")
-    model_code: str = Field(..., description="Model code", alias="modelCode")
-    tier: str | None = Field(None, description="Tier restriction (null = all tiers)")
-    temperature: float = Field(..., description="LLM temperature parameter")
-    max_tokens: int = Field(..., description="Maximum output tokens", alias="maxTokens")
-    top_p: float = Field(..., description="Top-p sampling parameter", alias="topP")
-    frequency_penalty: float = Field(..., description="Frequency penalty", alias="frequencyPenalty")
-    presence_penalty: float = Field(..., description="Presence penalty", alias="presencePenalty")
-    is_active: bool = Field(..., description="Whether configuration is active", alias="isActive")
-    effective_from: str = Field(..., description="Effective from date (ISO)", alias="effectiveFrom")
-    effective_until: str | None = Field(
-        None, description="Effective until date (ISO)", alias="effectiveUntil"
-    )
-    created_at: str = Field(..., description="Creation timestamp (ISO)", alias="createdAt")
-    updated_at: str = Field(..., description="Last update timestamp (ISO)", alias="updatedAt")
-    created_by: str = Field(..., description="Creator user ID", alias="createdBy")
-
-    model_config = {"populate_by_name": True}
-
-
-class ConfigurationSummary(BaseModel):
-    """Summary configuration information for list views."""
-
-    config_id: str = Field(..., description="Configuration identifier", alias="configId")
-    interaction_code: str = Field(..., description="Interaction code", alias="interactionCode")
-    template_id: str = Field(..., description="Template ID", alias="templateId")
-    model_code: str = Field(..., description="Model code", alias="modelCode")
-    tier: str | None = Field(None, description="Tier restriction")
-    is_active: bool = Field(..., description="Whether configuration is active", alias="isActive")
-    created_at: str = Field(..., description="Creation timestamp (ISO)", alias="createdAt")
-
-    model_config = {"populate_by_name": True}
-
-
-class ConfigurationsListResponse(BaseModel):
-    """Response for listing configurations."""
-
-    configurations: list[ConfigurationSummary] = Field(..., description="List of configurations")
-    total_count: int = Field(..., description="Total number of configurations", alias="totalCount")
-    filtered_count: int = Field(..., description="Number after filters", alias="filteredCount")
-
-    model_config = {"populate_by_name": True}
-
-
 __all__ = [
     "AIModelInfo",
     "AIModelsResponse",
     "AIProviderInfo",
     "ActiveConfigurationInfo",
-    "ConfigurationConflict",
-    "ConfigurationDependencies",
-    "ConfigurationDetail",
-    "ConfigurationSummary",
-    "ConfigurationValidationResponse",
-    "ConfigurationsListResponse",
     "ConversationDetail",
     "ConversationMessage",
     "ConversationSummary",
@@ -501,7 +374,6 @@ __all__ = [
     "ModelCostInfo",
     "ParameterAnalysis",
     "ParameterAnalysisResponse",
-    "ParameterCompatibility",
     "ParameterUsage",
     "PromptTemplateDetail",
     "PromptTemplateVersionsResponse",
