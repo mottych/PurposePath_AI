@@ -119,9 +119,9 @@ class LLMService:
         user_message: str,
         conversation_history: list[dict[str, str]],
         business_context: dict[str, Any] | None = None,
-        interaction_code: str | None = None,
-        user_tier: str | None = None,
-        template_parameters: dict[str, Any] | None = None,
+        _interaction_code: str | None = None,
+        _user_tier: str | None = None,
+        _template_parameters: dict[str, Any] | None = None,
         system_prompt_override: str | None = None,
     ) -> LLMResponse:
         """Generate a coaching response with business context.
@@ -132,9 +132,9 @@ class LLMService:
             user_message: User's message
             conversation_history: Conversation history
             business_context: Business context for the coaching session
-            interaction_code: Unused (kept for backward compatibility)
-            user_tier: Unused (kept for backward compatibility)
-            template_parameters: Unused (kept for backward compatibility)
+            _interaction_code: Unused (kept for backward compatibility)
+            _user_tier: Unused (kept for backward compatibility)
+            _template_parameters: Unused (kept for backward compatibility)
             system_prompt_override: Optional override for system prompt (bypasses template lookup).
                 Use this when you need a custom prompt with structured output instructions.
 

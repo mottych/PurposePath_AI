@@ -764,10 +764,9 @@ class UnifiedAIEngine:
             # which fields are required based on whether they have defaults
             # DO NOT overwrite it with all property keys
             properties = schema.get("properties", {})
-            if properties:
-                # Only set 'required' if it doesn't exist (shouldn't happen with Pydantic)
-                if "required" not in schema:
-                    schema["required"] = []
+            # Only set 'required' if it doesn't exist (shouldn't happen with Pydantic)
+            if properties and "required" not in schema:
+                schema["required"] = []
 
             for prop in properties.values():
                 self._add_additional_properties_false(prop)
