@@ -100,8 +100,9 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Response: `{ "success": true, "data": { "status": "valid|used|expired|not_found|error" } }`.
 
 ### POST /auth/resend-confirmation
-- Query: `email`; optional `X-Frontend-Base-Url` for link generation.
+- Query: `username` (required - user's username); optional `X-Frontend-Base-Url` for link generation.
 - Response: `{ "success": true, "message": "Confirmation email resent" }`.
+- Notes: Always returns success even if username not found (security - prevents username enumeration). Email only sent if user exists and needs verification (status is Pending).
 
 ### POST /auth/logout
 - Query: `refreshToken` (camelCase). Legacy `refresh_token` still accepted.
