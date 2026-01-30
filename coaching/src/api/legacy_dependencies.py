@@ -27,16 +27,12 @@ from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
-    LLMConfigurationRepository,
-)
 from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.cache_service import CacheService
 from coaching.src.services.insights_service import InsightsService
-from coaching.src.services.llm_configuration_service import LLMConfigurationService
 from coaching.src.services.llm_template_service import LLMTemplateService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
@@ -118,22 +114,6 @@ async def get_conversation_repository() -> DynamoDBConversationRepository:
     )
 
 
-async def get_llm_configuration_repository() -> LLMConfigurationRepository:
-    """Get LLM configuration repository.
-
-    Returns:
-        LLMConfigurationRepository instance configured with settings
-    """
-    dynamodb = get_dynamodb_resource_singleton()
-    # Use a dedicated table for LLM configurations
-    # For now, using a default name - this should be in settings
-    table_name = getattr(settings, "llm_config_table", "llm_configurations")
-    return LLMConfigurationRepository(
-        dynamodb_resource=dynamodb,
-        table_name=table_name,
-    )
-
-
 async def get_template_metadata_repository() -> TemplateMetadataRepository:
     """Get template metadata repository.
 
@@ -175,21 +155,6 @@ async def get_cache_service() -> CacheService:
     return CacheService(
         redis_client=redis_client,
         key_prefix="llm:",  # Namespace for LLM-related caching
-    )
-
-
-async def get_llm_configuration_service() -> LLMConfigurationService:
-    """Get LLM configuration service.
-
-    Returns:
-        LLMConfigurationService instance with repositories and caching
-    """
-    config_repo = await get_llm_configuration_repository()
-    cache_service = await get_cache_service()
-
-    return LLMConfigurationService(
-        configuration_repository=config_repo,
-        cache_service=cache_service,
     )
 
 
@@ -397,8 +362,6 @@ __all__ = [
     "get_conversation_repository",
     "get_conversation_service",
     "get_insights_service",
-    "get_llm_configuration_repository",
-    "get_llm_configuration_service",
     "get_llm_service",
     "get_llm_template_service",
     "get_measure_service",

@@ -11,8 +11,6 @@ from coaching.src.api.legacy_dependencies import (
     get_conversation_repository,
     get_conversation_service,
     get_insights_service,
-    get_llm_configuration_repository,
-    get_llm_configuration_service,
     get_llm_service,
     get_llm_template_service,
     get_measure_service,
@@ -45,8 +43,6 @@ __all__ = [
     # From ai_engine (overrides legacy if duplicates exist)
     "get_generic_handler",
     "get_insights_service",
-    "get_llm_configuration_repository",
-    "get_llm_configuration_service",
     "get_llm_provider",
     "get_llm_service",
     "get_llm_template_service",
