@@ -94,8 +94,7 @@ class TestLLMService:
         config = LLMConfiguration(
             config_id="conf-1",
             interaction_code="TEST_CODE",
-            basic_model_code="CLAUDE_3_SONNET",
-            premium_model_code="CLAUDE_3_SONNET",
+            model_code="CLAUDE_3_SONNET",
             temperature=0.7,
             max_tokens=1000,
             template_id="tpl-1",
@@ -152,8 +151,7 @@ class TestLLMService:
         config = LLMConfiguration(
             config_id="conf-1",
             interaction_code="TEST_CODE",
-            basic_model_code="CLAUDE_3_SONNET",
-            premium_model_code="CLAUDE_3_SONNET",
+            model_code="CLAUDE_3_SONNET",
             temperature=0.7,
             max_tokens=1000,
             template_id="tpl-1",

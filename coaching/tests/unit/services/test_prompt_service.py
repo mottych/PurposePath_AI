@@ -137,8 +137,8 @@ async def test_get_template_builds_from_llm_topic(sample_topic: LLMTopic) -> Non
     assert template.system_prompt == "System prompt content"
     assert template.initial_message == "User prompt content"
 
-    # LLM configuration should come from LLMTopic fields
-    assert template.llm_config.model == sample_topic.model_code
+    # LLM configuration should come from LLMTopic fields (uses premium_model_code for backward compatibility)
+    assert template.llm_config.model == sample_topic.premium_model_code
     assert template.llm_config.temperature == sample_topic.temperature
     assert template.llm_config.max_tokens == sample_topic.max_tokens
     assert template.llm_config.top_p == sample_topic.top_p

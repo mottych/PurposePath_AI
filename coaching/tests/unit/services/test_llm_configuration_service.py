@@ -37,8 +37,7 @@ def sample_config():
     return LLMConfiguration(
         config_id="config-123",
         interaction_code="coaching_conversation",
-        basic_model_code="gpt-4-turbo",
-        premium_model_code="gpt-4-turbo",
+        model_code="gpt-4-turbo",
         template_id="template-123",
         tier="premium",
         is_active=True,
@@ -57,8 +56,7 @@ def default_config():
     return LLMConfiguration(
         config_id="config-default",
         interaction_code="coaching_conversation",
-        basic_model_code="gpt-3.5-turbo",
-        premium_model_code="gpt-3.5-turbo",
+        model_code="gpt-3.5-turbo",
         template_id="template-default",
         tier=None,
         is_active=True,
