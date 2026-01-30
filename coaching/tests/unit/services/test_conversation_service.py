@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from coaching.src.core.constants import CoachingTopic, ConversationStatus
 from coaching.src.core.exceptions import ConversationNotFoundError
-from coaching.src.domain.entities.llm_config.llm_configuration import LLMConfiguration
 from coaching.src.domain.entities.prompt_template import PromptTemplate
 from coaching.src.models.conversation import Conversation
 from coaching.src.models.responses import ConversationResponse, MessageResponse
@@ -61,7 +60,7 @@ class TestConversationService:
         mock_template = Mock(spec=PromptTemplate)
         mock_template.initial_message = "Hello!"
         mock_template.version = "1.0"
-        mock_template.llm_config = Mock(spec=LLMConfiguration)
+        mock_template.llm_config = Mock()
         mock_template.llm_config.model_dump.return_value = {"model": "gpt-4"}
 
         mock_prompt_service.get_template.return_value = mock_template
