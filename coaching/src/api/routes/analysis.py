@@ -162,10 +162,10 @@ async def analyze_kpis(
         MeasureAnalysisResponse with analysis and recommendations
     """
     logger.info(
-        "Starting KPI analysis",
+        "Starting Measure analysis",
         user_id=user.user_id,
         tenant_id=user.tenant_id,
-        kpi_count=len(request.current_kpis),
+        measure_count=len(request.current_measures),
     )
 
     template_processor = create_template_processor(jwt_token) if jwt_token else None
