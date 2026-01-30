@@ -66,7 +66,7 @@ class AlignmentCheckData(StrategicPlanningBaseModel):
         description="Human-readable explanation of the alignment",
     )
     suggestions: list[str] = Field(
-        ...,
+        default_factory=list,
         max_length=3,
         description="Actionable improvement suggestions (0-3 items)",
     )
@@ -80,17 +80,14 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
     """Response for alignment_check topic.
 
     Calculates how well a goal aligns with organization's vision, purpose, and values.
-
-    Note: All fields are required for OpenAI structured output compatibility,
-    even those with defaults.
     """
 
     topic_id: str = Field(
-        ...,
+        default="alignment_check",
         description="Topic identifier",
     )
     success: bool = Field(
-        ...,
+        default=True,
         description="Whether the request succeeded",
     )
     data: AlignmentCheckData = Field(
@@ -98,7 +95,7 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
         description="Alignment check results",
     )
     schema_ref: str = Field(
-        ...,
+        default="AlignmentCheckResponse",
         description="Reference to this schema",
     )
 
@@ -137,7 +134,7 @@ class StrategySuggestion(StrategicPlanningBaseModel):
         description="How well this strategy aligns with business foundation",
     )
     suggested_measures: list[str] = Field(
-        ...,
+        default_factory=list,
         alias="suggestedMeasures",
         max_length=3,
         description="Brief Measure names to track this strategy (0-3 items)",
@@ -167,15 +164,14 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
 
     Generates suggested strategies for achieving a goal.
     Note: Named V2 to distinguish from existing StrategySuggestionsResponse.
-    All fields required for OpenAI structured output compatibility.
     """
 
     topic_id: str = Field(
-        ...,
+        default="strategy_suggestions",
         description="Topic identifier",
     )
     success: bool = Field(
-        ...,
+        default=True,
         description="Whether the request succeeded",
     )
     data: StrategySuggestionsData = Field(
@@ -183,7 +179,7 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
         description="Strategy suggestions",
     )
     schema_ref: str = Field(
-        ...,
+        default="StrategySuggestionsResponseV2",
         description="Reference to this schema",
     )
 
@@ -249,7 +245,7 @@ class MeasureRecommendation(StrategicPlanningBaseModel):
         description="Why this Measure is recommended",
     )
     suggested_target: SuggestedTarget | None = Field(
-        ...,
+        default=None,
         alias="suggestedTarget",
         description="Optional suggested target",
     )
@@ -267,38 +263,38 @@ class MeasureRecommendation(StrategicPlanningBaseModel):
         pattern="^(daily|weekly|monthly|quarterly)$",
     )
     is_primary_candidate: bool = Field(
-        ...,
+        default=False,
         alias="isPrimaryCandidate",
         description="Whether this should be the primary Measure",
     )
     catalog_measure_id: str | None = Field(
-        ...,
+        default=None,
         alias="catalogMeasureId",
         description="ID of recommended catalog measure (if from catalog)",
     )
     suggested_owner_id: str | None = Field(
-        ...,
+        default=None,
         alias="suggestedOwnerId",
         description="Suggested person ID to assign as measure owner",
     )
     suggested_owner_name: str | None = Field(
-        ...,
+        default=None,
         alias="suggestedOwnerName",
         description="Suggested person name to assign as measure owner",
     )
     suggested_position_id: str | None = Field(
-        ...,
+        default=None,
         alias="suggestedPositionId",
         description="Suggested position ID (optional, if position-based assignment)",
     )
     association_type: str | None = Field(
-        ...,
+        default=None,
         alias="associationType",
         description="Whether measure is for 'goal' or 'strategy'",
         pattern="^(goal|strategy)$",
     )
     associated_entity_id: str | None = Field(
-        ...,
+        default=None,
         alias="associatedEntityId",
         description="Goal ID or Strategy ID this measure is associated with",
     )
@@ -327,15 +323,14 @@ class MeasureRecommendationsResponseV2(StrategicPlanningBaseModel):
 
     Recommends Measures for measuring goal or strategy success.
     Note: Named V2 to distinguish from existing MeasureRecommendationsResponse.
-    All fields required for OpenAI structured output compatibility.
     """
 
     topic_id: str = Field(
-        ...,
+        default="measure_recommendations",
         description="Topic identifier",
     )
     success: bool = Field(
-        ...,
+        default=True,
         description="Whether the request succeeded",
     )
     data: MeasureRecommendationsData = Field(
@@ -343,7 +338,7 @@ class MeasureRecommendationsResponseV2(StrategicPlanningBaseModel):
         description="Measure recommendations",
     )
     schema_ref: str = Field(
-        ...,
+        default="MeasureRecommendationsResponseV2",
         description="Reference to this schema",
     )
 
@@ -389,12 +384,12 @@ class ActionSuggestion(StrategicPlanningBaseModel):
         description="Human-readable duration estimate (e.g., '2 weeks')",
     )
     suggested_owner_role: str | None = Field(
-        ...,
+        default=None,
         alias="suggestedOwnerRole",
         description="Suggested role for ownership",
     )
     dependencies: list[str] = Field(
-        ...,
+        default_factory=list,
         max_length=3,
         description="Titles of prerequisite actions (0-3 items)",
     )
@@ -423,7 +418,7 @@ class ActionSuggestionsData(StrategicPlanningBaseModel):
         description="Meta-commentary on the suggestions",
     )
     timeline_estimate: str | None = Field(
-        ...,
+        default=None,
         alias="timelineEstimate",
         description="Overall timeline estimate",
     )
@@ -433,15 +428,14 @@ class ActionSuggestionsResponse(StrategicPlanningBaseModel):
     """Response for action_suggestions topic.
 
     Suggests specific, actionable tasks to execute a strategy.
-    All fields required for OpenAI structured output compatibility.
     """
 
     topic_id: str = Field(
-        ...,
+        default="action_suggestions",
         description="Topic identifier",
     )
     success: bool = Field(
-        ...,
+        default=True,
         description="Whether the request succeeded",
     )
     data: ActionSuggestionsData = Field(
@@ -449,7 +443,7 @@ class ActionSuggestionsResponse(StrategicPlanningBaseModel):
         description="Action suggestions",
     )
     schema_ref: str = Field(
-        ...,
+        default="ActionSuggestionsResponse",
         description="Reference to this schema",
     )
 
