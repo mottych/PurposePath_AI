@@ -752,7 +752,9 @@ class UnifiedAIEngine:
     def _add_additional_properties_false(self, schema: dict[str, Any]) -> None:
         """Recursively add additionalProperties: false to all object schemas.
 
-        Preserves Pydantic's 'required' array which correctly identifies required fields.
+        OpenAI's structured output with additionalProperties: false requires
+        ALL properties to be in the 'required' array, even those with defaults.
+        This ensures strict schema validation.
 
         Args:
             schema: JSON schema dict to modify in place
@@ -760,13 +762,11 @@ class UnifiedAIEngine:
         if schema.get("type") == "object":
             schema["additionalProperties"] = False
 
-            # Preserve Pydantic's 'required' array - it already correctly identifies
-            # which fields are required based on whether they have defaults
-            # DO NOT overwrite it with all property keys
             properties = schema.get("properties", {})
-            # Only set 'required' if it doesn't exist (shouldn't happen with Pydantic)
-            if properties and "required" not in schema:
-                schema["required"] = []
+            if properties:
+                # OpenAI requires ALL properties in 'required' when using additionalProperties: false
+                # This is different from Pydantic's default which only includes fields without defaults
+                schema["required"] = list(properties.keys())
 
             for prop in properties.values():
                 self._add_additional_properties_false(prop)
