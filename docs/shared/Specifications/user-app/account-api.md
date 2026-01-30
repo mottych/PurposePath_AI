@@ -499,6 +499,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 }
 ```
 - **Note**: `tenant.name` is populated from the business foundation's company name if available, otherwise falls back to the tenant's name field.
+- **Email Verification** (Issue #619): When a user activates their account via invitation, their email is automatically marked as verified (`person.isEmailVerified = true`). The invitation acceptance itself serves as email validation, eliminating the need for a separate email verification step. The user's status is set to `Active` immediately upon successful activation.
 - Errors:
   - 400 `VALIDATION_ERROR`: Invalid token/expired/already used/person already linked/email mismatch (OAuth)/invalid username format.
   - 409 `USERNAME_NOT_AVAILABLE`: The specified username is already taken by another user (global uniqueness check).
