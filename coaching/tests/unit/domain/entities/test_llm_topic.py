@@ -229,7 +229,7 @@ class TestLLMTopic:
                 category="test",
                 is_active=True,
                 basic_model_code="claude-3-5-sonnet-20241022",
-            premium_model_code="claude-3-5-sonnet-20241022",
+                premium_model_code="claude-3-5-sonnet-20241022",
                 temperature=0.7,
                 max_tokens=2000,
                 prompts=[],

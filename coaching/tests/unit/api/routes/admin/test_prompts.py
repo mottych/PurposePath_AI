@@ -93,7 +93,9 @@ class TestListTopics:
 
 
 class TestCreateTopic:
-    @pytest.mark.skip(reason="Testing deprecated prompts.py endpoint - superseded by admin/topics.py")
+    @pytest.mark.skip(
+        reason="Testing deprecated prompts.py endpoint - superseded by admin/topics.py"
+    )
     def test_create_topic_success(self, client, mock_topic_repo, sample_topic):
         mock_topic_repo.create.return_value = sample_topic
 
@@ -122,7 +124,9 @@ class TestCreateTopic:
         assert response.json()["success"] is True
         mock_topic_repo.create.assert_called_once()
 
-    @pytest.mark.skip(reason="Testing deprecated prompts.py endpoint - superseded by admin/topics.py")
+    @pytest.mark.skip(
+        reason="Testing deprecated prompts.py endpoint - superseded by admin/topics.py"
+    )
     def test_create_topic_duplicate(self, client, mock_topic_repo):
         mock_topic_repo.create.side_effect = DuplicateTopicError(topic_id="existing_topic")
 
