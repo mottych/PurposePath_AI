@@ -94,9 +94,9 @@ class TestEndpointRegistry:
         valid_methods = {"GET", "POST", "PUT", "DELETE", "PATCH"}
         for key, topic in TOPIC_REGISTRY.items():
             if topic.http_method is not None:  # Only check if http_method is set
-                assert topic.http_method.upper() in valid_methods, (
-                    f"Invalid method for {key}: {topic.http_method}"
-                )
+                assert (
+                    topic.http_method.upper() in valid_methods
+                ), f"Invalid method for {key}: {topic.http_method}"
 
 
 class TestGetTopicDefinition:
