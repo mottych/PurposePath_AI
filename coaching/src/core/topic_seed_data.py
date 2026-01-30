@@ -410,7 +410,6 @@ Return a JSON object with this exact structure:
         default_user_prompt="""Generate strategy suggestions for achieving this specific goal and review existing strategies.
 
 GOAL INFORMATION:
-- Goal ID: {goal_id}
 - Goal Title: {goal_title}
 - Goal Description: {goal_description}
 - Goal Intent: {goal_intent}
@@ -423,7 +422,7 @@ BUSINESS FOUNDATION:
 EXISTING STRATEGIES FOR THIS GOAL:
 {existing_strategies_for_goal}
 
-Note: Filter the strategies list to only include strategies where strategy_goal_id matches {goal_id}. If no strategies exist for this goal, indicate that in your reasoning.
+Note: The strategies provided have already been filtered for this specific goal. If no strategies exist for this goal, indicate that in your reasoning.
 
 ADDITIONAL BUSINESS CONTEXT (if provided):
 {business_context}
@@ -604,7 +603,7 @@ BUSINESS CONTEXT:
 IMPLEMENTATION STRATEGIES FOR THIS GOAL:
 {strategies_for_goal}
 
-Note: Filter the strategies list to only include strategies where strategy_goal_id matches the goal_id. If no strategies exist for this goal, base alignment solely on the goal itself.
+Note: The strategies provided have already been filtered for this specific goal. If no strategies exist for this goal, base alignment solely on the goal itself.
 
 IMPORTANT: When strategies are present, consider how they impact alignment:
 - Do the strategies align with the organization's values and purpose?

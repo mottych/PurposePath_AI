@@ -182,6 +182,28 @@ _register(
 
 _register(
     ParameterDefinition(
+        name="businessName",
+        param_type=ParameterType.STRING,
+        description="The business name (camelCase alias for company_name).",
+        default="",
+        retrieval_method="get_business_foundation",
+        extraction_path="company_name",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="coreValues",
+        param_type=ParameterType.LIST,
+        description="The core values of the business (camelCase alias).",
+        default=[],
+        retrieval_method="get_business_foundation",
+        extraction_path="core_values",
+    )
+)
+
+_register(
+    ParameterDefinition(
         name="industry",
         param_type=ParameterType.STRING,
         description="The industry of the business.",
@@ -564,6 +586,28 @@ _register(
 
 _register(
     ParameterDefinition(
+        name="goal_intent",
+        param_type=ParameterType.STRING,
+        description="The intent or purpose of the goal.",
+        default="",
+        retrieval_method="get_goal_by_id",
+        extraction_path="intent",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="goalIntent",
+        param_type=ParameterType.STRING,
+        description="The intent or purpose of the goal (camelCase alias).",
+        default="",
+        retrieval_method="get_goal_by_id",
+        extraction_path="intent",
+    )
+)
+
+_register(
+    ParameterDefinition(
         name="goals_list",
         param_type=ParameterType.LIST,
         description="List of all goals for the user.",
@@ -759,6 +803,28 @@ _register(
         default={},
         retrieval_method="get_all_strategies",
         extraction_path="strategies_by_status",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="existing_strategies_for_goal",
+        param_type=ParameterType.STRING,
+        description="Formatted list of existing strategies for a specific goal (filtered and formatted for display).",
+        default="No existing strategies for this goal.",
+        retrieval_method="get_all_strategies",
+        extraction_path="strategies_formatted",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="strategies_for_goal",
+        param_type=ParameterType.STRING,
+        description="Formatted list of strategies for a specific goal (alternative name).",
+        default="No strategies for this goal.",
+        retrieval_method="get_all_strategies",
+        extraction_path="strategies_formatted",
     )
 )
 
@@ -1642,6 +1708,15 @@ _register(
         param_type=ParameterType.DICT,
         description="Additional context for analysis or generation.",
         default={},
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="business_context",
+        param_type=ParameterType.STRING,
+        description="Additional business context for strategy or analysis tasks.",
+        default="",
     )
 )
 

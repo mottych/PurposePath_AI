@@ -351,14 +351,19 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         description="Generate strategic planning suggestions for a specific goal, including review of existing strategies",
         is_active=True,
         parameter_refs=(
-            _req("goal_id"),  # Required: goal to generate strategies for
-            _goals("goal"),  # Auto-enriched: complete goal data
-            _goals("goal_title"),  # Auto-enriched: goal title
-            _goals("goal_description"),  # Auto-enriched: goal description
-            _onb("business_foundation"),  # Auto-enriched: vision, purpose, core_values
-            _strategies(
-                "strategies"
-            ),  # Auto-enriched: all strategies (filter by goal_id in template)
+            # Enrichment key (required in API request, NOT for templates):
+            _req("goal_id"),  # Used by get_goal_by_id to fetch goal data
+            # Template parameters (auto-enriched, FOR template use):
+            _goal("goal_title"),  # Auto-enriched from goal
+            _goal("goal_description"),  # Auto-enriched from goal
+            _goal("goal_intent"),  # Auto-enriched from goal
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("core_values"),  # Auto-enriched from business_foundation
+            _strategies("existing_strategies_for_goal"),  # Auto-enriched and formatted
+            # Optional request parameters:
+            _opt_req("business_context"),  # Optional: additional business context
+            _opt_req("constraints"),  # Optional: constraints for strategy generation
         ),
     ),
     "measure_recommendations": TopicDefinition(
@@ -411,9 +416,15 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         description="Calculate alignment score between goal and business foundation",
         is_active=True,
         parameter_refs=(
-            _goal("goal"),
-            _onb("business_foundation"),
-            _strategies("strategies"),
+            # Enrichment key (required in API request, NOT for templates):
+            _req("goal_id"),  # Used by get_goal_by_id to fetch goal data
+            # Template parameters (auto-enriched, FOR template use):
+            _goal("goalIntent"),  # Auto-enriched from goal
+            _onb("businessName"),  # Auto-enriched from business_foundation
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("coreValues"),  # Auto-enriched from business_foundation
+            _strategies("strategies_for_goal"),  # Auto-enriched and formatted
         ),
     ),
     "alignment_explanation": TopicDefinition(
