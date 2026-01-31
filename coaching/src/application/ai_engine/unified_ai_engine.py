@@ -752,13 +752,21 @@ class UnifiedAIEngine:
     def _add_additional_properties_false(self, schema: dict[str, Any]) -> None:
         """Recursively add additionalProperties: false to all object schemas.
 
-        OpenAI's structured output with additionalProperties: false requires
-        ALL properties to be in the 'required' array, even those with defaults.
-        This ensures strict schema validation.
+        OpenAI's structured output with additionalProperties: false requires:
+        1. ALL properties to be in the 'required' array, even those with defaults
+        2. $ref cannot have sibling keywords like 'description'
 
         Args:
             schema: JSON schema dict to modify in place
         """
+        # Fix $ref with extra keywords (OpenAI doesn't allow this)
+        if "$ref" in schema:
+            # Remove all keys except $ref to comply with OpenAI's strict validation
+            ref_value = schema["$ref"]
+            schema.clear()
+            schema["$ref"] = ref_value
+            return  # $ref properties don't need further processing
+
         if schema.get("type") == "object":
             schema["additionalProperties"] = False
 
