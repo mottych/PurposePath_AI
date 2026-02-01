@@ -2,7 +2,7 @@
 
 **Controller:** `AlignmentController`  
 **Base Route:** `/alignment`  
-**Version:** 7.1  
+**Version:** 7.2  
 **Last Updated:** January 8, 2026
 
 [← Back to API Index](./README.md)
@@ -11,11 +11,11 @@
 
 ## Overview
 
-The Alignment API provides endpoints for saving and retrieving goal alignment data.
+The Alignment API provides RESTful endpoints for saving and retrieving goal alignment data.
 
 **Important:** Alignment is calculated by the Coaching service (`POST /coaching/alignment-check`). This service provides endpoints to:
-1. Save alignment data to Goals (`POST /alignment/save`)
-2. Retrieve cached alignment data (`POST /alignment/check`)
+1. Save alignment data to Goals (`POST /alignment/{goalId}`)
+2. Retrieve cached alignment data (`GET /alignment/{goalId}`)
 
 ---
 
@@ -29,17 +29,121 @@ All endpoints require:
 
 ## Endpoints
 
-### 1. Save Alignment
+### 1. Get Alignment Data
 
-**POST** `/alignment/save`
+**GET** `/alignment/{goalId}`
 
-Save alignment data calculated by the Coaching service to a goal.
+Retrieve cached alignment data for a specific goal.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `goalId` | string (UUID) | Yes | Goal ID to retrieve alignment for |
+
+#### Response 200 (Success)
+
+```json
+{
+  "success": true,
+  "data": {
+    "goalId": "db1f3932-108d-46e8-bb2f-4ec3e9366a66",
+    "alignmentScore": 85,
+    "explanation": "This goal strongly aligns with your business vision and purpose...",
+    "suggestions": [
+      "Consider adding a strategy focused on customer acquisition",
+      "Your measures could be more specific about timeline"
+    ],
+    "componentScores": {
+      "intentAlignment": 90,
+      "strategyAlignment": 80,
+      "measureRelevance": 85
+    },
+    "breakdown": {
+      "visionAlignment": 88,
+      "purposeAlignment": 85,
+      "valuesAlignment": 82
+    },
+    "lastUpdated": "2025-10-13T14:30:00Z"
+  },
+  "message": null,
+  "error": null,
+  "code": null
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|------|------|-------------|
+| `goalId` | string (UUID) | Goal ID |
+| `alignmentScore` | integer | Overall alignment score (0-100) |
+| `explanation` | string | AI-generated explanation of the alignment |
+| `suggestions` | string[] | AI-generated suggestions for improvement |
+| `componentScores` | object? | Detailed component scores (nullable) |
+| `componentScores.intentAlignment` | integer | Intent alignment score (0-100) |
+| `componentScores.strategyAlignment` | integer | Strategy alignment score (0-100) |
+| `componentScores.measureRelevance` | integer | Measure relevance score (0-100) |
+| `breakdown` | object? | Breakdown by business foundation elements (nullable) |
+| `breakdown.visionAlignment` | integer | Vision alignment score (0-100) |
+| `breakdown.purposeAlignment` | integer | Purpose alignment score (0-100) |
+| `breakdown.valuesAlignment` | integer | Values alignment score (0-100) |
+| `lastUpdated` | datetime | When alignment data was last updated |
+
+#### Response 404 (Goal Not Found)
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": null,
+  "error": "Goal not found",
+  "code": null
+}
+```
+
+#### Response 404 (No Alignment Data)
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": null,
+  "error": "No alignment data found for this goal. Please calculate alignment using the Coaching service first.",
+  "code": null
+}
+```
+
+#### Response 500 (Server Error)
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": null,
+  "error": "Internal server error",
+  "code": null
+}
+```
+
+---
+
+### 2. Save Alignment Data
+
+**POST** `/alignment/{goalId}`
+
+Save alignment data calculated by the Coaching service to a specific goal.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `goalId` | string (UUID) | Yes | Goal ID to update with alignment data |
 
 #### Request Body
 
 ```json
 {
-  "goalId": "uuid",
   "alignmentScore": 85,
   "explanation": "This goal strongly aligns with your business vision and purpose...",
   "suggestions": [
@@ -63,10 +167,9 @@ Save alignment data calculated by the Coaching service to a goal.
 
 | Field | Type | Required | Description |
 |------|------|----------|-------------|
-| `goalId` | string (UUID) | Yes | Goal ID to update with alignment data |
 | `alignmentScore` | integer | Yes | Overall alignment score (0-100) |
-| `explanation` | string | No | AI-generated explanation of the alignment |
-| `suggestions` | string[] | No | AI-generated suggestions for improvement |
+| `explanation` | string | No | AI-generated explanation of the alignment (max 5000 chars) |
+| `suggestions` | string[] | No | AI-generated suggestions for improvement (max 10 items) |
 | `componentScores` | object | No | Detailed component scores |
 | `componentScores.intentAlignment` | integer | Yes* | Intent alignment score (0-100) |
 | `componentScores.strategyAlignment` | integer | Yes* | Strategy alignment score (0-100) |
@@ -132,89 +235,10 @@ Save alignment data calculated by the Coaching service to a goal.
 
 ---
 
-### 2. Check Alignment (Cached)
-
-**POST** `/alignment/check`
-
-Retrieve cached alignment data for a goal intent against business foundation.
-
-If cached alignment data is not available yet, this endpoint returns `200 OK` with `success: false` and an error message. (This is an expected business condition, not a missing route/resource.)
-
-#### Request Body
-
-```json
-{
-  "goalIntent": "string",
-  "businessFoundation": {
-    "businessName": "string",
-    "vision": "string",
-    "purpose": "string",
-    "coreValues": ["string"],
-    "targetMarket": "string",
-    "valueProposition": "string"
-  }
-}
-```
-
-#### Request Constraints
-
-| Field | Type | Required | Description |
-|------|------|----------|-------------|
-| `goalIntent` | string | Yes | Goal intent text to match against cached goals |
-| `businessFoundation.businessName` | string | Yes | Business name (provided by client; not used for cache lookup) |
-| `businessFoundation.vision` | string | Yes | Vision statement |
-| `businessFoundation.purpose` | string | Yes | Purpose statement |
-| `businessFoundation.coreValues` | string[] | Yes | List of core values |
-| `businessFoundation.targetMarket` | string | No | Target market |
-| `businessFoundation.valueProposition` | string | No | Value proposition |
-
-#### Response 200 (Cached Alignment Found)
-
-```json
-{
-  "success": true,
-  "data": {
-    "alignmentScore": 85,
-    "score": 85,
-    "explanation": "This goal strongly aligns with your business vision...",
-    "suggestions": [
-      "Consider adding a strategy focused on...",
-      "Your Measures could be more specific about..."
-    ],
-    "lastUpdated": "2025-10-13T14:30:00Z"
-  },
-  "message": null,
-  "error": null,
-  "code": null
-}
-```
-
-#### Response 200 (No Cached Alignment)
-
-```json
-{
-  "success": false,
-  "data": null,
-  "message": null,
-  "error": "No cached alignment data found. Please calculate alignment using the Coaching service first.",
-  "code": null
-}
-```
-
-#### Response 500 (Server Error)
-
-```json
-{
-  "success": false,
-  "data": null,
-  "message": null,
-  "error": "Internal server error",
-  "code": null
-}
-```
-
----
-
 ## Notes
 
-- The current implementation performs cache lookup by scanning goals and matching by `goalIntent`. Frontend should prefer passing a stable identifier when/if a goalId-based endpoint is introduced.
+- **RESTful Design**: Endpoints now follow RESTful conventions with resource IDs in URL paths
+- **Frontend Context**: Frontend always has `goalId` from goal creation/selection, eliminating need for intent-based lookups
+- **Performance**: Direct ID-based lookups are significantly faster than scanning and matching by intent string
+- **Simplicity**: No unnecessary business foundation payload in GET requests
+- **Breaking Change**: v7.2 removes deprecated `POST /alignment/check` and `POST /alignment/save` endpoints
