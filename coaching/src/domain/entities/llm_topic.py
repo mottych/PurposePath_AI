@@ -504,6 +504,9 @@ class LLMTopic:
         centralized endpoint registry. Creates an inactive topic with default
         configuration that can be activated and configured by admins.
 
+        Default model codes are loaded from AWS Parameter Store with fallback
+        to hardcoded defaults, allowing runtime configuration without code changes.
+
         Args:
             endpoint_def: TopicDefinition from TOPIC_REGISTRY
 
@@ -529,6 +532,16 @@ class LLMTopic:
         # Get tier_level from endpoint_def if available, otherwise default to FREE
         tier_level = getattr(endpoint_def, "tier_level", TierLevel.FREE)
 
+        # Get default model codes from Parameter Store with fallback
+        try:
+            from coaching.src.services.parameter_store_service import get_parameter_store_service
+
+            param_service = get_parameter_store_service()
+            basic_model, premium_model = param_service.get_default_models()
+        except Exception:
+            # Fallback to hardcoded defaults if Parameter Store unavailable
+            basic_model, premium_model = ("CLAUDE_3_5_SONNET_V2", "CLAUDE_OPUS_4_5")
+
         return cls(
             topic_id=endpoint_def.topic_id,
             topic_name=topic_name,
@@ -538,8 +551,8 @@ class LLMTopic:
             display_order=display_order,
             is_active=endpoint_def.is_active,  # Respect endpoint's active status
             tier_level=tier_level,  # Use endpoint tier or default to FREE
-            basic_model_code="claude-3-5-sonnet-20241022",  # Default basic model
-            premium_model_code="claude-3-5-sonnet-20241022",  # Default premium model
+            basic_model_code=basic_model,  # Loaded from Parameter Store or fallback
+            premium_model_code=premium_model,  # Loaded from Parameter Store or fallback
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,
