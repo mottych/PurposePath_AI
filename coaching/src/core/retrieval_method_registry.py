@@ -358,7 +358,10 @@ async def get_goal_by_id(context: RetrievalContext) -> dict[str, Any]:
 
         return {
             "goal": goal,
-            "goal_name": goal.get("name", ""),
+            "title": goal.get("title", ""),  # API returns "title", not "name"
+            "intent": goal.get("intent", ""),  # Goal intent/purpose
+            "description": goal.get("description", ""),
+            "goal_name": goal.get("title", ""),  # Legacy: alias for title
             "goal_description": goal.get("description", ""),
             "goal_status": goal.get("status", ""),
             "goal_type": goal.get("type", ""),  # annual, quarterly, monthly
