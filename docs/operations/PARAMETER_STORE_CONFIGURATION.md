@@ -10,6 +10,8 @@ The PurposePath AI system uses AWS Parameter Store to store runtime-configurable
 - Feature flags
 - Environment-specific configuration
 
+**Infrastructure as Code:** Parameter Store values are defined in Pulumi infrastructure (`coaching/pulumi/__main__.py`) and automatically created/updated during deployment. No manual seeding required.
+
 ## Default Model Configuration
 
 ### Parameter Structure
@@ -23,33 +25,70 @@ Default model codes are stored in Parameter Store at:
 
 Where `{stage}` is `dev`, `staging`, or `prod`.
 
-### Seeding Initial Values
+### Infrastructure Definition
 
-Use the provided script to initialize Parameter Store:
+Parameters are defined in Pulumi infrastructure and automatically created during `pulumi up`:
 
-```bash
-# Initialize dev environment
-cd coaching
-uv run python -m src.scripts.seed_parameter_store --stage dev
-
-# Initialize staging
-uv run python -m src.scripts.seed_parameter_store --stage staging
-
-# Initialize production
-uv run python -m src.scripts.seed_parameter_store --stage prod
+```python
+# coaching/pulumi/__main__.py
+default_models = {
+    "dev": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+    "staging": {...},
+    "prod": {...},
+}
 ```
 
-### Custom Model Codes
+To change default values:
+1. Edit `coaching/pulumi/__main__.py`
+2. Run `pulumi up` to apply changes
+3. Parameters are updated automatically
 
-To set specific model codes during seeding:
+### Manual Seeding (Optional)
+
+The seeding script is available for one-off updates without Pulumi deployment:
 
 ```bash
+# Update specific models without deploying infrastructure
+cd coaching
 uv run python -m src.scripts.seed_parameter_store \
-  --stage prod \
-  --basic-model CLAUDE_3_5_SONNET_V2 \
+  --stage dev \
+  --basic-model CLAUDE_3_7_SONNET \
   --premium-model CLAUDE_OPUS_4_5 \
   --force
 ```
+
+**Note:** Manual updates will be overwritten on next `pulumi up` unless infrastructure code is also updated.
+
+### Changing Default Models in Infrastructure
+
+To change default model codes permanently:
+
+1. **Edit Pulumi configuration:**
+   ```python
+   # coaching/pulumi/__main__.py
+   default_models = {
+       "prod": {
+           "basic": "CLAUDE_3_7_SONNET",  # Changed
+           "premium": "CLAUDE_OPUS_4_5",
+       },
+   }
+   ```
+
+2. **Deploy changes:**
+   ```bash
+   cd coaching/pulumi
+   pulumi up
+   ```
+
+3. **Verify update:**
+   ```bash
+   aws ssm get-parameter \
+     --name "/purposepath/prod/models/default_basic" \
+     --region us-east-1
+   ```
 
 ### Updating via AWS CLI
 
@@ -166,14 +205,7 @@ This ensures the system always has valid model codes even if Parameter Store is 
 
 ## Deployment Checklist
 
-After deploying code changes:
-
-- [ ] **Seed Parameter Store** in each environment:
-  ```bash
-  uv run python -m coaching.src.scripts.seed_parameter_store --stage dev
-  uv run python -m coaching.src.scripts.seed_parameter_store --stage staging
-  uv run python -m coaching.src.scripts.seed_parameter_store --stage prod
-  ```
+After deploying Pulumi infrastructure:
 
 - [ ] **Verify parameters** were created:
   ```bash
@@ -182,20 +214,14 @@ After deploying code changes:
     --region us-east-1
   ```
 
-- [ ] **Grant Lambda IAM permissions** for Parameter Store:
-  ```json
-  {
-    "Effect": "Allow",
-    "Action": [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-      "ssm:PutParameter"
-    ],
-    "Resource": [
-      "arn:aws:ssm:us-east-1:*:parameter/purposepath/*/models/*"
-    ]
-  }
+- [ ] **Verify via Pulumi outputs**:
+  ```bash
+  cd coaching/pulumi
+  pulumi stack output defaultBasicModelParam
+  pulumi stack output defaultPremiumModelParam
   ```
+
+**Note:** IAM permissions and parameter creation are handled automatically by Pulumi. No manual steps required.
 
 ## Monitoring
 

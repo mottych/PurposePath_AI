@@ -50,6 +50,26 @@ stack_config = config.get(stack, config["dev"])
 # AI Jobs table name (for async execution)
 ai_jobs_table = f"purposepath-ai-jobs-{stack}"
 
+# Default model codes for topic creation fallback
+# These are used when topics are auto-created from registry
+default_models = {
+    "dev": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+    "staging": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+    "prod": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+}
+
+# Get default models for this stack
+stack_default_models = default_models.get(stack, default_models["dev"])
+
 # Reference infrastructure stacks
 infra = pulumi.StackReference(stack_config["infra_stack"])
 coaching_infra = pulumi.StackReference(stack_config["coaching_infra_stack"])
@@ -221,6 +241,32 @@ aws.iam.RolePolicy(
     ),
 )
 
+# Parameter Store access for runtime configuration
+aws.iam.RolePolicy(
+    "coaching-parameter-store-policy",
+    role=lambda_role.id,
+    policy=pulumi.Output.all(aws.get_caller_identity().account_id).apply(
+        lambda args: json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ssm:GetParameter",
+                            "ssm:GetParameters",
+                            "ssm:PutParameter",
+                        ],
+                        "Resource": [
+                            f"arn:aws:ssm:us-east-1:{args[0]}:parameter/purposepath/{stack}/models/*",
+                        ],
+                    }
+                ],
+            }
+        )
+    ),
+)
+
 # Create ECR repository
 ecr_repo = aws.ecr.Repository(
     "coaching-repo",
@@ -355,6 +401,36 @@ aws.lambda_.Permission(
     source_arn=ai_job_executor_rule.arn,
 )
 
+# Parameter Store - Default Model Configuration
+# These parameters control default model codes for topic creation fallback
+default_basic_model_param = aws.ssm.Parameter(
+    "default-basic-model",
+    name=f"/purposepath/{stack}/models/default_basic",
+    type="String",
+    value=stack_default_models["basic"],
+    description=f"Default model code for Free/Basic tier topics in {stack} environment",
+    tags={
+        "Environment": stack,
+        "Service": "coaching-ai",
+        "ManagedBy": "Pulumi",
+        "Purpose": "Default model fallback for topic creation",
+    },
+)
+
+default_premium_model_param = aws.ssm.Parameter(
+    "default-premium-model",
+    name=f"/purposepath/{stack}/models/default_premium",
+    type="String",
+    value=stack_default_models["premium"],
+    description=f"Default model code for Premium/Ultimate tier topics in {stack} environment",
+    tags={
+        "Environment": stack,
+        "Service": "coaching-ai",
+        "ManagedBy": "Pulumi",
+        "Purpose": "Default model fallback for topic creation",
+    },
+)
+
 # Use existing custom domain from infrastructure stack
 # Domain: api.{stack}.purposepath.app (created by mottych/purposepath-infrastructure/{stack})
 # Certificate: Already attached to domain
@@ -378,3 +454,5 @@ pulumi.export(
 pulumi.export("lambdaArn", coaching_lambda.arn)
 pulumi.export("aiJobsTable", ai_jobs_dynamodb_table.name)
 pulumi.export("aiJobsTableArn", ai_jobs_dynamodb_table.arn)
+pulumi.export("defaultBasicModelParam", default_basic_model_param.name)
+pulumi.export("defaultPremiumModelParam", default_premium_model_param.name)

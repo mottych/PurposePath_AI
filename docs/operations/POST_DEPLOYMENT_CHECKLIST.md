@@ -29,38 +29,31 @@ aws dynamodb list-tables | grep purposepath
 
 ---
 
-## ✅ 2. Seed Parameter Store Defaults
+## ✅ 2. Verify Parameter Store Configuration
 
-**⚠️ NEW STEP** - Initialize default model configuration in Parameter Store.
+**✅ AUTOMATED** - Parameter Store values are created automatically by Pulumi.
 
-### Why This is Needed
+### Why This Exists
 
-Default model codes for topic creation are stored in AWS Parameter Store, allowing runtime updates without code deployments. This step initializes the parameters.
-
-### Seeding Command
-
-```bash
-# Seed Parameter Store defaults
-cd coaching
-uv run python -m src.scripts.seed_parameter_store --stage {env}
-
-# Example for production with specific models
-uv run python -m src.scripts.seed_parameter_store \
-  --stage prod \
-  --basic-model CLAUDE_3_5_SONNET_V2 \
-  --premium-model CLAUDE_OPUS_4_5 \
-  --force
-```
+Default model codes for topic creation are stored in AWS Parameter Store, allowing runtime updates without code deployments. Pulumi infrastructure automatically creates these parameters.
 
 ### Verification
 
 ```bash
+# Verify parameters exist
 aws ssm get-parameters \
   --names \
     "/purposepath/{env}/models/default_basic" \
     "/purposepath/{env}/models/default_premium" \
   --region us-east-1
+
+# Or via Pulumi outputs
+cd coaching/pulumi
+pulumi stack output defaultBasicModelParam
+pulumi stack output defaultPremiumModelParam
 ```
+
+**Note:** Parameters are defined in `coaching/pulumi/__main__.py` and created/updated during `pulumi up`. No manual seeding required.
 
 ---
 

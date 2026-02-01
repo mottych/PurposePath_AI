@@ -69,51 +69,63 @@ The MODEL_REGISTRY had the wrong release date (September 29 instead of November 
 
 ## Post-Deployment Steps
 
-### 1. Seed Parameter Store (Each Environment)
+### 1. Deploy Pulumi Infrastructure
+
+Parameter Store values are now managed by Pulumi infrastructure:
 
 ```bash
-# Dev
-cd coaching
-uv run python -m src.scripts.seed_parameter_store --stage dev
+cd coaching/pulumi
+pulumi up  # Creates/updates SSM parameters automatically
+```
 
-# Staging  
-uv run python -m src.scripts.seed_parameter_store --stage staging
-
-# Production
-uv run python -m src.scripts.seed_parameter_store --stage prod
+Parameters are defined in `coaching/pulumi/__main__.py`:
+```python
+default_models = {
+    "dev": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+    ...
+}
 ```
 
 ### 2. Verify Parameters Created
 
 ```bash
+# Via AWS CLI
 aws ssm get-parameters \
   --names \
     "/purposepath/dev/models/default_basic" \
     "/purposepath/dev/models/default_premium" \
   --region us-east-1
+
+# Or via Pulumi outputs
+cd coaching/pulumi
+pulumi stack output defaultBasicModelParam
+pulumi stack output defaultPremiumModelParam
 ```
 
-### 3. Grant Lambda IAM Permissions
-
-Ensure Lambda execution role has SSM permissions:
-
-```json
-{
-  "Effect": "Allow",
-  "Action": [
-    "ssm:GetParameter",
-    "ssm:GetParameters",
-    "ssm:PutParameter"
-  ],
-  "Resource": [
-    "arn:aws:ssm:us-east-1:*:parameter/purposepath/*/models/*"
-  ]
-}
-```
+**Note:** IAM permissions are automatically granted by Pulumi. No manual configuration needed.
 
 ## Usage Examples
 
-### Update Defaults via API
+### Update Defaults via Infrastructure (Recommended)
+
+```python
+# 1. Edit coaching/pulumi/__main__.py
+default_models = {
+    "prod": {
+        "basic": "CLAUDE_3_7_SONNET",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+}
+
+# 2. Deploy changes
+cd coaching/pulumi
+pulumi up
+```
+
+### Update Defaults via API (Runtime)
 
 ```bash
 curl -X PUT https://api.dev.purposepath.app/admin/system/default-models \
@@ -125,7 +137,9 @@ curl -X PUT https://api.dev.purposepath.app/admin/system/default-models \
   }'
 ```
 
-### Update via AWS CLI
+**Note:** Runtime API updates will be overwritten on next `pulumi up` unless infrastructure code is also updated.
+
+### Update via AWS CLI (One-off)
 
 ```bash
 aws ssm put-parameter \
@@ -135,6 +149,8 @@ aws ssm put-parameter \
   --overwrite \
   --region us-east-1
 ```
+
+**Note:** CLI updates will be overwritten on next `pulumi up` unless infrastructure code is also updated.
 
 ## Testing
 
