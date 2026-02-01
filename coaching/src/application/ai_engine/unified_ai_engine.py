@@ -366,9 +366,8 @@ class UnifiedAIEngine:
                 "max_tokens": topic.max_tokens,
                 "tier_level": topic.tier_level.value,
                 "model_configuration": {
-                    "default": topic.model_default,
-                    "premium": topic.model_premium,
-                    "ultimate": topic.model_ultimate,
+                    "basic": topic.basic_model_code,
+                    "premium": topic.premium_model_code,
                 },
             },
         )
