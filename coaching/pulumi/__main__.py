@@ -273,7 +273,9 @@ coaching_lambda = aws.lambda_.Function(
             "JWT_SECRET_NAME": stack_config["jwt_secret"],
             "JWT_ISSUER": stack_config["jwt_issuer"],
             "JWT_AUDIENCE": stack_config["jwt_audience"],
-            "AI_DEBUG_LOGGING": stack_config.get("ai_debug_logging", "false"),  # Optional, defaults to false
+            "AI_DEBUG_LOGGING": stack_config.get(
+                "ai_debug_logging", "false"
+            ),  # Optional, defaults to false
         }
     ),
 )
