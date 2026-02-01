@@ -258,10 +258,10 @@ class TestBusinessApiClient:
 
         assert result["id"] == "g1"
         assert result["title"] == "Goal 1"
-        # get_goal_by_id constructs traction URL from account base URL
-        expected_url = "https://test.com/traction/api/v1/goals/g1"
+        # get_goal_by_id tries to replace /account/ with /traction/ in base_url
+        # Test fixture uses "https://api.test.com" (no /account/), so no replacement occurs
         mock_http_client.get.assert_called_with(
-            expected_url,
+            "https://api.test.com/goals/g1",
             headers=business_client._get_headers("t1"),
         )
 
