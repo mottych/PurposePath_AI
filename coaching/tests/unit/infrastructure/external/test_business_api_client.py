@@ -251,15 +251,17 @@ class TestBusinessApiClient:
     async def test_get_goal_by_id(self, business_client, mock_http_client):
         """Test get_goal_by_id."""
         mock_http_client.get.return_value.json.return_value = {
-            "data": {"id": "g1", "name": "Goal 1", "status": "active"}
+            "data": {"id": "g1", "title": "Goal 1", "intent": "Test intent", "status": "active"}
         }
 
         result = await business_client.get_goal_by_id("g1", "t1")
 
         assert result["id"] == "g1"
-        assert result["name"] == "Goal 1"
+        assert result["title"] == "Goal 1"
+        # get_goal_by_id constructs traction URL from account base URL
+        expected_url = "https://test.com/traction/api/v1/goals/g1"
         mock_http_client.get.assert_called_with(
-            "/goals/g1",
+            expected_url,
             headers=business_client._get_headers("t1"),
         )
 
