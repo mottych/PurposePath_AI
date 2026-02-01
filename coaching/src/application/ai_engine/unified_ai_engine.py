@@ -5,6 +5,7 @@ topic-driven configuration, supporting both single-shot and conversation flows.
 """
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -28,6 +29,33 @@ if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
+
+# AI Debug logging control - set AI_DEBUG_LOGGING=true to enable detailed AI execution logging
+AI_DEBUG_ENABLED = os.getenv("AI_DEBUG_LOGGING", "false").lower() == "true"
+
+
+def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
+    """Log AI debug information when AI_DEBUG_LOGGING is enabled.
+    
+    Logs detailed information about AI execution including templates, parameters,
+    enrichment results, prompts, and responses for debugging purposes.
+    
+    Args:
+        message: Debug message describing the log entry
+        data: Optional structured data to include in the log
+    """
+    if AI_DEBUG_ENABLED:
+        log_entry = {"ai_debug": message}
+        if data:
+            # Truncate very long strings for readability
+            truncated_data = {}
+            for key, value in data.items():
+                if isinstance(value, str) and len(value) > 2000:
+                    truncated_data[key] = value[:2000] + f"... (truncated, total length: {len(value)})"
+                else:
+                    truncated_data[key] = value
+            log_entry.update(truncated_data)
+        logger.info("AI_DEBUG", **log_entry)
 
 
 @dataclass
@@ -312,8 +340,36 @@ class UnifiedAIEngine:
             user_tier=user_tier.value,
         )
 
+        _log_ai_debug(
+            "Starting AI execution",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "input_parameters": parameters,
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "user_tier": user_tier.value,
+            },
+        )
+
         # Step 1: Get topic configuration
         topic = await self._get_active_topic(topic_id, allow_inactive=allow_inactive)
+
+        _log_ai_debug(
+            "Topic configuration loaded",
+            {
+                "topic_id": topic_id,
+                "topic_name": topic.topic_name,
+                "temperature": topic.temperature,
+                "max_tokens": topic.max_tokens,
+                "tier_level": topic.tier_level.value,
+                "model_configuration": {
+                    "default": topic.model_default,
+                    "premium": topic.model_premium,
+                    "ultimate": topic.model_ultimate,
+                },
+            },
+        )
 
         # Step 1.5: Check tier-based access control
         if not TierLevel.can_access_topic(user_tier, topic.tier_level):
@@ -329,7 +385,25 @@ class UnifiedAIEngine:
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
 
+        _log_ai_debug(
+            "Prompt templates loaded",
+            {
+                "topic_id": topic_id,
+                "system_prompt_template": system_prompt_content,
+                "user_prompt_template": user_prompt_content,
+            },
+        )
+
         # Step 3: Enrich parameters if template processor is provided
+        _log_ai_debug(
+            "Starting parameter enrichment",
+            {
+                "topic_id": topic_id,
+                "has_template_processor": template_processor is not None,
+                "parameters_before_enrichment": parameters,
+            },
+        )
+
         enriched_params = await self._enrich_parameters(
             parameters=parameters,
             system_prompt=system_prompt_content,
@@ -338,6 +412,15 @@ class UnifiedAIEngine:
             user_id=str(user_id or parameters.get("user_id", "")),
             tenant_id=str(tenant_id or parameters.get("tenant_id", "")),
             template_processor=template_processor,
+        )
+
+        _log_ai_debug(
+            "Parameter enrichment completed",
+            {
+                "topic_id": topic_id,
+                "parameters_after_enrichment": enriched_params,
+                "enriched_keys": list(set(enriched_params.keys()) - set(parameters.keys())),
+            },
         )
 
         # Step 4: Validate parameters (after enrichment)
@@ -349,10 +432,29 @@ class UnifiedAIEngine:
         )
         rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, enriched_params)
 
+        _log_ai_debug(
+            "Prompts rendered with parameters",
+            {
+                "topic_id": topic_id,
+                "rendered_system_prompt": rendered_system,
+                "rendered_user_prompt": rendered_user,
+            },
+        )
+
         # Step 5.5: Inject response format instructions into system prompt
         # Also get the JSON schema for structured output providers (OpenAI)
         rendered_system, response_schema = self._inject_response_format_with_schema(
             rendered_system, response_model
+        )
+
+        _log_ai_debug(
+            "Response format injected",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "response_schema": response_schema,
+                "final_system_prompt": rendered_system,
+            },
         )
 
         # Step 6: Select model based on user tier and get provider
@@ -367,6 +469,20 @@ class UnifiedAIEngine:
 
         # Step 7: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
+
+        _log_ai_debug(
+            "Calling LLM",
+            {
+                "topic_id": topic_id,
+                "model_code": model_code,
+                "model_name": model_name,
+                "temperature": topic.temperature,
+                "max_tokens": topic.max_tokens,
+                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+                "system_prompt": rendered_system,
+                "has_response_schema": response_schema is not None,
+            },
+        )
 
         llm_response = await provider.generate(
             messages=messages,
@@ -385,6 +501,17 @@ class UnifiedAIEngine:
             finish_reason=llm_response.finish_reason,
         )
 
+        _log_ai_debug(
+            "LLM response received",
+            {
+                "topic_id": topic_id,
+                "model": llm_response.model,
+                "finish_reason": llm_response.finish_reason,
+                "usage": llm_response.usage,
+                "response_content": llm_response.content,
+            },
+        )
+
         # Step 8: Serialize response
         serialized = await self.response_serializer.serialize(
             ai_response=llm_response.content,
@@ -396,6 +523,29 @@ class UnifiedAIEngine:
             "Single-shot execution completed",
             topic_id=topic_id,
             result_type=type(serialized).__name__,
+        )
+
+        _log_ai_debug(
+            "Response serialization completed",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "serialized_response": serialized.model_dump() if hasattr(serialized, "model_dump") else str(serialized),
+            },
+        )
+
+        _log_ai_debug(
+            "AI execution completed successfully",
+            {
+                "topic_id": topic_id,
+                "execution_summary": {
+                    "input_parameters": parameters,
+                    "enriched_parameters": enriched_params,
+                    "model_used": llm_response.model,
+                    "tokens_used": llm_response.usage.get("total_tokens", 0),
+                    "response_type": type(serialized).__name__,
+                },
+            },
         )
 
         return SingleShotExecutionContext(
@@ -439,6 +589,10 @@ class UnifiedAIEngine:
             Enriched parameters dictionary
         """
         if template_processor is None:
+            _log_ai_debug(
+                "No template processor provided, skipping enrichment",
+                {"topic_id": topic.topic_id, "parameters": parameters},
+            )
             # No enrichment - return original parameters
             return parameters
 
