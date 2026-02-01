@@ -419,6 +419,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             # Enrichment key (required in API request, NOT for templates):
             _req("goal_id"),  # Used by get_goal_by_id to fetch goal data
             # Template parameters (auto-enriched, FOR template use):
+            _goal("goal"),  # Complete goal object (for old template format)
             _goal("goalIntent"),  # Auto-enriched from goal
             _onb("businessName"),  # Auto-enriched from business_foundation
             _onb("vision"),  # Auto-enriched from business_foundation
