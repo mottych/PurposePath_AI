@@ -51,7 +51,9 @@ def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
             truncated_data = {}
             for key, value in data.items():
                 if isinstance(value, str) and len(value) > 2000:
-                    truncated_data[key] = value[:2000] + f"... (truncated, total length: {len(value)})"
+                    truncated_data[key] = (
+                        value[:2000] + f"... (truncated, total length: {len(value)})"
+                    )
                 else:
                     truncated_data[key] = value
             log_entry.update(truncated_data)
@@ -530,7 +532,9 @@ class UnifiedAIEngine:
             {
                 "topic_id": topic_id,
                 "response_model": response_model.__name__,
-                "serialized_response": serialized.model_dump() if hasattr(serialized, "model_dump") else str(serialized),
+                "serialized_response": serialized.model_dump()
+                if hasattr(serialized, "model_dump")
+                else str(serialized),
             },
         )
 
