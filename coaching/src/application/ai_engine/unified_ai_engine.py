@@ -36,10 +36,10 @@ AI_DEBUG_ENABLED = os.getenv("AI_DEBUG_LOGGING", "false").lower() == "true"
 
 def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
     """Log AI debug information when AI_DEBUG_LOGGING is enabled.
-    
+
     Logs detailed information about AI execution including templates, parameters,
     enrichment results, prompts, and responses for debugging purposes.
-    
+
     Args:
         message: Debug message describing the log entry
         data: Optional structured data to include in the log
