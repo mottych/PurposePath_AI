@@ -20,6 +20,7 @@ config = {
         "jwt_issuer": "https://api.dev.purposepath.app",
         "jwt_audience": "https://dev.purposepath.app",
         "log_level": "INFO",
+        "ai_debug_logging": "true",  # Enable detailed AI execution logging for debugging
     },
     "staging": {
         "infra_stack": "mottych/purposepath-infrastructure/staging",
@@ -272,6 +273,7 @@ coaching_lambda = aws.lambda_.Function(
             "JWT_SECRET_NAME": stack_config["jwt_secret"],
             "JWT_ISSUER": stack_config["jwt_issuer"],
             "JWT_AUDIENCE": stack_config["jwt_audience"],
+            "AI_DEBUG_LOGGING": stack_config.get("ai_debug_logging", "false"),  # Optional, defaults to false
         }
     ),
 )
