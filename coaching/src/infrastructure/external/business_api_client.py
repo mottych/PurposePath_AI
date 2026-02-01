@@ -332,7 +332,7 @@ class BusinessApiClient:
             # Goals are in Traction service, not Account service
             # Construct full traction URL from base URL
             traction_url = self.base_url.replace("/account/api/v1", "/traction/api/v1")
-            
+
             response = await self.client.get(
                 f"{traction_url}/goals/{goal_id}",
                 headers=self._get_headers(tenant_id),
