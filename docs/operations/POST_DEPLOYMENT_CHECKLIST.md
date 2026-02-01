@@ -29,7 +29,42 @@ aws dynamodb list-tables | grep purposepath
 
 ---
 
-## ✅ 2. Seed AI Topics to DynamoDB
+## ✅ 2. Seed Parameter Store Defaults
+
+**⚠️ NEW STEP** - Initialize default model configuration in Parameter Store.
+
+### Why This is Needed
+
+Default model codes for topic creation are stored in AWS Parameter Store, allowing runtime updates without code deployments. This step initializes the parameters.
+
+### Seeding Command
+
+```bash
+# Seed Parameter Store defaults
+cd coaching
+uv run python -m src.scripts.seed_parameter_store --stage {env}
+
+# Example for production with specific models
+uv run python -m src.scripts.seed_parameter_store \
+  --stage prod \
+  --basic-model CLAUDE_3_5_SONNET_V2 \
+  --premium-model CLAUDE_OPUS_4_5 \
+  --force
+```
+
+### Verification
+
+```bash
+aws ssm get-parameters \
+  --names \
+    "/purposepath/{env}/models/default_basic" \
+    "/purposepath/{env}/models/default_premium" \
+  --region us-east-1
+```
+
+---
+
+## ✅ 3. Seed AI Topics to DynamoDB
 
 **⚠️ CRITICAL STEP** - This step is **required** for AI functionality to work.
 
@@ -103,9 +138,9 @@ aws s3 ls s3://purposepath-coaching-prompts-{env}/prompts/alignment_check/
 
 ---
 
-## ✅ 3. Test AI Endpoints
+## ✅ 4. Test AI Endpoints
 
-After seeding topics, test key endpoints:
+After seeding Parameter Store and topics, test key endpoints:
 
 ### Health Check
 
@@ -133,7 +168,7 @@ curl -X POST https://api.{env}.purposepath.app/ai/execute-async \
 
 ---
 
-## ✅ 4. Verify Custom Domain & SSL
+## ✅ 5. Verify Custom Domain & SSL
 
 ```bash
 # Test custom domain
@@ -150,7 +185,7 @@ openssl s_client -connect api.{env}.purposepath.app:443 -servername api.{env}.pu
 
 ---
 
-## ✅ 5. Check CloudWatch Logs
+## ✅ 6. Check CloudWatch Logs
 
 Monitor initial traffic and errors:
 
@@ -166,7 +201,7 @@ aws logs filter-log-events \
 
 ---
 
-## ✅ 6. Verify ElastiCache Redis
+## ✅ 7. Verify ElastiCache Redis
 
 ```bash
 # Check Redis cluster
@@ -181,7 +216,7 @@ redis-cli -h {redis-endpoint} ping
 
 ---
 
-## ✅ 7. Update Documentation
+## ✅ 8. Update Documentation
 
 - [ ] Update API documentation with new endpoints
 - [ ] Update environment variables documentation
