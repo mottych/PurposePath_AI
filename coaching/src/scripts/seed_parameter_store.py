@@ -67,7 +67,7 @@ def print_success(text: str) -> None:
 
 def print_info(text: str) -> None:
     """Print info message."""
-    print(f"{Colors.OKCYAN}ℹ️  {text}{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}[INFO] {text}{Colors.ENDC}")
 
 
 def print_warning(text: str) -> None:
@@ -150,7 +150,7 @@ def main() -> int:
     basic_param = f"/purposepath/{args.stage}/models/default_basic"
     premium_param = f"/purposepath/{args.stage}/models/default_premium"
 
-    print_info(f"Parameter paths:")
+    print_info("Parameter paths:")
     print(f"  - {basic_param}")
     print(f"  - {premium_param}")
     print()
