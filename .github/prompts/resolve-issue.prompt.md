@@ -72,6 +72,8 @@ python -m pytest coaching/tests/integration/ -x --tb=short -q
 
 ### STEP 4: Commit to Feature Branch
 
+Use GitHub MCP or CLI as preferred methods. If a file is needed to post the commit, follow the following steps:
+
 1. **Clean up temporary files**:
    ```bash
    rm -f issue_body.md
@@ -112,38 +114,46 @@ git checkout dev
 # 2. Merge with no-fast-forward (preserves history)
 git merge --no-ff fix/{ISSUE_NUMBER}-{description} -m "Merge fix/{ISSUE_NUMBER}-{description}"
 
-# 3. Delete local feature branch
-git branch -d fix/{ISSUE_NUMBER}-{description}
-
-# 4. Push to origin
+# 3. Push to origin
 git push origin dev
 ```
 
 **WAIT for deployment** - CI/CD pipeline will trigger automatically
+Verify on github that the deployment succeeded. If deployment failed revert to the feature branch,. fix the issue and repeat the Merge & Sync process.
+Do not proceed, unless the deployment is successful.
+
+```bash
+   gh run list --workflow=deploy-dev.yml --limit 1
+   gh run watch {RUN_ID} --exit-status
+```
 
 ### STEP 6: Post-Deployment Verification (E2E Testing)
 
-1. **Monitor deployment**:
-   ```bash
-   gh run list --workflow=deploy-dev.yml --limit 1
-   gh run watch {RUN_ID} --exit-status
-   ```
-
-2. **Run E2E tests** against deployed API:
+1. **Run E2E tests** against deployed API:
    - Test with real JWT tokens
    - Verify CloudWatch logs
    - Check all affected endpoints
 
-3. **If tests fail**:
+2. **If tests fail**:
    - ⛔ Do NOT close issue
-   - Create new feature branch from dev
+   - Switch to feature branch from dev
    - Fix and repeat from STEP 2
+
+3. **Delete Feature Branch**
+
+When all tests pass and deployment succeeded, detelt feature bracnh
+
+```bash
+# 4. Delete local feature branch
+git branch -d fix/{ISSUE_NUMBER}-{description}
+```
 
 ### STEP 7: Close Issue & Cleanup
 
 **ONLY after successful deployment and E2E verification:**
 
 1. **Update issue with results**:
+
    ```bash
    gh issue comment {ISSUE_NUMBER} --body "✅ **Resolved and verified in production**
    
