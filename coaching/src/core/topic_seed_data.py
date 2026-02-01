@@ -11,28 +11,9 @@ Usage:
     # Use seed data to initialize topic in DynamoDB
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from coaching.src.core.constants import TierLevel, TopicCategory, TopicType
-
-
-def _get_default_models() -> tuple[str, str]:
-    """Get default model codes from Parameter Store with fallback.
-
-    This function attempts to load default model codes from AWS Parameter Store.
-    If unavailable, it falls back to hardcoded defaults.
-
-    Returns:
-        Tuple of (basic_model_code, premium_model_code)
-    """
-    try:
-        from coaching.src.services.parameter_store_service import get_parameter_store_service
-
-        param_service = get_parameter_store_service()
-        return param_service.get_default_models()
-    except Exception:
-        # Fallback to hardcoded defaults if Parameter Store unavailable
-        return ("CLAUDE_3_5_SONNET_V2", "CLAUDE_OPUS_4_5")
 
 
 @dataclass
@@ -45,8 +26,8 @@ class TopicSeedData:
     Note: Parameters are now defined in PARAMETER_REGISTRY and ENDPOINT_REGISTRY,
     not stored with individual topics.
 
-    Default model codes are loaded from AWS Parameter Store with fallback to
-    hardcoded defaults. This allows runtime configuration without code changes.
+    Default model codes are defined in Pulumi infrastructure and managed via
+    AWS Parameter Store. These hardcoded values serve as fallback only.
 
     Attributes:
         topic_id: Unique identifier (snake_case)
@@ -55,8 +36,8 @@ class TopicSeedData:
         category: Grouping category
         description: Detailed description of topic purpose
         tier_level: Subscription tier required to access this topic
-        basic_model_code: LLM model for Free/Basic tiers (loaded from Parameter Store)
-        premium_model_code: LLM model for Premium/Ultimate tiers (loaded from Parameter Store)
+        basic_model_code: LLM model for Free/Basic tiers
+        premium_model_code: LLM model for Premium/Ultimate tiers
         temperature: LLM temperature parameter
         max_tokens: Maximum tokens for response
         top_p: Nucleus sampling parameter
@@ -73,8 +54,8 @@ class TopicSeedData:
     category: str
     description: str
     tier_level: TierLevel = TierLevel.FREE
-    basic_model_code: str = field(default_factory=lambda: _get_default_models()[0])
-    premium_model_code: str = field(default_factory=lambda: _get_default_models()[1])
+    basic_model_code: str = "CLAUDE_3_5_SONNET_V2"
+    premium_model_code: str = "CLAUDE_OPUS_4_5"
     temperature: float = 0.7
     max_tokens: int = 4096
     top_p: float = 1.0
