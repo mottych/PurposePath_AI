@@ -151,8 +151,8 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
     "CLAUDE_OPUS_4_5": SupportedModel(
         code="CLAUDE_OPUS_4_5",
         provider=LLMProvider.BEDROCK,
-        model_name="anthropic.claude-opus-4-5-20250929-v1:0",
-        version="20250929",
+        model_name="anthropic.claude-opus-4-5-20251101-v1:0",
+        version="20251101",
         provider_class="BedrockLLMProvider",
         capabilities=[
             "chat",

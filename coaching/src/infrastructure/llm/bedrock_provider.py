@@ -43,7 +43,7 @@ logger = structlog.get_logger()
 INFERENCE_PROFILE_MODELS: set[str] = {
     "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
-    "anthropic.claude-opus-4-5-20250929-v1:0",  # Claude Opus 4.5
+    "anthropic.claude-opus-4-5-20251101-v1:0",  # Claude Opus 4.5
 }
 
 # Models that support prompt caching via cache_control blocks
@@ -60,10 +60,10 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
     "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
     # Claude Opus 4.5
-    "anthropic.claude-opus-4-5-20250929-v1:0",
-    "us.anthropic.claude-opus-4-5-20250929-v1:0",
-    "eu.anthropic.claude-opus-4-5-20250929-v1:0",
-    "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+    "anthropic.claude-opus-4-5-20251101-v1:0",
+    "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+    "apac.anthropic.claude-opus-4-5-20251101-v1:0",
     # Claude 3 Haiku (requires 2048+ tokens)
     "anthropic.claude-3-haiku-20240307-v1:0",
 }
@@ -105,10 +105,10 @@ class BedrockLLMProvider:
         "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
         "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
         # Claude Opus 4.5 (requires inference profile)
-        "anthropic.claude-opus-4-5-20250929-v1:0",
-        "us.anthropic.claude-opus-4-5-20250929-v1:0",
-        "eu.anthropic.claude-opus-4-5-20250929-v1:0",
-        "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+        "anthropic.claude-opus-4-5-20251101-v1:0",
+        "us.anthropic.claude-opus-4-5-20251101-v1:0",
+        "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+        "apac.anthropic.claude-opus-4-5-20251101-v1:0",
         # Legacy Claude models
         "anthropic.claude-v2:1",
         "anthropic.claude-v2",
