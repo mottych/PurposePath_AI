@@ -317,7 +317,7 @@ class BusinessApiClient:
     async def get_goal_by_id(self, goal_id: str, tenant_id: str) -> dict[str, Any]:
         """Get single goal by ID from Traction Service.
 
-        Endpoint: GET /goals/{id}
+        Endpoint: GET /traction/api/v1/goals/{id}
 
         Args:
             goal_id: Goal identifier
@@ -329,8 +329,12 @@ class BusinessApiClient:
         try:
             logger.info("Fetching goal", goal_id=goal_id, tenant_id=tenant_id)
 
+            # Goals are in Traction service, not Account service
+            # Construct full traction URL from base URL
+            traction_url = self.base_url.replace("/account/api/v1", "/traction/api/v1")
+            
             response = await self.client.get(
-                f"/goals/{goal_id}",
+                f"{traction_url}/goals/{goal_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
