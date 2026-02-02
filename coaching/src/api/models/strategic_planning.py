@@ -451,7 +451,7 @@ class ActionSuggestionsData(StrategicPlanningBaseModel):
         ...,
         alias="analysisNotes",
         min_length=50,
-        max_length=200,
+        max_length=500,
         description="Meta-commentary on the suggestions",
     )
     timeline_estimate: str | None = Field(

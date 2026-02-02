@@ -768,7 +768,7 @@ Return a JSON object with this exact structure:
         "associatedStrategyName": "<strategy name>" or null
       }
     ],
-    "analysisNotes": "<meta-commentary on suggestions, 50-200 chars>",
+    "analysisNotes": "<meta-commentary on suggestions, 50-500 chars>",
     "timelineEstimate": "<overall timeline>" or null
   },
   "schema_ref": "ActionSuggestionsResponse"
