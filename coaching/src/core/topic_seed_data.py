@@ -742,29 +742,43 @@ ACTION QUALITY CRITERIA:
 - Consider dependencies between actions
 - Balance quick wins with foundational work
 
-ESTIMATED HOURS:
-- Be realistic about effort required
-- Include planning, execution, and review time
-- Acknowledge uncertainty in estimates
-
 PRIORITY ASSIGNMENT:
-- High: Critical path items, blockers for other work
-- Medium: Important but not blocking
-- Low: Nice-to-have, can be deferred
+- critical: Blocking, must be done immediately
+- high: Critical path items, blockers for other work
+- medium: Important but not blocking
+- low: Nice-to-have, can be deferred
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
 {
-  "actions": [
-    {
-      "action": "<specific, actionable task description, 10-200 chars>",
-      "estimatedHours": <realistic number, 1-100>,
-      "priority": "high" | "medium" | "low",
-      "dependencies": ["<other action descriptions if dependent>"] // optional, 0-3 items
-    }
-  ],
-  "totalActions": <number of actions, 5-10 recommended>
-}""",
+  "topic_id": "action_suggestions",
+  "success": true,
+  "data": {
+    "suggestions": [
+      {
+        "title": "<action title, 5-100 chars>",
+        "description": "<detailed description, 50-500 chars>",
+        "reasoning": "<why this action is important, 50-200 chars>",
+        "priority": "low" | "medium" | "high" | "critical",
+        "estimatedDuration": "<human-readable duration, e.g. '2 weeks'>",
+        "suggestedOwnerRole": "<role name>" or null,
+        "dependencies": ["<prerequisite action titles>"], // 0-3 items
+        "sequenceOrder": <integer, execution order starting from 1>,
+        "associatedStrategyId": "<strategy ID>" or null,
+        "associatedStrategyName": "<strategy name>" or null
+      }
+    ],
+    "analysisNotes": "<meta-commentary on suggestions, 50-200 chars>",
+    "timelineEstimate": "<overall timeline>" or null
+  },
+  "schema_ref": "ActionSuggestionsResponse"
+}
+
+IMPORTANT:
+- Provide 5-10 action suggestions
+- If a specific strategy is provided, set associatedStrategyId and associatedStrategyName for all actions
+- If no specific strategy (goal-level actions), set both to null
+- Ensure sequenceOrder starts from 1 and increments""",
         default_user_prompt="""Generate action items for achieving this goal.
 
 GOAL:
