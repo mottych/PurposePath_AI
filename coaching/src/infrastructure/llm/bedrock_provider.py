@@ -503,16 +503,15 @@ class BedrockLLMProvider:
             return [{"text": system_prompt}]
 
         # Add cache_control block for caching
+        # Note: cachePoint must be a separate element, not mixed with text
         logger.debug(
             "Adding cache_control to system prompt",
             estimated_tokens=estimated_tokens,
             model=resolved_model,
         )
         return [
-            {
-                "text": system_prompt,
-                "cachePoint": {"type": "default"},
-            }
+            {"text": system_prompt},
+            {"cachePoint": {"type": "default"}},
         ]
 
 
