@@ -515,6 +515,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
                 "strategy_id"
             ),  # Optional: if provided, generate actions for specific strategy only
             _goal("goal"),  # Auto-enriched from goal_id
+            _strategy("strategy"),  # Auto-enriched from strategy_id (if provided)
             _strategies("strategies"),  # Auto-enriched: all strategies for goal
             _onb("business_foundation"),  # Auto-enriched: business foundation
         ),
