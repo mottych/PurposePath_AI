@@ -756,9 +756,9 @@ Return a JSON object with this exact structure:
   "data": {
     "suggestions": [
       {
-        "title": "<action title, 5-100 chars>",
-        "description": "<detailed description, 50-500 chars>",
-        "reasoning": "<why this action is important, 50-200 chars>",
+        "title": "<action title>",
+        "description": "<detailed description>",
+        "reasoning": "<why this action is important>",
         "priority": "low" | "medium" | "high" | "critical",
         "estimatedDuration": "<human-readable duration, e.g. '2 weeks'>",
         "suggestedOwnerRole": "<role name>" or null,
@@ -768,7 +768,7 @@ Return a JSON object with this exact structure:
         "associatedStrategyName": "<strategy name>" or null
       }
     ],
-    "analysisNotes": "<meta-commentary on suggestions, 50-500 chars>",
+    "analysisNotes": "<meta-commentary on suggestions>",
     "timelineEstimate": "<overall timeline>" or null
   },
   "schema_ref": "ActionSuggestionsResponse"
