@@ -86,20 +86,23 @@ class ResponseSerializer:
         try:
             return self._serialize_json_direct(ai_response, response_model)
         except (json.JSONDecodeError, ValidationError) as e:
-            self.logger.debug(
+            self.logger.warning(
                 "Direct JSON parsing failed",
                 topic_id=topic_id,
                 error=str(e),
+                error_type=type(e).__name__,
+                response_preview=ai_response[:200],
             )
 
         # Strategy 2: Extract JSON from markdown code blocks
         try:
             return self._serialize_json_from_markdown(ai_response, response_model)
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            self.logger.debug(
+            self.logger.warning(
                 "Markdown JSON extraction failed",
                 topic_id=topic_id,
                 error=str(e),
+                error_type=type(e).__name__,
             )
 
         # Strategy 3: Pattern-based extraction (for specific models)
@@ -118,6 +121,8 @@ class ResponseSerializer:
             error_msg,
             topic_id=topic_id,
             response_sample=ai_response[:500],
+            response_length=len(ai_response),
+            full_response=ai_response,  # Log full response for debugging
         )
         raise SerializationError(
             topic_id=topic_id,
