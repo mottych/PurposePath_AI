@@ -302,7 +302,7 @@ async def get_user_context(context: RetrievalContext) -> dict[str, Any]:
             tenant_id=context.tenant_id,
         )
         data = await context.client.get_user_context(context.user_id, context.tenant_id)
-        
+
         logger.info(
             "retrieval_method.get_user_context.data_received",
             user_id=context.user_id,
@@ -311,7 +311,7 @@ async def get_user_context(context: RetrievalContext) -> dict[str, Any]:
             user_name_from_data=data.get("user_name", ""),
             name_from_data=data.get("name", ""),
         )
-        
+
         # Remap to expected parameter names
         # Use first_name for user_name (more natural for LLM greeting)
         result = {
@@ -321,13 +321,13 @@ async def get_user_context(context: RetrievalContext) -> dict[str, Any]:
             "user_department": data.get("department", ""),
             "user_position": data.get("position", ""),
         }
-        
+
         logger.info(
             "retrieval_method.get_user_context.result",
             user_id=context.user_id,
             resolved_user_name=result["user_name"],
         )
-        
+
         return result
     except Exception as e:
         logger.error(

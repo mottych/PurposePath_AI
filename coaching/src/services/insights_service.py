@@ -392,7 +392,7 @@ class InsightsService:
 
         prompt_parts.append("")
         prompt_parts.append("## Current State Assessment")
-        
+
         # Goals with progress
         if business_data.goals:
             prompt_parts.append(f"### Active Goals ({len(business_data.goals)} total)")
@@ -413,7 +413,7 @@ class InsightsService:
                 if goal_id not in strategies_by_goal:
                     strategies_by_goal[goal_id] = []
                 strategies_by_goal[goal_id].append(strategy)
-            
+
             for goal_id, strats in strategies_by_goal.items():
                 if goal_id != "unlinked":
                     goal_name = next((g.get("title") or g.get("name") for g in business_data.goals if g.get("id") == goal_id), "Unknown Goal")

@@ -71,7 +71,7 @@ async def test_generate_insights_success(insights_service, mock_llm_service, moc
             }
         ]
     )
-    
+
     mock_llm_response = {
         "insights": [
             {

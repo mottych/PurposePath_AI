@@ -563,7 +563,7 @@ class CoachingSessionService:
 
         # Render system prompt
         rendered_system = self._render_template(system_template, resolved_params)
-        
+
         # Log rendered templates for debugging
         logger.debug(
             "coaching_service.templates_rendered",
@@ -596,13 +596,13 @@ class CoachingSessionService:
 
         # Render initiation template with resolved params
         rendered_initiation = self._render_template(initiation_template, resolved_params)
-        
+
         # Build messages for LLM
         messages = [
             {"role": "system", "content": rendered_system},
             {"role": "user", "content": rendered_initiation},
         ]
-        
+
         logger.info(
             "coaching_service.llm_messages_assembled",
             topic_id=topic_id,
