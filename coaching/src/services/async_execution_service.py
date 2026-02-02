@@ -327,7 +327,7 @@ class AsyncAIExecutionService:
             )
 
             processing_time_ms = int((time.time() - start_time) * 1000)
-            result_dict = result.model_dump()
+            result_dict = result.model_dump(by_alias=True)
 
             # Update job with result
             await self._repository.update_status(
