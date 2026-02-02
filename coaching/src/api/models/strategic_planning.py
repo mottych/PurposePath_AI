@@ -173,7 +173,7 @@ class StrategySuggestion(StrategicPlanningBaseModel):
     reasoning: str = Field(
         ...,
         min_length=50,
-        max_length=800,
+        max_length=1000,
         description="Why this strategy makes sense for the goal",
     )
     alignment_score: int = Field(
@@ -204,7 +204,7 @@ class StrategySuggestionsData(StrategicPlanningBaseModel):
         ...,
         alias="analysisNotes",
         min_length=50,
-        max_length=800,
+        max_length=1000,
         description="Meta-commentary on the suggestions",
     )
 
