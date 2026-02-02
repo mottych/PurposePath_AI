@@ -54,10 +54,10 @@ class TestGoogleVertexProviderInitialization:
         assert provider._client is None
         assert provider._initialized is False
 
-    def test_default_location_is_us_central1(self) -> None:
-        """Test that default location is us-central1."""
+    def test_default_location_is_global(self) -> None:
+        """Test that default location is global (required for Gemini 3 models)."""
         provider = GoogleVertexLLMProvider(project_id="test-project")
-        assert provider.location == "us-central1"
+        assert provider.location == "global"
 
 
 class TestGoogleVertexProviderValidation:
