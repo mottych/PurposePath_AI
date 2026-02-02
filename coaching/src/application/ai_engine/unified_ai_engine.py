@@ -994,6 +994,19 @@ class UnifiedAIEngine:
         if "properties" in schema:
             result["properties"] = {}
             for name, prop in schema["properties"].items():
+                # Handle direct $ref properties (e.g., "data": {"$ref": "#/$defs/SomeModel"})
+                if "$ref" in prop:
+                    ref_name = prop["$ref"].split("/")[-1]
+                    if "$defs" in schema and ref_name in schema["$defs"]:
+                        # Recursively simplify the referenced schema
+                        result["properties"][name] = self._simplify_schema_for_prompt(
+                            schema["$defs"][ref_name]
+                        )
+                    else:
+                        # Reference not found, keep empty object
+                        result["properties"][name] = {}
+                    continue
+
                 simplified_prop: dict[str, Any] = {}
 
                 # Include type
