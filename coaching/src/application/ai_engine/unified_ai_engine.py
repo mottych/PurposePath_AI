@@ -972,18 +972,25 @@ class UnifiedAIEngine:
         result, _ = self._inject_response_format_with_schema(system_prompt, response_model)
         return result
 
-    def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
+    def _simplify_schema_for_prompt(
+        self, schema: dict[str, Any], root_schema: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Simplify JSON schema for LLM prompt injection.
 
         Removes internal Pydantic details and creates a cleaner schema
         that's easier for the LLM to understand.
 
         Args:
-            schema: Full Pydantic JSON schema
+            schema: Schema (or sub-schema) to simplify
+            root_schema: Full root schema with $defs (for resolving nested refs)
 
         Returns:
             Simplified schema dict
         """
+        # On first call, root_schema is the schema itself
+        if root_schema is None:
+            root_schema = schema
+
         result: dict[str, Any] = {}
 
         # Include title if present
@@ -997,10 +1004,10 @@ class UnifiedAIEngine:
                 # Handle direct $ref properties (e.g., "data": {"$ref": "#/$defs/SomeModel"})
                 if "$ref" in prop:
                     ref_name = prop["$ref"].split("/")[-1]
-                    if "$defs" in schema and ref_name in schema["$defs"]:
-                        # Recursively simplify the referenced schema
+                    if "$defs" in root_schema and ref_name in root_schema["$defs"]:
+                        # Recursively simplify the referenced schema, passing root_schema
                         result["properties"][name] = self._simplify_schema_for_prompt(
-                            schema["$defs"][ref_name]
+                            root_schema["$defs"][ref_name], root_schema
                         )
                     else:
                         # Reference not found, keep empty object
@@ -1038,14 +1045,16 @@ class UnifiedAIEngine:
                 if prop.get("type") == "array" and "items" in prop:
                     items = prop["items"]
                     if "$ref" in items:
-                        # Resolve reference from $defs
+                        # Resolve reference from root schema $defs
                         ref_name = items["$ref"].split("/")[-1]
-                        if "$defs" in schema and ref_name in schema["$defs"]:
+                        if "$defs" in root_schema and ref_name in root_schema["$defs"]:
                             simplified_prop["items"] = self._simplify_schema_for_prompt(
-                                schema["$defs"][ref_name]
+                                root_schema["$defs"][ref_name], root_schema
                             )
                     else:
-                        simplified_prop["items"] = self._simplify_schema_for_prompt(items)
+                        simplified_prop["items"] = self._simplify_schema_for_prompt(
+                            items, root_schema
+                        )
 
                 result["properties"][name] = simplified_prop
 
