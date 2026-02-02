@@ -426,6 +426,16 @@ class ActionSuggestion(StrategicPlanningBaseModel):
         ge=1,
         description="Suggested execution order",
     )
+    associated_strategy_id: str | None = Field(
+        default=None,
+        alias="associatedStrategyId",
+        description="Strategy ID this action supports (null for goal-level actions)",
+    )
+    associated_strategy_name: str | None = Field(
+        default=None,
+        alias="associatedStrategyName",
+        description="Strategy name this action supports",
+    )
 
 
 class ActionSuggestionsData(StrategicPlanningBaseModel):

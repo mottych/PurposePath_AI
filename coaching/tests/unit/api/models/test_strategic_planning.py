@@ -345,6 +345,38 @@ class TestActionSuggestionsResponse:
                 sequence_order=1,
             )
 
+    def test_action_with_strategy_association(self):
+        """Test action with strategy association fields."""
+        action = ActionSuggestion(
+            title="Launch marketing campaign",
+            description="Develop and execute a multi-channel marketing campaign to reach target market segments.",
+            reasoning="Directly supports market expansion strategy by building brand awareness in new regions.",
+            priority="high",
+            estimated_duration="3 months",
+            dependencies=[],
+            sequence_order=1,
+            associated_strategy_id="strategy-456",
+            associated_strategy_name="Expand to new markets",
+        )
+        assert action.associated_strategy_id == "strategy-456"
+        assert action.associated_strategy_name == "Expand to new markets"
+
+    def test_action_without_strategy_association(self):
+        """Test action without strategy association (goal-level action)."""
+        action = ActionSuggestion(
+            title="Conduct quarterly review",
+            description="Review overall goal progress and adjust plans as needed.",
+            reasoning="Ensures goal stays on track across all strategies.",
+            priority="medium",
+            estimated_duration="1 week",
+            dependencies=[],
+            sequence_order=10,
+            associated_strategy_id=None,
+            associated_strategy_name=None,
+        )
+        assert action.associated_strategy_id is None
+        assert action.associated_strategy_name is None
+
     def test_action_without_dependencies(self):
         """Test action with empty dependencies."""
         action = ActionSuggestion(

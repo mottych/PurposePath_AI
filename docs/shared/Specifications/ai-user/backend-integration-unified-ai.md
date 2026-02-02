@@ -1687,7 +1687,7 @@ Generate Five Whys analysis questions.
 
 #### Topic: `action_suggestions`
 
-Get AI-suggested actions for a goal or strategy.
+Get AI-suggested actions for a goal or specific strategy.
 
 **Request Payload Structure:**
 
@@ -1695,7 +1695,8 @@ Get AI-suggested actions for a goal or strategy.
 {
   "topic_id": "action_suggestions",
   "parameters": {
-    "goal_id": "goal-123"
+    "goal_id": "goal-123",
+    "strategy_id": "strategy-456"  // Optional
   }
 }
 ```
@@ -1705,8 +1706,13 @@ Get AI-suggested actions for a goal or strategy.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `goal_id` | string | Yes | ID of the goal to generate action suggestions for |
+| `strategy_id` | string | No | Optional: ID of specific strategy to generate actions for. If omitted, generates actions for all strategies under the goal |
 
 **Auto-enriched Parameters:** `goal`, `strategies`, `business_foundation`
+
+**Behavior:**
+- **Without `strategy_id`**: Generates actions for all strategies under the goal (covers entire goal execution)
+- **With `strategy_id`**: Generates actions only for that specific strategy (focused recommendations)
 
 **Response Model:** `ActionSuggestionsResponse`
 
@@ -1751,6 +1757,8 @@ The `data` field contains:
 | `suggestedOwnerRole` | string \| null | Suggested role for ownership (optional) |
 | `dependencies` | array of string | Titles of prerequisite actions (0-3 items) |
 | `sequenceOrder` | number (≥1) | Suggested execution order |
+| `associatedStrategyId` | string \| null | Strategy ID this action supports (null for goal-level actions) |
+| `associatedStrategyName` | string \| null | Strategy name this action supports |
 
 ---
 

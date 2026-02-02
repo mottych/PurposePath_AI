@@ -506,13 +506,17 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         http_method="POST",  # Legacy route
         response_model="ActionSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
-        category=TopicCategory.OPERATIONS_AI,
-        description="Suggest actions to resolve operational issues",
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description="Suggest actions for a goal or specific strategy",
         is_active=True,
         parameter_refs=(
-            _issue("issue"),
-            _issue("root_causes", "root_causes"),
-            _req("constraints"),
+            _req("goal_id"),  # Required: goal to generate actions for
+            _opt_req(
+                "strategy_id"
+            ),  # Optional: if provided, generate actions for specific strategy only
+            _goal("goal"),  # Auto-enriched from goal_id
+            _strategies("strategies"),  # Auto-enriched: all strategies for goal
+            _onb("business_foundation"),  # Auto-enriched: business foundation
         ),
     ),
     "optimize_action_plan": TopicDefinition(
