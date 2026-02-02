@@ -840,7 +840,8 @@ class UnifiedAIEngine:
         """
         try:
             # Get full schema for structured output (OpenAI Responses API)
-            full_schema = response_model.model_json_schema()
+            # Use by_alias=True to ensure camelCase field names match the aliases
+            full_schema = response_model.model_json_schema(by_alias=True)
 
             # Prepare schema for OpenAI structured output (needs specific format)
             structured_schema = self._prepare_schema_for_structured_output(
