@@ -1402,7 +1402,7 @@ Calculate alignment score between a goal and business foundation, considering bo
 
 **Auto-enriched Parameters:** `goal`, `business_foundation` (vision, purpose, core_values), `strategies` (implementation strategies for the goal)
 
-**Response Model:** `AlignmentAnalysisResponse`
+**Response Model:** `AlignmentCheckResponse`
 
 **Response Payload Structure:**
 
@@ -1410,49 +1410,31 @@ The `data` field contains:
 
 ```json
 {
-  "analysis_id": "string",
-  "analysis_type": "string",
-  "scores": {
-    "overall_score": number,
-    "purpose_alignment": number,
-    "values_alignment": number,
-    "goal_clarity": number
-  },
-  "overall_assessment": "string",
-  "strengths": ["string"],
-  "misalignments": ["string"],
-  "recommendations": [
-    {
-      "action": "string",
-      "priority": "string",
-      "rationale": "string"
-    }
-  ],
-  "created_at": "string (ISO8601)",
-  "metadata": {}
+  "alignmentScore": number,
+  "explanation": "string",
+  "suggestions": ["string"],
+  "breakdown": {
+    "visionAlignment": number,
+    "purposeAlignment": number,
+    "valuesAlignment": number
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `analysis_id` | string | Unique identifier for this analysis |
-| `analysis_type` | string | Type of analysis performed |
-| `scores` | AlignmentScore | Alignment scores (see below) |
-| `overall_assessment` | string | Summary assessment |
-| `strengths` | array of string | Identified strengths |
-| `misalignments` | array of string | Identified misalignments or gaps |
-| `recommendations` | array of object | Recommendations for improvement |
-| `created_at` | string | Analysis timestamp (ISO8601) |
-| `metadata` | object | Additional metadata |
+| `alignmentScore` | number (0-100) | Overall alignment score |
+| `explanation` | string (50-500 chars) | Human-readable explanation of the alignment |
+| `suggestions` | array of string (0-3 items) | Actionable improvement suggestions |
+| `breakdown` | AlignmentBreakdown | Breakdown of alignment scores by component |
 
-**AlignmentScore Structure:**
+**AlignmentBreakdown Structure:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `overall_score` | number (0-100) | Overall alignment score |
-| `purpose_alignment` | number (0-100) | Alignment with purpose |
-| `values_alignment` | number (0-100) | Alignment with core values |
-| `goal_clarity` | number (0-100) | Clarity of goals |
+| `visionAlignment` | number (0-100) | Alignment with company vision |
+| `purposeAlignment` | number (0-100) | Alignment with company purpose |
+| `valuesAlignment` | number (0-100) | Alignment with core values |
 
 **Example Response:**
 
@@ -1461,33 +1443,26 @@ The `data` field contains:
   "topic_id": "alignment_check",
   "success": true,
   "data": {
-    "analysis_id": "anls_abc123",
-    "analysis_type": "alignment",
-    "scores": {
-      "overall_score": 85.5,
-      "purpose_alignment": 90.0,
-      "values_alignment": 82.0,
-      "goal_clarity": 88.0
-    },
-    "overall_assessment": "Your goals show strong alignment with your stated purpose and values...",
-    "strengths": [
-      "Clear connection to purpose",
-      "Value-driven objectives"
+    "alignmentScore": 85,
+    "explanation": "Your goal shows strong alignment with your stated purpose and values. The goal directly supports your vision of 'Lead with clarity. Grow with purpose.' However, it could be strengthened by adding specific metrics tied to your core value of Integrity.",
+    "suggestions": [
+      "Add specific metrics to measure success against your core values",
+      "Define how this goal will demonstrate 'Do it Right' in execution",
+      "Include milestones that reflect your commitment to Joy and Freedom"
     ],
-    "misalignments": [
-      "Some goals lack specific success metrics"
-    ],
-    "recommendations": [
-      {
-        "action": "Add specific metrics to revenue goals",
-        "priority": "high",
-        "rationale": "Clear metrics improve accountability"
-      }
-    ],
-    "created_at": "2024-01-15T10:30:00Z",
-    "metadata": {}
+    "breakdown": {
+      "visionAlignment": 90,
+      "purposeAlignment": 88,
+      "valuesAlignment": 78
+    }
   },
-  "schema_ref": "AlignmentAnalysisResponse"
+  "schema_ref": "AlignmentCheckResponse",
+  "metadata": {
+    "model": "gpt-5.2-2025-12-11",
+    "tokens_used": 3124,
+    "processing_time_ms": 6290,
+    "finish_reason": "stop"
+  }
 }
 ```
 
