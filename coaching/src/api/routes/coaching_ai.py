@@ -258,7 +258,7 @@ async def get_strategy_suggestions(
     logger.info(
         "Strategy suggestions generated successfully",
         user_id=user.user_id,
-        suggestion_count=len(response_data.suggestions),
+        suggestion_count=len(response_data.data.suggestions),
     )
 
     return ApiResponse(success=True, data=response_data)
