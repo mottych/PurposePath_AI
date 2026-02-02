@@ -169,10 +169,20 @@ aws.iam.RolePolicy(
             "Version": "2012-10-17",
             "Statement": [
                 {
+                    "Sid": "BedrockInvoke",
                     "Effect": "Allow",
                     "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
                     "Resource": "*",
-                }
+                },
+                {
+                    "Sid": "MarketplaceAccess",
+                    "Effect": "Allow",
+                    "Action": [
+                        "aws-marketplace:ViewSubscriptions",
+                        "aws-marketplace:Subscribe",
+                    ],
+                    "Resource": "*",
+                },
             ],
         }
     ),
