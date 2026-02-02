@@ -173,9 +173,7 @@ class Settings(BaseSettings):
     # Google Vertex AI Configuration (optional)
     # Note: Gemini 3 models require "global" endpoint. Older models (2.5, 2.0, 1.5) support regional endpoints.
     google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
-    google_vertex_location: str = Field(
-        default="global", validation_alias="GOOGLE_VERTEX_LOCATION"
-    )
+    google_vertex_location: str = Field(default="global", validation_alias="GOOGLE_VERTEX_LOCATION")
 
     # Memory Management
     max_conversation_memory: int = 4000
