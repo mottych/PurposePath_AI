@@ -190,8 +190,12 @@ class StrategySuggestion(StrategicPlanningBaseModel):
     )
 
 
-class StrategySuggestionsData(StrategicPlanningBaseModel):
-    """Data payload for strategy suggestions response."""
+class StrategySuggestionsResponse(StrategicPlanningBaseModel):
+    """Response for strategy_suggestions topic.
+
+    Generates suggested strategies for achieving a goal.
+    Flat structure matching frontend specification.
+    """
 
     suggestions: list[StrategySuggestion] = Field(
         ...,
@@ -199,35 +203,16 @@ class StrategySuggestionsData(StrategicPlanningBaseModel):
         max_length=5,
         description="List of strategy suggestions (1-5 items)",
     )
-    analysis_notes: str = Field(
+    confidence: float = Field(
         ...,
-        alias="analysisNotes",
+        ge=0.0,
+        le=1.0,
+        description="Confidence score for suggestions (0-1)",
+    )
+    reasoning: str = Field(
+        ...,
         min_length=50,
-        description="Meta-commentary on the suggestions",
-    )
-
-
-class StrategySuggestionsResponse(StrategicPlanningBaseModel):
-    """Response for strategy_suggestions topic.
-
-    Generates suggested strategies for achieving a goal.
-    """
-
-    topic_id: str = Field(
-        default="strategy_suggestions",
-        description="Topic identifier",
-    )
-    success: bool = Field(
-        default=True,
-        description="Whether the request succeeded",
-    )
-    data: StrategySuggestionsData = Field(
-        ...,
-        description="Strategy suggestions",
-    )
-    schema_ref: str = Field(
-        default="StrategySuggestionsResponse",
-        description="Reference to this schema",
+        description="Overall reasoning for the suggestions",
     )
 
 
@@ -501,7 +486,6 @@ __all__ = [
     "MeasureRecommendationsData",
     "MeasureRecommendationsResponse",
     "StrategySuggestion",
-    "StrategySuggestionsData",
     "StrategySuggestionsRequest",
     "StrategySuggestionsResponse",
     "SuggestedTarget",

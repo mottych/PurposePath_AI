@@ -16,7 +16,6 @@ from coaching.src.api.models.strategic_planning import (
     MeasureRecommendationsData,
     MeasureRecommendationsResponse,
     StrategySuggestion,
-    StrategySuggestionsData,
     StrategySuggestionsResponse,
     SuggestedTarget,
 )
@@ -133,30 +132,30 @@ class TestStrategySuggestionsResponse:
     def test_valid_strategy_suggestions(self):
         """Test creating valid strategy suggestions."""
         response = StrategySuggestionsResponse(
-            data=StrategySuggestionsData(
-                suggestions=[
-                    StrategySuggestion(
-                        title="Expand to new markets",
-                        description="Identify and enter three new geographic markets within the next 18 months to diversify revenue streams.",
-                        reasoning="This approach leverages existing strengths while reducing geographic concentration risk.",
-                        alignment_score=85,
-                        suggested_kpis=["Market share", "Revenue growth"],
-                    ),
-                    StrategySuggestion(
-                        title="Digital transformation initiative",
-                        description="Invest in cloud infrastructure and automation tools to reduce operational costs by 30% over two years.",
-                        reasoning="Aligns with company purpose of innovation and efficiency while improving competitive position.",
-                        alignment_score=80,
-                        suggested_kpis=["Cost reduction"],
-                    ),
-                ],
-                analysis_notes="These strategies complement each other and address both growth and efficiency objectives.",
-            )
+            suggestions=[
+                StrategySuggestion(
+                    title="Expand to new markets",
+                    description="Identify and enter three new geographic markets within the next 18 months to diversify revenue streams.",
+                    reasoning="This approach leverages existing strengths while reducing geographic concentration risk.",
+                    alignment_score=85,
+                    suggested_kpis=["Market share", "Revenue growth"],
+                ),
+                StrategySuggestion(
+                    title="Digital transformation initiative",
+                    description="Invest in cloud infrastructure and automation tools to reduce operational costs by 30% over two years.",
+                    reasoning="Aligns with company purpose of innovation and efficiency while improving competitive position.",
+                    alignment_score=80,
+                    suggested_kpis=["Cost reduction"],
+                ),
+            ],
+            confidence=0.85,
+            reasoning="These strategies complement each other and address both growth and efficiency objectives.",
         )
 
-        assert len(response.data.suggestions) == 2
-        assert response.data.suggestions[0].alignment_score == 85
-        assert response.data.suggestions[1].title == "Digital transformation initiative"
+        assert len(response.suggestions) == 2
+        assert response.suggestions[0].alignment_score == 85
+        assert response.suggestions[1].title == "Digital transformation initiative"
+        assert response.confidence == 0.85
 
     def test_alignment_score_boundaries(self):
         """Test alignment score at boundaries."""
