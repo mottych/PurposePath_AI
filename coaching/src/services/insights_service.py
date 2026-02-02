@@ -265,6 +265,8 @@ class InsightsService:
         results = await asyncio.gather(
             self.business_api_client.get_business_foundation(self.tenant_id),
             self.business_api_client.get_user_goals(self.user_id, self.tenant_id),
+            self.business_api_client.get_strategies(self.tenant_id),  # Added strategies
+            self.business_api_client.get_measures(self.tenant_id),  # Added detailed measures
             self.business_api_client.get_measures_summary(self.tenant_id),
             self.business_api_client.get_actions(self.tenant_id, {"limit": 20}),
             self.business_api_client.get_issues(self.tenant_id, {"limit": 20}),
@@ -274,9 +276,11 @@ class InsightsService:
         # Unpack results with error handling
         foundation = results[0] if not isinstance(results[0], Exception) else {}
         goals = results[1] if not isinstance(results[1], Exception) else []
-        measures_summary = results[2] if not isinstance(results[2], Exception) else {}
-        recent_actions = results[3] if not isinstance(results[3], Exception) else []
-        open_issues = results[4] if not isinstance(results[4], Exception) else []
+        strategies = results[2] if not isinstance(results[2], Exception) else []
+        measures = results[3] if not isinstance(results[3], Exception) else []
+        measures_summary = results[4] if not isinstance(results[4], Exception) else {}
+        recent_actions = results[5] if not isinstance(results[5], Exception) else []
+        open_issues = results[6] if not isinstance(results[6], Exception) else []
 
         # Derive goal_stats and performance_score from measures_summary for compatibility
         goals_list = goals if isinstance(goals, list) else []
@@ -284,7 +288,7 @@ class InsightsService:
         goal_stats = {"total_goals": len(goals_list)}
         performance_score = {"health_score": measures_dict.get("healthScore", 0)}
 
-        # Log any errors (5 endpoints instead of 6)
+        # Log any errors
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.warning(
@@ -298,6 +302,8 @@ class InsightsService:
             tenant_id=self.tenant_id,
             foundation=foundation,
             goals=goals,
+            strategies=strategies,  # Added
+            measures=measures,  # Added
             goal_stats=goal_stats,
             performance_score=performance_score,
             recent_actions=recent_actions,
@@ -354,10 +360,20 @@ class InsightsService:
             return []
 
     def _build_insights_prompt(self, business_data: BusinessDataContext) -> str:
-        """Build prompt for LLM insight generation."""
-        # Simplified prompt building - in production would use template engine
+        """Build prompt for LLM insight generation with KISS framework."""
         prompt_parts = [
-            "Analyze the following business data and generate 5-10 actionable coaching insights.",
+            "You are a business advisor helping leadership make informed strategic decisions.",
+            "",
+            "PREMISE: Purpose-driven businesses aligned with their values result in:",
+            "- Engaged employees who are motivated and productive",
+            "- Loyal customers who trust and advocate for the brand",
+            "- Improved bottom line through sustainable growth",
+            "",
+            "Analyze the current business state and generate 5-10 leadership insights using the KISS framework:",
+            "- KEEP: What's working well and aligned with purpose/values (continue doing)",
+            "- IMPROVE: What's partially working but needs optimization",
+            "- START: What's missing that should be initiated",
+            "- STOP: What's misaligned or counterproductive (cease doing)",
             "",
             "## Business Foundation",
         ]
@@ -365,31 +381,95 @@ class InsightsService:
         if business_data.foundation:
             prompt_parts.append(f"Vision: {business_data.foundation.get('vision', 'N/A')}")
             prompt_parts.append(f"Purpose: {business_data.foundation.get('purpose', 'N/A')}")
-            core_values = business_data.foundation.get("core_values", [])
+            core_values = business_data.foundation.get("coreValues", []) or business_data.foundation.get("core_values", [])
             if core_values:
                 prompt_parts.append(f"Core Values: {', '.join(core_values)}")
+            target_market = business_data.foundation.get("targetMarket", {}) or business_data.foundation.get("target_market", {})
+            if target_market:
+                niche = target_market.get("niche") or target_market.get("nicheStatement", "")
+                if niche:
+                    prompt_parts.append(f"Target Market: {niche}")
 
         prompt_parts.append("")
-        prompt_parts.append("## Goals Overview")
-        if business_data.goal_stats:
-            prompt_parts.append(f"Total Goals: {business_data.goal_stats.get('total_goals', 0)}")
-            prompt_parts.append(
-                f"Completion Rate: {business_data.goal_stats.get('completion_rate', 0)}%"
-            )
-
+        prompt_parts.append("## Current State Assessment")
+        
+        # Goals with progress
         if business_data.goals:
-            prompt_parts.append("")
-            prompt_parts.append(f"## Active Goals ({len(business_data.goals)} total)")
-            for goal in business_data.goals[:5]:  # First 5 goals
-                title = goal.get("title", "Untitled")
+            prompt_parts.append(f"### Active Goals ({len(business_data.goals)} total)")
+            for goal in business_data.goals[:10]:
+                title = goal.get("title") or goal.get("name", "Untitled")
                 status = goal.get("status", "unknown")
                 progress = goal.get("progress", 0)
                 prompt_parts.append(f"- {title} (Status: {status}, Progress: {progress}%)")
 
+        # Strategies linked to goals
+        if business_data.strategies:
+            prompt_parts.append("")
+            prompt_parts.append(f"### Strategies ({len(business_data.strategies)} total)")
+            # Group strategies by goal
+            strategies_by_goal: dict[str, list] = {}
+            for strategy in business_data.strategies[:20]:
+                goal_id = strategy.get("goalId", "unlinked")
+                if goal_id not in strategies_by_goal:
+                    strategies_by_goal[goal_id] = []
+                strategies_by_goal[goal_id].append(strategy)
+            
+            for goal_id, strats in strategies_by_goal.items():
+                if goal_id != "unlinked":
+                    goal_name = next((g.get("title") or g.get("name") for g in business_data.goals if g.get("id") == goal_id), "Unknown Goal")
+                    prompt_parts.append(f"  For '{goal_name}':")
+                for s in strats:
+                    s_name = s.get("name") or s.get("title", "Unnamed")
+                    s_status = s.get("status", "unknown")
+                    prompt_parts.append(f"    - {s_name} (Status: {s_status})")
+
+        # Measures with current values
+        if business_data.measures:
+            prompt_parts.append("")
+            prompt_parts.append(f"### Measures/KPIs ({len(business_data.measures)} tracked)")
+            for measure in business_data.measures[:15]:
+                m_name = measure.get("name", "Unnamed")
+                m_current = measure.get("currentValue", "N/A")
+                m_target = measure.get("targetValue", "N/A")
+                m_unit = measure.get("unit", "")
+                m_status = measure.get("status", "unknown")
+                prompt_parts.append(f"- {m_name}: {m_current}/{m_target} {m_unit} (Status: {m_status})")
+
+        # Actions
+        if business_data.recent_actions:
+            prompt_parts.append("")
+            prompt_parts.append(f"### Recent Actions ({len(business_data.recent_actions)} shown)")
+            for action in business_data.recent_actions[:10]:
+                a_title = action.get("title", "Untitled")
+                a_status = action.get("status", "unknown")
+                a_priority = action.get("priority", "unknown")
+                prompt_parts.append(f"- {a_title} (Priority: {a_priority}, Status: {a_status})")
+
+        # Issues
+        if business_data.open_issues:
+            prompt_parts.append("")
+            prompt_parts.append(f"### Open Issues ({len(business_data.open_issues)} shown)")
+            for issue in business_data.open_issues[:10]:
+                i_title = issue.get("title", "Untitled")
+                i_impact = issue.get("businessImpact") or issue.get("business_impact", "unknown")
+                i_priority = issue.get("priority", "unknown")
+                prompt_parts.append(f"- {i_title} (Impact: {i_impact}, Priority: {i_priority})")
+
         prompt_parts.append("")
+        prompt_parts.append("## Output Requirements")
         prompt_parts.append(
-            "Generate insights in JSON format with title, description, category, priority, and suggested_actions."
+            "Generate insights in JSON format. Each insight MUST include:"
         )
+        prompt_parts.append("- title: Clear, specific insight for leadership")
+        prompt_parts.append("- description: What's happening and why it matters (reference specific data)")
+        prompt_parts.append("- category: strategy|operations|finance|marketing|leadership|technology")
+        prompt_parts.append("- priority: critical|high|medium|low")
+        prompt_parts.append("- kiss_category: keep|improve|start|stop")
+        prompt_parts.append("- alignment_impact: How this affects purpose/values alignment and business outcomes")
+        prompt_parts.append("- suggested_actions: 2-4 specific actions with effort/impact")
+        prompt_parts.append("- data_sources: Which data informed this insight")
+        prompt_parts.append("")
+        prompt_parts.append("Focus on alignment with purpose and values as the foundation for business success.")
 
         return "\n".join(prompt_parts)
 
@@ -439,6 +519,16 @@ class InsightsService:
                     )
                     actions.append(action)
 
+                # Parse KISS category if provided
+                kiss_category = None
+                kiss_cat_str = insight_dict.get("kiss_category")
+                if kiss_cat_str:
+                    from coaching.src.models.insights import KISSCategory
+                    try:
+                        kiss_category = KISSCategory(kiss_cat_str)
+                    except ValueError:
+                        logger.warning(f"Invalid kiss_category: {kiss_cat_str}")
+
                 # Create insight
                 expires_at = datetime.now(UTC) + timedelta(hours=24)
                 insight = Insight(
@@ -448,6 +538,8 @@ class InsightsService:
                     description=insight_dict.get("description", ""),
                     category=InsightCategory(insight_dict.get("category", "operations")),
                     priority=InsightPriority(insight_dict.get("priority", "medium")),
+                    kiss_category=kiss_category,
+                    alignment_impact=insight_dict.get("alignment_impact"),
                     status=InsightStatus.ACTIVE,
                     suggested_actions=actions,
                     data_sources=insight_dict.get("data_sources", []),
@@ -511,6 +603,8 @@ class InsightsService:
             description=insight.description,
             category=insight.category.value,
             priority=insight.priority.value,
+            kiss_category=insight.kiss_category.value if insight.kiss_category else None,
+            alignment_impact=insight.alignment_impact,
             status=insight.status.value,
             created_at=insight.created_at,
             updated_at=insight.created_at,  # Same as created for now

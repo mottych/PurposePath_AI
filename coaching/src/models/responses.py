@@ -173,6 +173,12 @@ class InsightResponse(BaseModel):
     description: str = Field(description="Detailed insight description")
     category: str = Field(description="Insight category")
     priority: str = Field(description="Priority level")
+    kiss_category: str | None = Field(
+        default=None, description="KISS framework category (keep, improve, start, stop)"
+    )
+    alignment_impact: str | None = Field(
+        default=None, description="How this affects purpose/values alignment and business outcomes"
+    )
     status: str = Field(description="Current status")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")

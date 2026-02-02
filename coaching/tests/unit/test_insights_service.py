@@ -53,8 +53,25 @@ def insights_service(mock_repo, mock_business_client, mock_llm_service):
 
 
 @pytest.mark.asyncio
-async def test_generate_insights_success(insights_service, mock_llm_service):
+async def test_generate_insights_success(insights_service, mock_llm_service, mock_business_client):
     # Arrange
+    # Add strategies and measures to mock data
+    mock_business_client.get_strategies = AsyncMock(
+        return_value=[{"id": "s1", "name": "Strategy 1", "status": "active", "goalId": "g1"}]
+    )
+    mock_business_client.get_measures = AsyncMock(
+        return_value=[
+            {
+                "id": "m1",
+                "name": "Revenue",
+                "currentValue": 50000,
+                "targetValue": 100000,
+                "unit": "USD",
+                "status": "on_track",
+            }
+        ]
+    )
+    
     mock_llm_response = {
         "insights": [
             {
@@ -62,6 +79,8 @@ async def test_generate_insights_success(insights_service, mock_llm_service):
                 "description": "Test Description must be at least 20 characters long to pass validation.",
                 "category": "strategy",
                 "priority": "high",
+                "kiss_category": "improve",
+                "alignment_impact": "This improves alignment with core values and drives customer loyalty.",
                 "suggested_actions": [
                     {"title": "Action 1", "description": "Desc", "effort": "low", "impact": "high"}
                 ],
@@ -82,6 +101,8 @@ async def test_generate_insights_success(insights_service, mock_llm_service):
     assert result.data[0].title == "Test Insight"
     assert result.data[0].category == "strategy"
     assert result.data[0].priority == "high"
+    assert result.data[0].kiss_category == "improve"
+    assert result.data[0].alignment_impact is not None
     assert result.pagination.total == 1
 
 
@@ -196,8 +217,10 @@ def test_build_insights_prompt(insights_service):
     # Arrange
     data = BusinessDataContext(
         tenant_id="t1",
-        foundation={"vision": "V", "purpose": "P", "core_values": ["V1", "V2"]},
+        foundation={"vision": "V", "purpose": "P", "coreValues": ["V1", "V2"]},
         goals=[{"title": "G1", "status": "active", "progress": 10}],
+        strategies=[],
+        measures=[],
         goal_stats={"total_goals": 1, "completion_rate": 10},
         performance_score={},
         recent_actions=[],
@@ -212,6 +235,8 @@ def test_build_insights_prompt(insights_service):
     assert "Purpose: P" in prompt
     assert "Core Values: V1, V2" in prompt
     assert "G1 (Status: active, Progress: 10%)" in prompt
+    assert "KISS" in prompt  # Should mention KISS framework
+    assert "Purpose-driven" in prompt  # Should mention purpose-driven premise
 
 
 @pytest.mark.asyncio

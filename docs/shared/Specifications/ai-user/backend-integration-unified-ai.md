@@ -14,6 +14,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-02-02 | 2.5 | **Insights Enhancement:** Enhanced insights_generation topic with KISS framework (Keep, Improve, Start, Stop), purpose-driven alignment analysis, measure-based state assessment, and leadership-focused framing. Now includes strategies and detailed measures data for comprehensive business analysis |
 | 2026-01-29 | 2.4 | **Issue #201 Completion:** Redesigned website_scan response structure to align with BusinessFoundation data model - now extracts industry, founding year, vision/purpose hints, core values, and structures data for direct population of business foundation fields |
 | 2026-01-29 | 2.3 | **Issue #200 Completion:** Enriched alignment_check topic with strategies parameter - alignment analysis now considers implementation strategies alongside goal and business foundation |
 | 2026-01-25 | 2.2 | **Issue #196 Completion:** Fixed measure_recommendations field name (kpiName → name), verified all field names match Pydantic models, ensured prompt templates align with validation schemas |
@@ -713,7 +714,7 @@ These parameters are automatically fetched from the Account Service:
 
 #### Insights
 
-- [insights_generation](#topic-insights_generation) - Generate business insights from coaching data
+- [insights_generation](#topic-insights_generation) - Generate leadership insights using KISS framework with purpose-driven alignment analysis
 
 #### Strategic Planning
 
@@ -1119,11 +1120,263 @@ Review and suggest variations for value proposition.
 
 #### Topic: `insights_generation`
 
-Generate business insights from coaching data.
+Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) based on current business state, measures, and purpose alignment.
 
-**Response Model:** `InsightsResponse`
+**Request Payload Structure:**
 
-**Note:** Response model structure not yet defined in codebase. Schema will be available via `GET /ai/schemas/InsightsResponse` once implemented.
+```json
+{
+  "topic_id": "insights_generation",
+  "parameters": {
+    "page": 1,
+    "page_size": 20,
+    "category": "strategy",  // Optional filter
+    "priority": "high",      // Optional filter
+    "status": "active"       // Optional filter
+  }
+}
+```
+
+**Request Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | number | No | Page number for pagination (default: 1) |
+| `page_size` | number | No | Items per page (default: 20, max: 100) |
+| `category` | string | No | Filter by category: strategy, operations, finance, marketing, leadership, technology |
+| `priority` | string | No | Filter by priority: critical, high, medium, low |
+| `status` | string | No | Filter by status: active, dismissed, acknowledged, in_progress, completed |
+
+**Auto-enriched Parameters:** `foundation` (vision, purpose, core values, target market), `goals` (with progress), `strategies` (linked to goals), `measures` (with current/target values), `recent_actions`, `open_issues`
+
+**Core Premise:**
+
+Purpose-driven businesses aligned with their values result in:
+- Engaged employees who are motivated and productive
+- Loyal customers who trust and advocate for the brand
+- Improved bottom line through sustainable growth
+
+**KISS Framework:**
+
+Each insight is categorized using KISS:
+- **KEEP**: What's working well and aligned with purpose/values (continue doing)
+- **IMPROVE**: What's partially working but needs optimization
+- **START**: What's missing that should be initiated
+- **STOP**: What's misaligned or counterproductive (cease doing)
+
+**Response Model:** `PaginatedResponse[InsightResponse]`
+
+**Response Payload Structure:**
+
+The response follows the unified AI response format with paginated data:
+
+```typescript
+{
+  "topic_id": "insights_generation",
+  "success": true,
+  "data": {
+    "success": true,
+    "data": [
+      {
+        "id": "string",
+        "title": "string",
+        "description": "string",
+        "category": "strategy" | "operations" | "finance" | "marketing" | "leadership" | "technology",
+        "priority": "critical" | "high" | "medium" | "low",
+        "kiss_category": "keep" | "improve" | "start" | "stop",
+        "alignment_impact": "string",
+        "status": "active" | "dismissed" | "acknowledged" | "in_progress" | "completed",
+        "created_at": "2026-02-02T10:00:00Z",
+        "updated_at": "2026-02-02T10:00:00Z",
+        "metadata": {
+          "conversation_count": 0,
+          "business_impact": "low" | "medium" | "high",
+          "effort_required": "low" | "medium" | "high"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 8,
+      "total_pages": 1
+    }
+  },
+  "schema_ref": "PaginatedInsightResponse",
+  "metadata": {
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "tokens_used": 3245,
+    "processing_time_ms": 4567,
+    "finish_reason": "stop"
+  }
+}
+```
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `topic_id` | string | Topic identifier ("insights_generation") |
+| `success` | boolean | Overall request success status |
+| `data` | PaginatedResponse | Paginated insights data |
+| `schema_ref` | string | Response model reference ("PaginatedInsightResponse") |
+| `metadata` | ResponseMetadata | LLM execution metadata (model, tokens, processing time) |
+
+**PaginatedResponse Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Data retrieval success status |
+| `data` | InsightResponse[] | Array of insight objects |
+| `pagination` | PaginationMeta | Pagination information |
+
+**InsightResponse Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique insight identifier (UUID) |
+| `title` | string | Clear, specific insight for leadership (5-200 chars) |
+| `description` | string | What's happening, why it matters, with specific data references (20-2000 chars) |
+| `category` | string | Business domain: "strategy", "operations", "finance", "marketing", "leadership", "technology" |
+| `priority` | string | Urgency level: "critical", "high", "medium", "low" |
+| `kiss_category` | string | KISS framework: "keep", "improve", "start", "stop" |
+| `alignment_impact` | string | How this affects purpose/values alignment and business outcomes (max 500 chars) |
+| `status` | string | Current status: "active", "dismissed", "acknowledged", "in_progress", "completed" |
+| `created_at` | ISO8601 datetime | When insight was generated |
+| `updated_at` | ISO8601 datetime | Last update timestamp |
+| `metadata` | InsightMetadata | Additional insight metadata |
+
+**InsightMetadata Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `conversation_count` | number | Number of conversations contributing to this insight |
+| `business_impact` | string | Business impact level: "low", "medium", "high" |
+| `effort_required` | string | Implementation effort: "low", "medium", "high" |
+
+**PaginationMeta Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `page` | number | Current page number |
+| `limit` | number | Items per page |
+| `total` | number | Total number of insights (all pages) |
+| `total_pages` | number | Total number of pages |
+
+**Analysis Focus:**
+
+Insights prioritize:
+- Alignment gaps between vision/purpose/values and current execution
+- Goals with low progress or behind schedule
+- Strategies missing for critical goals
+- Measures showing concerning trends (current far from target)
+- Actions not aligned with priority goals
+- Issues blocking strategic progress
+- Patterns suggesting systemic misalignment
+
+**Example Response:**
+
+```json
+{
+  "topic_id": "insights_generation",
+  "success": true,
+  "data": {
+    "success": true,
+    "data": [
+      {
+        "id": "insight-abc123",
+        "title": "Customer retention goal 30% behind target - missing engagement strategy",
+        "description": "Based on measure 'Customer Retention Rate' (current: 70%, target: 90%), your customer retention goal is significantly behind schedule. Analysis shows no strategies defined for customer engagement or retention, despite this being aligned with your core value 'Customer First'. This gap is impacting both customer loyalty and bottom line growth.",
+        "category": "strategy",
+        "priority": "high",
+        "kiss_category": "start",
+        "alignment_impact": "Starting a customer engagement strategy aligns with your core value 'Customer First' and directly supports your purpose of 'empowering businesses to grow sustainably'. Improved retention drives loyal customers and recurring revenue.",
+        "status": "active",
+        "created_at": "2026-02-02T10:00:00Z",
+        "updated_at": "2026-02-02T10:00:00Z",
+        "metadata": {
+          "conversation_count": 0,
+          "business_impact": "high",
+          "effort_required": "medium"
+        }
+      },
+      {
+        "id": "insight-def456",
+        "title": "Operational efficiency improving - maintain focus on process optimization",
+        "description": "Based on measure 'Task Completion Rate' (current: 88%, target: 90%), your operations team is performing well and making steady progress. The current approach to process documentation and automation aligns with your value of 'Excellence'. Continue investing in these areas to sustain momentum.",
+        "category": "operations",
+        "priority": "medium",
+        "kiss_category": "keep",
+        "alignment_impact": "Maintaining this operational excellence supports your purpose and demonstrates commitment to doing things right. This builds team confidence and customer trust.",
+        "status": "active",
+        "created_at": "2026-02-02T10:00:00Z",
+        "updated_at": "2026-02-02T10:00:00Z",
+        "metadata": {
+          "conversation_count": 0,
+          "business_impact": "medium",
+          "effort_required": "low"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 8,
+      "total_pages": 1
+    }
+  },
+  "schema_ref": "PaginatedInsightResponse",
+  "metadata": {
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "tokens_used": 3245,
+    "processing_time_ms": 4567,
+    "finish_reason": "stop"
+  }
+}
+```
+
+**Frontend Implementation Notes:**
+
+```typescript
+// Example TypeScript usage
+const response = await coachingClient.post('/ai/execute', {
+  topic_id: 'insights_generation',
+  parameters: {
+    page: 1,
+    page_size: 20,
+    category: 'strategy',  // Optional filter
+    priority: 'high'       // Optional filter
+  }
+});
+
+// Access the insights array
+const insights = response.data.data.data;  // response.data.data.data[] for nested structure
+const pagination = response.data.data.pagination;
+
+// Or access directly if using the legacy /insights/generate endpoint
+const directResponse = await coachingClient.post('/insights/generate', {
+  page: 1,
+  page_size: 20,
+  category: 'strategy'
+});
+const directInsights = directResponse.data.data;  // Direct access
+const directPagination = directResponse.data.pagination;
+
+// Process insights
+insights.forEach(insight => {
+  console.log(`[${insight.kiss_category.toUpperCase()}] ${insight.title}`);
+  console.log(`Priority: ${insight.priority}, Impact: ${insight.metadata.business_impact}`);
+  console.log(`Alignment: ${insight.alignment_impact}`);
+});
+```
+
+**Notes:**
+
+- The AI analyzes current business state using measure data (current vs target values) to assess performance
+- Suggests KISS actions (Keep, Improve, Start, Stop) that maintain purpose-driven alignment
+- Each insight includes specific data references (goals, measures, strategies) in the description
+- `alignment_impact` explains how the insight affects values alignment, employee engagement, and bottom line
+- **IMPORTANT:** This endpoint generates NEW insights using LLM (costs money!) - cache results on frontend/backend
 
 ---
 

@@ -329,30 +329,47 @@ Provide:
         topic_name="Insights Generation",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.INSIGHTS.value,
-        description="Generate business insights from coaching data, conversations, and patterns",
+        description="Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) based on current business state, measures, and purpose alignment",
         temperature=0.7,
         max_tokens=4096,
-        default_system_prompt="""You are an AI insights analyst specializing in business intelligence.
+        default_system_prompt="""You are an expert business advisor helping leadership make informed strategic decisions for their purpose-driven business.
 
-Extract insights from:
-- Coaching conversation patterns
-- Strategic planning data
-- Operational metrics
-- Goal achievement patterns
+CORE PREMISE:
+Purpose-driven businesses aligned with their values result in:
+- Engaged employees who are motivated and productive
+- Loyal customers who trust and advocate for the brand
+- Improved bottom line through sustainable growth
 
-Focus on actionable, data-driven insights that drive business value.""",
-        default_user_prompt="""Generate insights from:
+Your role is to analyze business data and generate specific, actionable insights using the KISS framework:
+- KEEP: What's working well and aligned with purpose/values (continue doing)
+- IMPROVE: What's partially working but needs optimization
+- START: What's missing that should be initiated
+- STOP: What's misaligned or counterproductive (cease doing)
 
-Data sources: {data_sources}
-Insight types: {insight_types}
-Time range: {time_range}
+Key Principles:
+1. **Alignment First**: Evaluate everything against vision, purpose, and core values
+2. **Data-Driven**: Reference specific goals, measures, strategies, and progress data
+3. **Leadership Focus**: Frame insights for strategic decision-making
+4. **Actionability**: Every insight must have concrete next steps with effort/impact
+5. **Holistic View**: Consider interconnections between goals, strategies, actions, and measures
 
-Provide:
-1. Key Patterns & Trends
-2. Actionable Recommendations
-3. Risk Indicators
-4. Opportunity Areas
-5. Priority Insights""",
+You will analyze:
+- Business foundation (vision, purpose, core values, target market)
+- Goals with progress and completion status
+- Strategies linked to goals
+- Measures/KPIs with current vs target values
+- Operational actions and their status
+- Open issues and their business impact""",
+        default_user_prompt="""Analyze the current business state and generate 5-10 leadership insights using the KISS framework.
+
+Business Foundation: {foundation}
+Goals: {goals}
+Strategies: {strategies}
+Measures: {measures}
+Actions: {recent_actions}
+Issues: {open_issues}
+
+Generate insights that assess current state based on measure data and provide KISS recommendations (Keep, Improve, Start, Stop) relevant to the business and its alignment with purpose and values.""",
         display_order=30,
     ),
     # ========== Section 3: Strategic Planning AI (5 topics) ==========

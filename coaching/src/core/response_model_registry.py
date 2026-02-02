@@ -41,9 +41,15 @@ from coaching.src.api.models.strategic_planning import (
     MeasureRecommendationsResponse,
     StrategySuggestionsResponse,
 )
+from coaching.src.models.responses import InsightResponse
 from pydantic import BaseModel
+from shared.models.schemas import PaginatedResponse
 
 logger = structlog.get_logger()
+
+
+# Type aliases for generic response types
+PaginatedInsightResponse = PaginatedResponse[InsightResponse]
 
 
 # Central registry mapping response model names to classes
@@ -68,6 +74,8 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "AlignmentSuggestionsResponse": AlignmentSuggestionsResponse,
     "AlignmentCheckResponse": AlignmentCheckResponse,
     "ActionSuggestionsResponse": ActionSuggestionsResponse,
+    # === Insights ===
+    "PaginatedInsightResponse": PaginatedInsightResponse,
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,
     "StrategicAlignmentResponse": StrategicAlignmentResponse,
@@ -78,7 +86,6 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "SchedulingSuggestionsResponse": SchedulingResponse,
     # === Placeholder for inactive/future endpoints ===
     # The following models are referenced in endpoint_registry but endpoints are inactive:
-    # - InsightsResponse
     # - RootCauseSuggestionsResponse
     # - SwotAnalysisResponse
     # - FiveWhysQuestionsResponse

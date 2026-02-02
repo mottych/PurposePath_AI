@@ -329,15 +329,20 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         topic_id="insights_generation",
         endpoint_path="/insights/generate",  # Legacy route
         http_method="POST",  # Legacy route
-        response_model="InsightsResponse",
+        response_model="PaginatedInsightResponse",  # Returns PaginatedResponse[InsightResponse]
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.INSIGHTS,
-        description="Generate business insights from coaching data",
+        description="Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) based on current business state, measures, and purpose alignment",
         is_active=True,
         parameter_refs=(
-            _req("data_sources"),
-            _req("insight_types"),
-            _req("time_range"),
+            # Optional filters for pagination and filtering
+            _opt_req("page"),  # Page number (default: 1)
+            _opt_req("page_size"),  # Items per page (default: 20)
+            _opt_req("category"),  # Filter by category (strategy, operations, etc.)
+            _opt_req("priority"),  # Filter by priority (critical, high, medium, low)
+            _opt_req("status"),  # Filter by status (active, dismissed, etc.)
+            # Auto-enriched from business APIs - no request parameters needed
+            # The service automatically fetches: foundation, goals, strategies, measures, actions, issues
         ),
     ),
     # ========== Section 4: Strategic Planning AI (5 endpoints) ==========

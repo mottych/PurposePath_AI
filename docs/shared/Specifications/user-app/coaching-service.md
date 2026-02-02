@@ -707,9 +707,11 @@ Get business metrics and data summary.
 
 ### POST /insights/generate
 
-Generate fresh AI-powered coaching insights using LLM.
+Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) with purpose-driven alignment analysis.
 
 **Note:** Full URL: `{BASE_URL}/insights/generate`
+
+**Core Premise:** Purpose-driven businesses aligned with their values result in engaged employees, loyal customers, and improved bottom line.
 
 **Query Parameters:**
 
@@ -726,16 +728,18 @@ Generate fresh AI-powered coaching insights using LLM.
   "success": true,
   "data": [{
     "id": "string",
-    "title": "Customer Retention Opportunity",
-    "description": "Your churn rate increased 15% last month. Consider implementing a customer success program.",
-    "category": "operations",
+    "title": "Customer retention goal 30% behind target - missing engagement strategy",
+    "description": "Based on measure 'Customer Retention Rate' (current: 70%, target: 90%), your customer retention goal is significantly behind schedule. Analysis shows no strategies defined for customer engagement or retention, despite this being aligned with your core value 'Customer First'. This gap is impacting both customer loyalty and bottom line growth.",
+    "category": "strategy",
     "priority": "high",
+    "kiss_category": "start",
+    "alignment_impact": "Starting a customer engagement strategy aligns with your core value 'Customer First' and directly supports your purpose of 'empowering businesses to grow sustainably'. Improved retention drives loyal customers and recurring revenue.",
     "status": "active",
-    "created_at": "2025-10-13T12:00:00Z",
-    "updated_at": "2025-10-13T12:00:00Z",
+    "created_at": "2026-02-02T10:00:00Z",
+    "updated_at": "2026-02-02T10:00:00Z",
     "metadata": {
       "conversation_count": 0,
-      "business_impact": "medium",
+      "business_impact": "high",
       "effort_required": "medium"
     }
   }],
@@ -748,15 +752,25 @@ Generate fresh AI-powered coaching insights using LLM.
 }
 ```
 
+**Insight Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `kiss_category` | string | KISS framework: "keep" \| "improve" \| "start" \| "stop" |
+| `alignment_impact` | string | How this affects purpose/values alignment and business outcomes |
+| `category` | string | "strategy" \| "operations" \| "finance" \| "marketing" \| "leadership" \| "technology" |
+| `priority` | string | "low" \| "medium" \| "high" \| "critical" |
+| `status` | string | "active" \| "dismissed" \| "acknowledged" \| "in_progress" \| "completed" |
+
 **Notes:**
 
 - **IMPORTANT:** This endpoint generates NEW insights using LLM (costs money!)
-- Each call fetches fresh business data and runs AI analysis
+- Each call fetches fresh business data (goals, strategies, measures, actions, issues) and runs AI analysis
+- Analyzes current state using measure data (current vs target values)
+- Evaluates alignment with business purpose, vision, and core values
+- Uses KISS framework to categorize insights as Keep, Improve, Start, or Stop
 - Frontend should persist results to .NET backend after generation
 - For viewing existing insights, call .NET API directly (not this endpoint)
-- `category`: "strategy" | "operations" | "finance" | "marketing" | "leadership" | "technology"
-- `priority`: "low" | "medium" | "high" | "critical"
-- `status`: "active" | "dismissed" | "acknowledged"
 
 **Architecture Flow:**
 
