@@ -333,29 +333,51 @@ Results are delivered via the existing WebSocket connection at `wss://{WEBSOCKET
 
 ```json
 {
-  "type": "ai.job.completed",
-  "timestamp": "2026-01-11T20:00:35Z",
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "tenant-123",
+  "userId": "user-456",
+  "topicId": "niche_review",
+  "eventType": "ai.job.completed",
   "data": {
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "topicId": "niche_review",
-    "result": { ... },
+    "result": {
+      "topic_id": "niche_review",
+      "success": true,
+      "data": {
+        "qualityReview": "...",
+        "suggestions": [...]
+      },
+      "schema_ref": "OnboardingReviewResponse"
+    },
     "processingTimeMs": 35000
-  }
+  },
+  "stage": "dev"
 }
 ```
+
+**Key Fields:**
+- `jobId`, `tenantId`, `userId`, `topicId`, `eventType` - Top-level metadata
+- `data.result` - The actual AI response (structure varies by topic)
+- `data.processingTimeMs` - How long the AI took to process
+- `stage` - Environment (dev/staging/prod)
 
 #### ai.job.failed
 
 ```json
 {
-  "type": "ai.job.failed",
-  "timestamp": "2026-01-11T20:00:45Z",
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "tenant-123",
+  "userId": "user-456",
+  "topicId": "niche_review",
+  "eventType": "ai.job.failed",
   "data": {
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "topicId": "niche_review",
     "error": "LLM provider timeout after 60 seconds",
     "errorCode": "LLM_TIMEOUT"
-  }
+  },
+  "stage": "dev"
 }
 ```
 
