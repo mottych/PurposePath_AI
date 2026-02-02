@@ -180,6 +180,7 @@ aws.iam.RolePolicy(
                     "Action": [
                         "aws-marketplace:ViewSubscriptions",
                         "aws-marketplace:Subscribe",
+                        "aws-marketplace:Unsubscribe",
                     ],
                     "Resource": "*",
                 },
