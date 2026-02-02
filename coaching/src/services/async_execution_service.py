@@ -7,6 +7,7 @@ coordinating between the API, domain models, repository, and event publishing.
 from __future__ import annotations
 
 import time
+from decimal import Decimal
 from typing import Any
 
 import structlog
@@ -30,6 +31,28 @@ from coaching.src.services.template_parameter_processor import TemplateParameter
 from shared.services.eventbridge_client import EventBridgePublisher, EventBridgePublishError
 
 logger = structlog.get_logger()
+
+
+def convert_floats_to_decimal(obj: Any) -> Any:
+    """Convert float values to Decimal for DynamoDB compatibility.
+
+    DynamoDB does not support float types and requires Decimal instead.
+    This function recursively converts all float values in nested structures.
+
+    Args:
+        obj: Object to convert (can be dict, list, float, or any other type)
+
+    Returns:
+        Object with all floats converted to Decimal
+    """
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    else:
+        return obj
 
 
 class AsyncAIExecutionError(Exception):
@@ -329,11 +352,14 @@ class AsyncAIExecutionService:
             processing_time_ms = int((time.time() - start_time) * 1000)
             result_dict = result.model_dump(by_alias=True)
 
+            # Convert floats to Decimal for DynamoDB compatibility
+            result_dict_dynamodb = convert_floats_to_decimal(result_dict)
+
             # Update job with result
             await self._repository.update_status(
                 job_id=job.job_id,
                 status=AIJobStatus.COMPLETED,
-                result=result_dict,
+                result=result_dict_dynamodb,
                 processing_time_ms=processing_time_ms,
             )
 
