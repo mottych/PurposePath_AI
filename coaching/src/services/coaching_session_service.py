@@ -552,8 +552,25 @@ class CoachingSessionService:
         )
         resolved_params = param_result.parameters
 
+        # Log resolved parameters for debugging
+        logger.info(
+            "coaching_service.parameters_resolved",
+            topic_id=topic_id,
+            resolved_params=resolved_params,
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
+
         # Render system prompt
         rendered_system = self._render_template(system_template, resolved_params)
+        
+        # Log rendered templates for debugging
+        logger.debug(
+            "coaching_service.templates_rendered",
+            topic_id=topic_id,
+            system_prompt_preview=rendered_system[:200] + "..." if len(rendered_system) > 200 else rendered_system,
+            initiation_prompt_preview=initiation_template[:200] + "..." if len(initiation_template) > 200 else initiation_template,
+        )
 
         # Create session entity
         # Get conversation settings from additional_config (stored in DynamoDB)
@@ -577,11 +594,22 @@ class CoachingSessionService:
             context=resolved_params,
         )
 
+        # Render initiation template with resolved params
+        rendered_initiation = self._render_template(initiation_template, resolved_params)
+        
         # Build messages for LLM
         messages = [
             {"role": "system", "content": rendered_system},
-            {"role": "user", "content": initiation_template},
+            {"role": "user", "content": rendered_initiation},
         ]
+        
+        logger.info(
+            "coaching_service.llm_messages_assembled",
+            topic_id=topic_id,
+            message_count=len(messages),
+            system_preview=rendered_system[:150] + "...",
+            user_preview=rendered_initiation[:150] + "...",
+        )
 
         # Execute LLM call
         llm_response, response_metadata = await self._execute_llm_call(
@@ -678,12 +706,27 @@ class CoachingSessionService:
             "max_turns": session.max_turns,
         }
 
+        logger.info(
+            "coaching_service.resume_context_assembled",
+            session_id=str(session.session_id),
+            topic_id=session.topic_id,
+            context_params=list(context.keys()),
+            user_name=context.get("user_name", "NOT_SET"),
+        )
+
         # Render resume template
         rendered_resume = self._render_template(resume_template, context)
 
         # Load and render system prompt
         system_template = await self._load_template(session.topic_id, TemplateType.SYSTEM)
         rendered_system = self._render_template(system_template, session.context)
+
+        logger.info(
+            "coaching_service.resume_prompts_rendered",
+            session_id=str(session.session_id),
+            resume_preview=rendered_resume[:150] + "...",
+            system_preview=rendered_system[:150] + "...",
+        )
 
         # Build messages with history
         history = session.get_messages_for_llm(max_messages=20)

@@ -131,6 +131,16 @@ class BusinessApiClient:
             data = response.json()
             user_data = data.get("data", {})
 
+            logger.info(
+                "Account Service /user/profile response received",
+                user_id=user_id,
+                tenant_id=tenant_id,
+                response_data=user_data,
+                has_firstName=bool(user_data.get("firstName")),
+                has_first_name=bool(user_data.get("first_name")),
+                has_email=bool(user_data.get("email")),
+            )
+
             # Build context with MVP fallbacks
             # Note: Account Service returns camelCase (firstName, lastName)
             first_name = user_data.get("firstName", "") or user_data.get("first_name", "")
@@ -150,9 +160,12 @@ class BusinessApiClient:
                 "position": "Owner",
             }
 
-            logger.debug(
-                "User context retrieved",
+            logger.info(
+                "User context built successfully",
                 user_id=user_context.get("user_id"),
+                user_name=user_context.get("user_name"),
+                first_name=user_context.get("first_name"),
+                email=user_context.get("email"),
                 status_code=response.status_code,
             )
 
