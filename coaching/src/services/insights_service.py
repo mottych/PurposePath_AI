@@ -407,7 +407,7 @@ class InsightsService:
             prompt_parts.append("")
             prompt_parts.append(f"### Strategies ({len(business_data.strategies)} total)")
             # Group strategies by goal
-            strategies_by_goal: dict[str, list] = {}
+            strategies_by_goal: dict[str, list[dict[str, Any]]] = {}
             for strategy in business_data.strategies[:20]:
                 goal_id = strategy.get("goalId", "unlinked")
                 if goal_id not in strategies_by_goal:
