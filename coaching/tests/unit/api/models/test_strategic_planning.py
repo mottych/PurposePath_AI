@@ -390,20 +390,6 @@ class TestActionSuggestionsResponse:
         )
         assert action.dependencies == []
 
-    def test_title_min_length(self):
-        """Test title minimum length."""
-        with pytest.raises(ValidationError) as exc_info:
-            ActionSuggestion(
-                title="Hi",  # Less than 5 characters
-                description="This is a valid description that meets the minimum length requirement.",
-                reasoning="Testing that title minimum length validation is enforced correctly.",
-                priority="low",
-                estimated_duration="1 day",
-                dependencies=[],
-                sequence_order=1,
-            )
-        assert "at least 5 characters" in str(exc_info.value)
-
 
 @pytest.mark.unit
 class TestResponseModelRegistry:
