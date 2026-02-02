@@ -9,6 +9,8 @@ Response models for strategic planning AI topics:
 These models match the specifications in Issue #182.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -101,8 +103,56 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
 
 
 # =============================================================================
-# StrategySuggestions Response Models
+# StrategySuggestions Request & Response Models
 # =============================================================================
+
+
+class StrategySuggestionsRequest(StrategicPlanningBaseModel):
+    """Request for AI-generated strategy recommendations for a specific goal.
+
+    Updated to be goal-centric: requires goal_id and optionally accepts goal_intent.
+    Auto-enriches goal data, business foundation, and existing strategies for the goal.
+    """
+
+    goal_id: str = Field(
+        ...,
+        alias="goalId",
+        description="The unique identifier of the goal requiring strategies",
+        examples=["goal-123"],
+    )
+
+    goal_intent: str | None = Field(
+        default=None,
+        alias="goalIntent",
+        min_length=5,
+        max_length=500,
+        description="Optional goal intent/description. If not provided, will be extracted from goal data.",
+        examples=["Increase customer retention by 20%"],
+    )
+
+    business_context: dict[str, Any] | None = Field(
+        default=None,
+        alias="businessContext",
+        description="Optional additional business context. Business foundation (vision, purpose, core values) is auto-enriched.",
+        examples=[
+            {
+                "targetMarket": "Small to medium businesses",
+                "valueProposition": "Comprehensive solutions with personal service",
+                "businessName": "Sample Business",
+                "industry": "Software",
+                "businessType": "B2B SaaS",
+                "currentChallenges": ["High churn", "Competition"],
+            }
+        ],
+    )
+
+    constraints: dict[str, Any] | None = Field(
+        default=None,
+        description="Resource constraints",
+        examples=[
+            {"budget": 50000, "timeline": "6 months", "resources": ["2 developers", "1 designer"]}
+        ],
+    )
 
 
 class StrategySuggestion(StrategicPlanningBaseModel):
@@ -454,6 +504,7 @@ __all__ = [
     "MeasureRecommendationsResponse",
     "StrategySuggestion",
     "StrategySuggestionsData",
+    "StrategySuggestionsRequest",
     "StrategySuggestionsResponse",
     "SuggestedTarget",
 ]

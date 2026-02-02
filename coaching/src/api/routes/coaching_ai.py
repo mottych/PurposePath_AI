@@ -41,7 +41,7 @@ from coaching.src.api.models.onboarding import (
     OnboardingCoachingRequest,
     OnboardingCoachingResponse,
 )
-from coaching.src.api.models.strategy_suggestions import (
+from coaching.src.api.models.strategic_planning import (
     StrategySuggestionsRequest,
     StrategySuggestionsResponse,
 )
