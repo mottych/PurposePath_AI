@@ -384,20 +384,14 @@ class ActionSuggestion(StrategicPlanningBaseModel):
 
     title: str = Field(
         ...,
-        min_length=5,
-        max_length=100,
         description="Action title",
     )
     description: str = Field(
         ...,
-        min_length=50,
-        max_length=500,
         description="Detailed action description",
     )
     reasoning: str = Field(
         ...,
-        min_length=50,
-        max_length=200,
         description="Why this action is important",
     )
     priority: str = Field(
@@ -450,8 +444,6 @@ class ActionSuggestionsData(StrategicPlanningBaseModel):
     analysis_notes: str = Field(
         ...,
         alias="analysisNotes",
-        min_length=50,
-        max_length=500,
         description="Meta-commentary on the suggestions",
     )
     timeline_estimate: str | None = Field(
