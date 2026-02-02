@@ -397,10 +397,7 @@ class TestResponseModelRegistry:
         from coaching.src.core.response_model_registry import RESPONSE_MODEL_REGISTRY
 
         assert RESPONSE_MODEL_REGISTRY["AlignmentCheckResponse"] is AlignmentCheckResponse
-        assert (
-            RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponse"]
-            is StrategySuggestionsResponse
-        )
+        assert RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponse"] is StrategySuggestionsResponse
         assert (
             RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponse"]
             is MeasureRecommendationsResponse

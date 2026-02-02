@@ -341,8 +341,6 @@ class MeasureRecommendationsResponse(StrategicPlanningBaseModel):
     )
 
 
-
-
 # =============================================================================
 # ActionSuggestions Response Models
 # =============================================================================
