@@ -98,7 +98,7 @@ class GoogleVertexLLMProvider:
 
         Args:
             project_id: GCP project ID (optional - will retrieve from config/secrets if not provided)
-            location: GCP location/region (default: global). 
+            location: GCP location/region (default: global).
                      Note: Gemini 3 models require "global". Older models support regional endpoints.
             credentials: Optional GCP credentials object (will retrieve from Secrets Manager if not provided)
             enable_caching: Whether to enable context caching for system prompts (default: True)
