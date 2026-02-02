@@ -159,11 +159,10 @@ class StrategySuggestionsData(StrategicPlanningBaseModel):
     )
 
 
-class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
+class StrategySuggestionsResponse(StrategicPlanningBaseModel):
     """Response for strategy_suggestions topic.
 
     Generates suggested strategies for achieving a goal.
-    Note: Named V2 to distinguish from existing StrategySuggestionsResponse.
     """
 
     topic_id: str = Field(
@@ -179,7 +178,7 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
         description="Strategy suggestions",
     )
     schema_ref: str = Field(
-        default="StrategySuggestionsResponseV2",
+        default="StrategySuggestionsResponse",
         description="Reference to this schema",
     )
 
@@ -318,11 +317,10 @@ class MeasureRecommendationsData(StrategicPlanningBaseModel):
     )
 
 
-class MeasureRecommendationsResponseV2(StrategicPlanningBaseModel):
+class MeasureRecommendationsResponse(StrategicPlanningBaseModel):
     """Response for measure_recommendations topic.
 
     Recommends Measures for measuring goal or strategy success.
-    Note: Named V2 to distinguish from existing MeasureRecommendationsResponse.
     """
 
     topic_id: str = Field(
@@ -338,13 +336,11 @@ class MeasureRecommendationsResponseV2(StrategicPlanningBaseModel):
         description="Measure recommendations",
     )
     schema_ref: str = Field(
-        default="MeasureRecommendationsResponseV2",
+        default="MeasureRecommendationsResponse",
         description="Reference to this schema",
     )
 
 
-# Renamed from KPIRecommendationsResponseV2
-MeasureRecommendationsResponse = MeasureRecommendationsResponseV2
 
 
 # =============================================================================
@@ -457,9 +453,9 @@ __all__ = [
     "AlignmentCheckResponse",
     "MeasureRecommendation",
     "MeasureRecommendationsData",
-    "MeasureRecommendationsResponseV2",
+    "MeasureRecommendationsResponse",
     "StrategySuggestion",
     "StrategySuggestionsData",
-    "StrategySuggestionsResponseV2",
+    "StrategySuggestionsResponse",
     "SuggestedTarget",
 ]

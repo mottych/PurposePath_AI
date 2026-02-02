@@ -14,10 +14,10 @@ from coaching.src.api.models.strategic_planning import (
     AlignmentCheckResponse,
     MeasureRecommendation,
     MeasureRecommendationsData,
-    MeasureRecommendationsResponseV2,
+    MeasureRecommendationsResponse,
     StrategySuggestion,
     StrategySuggestionsData,
-    StrategySuggestionsResponseV2,
+    StrategySuggestionsResponse,
     SuggestedTarget,
 )
 from pydantic import ValidationError
@@ -127,12 +127,12 @@ class TestAlignmentCheckResponse:
 
 
 @pytest.mark.unit
-class TestStrategySuggestionsResponseV2:
-    """Tests for StrategySuggestionsResponseV2 model."""
+class TestStrategySuggestionsResponse:
+    """Tests for StrategySuggestionsResponse model."""
 
     def test_valid_strategy_suggestions(self):
         """Test creating valid strategy suggestions."""
-        response = StrategySuggestionsResponseV2(
+        response = StrategySuggestionsResponse(
             data=StrategySuggestionsData(
                 suggestions=[
                     StrategySuggestion(
@@ -193,12 +193,12 @@ class TestStrategySuggestionsResponseV2:
 
 
 @pytest.mark.unit
-class TestMeasureRecommendationsResponseV2:
-    """Tests for MeasureRecommendationsResponseV2 model."""
+class TestMeasureRecommendationsResponse:
+    """Tests for MeasureRecommendationsResponse model."""
 
     def test_valid_measure_recommendations(self):
         """Test creating valid Measure recommendations."""
-        response = MeasureRecommendationsResponseV2(
+        response = MeasureRecommendationsResponse(
             data=MeasureRecommendationsData(
                 recommendations=[
                     MeasureRecommendation(
@@ -384,8 +384,8 @@ class TestResponseModelRegistry:
 
         expected_models = [
             "AlignmentCheckResponse",
-            "StrategySuggestionsResponseV2",
-            "MeasureRecommendationsResponseV2",
+            "StrategySuggestionsResponse",
+            "MeasureRecommendationsResponse",
             "ActionSuggestionsResponse",
         ]
 
@@ -398,11 +398,11 @@ class TestResponseModelRegistry:
 
         assert RESPONSE_MODEL_REGISTRY["AlignmentCheckResponse"] is AlignmentCheckResponse
         assert (
-            RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponseV2"]
-            is StrategySuggestionsResponseV2
+            RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponse"]
+            is StrategySuggestionsResponse
         )
         assert (
-            RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponseV2"]
-            is MeasureRecommendationsResponseV2
+            RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponse"]
+            is MeasureRecommendationsResponse
         )
         assert RESPONSE_MODEL_REGISTRY["ActionSuggestionsResponse"] is ActionSuggestionsResponse
