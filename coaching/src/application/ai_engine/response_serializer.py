@@ -199,11 +199,11 @@ class ResponseSerializer:
 
         # Try first match (usually the only one)
         json_text = matches[0].strip()
-        
+
         # Validate it's actually JSON before parsing
         if not json_text.startswith(("{", "[")):
             raise ValueError(f"Extracted text doesn't look like JSON: {json_text[:100]}")
-        
+
         data = json.loads(json_text)
         return response_model.model_validate(data)
 
