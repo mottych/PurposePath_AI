@@ -350,7 +350,8 @@ class AsyncAIExecutionService:
             )
 
             processing_time_ms = int((time.time() - start_time) * 1000)
-            result_dict = result.model_dump(by_alias=True)
+            # Use mode='json' to serialize datetime objects to ISO format strings
+            result_dict = result.model_dump(by_alias=True, mode="json")
 
             # Convert floats to Decimal for DynamoDB compatibility
             result_dict_dynamodb = convert_floats_to_decimal(result_dict)
