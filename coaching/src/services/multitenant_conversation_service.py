@@ -89,6 +89,7 @@ class MultitenantConversationService:
         topic: SharedCoachingTopic,
         context_data: dict[str, str] | None = None,
         language: str = "en",
+        max_turns: int = 0,
     ) -> ConversationResponse:
         """Initiate a new coaching conversation.
 
@@ -96,6 +97,7 @@ class MultitenantConversationService:
             topic: Coaching topic
             context_data: Optional context data
             language: Language code
+            max_turns: Maximum number of conversation turns (0 = unlimited)
 
         Returns:
             Conversation response
@@ -179,11 +181,15 @@ class MultitenantConversationService:
             "language": language,
         }
 
+        # Add max_turns to llm_config
+        llm_config_dict = template.llm_config.model_dump()
+        llm_config_dict["max_turns"] = max_turns
+
         conversation = await self.conversation_repo.create(
             user_id=self.context.user_id,
             topic=topic.value,
             initial_message=template.initial_message,
-            llm_config=template.llm_config.model_dump(),  # Pydantic already returns dict[str, Any]
+            llm_config=llm_config_dict,  # Pydantic already returns dict[str, Any]
             context=conversation_context_dict,  # Service context boundary
         )
 
@@ -285,6 +291,9 @@ class MultitenantConversationService:
             business_data_dict, SharedCoachingTopic(conversation.topic)
         )
 
+        # Get max_turns from conversation's llm_config or use default of 0 (unlimited)
+        max_turns = conversation.llm_config.get("max_turns", 0)
+
         # Generate AI response with business context (pass dict)
         ai_response_raw = await self.llm_service.generate_coaching_response(
             conversation_id=conversation_id,
@@ -292,6 +301,7 @@ class MultitenantConversationService:
             user_message=user_message,
             conversation_history=conversation.get_conversation_history(),
             business_context=current_business_context_dict,
+            max_turns=max_turns,
         )
 
         ai_response = AIResponseData(

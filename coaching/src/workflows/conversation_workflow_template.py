@@ -351,13 +351,20 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         )
         insights_count = len(state.get("results", {}).get("accumulated_insights", []))
 
+        # Get max_turns from state's model_config, or fallback to config, default to 0 (unlimited)
+        max_turns = state.get("model_config", {}).get("max_turns", 0)
+        if max_turns == 0:
+            max_turns = self.config.custom_config.get("max_turns", 0)
+        # If unlimited (0), use a high number for comparison
+        effective_max_turns = max_turns if max_turns > 0 else 999
+
         state["step_data"]["conversation_metrics"] = {
             "user_messages": conversation_count,
             "insights_collected": insights_count,
             "decision_factors": {
                 "sufficient_depth": conversation_count >= 3,
                 "meaningful_insights": insights_count >= 2,
-                "max_turns_reached": conversation_count >= 8,
+                "max_turns_reached": conversation_count >= effective_max_turns,
             },
         }
 
@@ -411,6 +418,15 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         )
         insights_count = len(state.get("results", {}).get("accumulated_insights", []))
 
+        # Get max_turns from state's model_config, or fallback to config, default to 0 (unlimited)
+        max_turns = state.get("model_config", {}).get("max_turns", 0)
+        if max_turns == 0:
+            max_turns = self.config.custom_config.get("max_turns", 0)
+        
+        # Complete if max turns reached (only if max_turns is configured)
+        if max_turns > 0 and conversation_count >= max_turns:
+            return "complete"
+
         # Complete if we have at least one turn and any insights (for testing/demo)
         # This prevents infinite loops when there's no new user input
         if conversation_count >= 1 and insights_count >= 1:
@@ -422,10 +438,6 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         # Complete if we have sufficient insights and depth
         if conversation_count >= 3 and insights_count >= 2:
-            return "complete"
-
-        # Complete if max turns reached
-        if conversation_count >= 8:
             return "complete"
 
         return "continue"

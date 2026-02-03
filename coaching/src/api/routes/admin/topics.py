@@ -178,11 +178,13 @@ def _map_topic_to_detail(
     if topic.topic_type == "conversation_coaching":
         # Get from additional_config or use defaults
         config_data = topic.additional_config or {}
+        # Support both 'max_turns' (new) and 'estimated_messages' (legacy) for backward compatibility
+        max_turns_value = config_data.get("max_turns") or config_data.get("estimated_messages", 0)
         conversation_config = ConversationConfig(
             max_messages_to_llm=config_data.get("max_messages_to_llm", 30),
             inactivity_timeout_minutes=config_data.get("inactivity_timeout_minutes", 30),
             session_ttl_days=config_data.get("session_ttl_days", 14),
-            estimated_messages=config_data.get("estimated_messages", 20),
+            max_turns=max_turns_value,
         )
 
     return TopicDetail(

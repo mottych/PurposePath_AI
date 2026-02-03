@@ -123,6 +123,7 @@ class LLMService:
         _user_tier: str | None = None,
         _template_parameters: dict[str, Any] | None = None,
         system_prompt_override: str | None = None,
+        max_turns: int = 0,
     ) -> LLMResponse:
         """Generate a coaching response with business context.
 
@@ -137,6 +138,7 @@ class LLMService:
             _template_parameters: Unused (kept for backward compatibility)
             system_prompt_override: Optional override for system prompt (bypasses template lookup).
                 Use this when you need a custom prompt with structured output instructions.
+            max_turns: Maximum number of conversation turns (0 = unlimited)
 
         Returns:
             Response dictionary with AI response and metadata
@@ -174,6 +176,7 @@ class LLMService:
             max_tokens=template.llm_config.max_tokens,
             user_id=self.user_id,
             tenant_id=self.tenant_id,
+            max_turns=max_turns,
         )
 
         # Extract response data

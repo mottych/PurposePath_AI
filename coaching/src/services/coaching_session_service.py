@@ -357,7 +357,11 @@ class CoachingSessionService:
             tier_level=llm_topic.tier_level.value,
             basic_model=llm_topic.basic_model_code,
             premium_model=llm_topic.premium_model_code,
-            max_turns=llm_topic.additional_config.get("max_turns", 10),
+            max_turns=(
+                llm_topic.additional_config.get("max_turns")
+                or llm_topic.additional_config.get("estimated_messages")
+                or 10
+            ),
         )
 
         return endpoint_def, llm_topic
@@ -578,8 +582,17 @@ class CoachingSessionService:
 
         # Create session entity
         # Get conversation settings from additional_config (stored in DynamoDB)
-        max_turns = llm_topic.additional_config.get("max_turns", 10)
-        idle_timeout_minutes = llm_topic.additional_config.get("idle_timeout_minutes", 30)
+        # Support both 'max_turns' and 'estimated_messages' as aliases
+        max_turns = (
+            llm_topic.additional_config.get("max_turns")
+            or llm_topic.additional_config.get("estimated_messages")
+            or 10
+        )
+        idle_timeout_minutes = (
+            llm_topic.additional_config.get("idle_timeout_minutes")
+            or llm_topic.additional_config.get("inactivity_timeout_minutes")
+            or 30
+        )
         # Session TTL in hours - default 336 hours (2 weeks) for paused sessions deletion
         session_ttl_hours = llm_topic.additional_config.get("session_ttl_hours", 336)
 

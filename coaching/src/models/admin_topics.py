@@ -33,11 +33,11 @@ class ConversationConfig(BaseModel):
         le=90,
         description="Days to keep paused/completed sessions before deletion",
     )
-    estimated_messages: int = Field(
-        default=20,
-        ge=5,
+    max_turns: int = Field(
+        default=0,
+        ge=0,
         le=100,
-        description="Estimated messages for a typical session (for progress calculation)",
+        description="Maximum conversation turns (0 = unlimited)",
     )
 
 
