@@ -202,22 +202,15 @@ class InsightLLMResponse(BaseModel):
     title: str = Field(description="Insight title")
     description: str = Field(description="Detailed insight description")
     category: str = Field(
-        description=(
-            "Insight category: strategy, operations, finance, marketing, leadership, "
-            "technology"
-        )
+        description="Insight category: strategy, operations, finance, marketing, leadership, technology"
     )
     priority: str = Field(description="Priority level: critical, high, medium, low")
-    kiss_category: str = Field(
-        description="KISS framework category: keep, improve, start, stop"
-    )
+    kiss_category: str = Field(description="KISS framework category: keep, improve, start, stop")
     alignment_impact: str = Field(
         description="How this affects purpose/values alignment and business outcomes"
     )
     business_impact: str = Field(description="Business impact level: low, medium, high")
-    effort_required: str = Field(
-        description="Effort required to implement: low, medium, high"
-    )
+    effort_required: str = Field(description="Effort required to implement: low, medium, high")
 
 
 class InsightsGenerationResponse(BaseModel):
