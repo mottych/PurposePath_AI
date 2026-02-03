@@ -545,10 +545,12 @@ class CoachingSessionService:
         initiation_template = await self._load_template(topic_id, TemplateType.INITIATION)
 
         # Resolve parameters using template processor
+        # Scan BOTH templates for parameters (they may have different placeholders)
         required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
+        combined_template = system_template + "\n\n" + initiation_template
 
         param_result = await self.template_processor.process_template_parameters(
-            template=system_template,
+            template=combined_template,
             payload=parameters,
             user_id=user_id,
             tenant_id=tenant_id,
