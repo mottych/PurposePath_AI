@@ -413,7 +413,7 @@ class TopicSeedingService:
                 )
             )
 
-        # User prompt
+        # User prompt (for single-shot topics)
         if seed_data.default_user_prompt:
             user_key = await self.s3_storage.save_prompt(
                 topic_id=seed_data.topic_id,
@@ -425,6 +425,40 @@ class TopicSeedingService:
                     prompt_type="user",
                     s3_bucket=self.s3_storage.bucket_name,
                     s3_key=user_key,
+                    updated_at=now,
+                    updated_by=self.default_created_by,
+                )
+            )
+
+        # Initiation prompt (for conversation coaching topics)
+        if seed_data.default_initiation_prompt:
+            initiation_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="initiation",
+                content=seed_data.default_initiation_prompt,
+            )
+            prompts.append(
+                PromptInfo(
+                    prompt_type="initiation",
+                    s3_bucket=self.s3_storage.bucket_name,
+                    s3_key=initiation_key,
+                    updated_at=now,
+                    updated_by=self.default_created_by,
+                )
+            )
+
+        # Resume prompt (for conversation coaching topics)
+        if seed_data.default_resume_prompt:
+            resume_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="resume",
+                content=seed_data.default_resume_prompt,
+            )
+            prompts.append(
+                PromptInfo(
+                    prompt_type="resume",
+                    s3_bucket=self.s3_storage.bucket_name,
+                    s3_key=resume_key,
                     updated_at=now,
                     updated_by=self.default_created_by,
                 )
@@ -499,7 +533,7 @@ class TopicSeedingService:
                     )
                 )
 
-        # Update user prompt
+        # Update user prompt (for single-shot topics)
         if seed_data.default_user_prompt:
             user_key = await self.s3_storage.save_prompt(
                 topic_id=seed_data.topic_id,
@@ -517,6 +551,52 @@ class TopicSeedingService:
                         prompt_type="user",
                         s3_bucket=self.s3_storage.bucket_name,
                         s3_key=user_key,
+                        updated_at=now,
+                        updated_by=self.default_created_by,
+                    )
+                )
+
+        # Update initiation prompt (for conversation coaching topics)
+        if seed_data.default_initiation_prompt:
+            initiation_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="initiation",
+                content=seed_data.default_initiation_prompt,
+            )
+            # Update or add initiation prompt info
+            initiation_prompt = existing_topic.get_prompt(prompt_type="initiation")
+            if initiation_prompt:
+                initiation_prompt.updated_at = now
+                initiation_prompt.updated_by = self.default_created_by
+            else:
+                prompts.append(
+                    PromptInfo(
+                        prompt_type="initiation",
+                        s3_bucket=self.s3_storage.bucket_name,
+                        s3_key=initiation_key,
+                        updated_at=now,
+                        updated_by=self.default_created_by,
+                    )
+                )
+
+        # Update resume prompt (for conversation coaching topics)
+        if seed_data.default_resume_prompt:
+            resume_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="resume",
+                content=seed_data.default_resume_prompt,
+            )
+            # Update or add resume prompt info
+            resume_prompt = existing_topic.get_prompt(prompt_type="resume")
+            if resume_prompt:
+                resume_prompt.updated_at = now
+                resume_prompt.updated_by = self.default_created_by
+            else:
+                prompts.append(
+                    PromptInfo(
+                        prompt_type="resume",
+                        s3_bucket=self.s3_storage.bucket_name,
+                        s3_key=resume_key,
                         updated_at=now,
                         updated_by=self.default_created_by,
                     )

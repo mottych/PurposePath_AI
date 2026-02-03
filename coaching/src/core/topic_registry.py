@@ -966,7 +966,6 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Core values are personal beliefs - minimal context needed
         # user_name from user profile, company_name optional from onboarding
@@ -989,7 +988,6 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Purpose needs business context and core values (if completed)
         parameter_refs=(
@@ -1016,7 +1014,6 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Vision builds on values and purpose, needs full foundation context
         parameter_refs=(

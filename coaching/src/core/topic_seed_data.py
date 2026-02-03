@@ -62,7 +62,9 @@ class TopicSeedData:
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     default_system_prompt: str = ""
-    default_user_prompt: str = ""
+    default_user_prompt: str = ""  # For single-shot topics
+    default_initiation_prompt: str = ""  # For conversation topics - first turn
+    default_resume_prompt: str = ""  # For conversation topics - resuming session
     display_order: int = 100
 
 
@@ -1364,13 +1366,45 @@ CONVERSATION FLOW:
 4. Test candidate values for authenticity
 5. Refine wording for clarity and impact
 6. Validate with real scenarios""",
-        default_user_prompt="""Begin the core values discovery conversation.
+        default_initiation_prompt="""Begin the core values discovery conversation.
 
 User Context:
 - Name: {{user_name}}
 - Company: {{company_name}}
 
 Guide the user through discovering their authentic core values through thoughtful questions and active listening.""",
+        default_resume_prompt="""# Session Resume Instructions
+
+You are RESUMING a paused core values coaching session. The user {{user_name}} has returned after a break.
+
+## Context Available
+You have access to:
+- Conversation history
+- Values identified so far
+- Current exploration phase
+
+## Resume Approach
+
+### 1. Warm Re-engagement
+Acknowledge the break warmly and naturally.
+
+### 2. Quick Recap
+Provide a concise summary of:
+- Values candidates identified so far
+- Key insights from previous discussion
+- Current stage in the discovery process
+
+### 3. Check for Shifts
+"Before we continue—has anything shifted in your thinking since we last spoke?"
+
+### 4. Continue Forward
+Resume with the next logical question or exploration based on where you paused.
+
+## Key Rules
+- Never re-ask questions already answered
+- Build on prior discoveries
+- Maintain coaching warmth and momentum
+- Honor their prior insights""",
         display_order=100,
     ),
     "purpose": TopicSeedData(
@@ -1418,7 +1452,7 @@ You have access to:
 - Business context: niche ({{onboarding_niche}}), ICA ({{onboarding_ica}}), value proposition ({{onboarding_value_proposition}}), products ({{onboarding_products}})
 
 Use this context to make coaching more relevant and specific.""",
-        default_user_prompt="""Begin the purpose definition conversation.
+        default_initiation_prompt="""Begin the purpose definition conversation.
 
 User Context:
 - Name: {{user_name}}
@@ -1430,6 +1464,40 @@ User Context:
 - Products/Services: {{onboarding_products}}
 
 Guide the user to define their organization's deeper purpose through thoughtful exploration and questioning.""",
+        default_resume_prompt="""# Session Resume Instructions
+
+You are RESUMING a paused purpose definition coaching session. The user {{user_name}} has returned after a break.
+
+## Context Available
+You have access to:
+- Core values: {{core_values}}
+- Business context (niche, ICA, value proposition, products)
+- Conversation history
+- Purpose ideas explored so far
+
+## Resume Approach
+
+### 1. Warm Re-engagement
+Welcome the user back naturally and warmly.
+
+### 2. Quick Recap
+Provide a concise summary of:
+- Purpose ideas or statements drafted so far
+- Key insights about their "why"
+- Impact themes discussed
+- Current stage in purpose definition
+
+### 3. Check for Shifts
+"Before we continue—has anything shifted in your thinking about your purpose since we last spoke?"
+
+### 4. Continue Forward
+Resume with the next logical exploration based on where you paused.
+
+## Key Rules
+- Build on their core values foundation
+- Reference prior insights and examples
+- Maintain coaching depth and authenticity
+- Guide toward clear, inspiring purpose statement""",
         display_order=101,
     ),
     "vision": TopicSeedData(
@@ -1479,7 +1547,7 @@ You have access to:
 - Business context: niche ({{onboarding_niche}}), ICA ({{onboarding_ica}}), value proposition ({{onboarding_value_proposition}}), products ({{onboarding_products}})
 
 Use this foundation to guide vision development.""",
-        default_user_prompt="""Begin the vision crafting conversation.
+        default_initiation_prompt="""Begin the vision crafting conversation.
 
 User Context:
 - Name: {{user_name}}
@@ -1492,6 +1560,41 @@ User Context:
 - Products/Services: {{onboarding_products}}
 
 Guide the user to craft a compelling vision for their organization's future, building on their core values and purpose.""",
+        default_resume_prompt="""# Session Resume Instructions
+
+You are RESUMING a paused vision crafting coaching session. The user {{user_name}} has returned after a break.
+
+## Context Available
+You have access to:
+- Core values: {{core_values}}
+- Purpose: {{purpose}}
+- Business context (niche, ICA, value proposition, products)
+- Conversation history
+- Vision elements explored so far
+
+## Resume Approach
+
+### 1. Warm Re-engagement
+Welcome the user back with energy and positivity.
+
+### 2. Quick Recap
+Provide a concise summary of:
+- Vision statements or aspirations drafted so far
+- Time horizon discussed (3-10 years)
+- Key future-state elements identified
+- Current stage in vision crafting
+
+### 3. Check for Shifts
+"Before we continue—has your thinking about the future evolved since we last spoke?"
+
+### 4. Continue Forward
+Resume with the next logical exploration based on where you paused.
+
+## Key Rules
+- Connect vision to values and purpose
+- Maintain ambitious, inspiring tone
+- Reference prior aspirations and insights
+- Guide toward concrete, specific vision statement""",
         display_order=102,
     ),
     # ========== Section 8: Analysis API (4 topics) ==========
