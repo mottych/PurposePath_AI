@@ -34,6 +34,47 @@ logger = structlog.get_logger()
 AI_DEBUG_ENABLED = os.getenv("AI_DEBUG_LOGGING", "false").lower() == "true"
 
 
+def _sanitize_unicode(obj: Any) -> Any:
+    """Recursively sanitize Unicode characters in objects for safe logging.
+    
+    Replaces problematic Unicode characters with ASCII equivalents or removes them
+    to prevent encoding errors when logging to console/stream.
+    
+    Args:
+        obj: Object to sanitize (str, dict, list, or other)
+        
+    Returns:
+        Sanitized version of the object
+    """
+    if isinstance(obj, str):
+        # Replace common Unicode characters with ASCII equivalents
+        replacements = {
+            '\u2192': '->',  # → (rightward arrow)
+            '\u2190': '<-',  # ← (leftward arrow)
+            '\u2191': '^',   # ↑ (upward arrow)
+            '\u2193': 'v',   # ↓ (downward arrow)
+            '\u2014': '--',  # — (em dash)
+            '\u2013': '-',   # – (en dash)
+            '\u2018': "'",   # ' (left single quote)
+            '\u2019': "'",   # ' (right single quote)
+            '\u201c': '"',   # " (left double quote)
+            '\u201d': '"',   # " (right double quote)
+            '\u2022': '*',   # • (bullet)
+            '\u2026': '...', # … (ellipsis)
+        }
+        result = obj
+        for unicode_char, ascii_replacement in replacements.items():
+            result = result.replace(unicode_char, ascii_replacement)
+        # Remove any remaining non-ASCII characters
+        return result.encode('ascii', errors='replace').decode('ascii')
+    elif isinstance(obj, dict):
+        return {key: _sanitize_unicode(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_unicode(item) for item in obj]
+    else:
+        return obj
+
+
 def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
     """Log AI debug information when AI_DEBUG_LOGGING is enabled.
 
@@ -47,15 +88,16 @@ def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
     if AI_DEBUG_ENABLED:
         log_entry = {"ai_debug": message}
         if data:
-            # Truncate very long strings for readability
+            # Truncate very long strings for readability and sanitize Unicode
             truncated_data = {}
             for key, value in data.items():
-                if isinstance(value, str) and len(value) > 2000:
+                sanitized_value = _sanitize_unicode(value)
+                if isinstance(sanitized_value, str) and len(sanitized_value) > 2000:
                     truncated_data[key] = (
-                        value[:2000] + f"... (truncated, total length: {len(value)})"
+                        sanitized_value[:2000] + f"... (truncated, total length: {len(sanitized_value)})"
                     )
                 else:
-                    truncated_data[key] = value
+                    truncated_data[key] = sanitized_value
             log_entry.update(truncated_data)
         logger.info("AI_DEBUG", **log_entry)
 
