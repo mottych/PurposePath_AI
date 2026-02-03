@@ -563,13 +563,16 @@ class CoachingSessionService:
             resolved_params=resolved_params,
             user_id=user_id,
             tenant_id=tenant_id,
+            param_warnings=param_result.warnings,
+            missing_required=param_result.missing_required,
+            param_count=len(resolved_params),
         )
 
         # Render system prompt
         rendered_system = self._render_template(system_template, resolved_params)
 
         # Log rendered templates for debugging
-        logger.debug(
+        logger.info(
             "coaching_service.templates_rendered",
             topic_id=topic_id,
             system_prompt_preview=rendered_system[:200] + "..."
@@ -626,6 +629,17 @@ class CoachingSessionService:
             message_count=len(messages),
             system_preview=rendered_system[:150] + "...",
             user_preview=rendered_initiation[:150] + "...",
+        )
+        
+        # CRITICAL: Log full prompts for debugging template parameter resolution
+        logger.info(
+            "coaching_service.FULL_PROMPTS_SENT_TO_LLM",
+            topic_id=topic_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            resolved_params=resolved_params,
+            system_prompt_full=rendered_system,
+            initiation_prompt_full=rendered_initiation,
         )
 
         # Execute LLM call
