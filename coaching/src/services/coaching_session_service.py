@@ -496,8 +496,16 @@ class CoachingSessionService:
                     last_activity_at=(
                         existing.last_activity_at.isoformat() if existing.last_activity_at else None
                     ),
+                    session_status=existing.status.value,
                 )
-                existing.complete(result={})
+                # Handle idle sessions based on their status
+                if existing.is_active():
+                    existing.complete(result={})
+                elif existing.is_paused():
+                    existing.mark_abandoned()
+                else:
+                    # For other statuses (completed, cancelled, etc.), just cancel
+                    existing.cancel()
                 await self.session_repository.update(existing)
                 # Fall through to create a new session
             else:
