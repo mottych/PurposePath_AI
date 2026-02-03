@@ -1076,7 +1076,7 @@ The `data` field contains:
 
 #### Topic: `ica_review`
 
-Review and suggest variations for Ideal Client Avatar (ICA).
+Review and suggest detailed ICA (Ideal Client Avatar) personas with demographics, goals, pain points, and buying behavior.
 
 **Request:**
 
@@ -1084,14 +1084,39 @@ Review and suggest variations for Ideal Client Avatar (ICA).
 {
   "topic_id": "ica_review",
   "parameters": {
-    "current_value": "Business owners who want to grow"
+    "current_value": "Business owners who want to grow"  // Optional - can generate suggestions without a draft
   }
 }
 ```
 
-**Response Model:** `OnboardingReviewResponse`
+**Response Model:** `IcaReviewResponse`
 
-**Response Payload Structure:** Same as `niche_review` - see [OnboardingReviewResponse structure](#topic-niche_review) above.
+**Response Payload Structure:**
+
+```typescript
+{
+  "qualityReview": "string | null",  // Review of current ICA if provided, null otherwise
+  "suggestions": [
+    {
+      "title": "string",  // Descriptive persona name
+      "demographics": "string",  // Age, gender, location, income, education, occupation, family
+      "goalsAspirations": "string",  // What they want to achieve
+      "painPoints": "string",  // Problems and frustrations they face
+      "motivations": "string",  // What drives their decisions
+      "commonObjectives": "string",  // Milestones they're working toward
+      "whereToFind": "string",  // Channels, communities, platforms
+      "buyingProcess": "string"  // How they research and make decisions
+    }
+    // Exactly 3 suggestions
+  ]
+}
+```
+
+**Key Features:**
+- **Optional current_value**: Can generate suggestions without existing ICA
+- **Comprehensive personas**: Each suggestion includes 8 detailed fields
+- **Business alignment**: Suggestions consider niche, value proposition, and products
+- **Actionable insights**: Includes where to find prospects and their buying behavior
 
 ---
 
@@ -2796,7 +2821,7 @@ Same as `core_values` - responses follow the `ConversationResponse` structure wi
 
 ### OnboardingReviewResponse
 
-Used by: `niche_review`, `ica_review`, `value_proposition_review`
+Used by: `niche_review`, `value_proposition_review`
 
 ```typescript
 interface OnboardingReviewResponse {
@@ -2807,6 +2832,28 @@ interface OnboardingReviewResponse {
 interface SuggestionVariation {
   text: string;      // Suggested text variation
   reasoning: string; // Why this variation is recommended
+}
+```
+
+### IcaReviewResponse
+
+Used by: `ica_review`
+
+```typescript
+interface IcaReviewResponse {
+  qualityReview: string | null;  // Review of current ICA if provided, null if no current_value
+  suggestions: IcaSuggestion[];   // Exactly 3 detailed persona suggestions
+}
+
+interface IcaSuggestion {
+  title: string;            // Descriptive persona name (5-100 chars)
+  demographics: string;     // Age, gender, location, income, education, occupation, family (20-500 chars)
+  goalsAspirations: string; // What they want to achieve, ambitions (20-500 chars)
+  painPoints: string;       // Problems, challenges, frustrations (20-500 chars)
+  motivations: string;      // What drives them, values, priorities (20-500 chars)
+  commonObjectives: string; // Typical goals and milestones (20-500 chars)
+  whereToFind: string;      // Channels, communities, platforms (20-500 chars)
+  buyingProcess: string;    // Research and decision-making process (20-500 chars)
 }
 ```
 

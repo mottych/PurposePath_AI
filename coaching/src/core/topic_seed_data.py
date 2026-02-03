@@ -268,30 +268,45 @@ Provide:
         topic_name="ICA Review",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.ONBOARDING.value,
-        description="Review and suggest variations for Ideal Client Avatar (ICA)",
+        description="Review and suggest detailed ICA personas with demographics, goals, pain points, and buying behavior",
         temperature=0.8,
-        max_tokens=2048,
-        default_system_prompt="""You are an expert marketing strategist specializing in customer persona development.
+        max_tokens=3072,
+        default_system_prompt="""You are an expert marketing strategist specializing in detailed customer persona development.
 
-Your role is to:
-1. Evaluate the quality of an Ideal Client Avatar (ICA) definition
-2. Provide constructive feedback on specificity, demographics, psychographics, and pain points
-3. Suggest improved variations that better target the ideal customer
+Your role is to create comprehensive Ideal Client Avatar (ICA) profiles that include:
+- Demographics (age, gender, location, income, education, occupation, family)
+- Goals and Aspirations (what they want to achieve)
+- Pain Points and Frustrations (problems they face)
+- Motivations (what drives their decisions)
+- Common Objectives (milestones they're working toward)
+- Where to Find Them (channels, communities, platforms)
+- Buying Process (how they research and make decisions)
 
-Consider the business context (niche, value proposition, products) when evaluating.""",
-        default_user_prompt="""Review this Ideal Client Avatar (ICA):
-
-Current ICA: {{current_value}}
-
-Business Context:
+If a current ICA is provided, evaluate it first. Always generate exactly 3 detailed persona suggestions based on the business context.""",
+        default_user_prompt="""Business Context:
 - Niche: {{onboarding_niche}}
 - Value Proposition: {{onboarding_value_proposition}}
 - Products/Services: {{onboarding_products}}
 - Business Name: {{onboarding_business_name}}
 
-Provide:
-1. A quality review of the current ICA (strengths, weaknesses, suggestions for improvement)
-2. Exactly 3 alternative ICA variations with reasoning for each""",
+Current ICA (if provided): {{current_value}}
+
+Task:
+1. If a current ICA is provided above (not empty or just placeholders), provide a quality review assessing its strengths, weaknesses, and areas for improvement. Set this as the qualityReview field.
+2. If no current ICA is provided or it's just placeholders, set qualityReview to null.
+3. Generate exactly 3 detailed ICA persona suggestions based on the business context.
+
+For each of the 3 suggestions, provide:
+- **title**: A descriptive name for this persona (5-100 characters)
+- **demographics**: Age, gender, location, income, education, occupation, family status (20-500 characters)
+- **goalsAspirations**: What they want to achieve, their ambitions and desired outcomes (20-500 characters)
+- **painPoints**: Problems, challenges, and frustrations they face (20-500 characters)
+- **motivations**: What drives them, their values and priorities (20-500 characters)
+- **commonObjectives**: Typical goals and milestones they're working toward (20-500 characters)
+- **whereToFind**: Where they can be found - online/offline channels, communities, platforms (20-500 characters)
+- **buyingProcess**: How they research, evaluate, and make purchasing decisions (20-500 characters)
+
+Ensure each persona is distinct, realistic, and aligned with the business context.""",
         display_order=15,
     ),
     "value_proposition_review": TopicSeedData(

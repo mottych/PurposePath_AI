@@ -171,6 +171,91 @@ class SuggestionVariation(BaseModel):
     )
 
 
+class IcaSuggestion(BaseModel):
+    """Detailed ICA (Ideal Client Avatar) suggestion with comprehensive persona information."""
+
+    title: str = Field(
+        ...,
+        min_length=5,
+        max_length=100,
+        description="Descriptive title for this ICA persona",
+    )
+    demographics: str = Field(
+        ...,
+        min_length=20,
+        max_length=500,
+        description="Age, gender, location, income, education, occupation, family status",
+    )
+    goals_aspirations: str = Field(
+        ...,
+        alias="goalsAspirations",
+        min_length=20,
+        max_length=500,
+        description="What they want to achieve, their ambitions and desired outcomes",
+    )
+    pain_points: str = Field(
+        ...,
+        alias="painPoints",
+        min_length=20,
+        max_length=500,
+        description="Problems, challenges, frustrations they face",
+    )
+    motivations: str = Field(
+        ...,
+        min_length=20,
+        max_length=500,
+        description="What drives them, their values and priorities",
+    )
+    common_objectives: str = Field(
+        ...,
+        alias="commonObjectives",
+        min_length=20,
+        max_length=500,
+        description="Typical goals and milestones they're working toward",
+    )
+    where_to_find: str = Field(
+        ...,
+        alias="whereToFind",
+        min_length=20,
+        max_length=500,
+        description="Where this persona can be found (online/offline channels, communities, platforms)",
+    )
+    buying_process: str = Field(
+        ...,
+        alias="buyingProcess",
+        min_length=20,
+        max_length=500,
+        description="How they make purchasing decisions, research process, decision criteria",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class IcaReviewResponse(BaseModel):
+    """Response from ICA review endpoint with detailed persona suggestions.
+    
+    Used by topic: ica_review
+    """
+
+    quality_review: str | None = Field(
+        default=None,
+        alias="qualityReview",
+        description=(
+            "AI review of the current ICA quality with feedback. "
+            "Use newlines (\\n) to separate sections. "
+            "This field is optional - null if no current_value was provided."
+        ),
+    )
+    suggestions: list[IcaSuggestion] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+        description="Exactly 3 detailed ICA persona suggestions",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class OnboardingReviewResponse(BaseModel):
     """Response from onboarding review endpoint (niche, ICA, value proposition).
 
@@ -197,6 +282,8 @@ class OnboardingReviewResponse(BaseModel):
 
 
 __all__ = [
+    "IcaReviewResponse",
+    "IcaSuggestion",
     "OnboardingCoachingRequest",
     "OnboardingCoachingResponse",
     "OnboardingReviewResponse",

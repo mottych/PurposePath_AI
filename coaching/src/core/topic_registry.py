@@ -293,13 +293,13 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         topic_id="ica_review",
         endpoint_path=None,  # Uses unified /ai/execute endpoint
         http_method=None,  # Uses unified /ai/execute endpoint
-        response_model="OnboardingReviewResponse",
+        response_model="IcaReviewResponse",  # Uses detailed ICA-specific response model
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
-        description="Review and suggest variations for Ideal Client Avatar (ICA)",
+        description="Review and suggest detailed ICA personas with demographics, goals, pain points, and buying behavior",
         is_active=True,
         parameter_refs=(
-            _opt_req("current_value"),
+            _opt_req("current_value"),  # Optional - can generate suggestions without a draft
             _onb("onboarding_niche"),
             _onb("onboarding_value_proposition"),
             _onb("onboarding_products"),
