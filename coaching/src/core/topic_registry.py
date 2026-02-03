@@ -311,10 +311,10 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         topic_id="value_proposition_review",
         endpoint_path=None,  # Uses unified /ai/execute endpoint
         http_method=None,  # Uses unified /ai/execute endpoint
-        response_model="OnboardingReviewResponse",
+        response_model="ValuePropositionReviewResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
-        description="Review and suggest variations for value proposition",
+        description="Review and suggest detailed value proposition variations with positioning strategy",
         is_active=True,
         parameter_refs=(
             _opt_req("current_value"),

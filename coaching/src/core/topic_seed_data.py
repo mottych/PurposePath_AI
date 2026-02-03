@@ -314,30 +314,57 @@ Ensure each persona is distinct, realistic, and aligned with the business contex
         topic_name="Value Proposition Review",
         topic_type=TopicType.SINGLE_SHOT.value,
         category=TopicCategory.ONBOARDING.value,
-        description="Review and suggest variations for value proposition statement",
+        description="Review and suggest detailed value proposition variations with comprehensive positioning strategy",
         temperature=0.8,
-        max_tokens=2048,
-        default_system_prompt="""You are an expert brand strategist specializing in value proposition development.
+        max_tokens=4096,
+        default_system_prompt="""You are an expert brand strategist and business positioning consultant specializing in value proposition development and competitive positioning.
 
 Your role is to:
-1. Evaluate the quality of a value proposition statement
-2. Provide constructive feedback on clarity, uniqueness, and customer appeal
-3. Suggest improved variations that better communicate value and differentiation
+1. Evaluate existing value propositions for quality, clarity, uniqueness, and customer appeal
+2. Generate comprehensive value proposition suggestions based on business context
+3. Provide detailed competitive positioning strategy for each suggestion
+4. Ensure each value proposition includes complete business positioning elements
 
-Consider the business context (niche, ICA, products) when evaluating.""",
-        default_user_prompt="""Review this value proposition:
+IMPORTANT: If there is insufficient business context to generate quality suggestions, you MUST set insufficientInformation to true and provide minimal or placeholder suggestions. Not enough information means:
+- No current value proposition AND no meaningful business context (niche, ICA, products are all missing or vague)
+- The provided information is too generic to create differentiated positioning
+
+Each value proposition suggestion MUST include:
+1. USP Statement - Clear, compelling unique selling proposition
+2. Key Differentiators - 2-5 specific ways the business stands apart
+3. Customer Outcomes - 2-5 concrete benefits customers will experience
+4. Proof Points - 2-7 credibility markers (testimonials, metrics, awards, certifications, years in business, notable clients)
+5. Brand Promise - What the business commits to delivering consistently
+6. Primary Competitor - Main competitor or competitive segment (or "N/A" if not applicable/unknown)
+7. Competitive Advantage - The key advantage that drives differentiation
+8. Market Position - Choose ONE: "Market Leader", "Challenger", "Niche Player", or "Emerging"
+
+Consider the full business context when crafting suggestions.""",
+        default_user_prompt="""Review and create detailed value proposition suggestions for this business.
 
 Current Value Proposition: {{current_value}}
 
 Business Context:
-- Niche: {{onboarding_niche}}
+- Niche/Target Market: {{onboarding_niche}}
 - Ideal Client Avatar (ICA): {{onboarding_ica}}
 - Products/Services: {{onboarding_products}}
 - Business Name: {{onboarding_business_name}}
 
-Provide:
-1. A quality review of the current value proposition (strengths, weaknesses, suggestions for improvement)
-2. Exactly 3 alternative value proposition variations with reasoning for each""",
+INSTRUCTIONS:
+1. If a current value proposition is provided, analyze it in qualityReview (strengths, weaknesses, opportunities for improvement)
+2. If NO current value proposition is provided but business context exists, set qualityReview to null and generate suggestions from context
+3. If there is insufficient information to create quality suggestions, set insufficientInformation to true and qualityReview to a message explaining what information is needed
+4. Generate exactly 3 comprehensive value proposition suggestions, each with ALL required fields:
+   - uspStatement: The core unique selling proposition
+   - keyDifferentiators: List of 2-5 specific differentiators
+   - customerOutcomes: List of 2-5 concrete customer benefits/results
+   - proofPoints: List of 2-7 credibility markers (can include: testimonials, metrics, years in business, certifications, awards, client examples, success rates)
+   - brandPromise: The commitment the brand makes to customers
+   - primaryCompetitor: Main competitor or "N/A" if not applicable
+   - competitiveAdvantage: Key advantage statement
+   - marketPosition: ONE of: "Market Leader", "Challenger", "Niche Player", "Emerging" (use best judgment based on context)
+
+Each suggestion should offer a different strategic positioning angle while remaining authentic to the business context.""",
         display_order=16,
     ),
     # ========== Section 2: Insights Generation (1 topic) ==========

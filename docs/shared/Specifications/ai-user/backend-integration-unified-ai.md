@@ -1122,7 +1122,7 @@ Review and suggest detailed ICA (Ideal Client Avatar) personas with demographics
 
 #### Topic: `value_proposition_review`
 
-Review and suggest variations for value proposition.
+Review and suggest detailed value proposition variations with comprehensive positioning strategy.
 
 **Request:**
 
@@ -1130,14 +1130,212 @@ Review and suggest variations for value proposition.
 {
   "topic_id": "value_proposition_review",
   "parameters": {
-    "current_value": "We provide great marketing services"
+    "current_value": "We provide great marketing services"  // Optional - can generate suggestions without a draft
   }
 }
 ```
 
-**Response Model:** `OnboardingReviewResponse`
+**Request Parameters:**
 
-**Response Payload Structure:** Same as `niche_review` - see [OnboardingReviewResponse structure](#topic-niche_review) above.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `current_value` | string | No | Current value proposition to review and improve. If not provided, AI will generate suggestions from business context |
+
+**Response Model:** `ValuePropositionReviewResponse`
+
+**Response Payload Structure:**
+
+The `data` field contains:
+
+```json
+{
+  "qualityReview": "string or null",
+  "insufficientInformation": false,
+  "suggestions": [
+    {
+      "uspStatement": "string",
+      "keyDifferentiators": ["string"],
+      "customerOutcomes": ["string"],
+      "proofPoints": ["string"],
+      "brandPromise": "string",
+      "primaryCompetitor": "string or null",
+      "competitiveAdvantage": "string",
+      "marketPosition": "Market Leader|Challenger|Niche Player|Emerging"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `qualityReview` | string or null | AI review of the current value proposition quality with feedback. Null if no current_value was provided or if there's insufficient information. Use newlines (\n) to separate sections for readability |
+| `insufficientInformation` | boolean | True if there's not enough business context to generate quality suggestions. Default: false |
+| `suggestions` | array of ValuePropositionSuggestion | Exactly 3 detailed value proposition suggestions with positioning strategy |
+
+**ValuePropositionSuggestion Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `uspStatement` | string | Unique Selling Proposition statement - the core value promise (10-500 chars) |
+| `keyDifferentiators` | array of strings | 2-5 key differentiators that set the business apart from competitors |
+| `customerOutcomes` | array of strings | 2-5 specific outcomes or benefits customers can expect |
+| `proofPoints` | array of strings | 2-7 short credibility markers (testimonials, metrics, achievements, certifications, years in business, notable clients) |
+| `brandPromise` | string | The brand promise - what the business commits to delivering consistently (10-300 chars) |
+| `primaryCompetitor` | string or null | Primary competitor or competitive segment (if known/applicable), or null |
+| `competitiveAdvantage` | string | Key competitive advantage that drives market differentiation (10-400 chars) |
+| `marketPosition` | string | Market position: "Market Leader", "Challenger", "Niche Player", or "Emerging" |
+
+**Example Response:**
+
+```json
+{
+  "topic_id": "value_proposition_review",
+  "success": true,
+  "data": {
+    "qualityReview": "Your current value proposition is too generic and doesn't communicate specific value...\n\nStrengths:\n- Clear service category\n\nWeaknesses:\n- Lacks differentiation\n- No specific outcomes mentioned\n- Doesn't target a specific audience\n\nSuggestions:\n- Specify your target market\n- Highlight unique methodology or approach\n- Include measurable outcomes",
+    "insufficientInformation": false,
+    "suggestions": [
+      {
+        "uspStatement": "We help B2B SaaS companies scale from $1M to $10M ARR through data-driven growth marketing that delivers predictable pipeline",
+        "keyDifferentiators": [
+          "Specialized focus on B2B SaaS growth stage",
+          "Data-driven methodology with daily performance dashboards",
+          "Proven playbook for scaling ARR 10x",
+          "Full-stack marketing team included"
+        ],
+        "customerOutcomes": [
+          "Predictable monthly pipeline generation",
+          "40%+ reduction in customer acquisition cost",
+          "3x increase in qualified lead volume within 90 days",
+          "Clear ROI tracking on every marketing dollar"
+        ],
+        "proofPoints": [
+          "Helped 15+ SaaS companies achieve 10x ARR growth",
+          "Average 180% ROI in first 6 months",
+          "Featured in SaaStr and SaaS Weekly",
+          "Certified HubSpot and Google Premier Partner",
+          "12 years B2B SaaS marketing experience"
+        ],
+        "brandPromise": "We guarantee measurable pipeline growth within 90 days or work for free until you do",
+        "primaryCompetitor": "Full-service digital agencies without SaaS specialization",
+        "competitiveAdvantage": "Specialized SaaS growth expertise with proven scaling playbook and performance guarantees",
+        "marketPosition": "Niche Player"
+      },
+      {
+        "uspStatement": "Transform your marketing chaos into a revenue engine with our AI-powered marketing platform and expert support",
+        "keyDifferentiators": [
+          "AI-powered automation and optimization",
+          "White-glove onboarding and strategy support",
+          "All-in-one platform eliminating tool sprawl",
+          "Real-time performance insights"
+        ],
+        "customerOutcomes": [
+          "Save 20+ hours per week on marketing tasks",
+          "Increase conversion rates by 35%+",
+          "Unified view of entire marketing funnel",
+          "Professional marketing without hiring full team"
+        ],
+        "proofPoints": [
+          "500+ businesses trust our platform",
+          "4.8/5 star rating with 200+ reviews",
+          "Named G2 Leader in Marketing Automation",
+          "$50M+ in tracked customer revenue",
+          "99.9% platform uptime guarantee"
+        ],
+        "brandPromise": "We deliver marketing technology that actually works, backed by humans who care about your success",
+        "primaryCompetitor": "HubSpot",
+        "competitiveAdvantage": "Combines enterprise-grade AI automation with personalized human support at SMB-friendly pricing",
+        "marketPosition": "Challenger"
+      },
+      {
+        "uspStatement": "Get world-class marketing strategy and execution without the enterprise price tag - perfect for growing businesses ready to scale",
+        "keyDifferentiators": [
+          "Fractional CMO + execution team model",
+          "Enterprise expertise at mid-market pricing",
+          "Flexible month-to-month engagements",
+          "Industry-specific strategy frameworks"
+        ],
+        "customerOutcomes": [
+          "Strategic marketing direction from day one",
+          "Professional brand positioning and messaging",
+          "Consistent content and campaign execution",
+          "Marketing that scales with your growth"
+        ],
+        "proofPoints": [
+          "Former Fortune 500 marketing executives",
+          "Managed $100M+ in marketing budgets",
+          "50+ client success stories across 12 industries",
+          "Average 2.5 year client relationship",
+          "Published authors and conference speakers"
+        ],
+        "brandPromise": "We bring Fortune 500 marketing expertise to growing businesses who deserve better than generic agencies",
+        "primaryCompetitor": "Traditional marketing agencies",
+        "competitiveAdvantage": "Senior-level strategic expertise combined with execution capabilities at accessible pricing for mid-market",
+        "marketPosition": "Niche Player"
+      }
+    ]
+  },
+  "schema_ref": "ValuePropositionReviewResponse",
+  "metadata": {
+    "model": "gpt-4o-mini",
+    "tokens_used": 1250,
+    "processing_time_ms": 4500,
+    "finish_reason": "stop"
+  }
+}
+```
+
+**Insufficient Information Example:**
+
+```json
+{
+  "topic_id": "value_proposition_review",
+  "success": true,
+  "data": {
+    "qualityReview": "Not enough information provided to generate quality value proposition suggestions. Please provide:\n- Target market or niche description\n- Products/services offered\n- Ideal customer profile\n- Any unique aspects of your business approach",
+    "insufficientInformation": true,
+    "suggestions": [
+      {
+        "uspStatement": "Unable to generate specific USP without business context",
+        "keyDifferentiators": ["More information needed", "Business context required"],
+        "customerOutcomes": ["Specific outcomes depend on your business model", "Customer benefits require market understanding"],
+        "proofPoints": ["Proof points require business history", "Credentials need business context"],
+        "brandPromise": "Brand promise requires understanding of your business values and approach",
+        "primaryCompetitor": null,
+        "competitiveAdvantage": "Competitive advantage analysis requires market and offering details",
+        "marketPosition": "Emerging"
+      },
+      {
+        "uspStatement": "Comprehensive value proposition requires detailed business information",
+        "keyDifferentiators": ["Business differentiation needs context", "Unique value requires market understanding"],
+        "customerOutcomes": ["Customer results depend on service offering", "Outcomes require target market knowledge"],
+        "proofPoints": ["Track record information needed", "Credibility markers require business details"],
+        "brandPromise": "Promise development needs business mission and values",
+        "primaryCompetitor": null,
+        "competitiveAdvantage": "Advantage statement requires competitive landscape understanding",
+        "marketPosition": "Emerging"
+      },
+      {
+        "uspStatement": "Strategic positioning requires foundational business information",
+        "keyDifferentiators": ["Differentiators need business context", "Competitive factors require market data"],
+        "customerOutcomes": ["Value delivery depends on business model", "Benefits require offering details"],
+        "proofPoints": ["Success indicators need business history", "Evidence requires operational context"],
+        "brandPromise": "Promise crafting needs core business values",
+        "primaryCompetitor": null,
+        "competitiveAdvantage": "Strategic advantage analysis requires comprehensive business understanding",
+        "marketPosition": "Emerging"
+      }
+    ]
+  },
+  "schema_ref": "ValuePropositionReviewResponse",
+  "metadata": {
+    "model": "gpt-4o-mini",
+    "tokens_used": 450,
+    "processing_time_ms": 1800,
+    "finish_reason": "stop"
+  }
+}
+```
 
 ---
 

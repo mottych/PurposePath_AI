@@ -17,7 +17,7 @@ from httpx import AsyncClient
 
 
 def validate_onboarding_review_response(data: dict) -> None:
-    """Validate the structure and content of onboarding review response."""
+    """Validate the structure and content of onboarding review response (niche_review)."""
     # Validate data structure
     assert "data" in data, "Response should contain 'data' field"
     response_data = data["data"]
@@ -40,6 +40,82 @@ def validate_onboarding_review_response(data: dict) -> None:
         assert "reasoning" in suggestion, f"Suggestion {i} should have 'reasoning'"
         assert len(suggestion["text"]) > 10, f"Suggestion {i} text should be substantive"
         assert len(suggestion["reasoning"]) > 20, f"Suggestion {i} reasoning should be substantive"
+
+
+def validate_value_proposition_review_response(data: dict) -> None:
+    """Validate the structure and content of value proposition review response."""
+    # Validate data structure
+    assert "data" in data, "Response should contain 'data' field"
+    response_data = data["data"]
+
+    # quality_review validation (can be null if no current_value provided or insufficient info)
+    quality_review_key = "quality_review" if "quality_review" in response_data else "qualityReview"
+    if quality_review_key in response_data:
+        quality_review = response_data[quality_review_key]
+        # Can be null or string
+        if quality_review is not None:
+            assert isinstance(quality_review, str), "quality_review should be a string or null"
+            assert len(quality_review) > 20, "quality_review should be substantive when provided"
+
+    # insufficientInformation validation (optional field, defaults to false)
+    insufficient_info_key = (
+        "insufficient_information"
+        if "insufficient_information" in response_data
+        else "insufficientInformation"
+    )
+    if insufficient_info_key in response_data:
+        assert isinstance(
+            response_data[insufficient_info_key], bool
+        ), "insufficientInformation should be boolean"
+
+    # suggestions validation - should always have 3 suggestions
+    assert "suggestions" in response_data, "Response should contain suggestions"
+    suggestions = response_data["suggestions"]
+    assert isinstance(suggestions, list), "suggestions should be a list"
+    assert len(suggestions) == 3, "Should have exactly 3 suggestions"
+
+    # Validate each value proposition suggestion
+    for i, suggestion in enumerate(suggestions):
+        # Check all required fields
+        usp_key = "usp_statement" if "usp_statement" in suggestion else "uspStatement"
+        assert usp_key in suggestion, f"Suggestion {i} should have uspStatement"
+        assert len(suggestion[usp_key]) > 10, f"Suggestion {i} USP should be substantive"
+
+        diff_key = "key_differentiators" if "key_differentiators" in suggestion else "keyDifferentiators"
+        assert diff_key in suggestion, f"Suggestion {i} should have keyDifferentiators"
+        assert isinstance(suggestion[diff_key], list), f"Suggestion {i} keyDifferentiators should be list"
+        assert 2 <= len(suggestion[diff_key]) <= 5, f"Suggestion {i} should have 2-5 differentiators"
+
+        outcomes_key = "customer_outcomes" if "customer_outcomes" in suggestion else "customerOutcomes"
+        assert outcomes_key in suggestion, f"Suggestion {i} should have customerOutcomes"
+        assert isinstance(suggestion[outcomes_key], list), f"Suggestion {i} customerOutcomes should be list"
+        assert 2 <= len(suggestion[outcomes_key]) <= 5, f"Suggestion {i} should have 2-5 outcomes"
+
+        proof_key = "proof_points" if "proof_points" in suggestion else "proofPoints"
+        assert proof_key in suggestion, f"Suggestion {i} should have proofPoints"
+        assert isinstance(suggestion[proof_key], list), f"Suggestion {i} proofPoints should be list"
+        assert 2 <= len(suggestion[proof_key]) <= 7, f"Suggestion {i} should have 2-7 proof points"
+
+        promise_key = "brand_promise" if "brand_promise" in suggestion else "brandPromise"
+        assert promise_key in suggestion, f"Suggestion {i} should have brandPromise"
+        assert len(suggestion[promise_key]) > 10, f"Suggestion {i} brandPromise should be substantive"
+
+        # primaryCompetitor can be null
+        comp_key = "primary_competitor" if "primary_competitor" in suggestion else "primaryCompetitor"
+        assert comp_key in suggestion, f"Suggestion {i} should have primaryCompetitor field"
+
+        advantage_key = "competitive_advantage" if "competitive_advantage" in suggestion else "competitiveAdvantage"
+        assert advantage_key in suggestion, f"Suggestion {i} should have competitiveAdvantage"
+        assert len(suggestion[advantage_key]) > 10, f"Suggestion {i} competitiveAdvantage should be substantive"
+
+        position_key = "market_position" if "market_position" in suggestion else "marketPosition"
+        assert position_key in suggestion, f"Suggestion {i} should have marketPosition"
+        assert suggestion[position_key] in [
+            "Market Leader",
+            "Challenger",
+            "Niche Player",
+            "Emerging",
+        ], f"Suggestion {i} marketPosition should be valid enum value"
 
 
 def validate_response_metadata(data: dict, expected_topic: str) -> None:
@@ -210,8 +286,9 @@ async def test_value_proposition_review_real_llm(
     Test value proposition review with real LLM.
 
     Validates:
-    - Real LLM generates value proposition review
-    - Suggestions are compelling value propositions
+    - Real LLM generates detailed value proposition review
+    - Suggestions include comprehensive positioning strategy
+    - Each suggestion has all required fields (USP, differentiators, outcomes, proof points, etc.)
     """
     payload = {
         "topic_id": "value_proposition_review",
@@ -226,7 +303,7 @@ async def test_value_proposition_review_real_llm(
     data = response.json()
 
     validate_response_metadata(data, "value_proposition_review")
-    validate_onboarding_review_response(data)
+    validate_value_proposition_review_response(data)
 
 
 @pytest.mark.e2e
@@ -241,6 +318,7 @@ async def test_value_proposition_review_specific(
     Validates:
     - LLM provides specific, actionable feedback
     - Suggestions maintain core value while improving clarity
+    - Detailed positioning strategy is included
     """
     payload = {
         "topic_id": "value_proposition_review",
@@ -258,7 +336,7 @@ async def test_value_proposition_review_specific(
     data = response.json()
 
     validate_response_metadata(data, "value_proposition_review")
-    validate_onboarding_review_response(data)
+    validate_value_proposition_review_response(data)
 
 
 # =============================================================================
@@ -325,6 +403,35 @@ async def test_get_onboarding_review_schema(
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+async def test_get_value_proposition_review_schema(
+    e2e_client: AsyncClient,
+) -> None:
+    """
+    Test getting the ValuePropositionReviewResponse schema.
+
+    Validates:
+    - Schema endpoint works for value proposition response
+    - Schema describes expected detailed response structure
+    """
+    response = await e2e_client.get("/api/v1/ai/schemas/ValuePropositionReviewResponse")
+
+    assert response.status_code == 200, f"Failed: {response.text}"
+    data = response.json()
+
+    assert "schema" in data
+    schema = data["schema"]
+
+    # Verify schema has expected properties
+    assert "properties" in schema
+    properties = schema["properties"]
+
+    assert "qualityReview" in properties, "Schema should define qualityReview"
+    assert "suggestions" in properties, "Schema should define suggestions"
+    assert "insufficientInformation" in properties, "Schema should define insufficientInformation"
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
 async def test_list_all_schemas(
     e2e_client: AsyncClient,
 ) -> None:
@@ -333,7 +440,7 @@ async def test_list_all_schemas(
 
     Validates:
     - Schemas endpoint returns list
-    - OnboardingReviewResponse is included
+    - OnboardingReviewResponse and ValuePropositionReviewResponse are included
     """
     response = await e2e_client.get("/api/v1/ai/schemas")
 
@@ -346,6 +453,9 @@ async def test_list_all_schemas(
     assert (
         "OnboardingReviewResponse" in schemas
     ), "OnboardingReviewResponse should be in available schemas"
+    assert (
+        "ValuePropositionReviewResponse" in schemas
+    ), "ValuePropositionReviewResponse should be in available schemas"
 
 
 # =============================================================================
