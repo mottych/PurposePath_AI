@@ -459,6 +459,12 @@ class UnifiedAIEngine:
         )
 
         # Step 6: Select model based on user tier and get provider
+        self.logger.info(
+            "About to select model for tier",
+            user_tier=user_tier.value,
+            topic_id=topic_id,
+            has_get_model_method=hasattr(topic, "get_model_code_for_tier"),
+        )
         model_code = topic.get_model_code_for_tier(user_tier)
         self.logger.info(
             "Selected model for tier",
