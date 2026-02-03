@@ -21,14 +21,16 @@ def _json_serializer(obj: Any, **kwargs: Any) -> str:
         JSON string
     """
 
-    def default(o: Any) -> Any:
+    def default_handler(o: Any) -> Any:
         """Handle non-JSON-serializable objects."""
         if isinstance(o, datetime):
             return o.isoformat()
         # Let the default encoder raise TypeError for other unsupported types
         raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 
-    return json.dumps(obj, default=default, **kwargs)
+    # Remove 'default' from kwargs if present to avoid conflict
+    kwargs.pop("default", None)
+    return json.dumps(obj, default=default_handler, **kwargs)
 
 
 def configure_logging(
