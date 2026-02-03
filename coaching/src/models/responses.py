@@ -194,7 +194,7 @@ class InsightResponse(BaseModel):
 
 class InsightLLMResponse(BaseModel):
     """LLM-generated insight data (without system fields like id, timestamps).
-    
+
     This is what the LLM generates. The backend adds id, status, timestamps.
     """
 
