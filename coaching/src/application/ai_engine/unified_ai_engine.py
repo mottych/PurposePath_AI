@@ -36,13 +36,13 @@ AI_DEBUG_ENABLED = os.getenv("AI_DEBUG_LOGGING", "false").lower() == "true"
 
 def _sanitize_unicode(obj: Any) -> Any:
     """Recursively sanitize Unicode characters in objects for safe logging.
-    
+
     Replaces problematic Unicode characters with ASCII equivalents or removes them
     to prevent encoding errors when logging to console/stream.
-    
+
     Args:
         obj: Object to sanitize (str, dict, list, or other)
-        
+
     Returns:
         Sanitized version of the object
     """
@@ -54,7 +54,7 @@ def _sanitize_unicode(obj: Any) -> Any:
             '\u2191': '^',   # ↑ (upward arrow)
             '\u2193': 'v',   # ↓ (downward arrow)
             '\u2014': '--',  # — (em dash)
-            '\u2013': '-',   # – (en dash)
+            '\u2013': '-',   # - (en dash)
             '\u2018': "'",   # ' (left single quote)
             '\u2019': "'",   # ' (right single quote)
             '\u201c': '"',   # " (left double quote)
