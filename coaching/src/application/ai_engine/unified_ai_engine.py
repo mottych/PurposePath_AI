@@ -386,8 +386,7 @@ class UnifiedAIEngine:
         self.logger.info(
             "Loading prompts from S3",
             topic_id=topic_id,
-            bucket=topic.prompt_s3_bucket,
-            prefix=topic.prompt_s3_prefix,
+            prompt_count=len(topic.prompts),
         )
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
