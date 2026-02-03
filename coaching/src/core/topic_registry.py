@@ -335,12 +335,8 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         description="Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) based on current business state, measures, and purpose alignment",
         is_active=True,
         parameter_refs=(
-            # Optional filters for pagination and filtering
-            _opt_req("page"),  # Page number (default: 1)
-            _opt_req("page_size"),  # Items per page (default: 20)
-            _opt_req("category"),  # Filter by category (strategy, operations, etc.)
-            _opt_req("priority"),  # Filter by priority (critical, high, medium, low)
-            _opt_req("status"),  # Filter by status (active, dismissed, etc.)
+            # NOTE: page, page_size, category, priority, status are API-level filtering params
+            # They should be handled by the API layer AFTER LLM generates insights, not sent to LLM
             # Auto-enriched business data for AI analysis
             _opt_req(
                 "business_foundation"
