@@ -1,6 +1,7 @@
 """Response models for API endpoints."""
 
-from datetime import UTC, datetime
+import uuid
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
@@ -168,7 +169,7 @@ class InsightMetadata(BaseModel):
 class InsightResponse(BaseModel):
     """Response model for coaching insights."""
 
-    id: str = Field(description="Unique insight identifier")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique insight identifier")
     title: str = Field(description="Insight title")
     description: str = Field(description="Detailed insight description")
     category: str = Field(description="Insight category")
@@ -179,9 +180,9 @@ class InsightResponse(BaseModel):
     alignment_impact: str | None = Field(
         default=None, description="How this affects purpose/values alignment and business outcomes"
     )
-    status: str = Field(description="Current status")
-    created_at: datetime = Field(description="Creation timestamp")
-    updated_at: datetime = Field(description="Last update timestamp")
+    status: str = Field(default="active", description="Current status")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation timestamp")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Last update timestamp")
     metadata: InsightMetadata = Field(description="Additional insight metadata")
 
 
