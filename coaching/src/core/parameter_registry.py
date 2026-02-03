@@ -1201,6 +1201,17 @@ _register(
 
 _register(
     ParameterDefinition(
+        name="issues",
+        param_type=ParameterType.LIST,
+        description="List of all issues for the tenant.",
+        default=[],
+        retrieval_method="get_all_issues",
+        extraction_path="issues",
+    )
+)
+
+_register(
+    ParameterDefinition(
         name="issue_title",
         param_type=ParameterType.STRING,
         description="The title of the issue.",
