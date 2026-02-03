@@ -706,7 +706,7 @@ These parameters are automatically fetched from the Account Service:
 - [onboarding_coaching](#topic-onboarding_coaching) - AI coaching for onboarding process
 - [business_metrics](#topic-business_metrics) - Retrieve business metrics and data for coaching context
 - [niche_review](#topic-niche_review) - Review and suggest variations for business niche
-- [ica_review](#topic-ica_review) - Review and suggest variations for Ideal Client Avatar (ICA)
+- [ica_review](#topic-ica_review) - Review and suggest detailed ICA personas with demographics, goals, pain points, and buying behavior
 - [value_proposition_review](#topic-value_proposition_review) - Review and suggest variations for value proposition
 - [core_values](#topic-core_values) - Discover and articulate your organization's authentic core values through guided coaching
 - [purpose](#topic-purpose) - Define your organization's deeper purpose and reason for existing through guided coaching
