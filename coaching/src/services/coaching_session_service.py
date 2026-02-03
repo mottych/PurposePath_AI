@@ -568,8 +568,12 @@ class CoachingSessionService:
         logger.debug(
             "coaching_service.templates_rendered",
             topic_id=topic_id,
-            system_prompt_preview=rendered_system[:200] + "..." if len(rendered_system) > 200 else rendered_system,
-            initiation_prompt_preview=initiation_template[:200] + "..." if len(initiation_template) > 200 else initiation_template,
+            system_prompt_preview=rendered_system[:200] + "..."
+            if len(rendered_system) > 200
+            else rendered_system,
+            initiation_prompt_preview=initiation_template[:200] + "..."
+            if len(initiation_template) > 200
+            else initiation_template,
         )
 
         # Create session entity

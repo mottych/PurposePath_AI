@@ -342,7 +342,9 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _opt_req("priority"),  # Filter by priority (critical, high, medium, low)
             _opt_req("status"),  # Filter by status (active, dismissed, etc.)
             # Auto-enriched business data for AI analysis
-            _opt_req("business_foundation"),  # Complete foundation data (vision, purpose, values, etc.)
+            _opt_req(
+                "business_foundation"
+            ),  # Complete foundation data (vision, purpose, values, etc.)
             _opt_req("goals"),  # All tenant goals with progress
             _opt_req("strategies"),  # All tenant strategies
             _opt_req("measures"),  # All measures/KPIs with progress

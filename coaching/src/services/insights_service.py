@@ -381,10 +381,14 @@ class InsightsService:
         if business_data.foundation:
             prompt_parts.append(f"Vision: {business_data.foundation.get('vision', 'N/A')}")
             prompt_parts.append(f"Purpose: {business_data.foundation.get('purpose', 'N/A')}")
-            core_values = business_data.foundation.get("coreValues", []) or business_data.foundation.get("core_values", [])
+            core_values = business_data.foundation.get(
+                "coreValues", []
+            ) or business_data.foundation.get("core_values", [])
             if core_values:
                 prompt_parts.append(f"Core Values: {', '.join(core_values)}")
-            target_market = business_data.foundation.get("targetMarket", {}) or business_data.foundation.get("target_market", {})
+            target_market = business_data.foundation.get(
+                "targetMarket", {}
+            ) or business_data.foundation.get("target_market", {})
             if target_market:
                 niche = target_market.get("niche") or target_market.get("nicheStatement", "")
                 if niche:
@@ -416,7 +420,14 @@ class InsightsService:
 
             for goal_id, strats in strategies_by_goal.items():
                 if goal_id != "unlinked":
-                    goal_name = next((g.get("title") or g.get("name") for g in business_data.goals if g.get("id") == goal_id), "Unknown Goal")
+                    goal_name = next(
+                        (
+                            g.get("title") or g.get("name")
+                            for g in business_data.goals
+                            if g.get("id") == goal_id
+                        ),
+                        "Unknown Goal",
+                    )
                     prompt_parts.append(f"  For '{goal_name}':")
                 for s in strats:
                     s_name = s.get("name") or s.get("title", "Unnamed")
@@ -433,7 +444,9 @@ class InsightsService:
                 m_target = measure.get("targetValue", "N/A")
                 m_unit = measure.get("unit", "")
                 m_status = measure.get("status", "unknown")
-                prompt_parts.append(f"- {m_name}: {m_current}/{m_target} {m_unit} (Status: {m_status})")
+                prompt_parts.append(
+                    f"- {m_name}: {m_current}/{m_target} {m_unit} (Status: {m_status})"
+                )
 
         # Actions
         if business_data.recent_actions:
@@ -457,19 +470,25 @@ class InsightsService:
 
         prompt_parts.append("")
         prompt_parts.append("## Output Requirements")
-        prompt_parts.append(
-            "Generate insights in JSON format. Each insight MUST include:"
-        )
+        prompt_parts.append("Generate insights in JSON format. Each insight MUST include:")
         prompt_parts.append("- title: Clear, specific insight for leadership")
-        prompt_parts.append("- description: What's happening and why it matters (reference specific data)")
-        prompt_parts.append("- category: strategy|operations|finance|marketing|leadership|technology")
+        prompt_parts.append(
+            "- description: What's happening and why it matters (reference specific data)"
+        )
+        prompt_parts.append(
+            "- category: strategy|operations|finance|marketing|leadership|technology"
+        )
         prompt_parts.append("- priority: critical|high|medium|low")
         prompt_parts.append("- kiss_category: keep|improve|start|stop")
-        prompt_parts.append("- alignment_impact: How this affects purpose/values alignment and business outcomes")
+        prompt_parts.append(
+            "- alignment_impact: How this affects purpose/values alignment and business outcomes"
+        )
         prompt_parts.append("- suggested_actions: 2-4 specific actions with effort/impact")
         prompt_parts.append("- data_sources: Which data informed this insight")
         prompt_parts.append("")
-        prompt_parts.append("Focus on alignment with purpose and values as the foundation for business success.")
+        prompt_parts.append(
+            "Focus on alignment with purpose and values as the foundation for business success."
+        )
 
         return "\n".join(prompt_parts)
 
@@ -524,6 +543,7 @@ class InsightsService:
                 kiss_cat_str = insight_dict.get("kiss_category")
                 if kiss_cat_str:
                     from coaching.src.models.insights import KISSCategory
+
                     try:
                         kiss_category = KISSCategory(kiss_cat_str)
                     except ValueError:
