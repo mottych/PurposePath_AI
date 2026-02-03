@@ -194,7 +194,7 @@ class InsightResponse(BaseModel):
 
 class InsightsGenerationResponse(BaseModel):
     """Response for insights generation - returns a list of insights without pagination.
-    
+
     Used by the insights_generation topic where the LLM generates multiple insights
     in a single response. Pagination is handled by the frontend, not the LLM.
     """
