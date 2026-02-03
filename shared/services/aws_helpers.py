@@ -50,11 +50,13 @@ def get_bedrock_client(region_name: str) -> Any:
 
     config = Config(
         connect_timeout=10,  # 10 seconds to connect
-        read_timeout=240,    # 4 minutes to receive response
-        retries={'max_attempts': 2, 'mode': 'standard'}  # Retry on transient failures
+        read_timeout=240,  # 4 minutes to receive response
+        retries={"max_attempts": 2, "mode": "standard"},  # Retry on transient failures
     )
 
-    return cast(Any, boto3.client("bedrock-runtime", region_name=region_name, config=config))
+    return cast(
+        Any, boto3.client("bedrock-runtime", region_name=region_name, config=config)
+    )
 
 
 def get_s3_client(region_name: str) -> Any:
