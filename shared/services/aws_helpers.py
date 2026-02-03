@@ -35,11 +35,11 @@ def get_bedrock_client(region_name: str) -> Any:
     """Get a bedrock runtime client with timeout configuration.
 
     Using Any return type as mypy_boto3_bedrock_runtime is not commonly available.
-    
+
     Timeout configuration:
     - connect_timeout: 10 seconds (time to establish connection)
     - read_timeout: 240 seconds (4 minutes - time to receive response)
-    
+
     The 4-minute read timeout allows for:
     - Complex reasoning tasks (insights, strategic analysis)
     - Large context processing
@@ -47,13 +47,13 @@ def get_bedrock_client(region_name: str) -> Any:
     While still fitting within Lambda's 5-minute timeout.
     """
     from botocore.config import Config
-    
+
     config = Config(
         connect_timeout=10,  # 10 seconds to connect
         read_timeout=240,    # 4 minutes to receive response
         retries={'max_attempts': 2, 'mode': 'standard'}  # Retry on transient failures
     )
-    
+
     return cast(Any, boto3.client("bedrock-runtime", region_name=region_name, config=config))
 
 
