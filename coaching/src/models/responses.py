@@ -193,9 +193,10 @@ class InsightResponse(BaseModel):
 
 
 class InsightLLMResponse(BaseModel):
-    """LLM-generated insight data (without system fields like id, timestamps).
+    """LLM-generated insight data (ephemeral, not persisted).
 
-    This is what the LLM generates. The backend adds id, status, timestamps.
+    The Python AI service generates insights and returns them to the frontend.
+    The .NET backend handles persistence and adds system fields (id, timestamps, status).
     """
 
     title: str = Field(description="Insight title")
@@ -204,7 +205,8 @@ class InsightLLMResponse(BaseModel):
     priority: str = Field(description="Priority level: critical, high, medium, low")
     kiss_category: str = Field(description="KISS framework category: keep, improve, start, stop")
     alignment_impact: str = Field(description="How this affects purpose/values alignment and business outcomes")
-    metadata: InsightMetadata = Field(description="Additional insight metadata")
+    business_impact: str = Field(description="Business impact level: low, medium, high")
+    effort_required: str = Field(description="Effort required to implement: low, medium, high")
 
 
 class InsightsGenerationResponse(BaseModel):
