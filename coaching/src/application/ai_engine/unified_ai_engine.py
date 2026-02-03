@@ -383,8 +383,20 @@ class UnifiedAIEngine:
             raise TopicAccessDeniedError(topic_id, user_tier, topic.tier_level)
 
         # Step 2: Load prompts from S3
+        self.logger.info(
+            "Loading prompts from S3",
+            topic_id=topic_id,
+            bucket=topic.prompt_s3_bucket,
+            prefix=topic.prompt_s3_prefix,
+        )
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
+        self.logger.info(
+            "Prompts loaded successfully",
+            topic_id=topic_id,
+            system_length=len(system_prompt_content),
+            user_length=len(user_prompt_content),
+        )
 
         _log_ai_debug(
             "Prompt templates loaded",
@@ -405,6 +417,12 @@ class UnifiedAIEngine:
             },
         )
 
+        self.logger.info(
+            "Starting parameter enrichment",
+            topic_id=topic_id,
+            has_template_processor=template_processor is not None,
+            input_param_count=len(parameters),
+        )
         enriched_params = await self._enrich_parameters(
             parameters=parameters,
             system_prompt=system_prompt_content,
@@ -413,6 +431,11 @@ class UnifiedAIEngine:
             user_id=str(user_id or parameters.get("user_id", "")),
             tenant_id=str(tenant_id or parameters.get("tenant_id", "")),
             template_processor=template_processor,
+        )
+        self.logger.info(
+            "Parameter enrichment completed",
+            topic_id=topic_id,
+            enriched_param_count=len(enriched_params),
         )
 
         _log_ai_debug(
@@ -491,6 +514,16 @@ class UnifiedAIEngine:
             },
         )
 
+        self.logger.info(
+            "Calling LLM provider",
+            topic_id=topic_id,
+            model_code=model_code,
+            model_name=model_name,
+            temperature=topic.temperature,
+            max_tokens=topic.max_tokens,
+            system_prompt_length=len(rendered_system),
+            user_prompt_length=len(rendered_user),
+        )
         llm_response = await provider.generate(
             messages=messages,
             model=model_name,  # Use resolved model name, not model code

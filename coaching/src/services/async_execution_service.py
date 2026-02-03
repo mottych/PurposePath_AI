@@ -337,9 +337,20 @@ class AsyncAIExecutionService:
                 )
 
             # Create template processor for parameter enrichment
+            logger.info(
+                "async_job.creating_template_processor",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
+            )
             template_processor = self._create_template_processor(job.jwt_token)
 
             # Execute AI with enrichment
+            logger.info(
+                "async_job.starting_ai_execution",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
+                parameter_count=len(job.parameters),
+            )
             result = await self._engine.execute_single_shot(
                 topic_id=job.topic_id,
                 parameters=job.parameters,
@@ -347,6 +358,11 @@ class AsyncAIExecutionService:
                 user_id=job.user_id,
                 tenant_id=job.tenant_id,
                 template_processor=template_processor,
+            )
+            logger.info(
+                "async_job.ai_execution_completed",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
             )
 
             processing_time_ms = int((time.time() - start_time) * 1000)
