@@ -422,7 +422,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         max_turns = state.get("model_config", {}).get("max_turns", 0)
         if max_turns == 0:
             max_turns = self.config.custom_config.get("max_turns", 0)
-        
+
         # Complete if max turns reached (only if max_turns is configured)
         if max_turns > 0 and conversation_count >= max_turns:
             return "complete"
