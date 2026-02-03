@@ -233,7 +233,7 @@ class IcaSuggestion(BaseModel):
 
 class IcaReviewResponse(BaseModel):
     """Response from ICA review endpoint with detailed persona suggestions.
-    
+
     Used by topic: ica_review
     """
 
@@ -257,9 +257,9 @@ class IcaReviewResponse(BaseModel):
 
 
 class OnboardingReviewResponse(BaseModel):
-    """Response from onboarding review endpoint (niche, ICA, value proposition).
+    """Response from onboarding review endpoint (niche review).
 
-    Used by topics: niche_review, ica_review, value_proposition_review
+    Used by topics: niche_review
     """
 
     quality_review: str = Field(
@@ -281,6 +281,97 @@ class OnboardingReviewResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ValuePropositionSuggestion(BaseModel):
+    """Detailed value proposition suggestion with comprehensive business positioning."""
+
+    usp_statement: str = Field(
+        ...,
+        alias="uspStatement",
+        min_length=10,
+        max_length=500,
+        description="Unique Selling Proposition statement - the core value promise",
+    )
+    key_differentiators: list[str] = Field(
+        ...,
+        alias="keyDifferentiators",
+        min_length=2,
+        max_length=5,
+        description="2-5 key differentiators that set the business apart from competitors",
+    )
+    customer_outcomes: list[str] = Field(
+        ...,
+        alias="customerOutcomes",
+        min_length=2,
+        max_length=5,
+        description="2-5 specific outcomes or benefits customers can expect",
+    )
+    proof_points: list[str] = Field(
+        ...,
+        alias="proofPoints",
+        min_length=2,
+        max_length=7,
+        description="2-7 short proof points (testimonials, metrics, achievements, credentials)",
+    )
+    brand_promise: str = Field(
+        ...,
+        alias="brandPromise",
+        min_length=10,
+        max_length=300,
+        description="The brand promise - what the business commits to delivering consistently",
+    )
+    primary_competitor: str | None = Field(
+        None,
+        alias="primaryCompetitor",
+        max_length=200,
+        description="Primary competitor or competitive segment (if known/applicable)",
+    )
+    competitive_advantage: str = Field(
+        ...,
+        alias="competitiveAdvantage",
+        min_length=10,
+        max_length=400,
+        description="Key competitive advantage that drives market differentiation",
+    )
+    market_position: str = Field(
+        ...,
+        alias="marketPosition",
+        pattern="^(Market Leader|Challenger|Niche Player|Emerging)$",
+        description="Market position: Market Leader, Challenger, Niche Player, or Emerging",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class ValuePropositionReviewResponse(BaseModel):
+    """Response from value proposition review endpoint with detailed positioning suggestions.
+
+    Used by topic: value_proposition_review
+    """
+
+    quality_review: str | None = Field(
+        default=None,
+        alias="qualityReview",
+        description=(
+            "AI review of the current value proposition quality with feedback. "
+            "Use newlines (\\n) to separate sections. "
+            "This field is null if no current_value was provided or if there's not enough information."
+        ),
+    )
+    suggestions: list[ValuePropositionSuggestion] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+        description="Exactly 3 detailed value proposition suggestions",
+    )
+    insufficient_information: bool = Field(
+        default=False,
+        alias="insufficientInformation",
+        description="True if there's not enough information to generate quality suggestions",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 __all__ = [
     "IcaReviewResponse",
     "IcaSuggestion",
@@ -290,6 +381,8 @@ __all__ = [
     "OnboardingSuggestionRequest",
     "OnboardingSuggestionResponse",
     "SuggestionVariation",
+    "ValuePropositionReviewResponse",
+    "ValuePropositionSuggestion",
     "WebsiteScanBusinessProfile",
     "WebsiteScanCoreIdentity",
     "WebsiteScanProduct",

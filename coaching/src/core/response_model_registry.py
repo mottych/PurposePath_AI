@@ -28,6 +28,7 @@ from coaching.src.api.models.onboarding import (
     OnboardingCoachingResponse,
     OnboardingReviewResponse,
     OnboardingSuggestionResponse,
+    ValuePropositionReviewResponse,
     WebsiteScanResponse,
 )
 from coaching.src.api.models.operations import (
@@ -62,8 +63,9 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     # Note: OnboardingSuggestionsResponse maps to OnboardingSuggestionResponse (singular)
     "OnboardingSuggestionsResponse": OnboardingSuggestionResponse,
     "OnboardingCoachingResponse": OnboardingCoachingResponse,
-    "OnboardingReviewResponse": OnboardingReviewResponse,  # Used by niche_review, value_proposition_review
+    "OnboardingReviewResponse": OnboardingReviewResponse,  # Used by niche_review
     "IcaReviewResponse": IcaReviewResponse,  # Used by ica_review (detailed ICA suggestions)
+    "ValuePropositionReviewResponse": ValuePropositionReviewResponse,  # Used by value_proposition_review
     "BusinessMetricsResponse": BusinessMetricsResponse,
     # === Conversations ===
     "ConversationResponse": ConversationResponse,
