@@ -15,8 +15,10 @@ Key Design Principles:
 - Clear separation between what's needed vs how to get it
 """
 
+import json
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -324,7 +326,8 @@ class TemplateParameterProcessor:
                             req.name,
                         )
                         if value is not None:
-                            result[req.name] = value
+                            # Serialize value to handle datetime and other non-JSON types
+                            result[req.name] = self._serialize_value(value)
                         elif req.definition.default is not None:
                             result[req.name] = req.definition.default
 
@@ -341,6 +344,29 @@ class TemplateParameterProcessor:
                         result[req.name] = req.definition.default
 
         return result
+
+    def _serialize_value(self, value: Any) -> Any:
+        """Serialize a value to be JSON-compatible.
+
+        Converts datetime objects and other non-JSON types to strings.
+        Recursively processes lists and dicts.
+
+        Args:
+            value: The value to serialize
+
+        Returns:
+            JSON-serializable version of the value
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: self._serialize_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._serialize_value(item) for item in value]
+        # For other types (str, int, float, bool), return as-is
+        return value
 
     def _extract_value(
         self,
