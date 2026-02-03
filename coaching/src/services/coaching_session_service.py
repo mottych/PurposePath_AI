@@ -630,7 +630,7 @@ class CoachingSessionService:
             system_preview=rendered_system[:150] + "...",
             user_preview=rendered_initiation[:150] + "...",
         )
-        
+
         # CRITICAL: Log full prompts for debugging template parameter resolution
         logger.info(
             "coaching_service.FULL_PROMPTS_SENT_TO_LLM",
