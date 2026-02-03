@@ -192,6 +192,19 @@ class InsightResponse(BaseModel):
     metadata: InsightMetadata = Field(description="Additional insight metadata")
 
 
+class InsightsGenerationResponse(BaseModel):
+    """Response for insights generation - returns a list of insights without pagination.
+    
+    Used by the insights_generation topic where the LLM generates multiple insights
+    in a single response. Pagination is handled by the frontend, not the LLM.
+    """
+
+    insights: list[InsightResponse] = Field(
+        description="List of generated insights (typically 5-10)",
+        min_length=1,
+    )
+
+
 class InsightActionResponse(BaseModel):
     """Response for insight actions (dismiss, acknowledge)."""
 
