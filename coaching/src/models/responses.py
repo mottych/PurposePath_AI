@@ -192,14 +192,29 @@ class InsightResponse(BaseModel):
     metadata: InsightMetadata = Field(description="Additional insight metadata")
 
 
-class InsightsGenerationResponse(BaseModel):
-    """Response for insights generation - returns a list of insights without pagination.
-
-    Used by the insights_generation topic where the LLM generates multiple insights
-    in a single response. Pagination is handled by the frontend, not the LLM.
+class InsightLLMResponse(BaseModel):
+    """LLM-generated insight data (without system fields like id, timestamps).
+    
+    This is what the LLM generates. The backend adds id, status, timestamps.
     """
 
-    insights: list[InsightResponse] = Field(
+    title: str = Field(description="Insight title")
+    description: str = Field(description="Detailed insight description")
+    category: str = Field(description="Insight category: strategy, operations, finance, marketing, leadership, technology")
+    priority: str = Field(description="Priority level: critical, high, medium, low")
+    kiss_category: str = Field(description="KISS framework category: keep, improve, start, stop")
+    alignment_impact: str = Field(description="How this affects purpose/values alignment and business outcomes")
+    metadata: InsightMetadata = Field(description="Additional insight metadata")
+
+
+class InsightsGenerationResponse(BaseModel):
+    """Response for insights generation - LLM returns a list of insights.
+
+    Used by the insights_generation topic where the LLM generates multiple insights
+    in a single response. System fields (id, status, timestamps) are added by backend.
+    """
+
+    insights: list[InsightLLMResponse] = Field(
         description="List of generated insights (typically 5-10)",
         min_length=1,
     )
