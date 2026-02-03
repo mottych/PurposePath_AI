@@ -1,11 +1,34 @@
 """Structured logging configuration for production observability."""
 
+import json
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Any
 
 import structlog
+
+
+def _json_serializer(obj: Any, **kwargs: Any) -> str:
+    """Custom JSON serializer that handles datetime objects.
+
+    Args:
+        obj: Object to serialize
+        **kwargs: Additional arguments for json.dumps
+
+    Returns:
+        JSON string
+    """
+
+    def default(o: Any) -> Any:
+        """Handle non-JSON-serializable objects."""
+        if isinstance(o, datetime):
+            return o.isoformat()
+        # Let the default encoder raise TypeError for other unsupported types
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    return json.dumps(obj, default=default, **kwargs)
 
 
 def configure_logging(
@@ -60,7 +83,7 @@ def configure_logging(
             *shared_processors,
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer(),
+            structlog.processors.JSONRenderer(serializer=_json_serializer),
         ]
     else:
         # Console formatting for development
