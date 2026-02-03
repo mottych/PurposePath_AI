@@ -169,7 +169,9 @@ class InsightMetadata(BaseModel):
 class InsightResponse(BaseModel):
     """Response model for coaching insights."""
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique insight identifier")
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()), description="Unique insight identifier"
+    )
     title: str = Field(description="Insight title")
     description: str = Field(description="Detailed insight description")
     category: str = Field(description="Insight category")
@@ -181,8 +183,12 @@ class InsightResponse(BaseModel):
         default=None, description="How this affects purpose/values alignment and business outcomes"
     )
     status: str = Field(default="active", description="Current status")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Last update timestamp")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
+    )
     metadata: InsightMetadata = Field(description="Additional insight metadata")
 
 

@@ -49,24 +49,24 @@ def _sanitize_unicode(obj: Any) -> Any:
     if isinstance(obj, str):
         # Replace common Unicode characters with ASCII equivalents
         replacements = {
-            '\u2192': '->',  # → (rightward arrow)
-            '\u2190': '<-',  # ← (leftward arrow)
-            '\u2191': '^',   # ↑ (upward arrow)
-            '\u2193': 'v',   # ↓ (downward arrow)
-            '\u2014': '--',  # — (em dash)
-            '\u2013': '-',   # - (en dash)
-            '\u2018': "'",   # ' (left single quote)
-            '\u2019': "'",   # ' (right single quote)
-            '\u201c': '"',   # " (left double quote)
-            '\u201d': '"',   # " (right double quote)
-            '\u2022': '*',   # • (bullet)
-            '\u2026': '...', # … (ellipsis)
+            "\u2192": "->",  # → (rightward arrow)
+            "\u2190": "<-",  # ← (leftward arrow)
+            "\u2191": "^",  # ↑ (upward arrow)
+            "\u2193": "v",  # ↓ (downward arrow)
+            "\u2014": "--",  # — (em dash)
+            "\u2013": "-",  # - (en dash)
+            "\u2018": "'",  # ' (left single quote)
+            "\u2019": "'",  # ' (right single quote)
+            "\u201c": '"',  # " (left double quote)
+            "\u201d": '"',  # " (right double quote)
+            "\u2022": "*",  # • (bullet)
+            "\u2026": "...",  # … (ellipsis)
         }
         result = obj
         for unicode_char, ascii_replacement in replacements.items():
             result = result.replace(unicode_char, ascii_replacement)
         # Remove any remaining non-ASCII characters
-        return result.encode('ascii', errors='replace').decode('ascii')
+        return result.encode("ascii", errors="replace").decode("ascii")
     elif isinstance(obj, dict):
         return {key: _sanitize_unicode(value) for key, value in obj.items()}
     elif isinstance(obj, list):
@@ -94,7 +94,8 @@ def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
                 sanitized_value = _sanitize_unicode(value)
                 if isinstance(sanitized_value, str) and len(sanitized_value) > 2000:
                     truncated_data[key] = (
-                        sanitized_value[:2000] + f"... (truncated, total length: {len(sanitized_value)})"
+                        sanitized_value[:2000]
+                        + f"... (truncated, total length: {len(sanitized_value)})"
                     )
                 else:
                     truncated_data[key] = sanitized_value

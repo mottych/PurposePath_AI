@@ -54,9 +54,7 @@ def get_bedrock_client(region_name: str) -> Any:
         retries={"max_attempts": 2, "mode": "standard"},  # Retry on transient failures
     )
 
-    return cast(
-        Any, boto3.client("bedrock-runtime", region_name=region_name, config=config)
-    )
+    return cast(Any, boto3.client("bedrock-runtime", region_name=region_name, config=config))
 
 
 def get_s3_client(region_name: str) -> Any:

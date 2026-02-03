@@ -64,9 +64,9 @@ def validate_value_proposition_review_response(data: dict) -> None:
         else "insufficientInformation"
     )
     if insufficient_info_key in response_data:
-        assert isinstance(response_data[insufficient_info_key], bool), (
-            "insufficientInformation should be boolean"
-        )
+        assert isinstance(
+            response_data[insufficient_info_key], bool
+        ), "insufficientInformation should be boolean"
 
     # suggestions validation - should always have 3 suggestions
     assert "suggestions" in response_data, "Response should contain suggestions"
@@ -85,20 +85,20 @@ def validate_value_proposition_review_response(data: dict) -> None:
             "key_differentiators" if "key_differentiators" in suggestion else "keyDifferentiators"
         )
         assert diff_key in suggestion, f"Suggestion {i} should have keyDifferentiators"
-        assert isinstance(suggestion[diff_key], list), (
-            f"Suggestion {i} keyDifferentiators should be list"
-        )
-        assert 2 <= len(suggestion[diff_key]) <= 5, (
-            f"Suggestion {i} should have 2-5 differentiators"
-        )
+        assert isinstance(
+            suggestion[diff_key], list
+        ), f"Suggestion {i} keyDifferentiators should be list"
+        assert (
+            2 <= len(suggestion[diff_key]) <= 5
+        ), f"Suggestion {i} should have 2-5 differentiators"
 
         outcomes_key = (
             "customer_outcomes" if "customer_outcomes" in suggestion else "customerOutcomes"
         )
         assert outcomes_key in suggestion, f"Suggestion {i} should have customerOutcomes"
-        assert isinstance(suggestion[outcomes_key], list), (
-            f"Suggestion {i} customerOutcomes should be list"
-        )
+        assert isinstance(
+            suggestion[outcomes_key], list
+        ), f"Suggestion {i} customerOutcomes should be list"
         assert 2 <= len(suggestion[outcomes_key]) <= 5, f"Suggestion {i} should have 2-5 outcomes"
 
         proof_key = "proof_points" if "proof_points" in suggestion else "proofPoints"
@@ -108,9 +108,9 @@ def validate_value_proposition_review_response(data: dict) -> None:
 
         promise_key = "brand_promise" if "brand_promise" in suggestion else "brandPromise"
         assert promise_key in suggestion, f"Suggestion {i} should have brandPromise"
-        assert len(suggestion[promise_key]) > 10, (
-            f"Suggestion {i} brandPromise should be substantive"
-        )
+        assert (
+            len(suggestion[promise_key]) > 10
+        ), f"Suggestion {i} brandPromise should be substantive"
 
         # primaryCompetitor can be null
         comp_key = (
@@ -124,9 +124,9 @@ def validate_value_proposition_review_response(data: dict) -> None:
             else "competitiveAdvantage"
         )
         assert advantage_key in suggestion, f"Suggestion {i} should have competitiveAdvantage"
-        assert len(suggestion[advantage_key]) > 10, (
-            f"Suggestion {i} competitiveAdvantage should be substantive"
-        )
+        assert (
+            len(suggestion[advantage_key]) > 10
+        ), f"Suggestion {i} competitiveAdvantage should be substantive"
 
         position_key = "market_position" if "market_position" in suggestion else "marketPosition"
         assert position_key in suggestion, f"Suggestion {i} should have marketPosition"
@@ -219,9 +219,9 @@ async def test_niche_review_with_context(
 
     for suggestion in suggestions:
         # Each suggestion should be different from input (not just echoed back)
-        assert suggestion["text"].lower() != current_value, (
-            "Suggestion should not be identical to input"
-        )
+        assert (
+            suggestion["text"].lower() != current_value
+        ), "Suggestion should not be identical to input"
 
 
 # =============================================================================
@@ -388,9 +388,9 @@ async def test_get_available_topics(
     topic_ids = [t["topic_id"] for t in topics]
     assert "niche_review" in topic_ids, "niche_review should be in available topics"
     assert "ica_review" in topic_ids, "ica_review should be in available topics"
-    assert "value_proposition_review" in topic_ids, (
-        "value_proposition_review should be in available topics"
-    )
+    assert (
+        "value_proposition_review" in topic_ids
+    ), "value_proposition_review should be in available topics"
 
 
 @pytest.mark.e2e
@@ -470,12 +470,12 @@ async def test_list_all_schemas(
     assert "schemas" in data
     schemas = data["schemas"]
 
-    assert "OnboardingReviewResponse" in schemas, (
-        "OnboardingReviewResponse should be in available schemas"
-    )
-    assert "ValuePropositionReviewResponse" in schemas, (
-        "ValuePropositionReviewResponse should be in available schemas"
-    )
+    assert (
+        "OnboardingReviewResponse" in schemas
+    ), "OnboardingReviewResponse should be in available schemas"
+    assert (
+        "ValuePropositionReviewResponse" in schemas
+    ), "ValuePropositionReviewResponse should be in available schemas"
 
 
 # =============================================================================
