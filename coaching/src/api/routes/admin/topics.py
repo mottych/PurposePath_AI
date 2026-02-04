@@ -519,6 +519,7 @@ async def get_topics_stats(
             models_health.status,
         ]
 
+        overall_status: Any
         if any(s == "down" for s in service_statuses_list) or critical_issues:
             overall_status = "critical"
         elif any(s == "degraded" for s in service_statuses_list) or warnings_list:
@@ -526,6 +527,7 @@ async def get_topics_stats(
         else:
             overall_status = "healthy"
 
+        validation_status: Any
         if critical_issues:
             validation_status = "errors"
         elif warnings_list:

@@ -9,6 +9,7 @@ critical issues, warnings, and service health monitoring.
 
 import time
 from datetime import UTC, datetime
+from typing import Literal, cast
 
 import structlog
 from coaching.src.api.dependencies import (
@@ -77,9 +78,11 @@ async def _check_templates_health() -> ServiceHealthStatus:
         logger.error("Templates health check failed", error=str(e))
         elapsed_ms = int((time.time() - start_time) * 1000)
         # In dev, S3 access might be denied but that's okay
-        status = "degraded" if settings.stage == "dev" else "down"
+        status_value: Literal["operational", "degraded", "down"] = (
+            "degraded" if settings.stage == "dev" else "down"
+        )
         return ServiceHealthStatus(
-            status=status,
+            status=status_value,
             last_check=datetime.now(UTC).isoformat(),
             response_time_ms=elapsed_ms,
         )
@@ -220,6 +223,7 @@ async def get_admin_health(
         # Determine overall status
         service_statuses = [configs_health.status, templates_health.status, models_health.status]
 
+        overall_status: Literal["healthy", "warnings", "errors", "critical"]
         if any(s == "down" for s in service_statuses) or critical_issues:
             overall_status = "critical"
         elif any(s == "degraded" for s in service_statuses) or warnings_list:
@@ -228,6 +232,7 @@ async def get_admin_health(
             overall_status = "healthy"
 
         # Determine validation status
+        validation_status: Literal["healthy", "warnings", "errors"]
         if critical_issues:
             validation_status = "errors"
         elif warnings_list:
