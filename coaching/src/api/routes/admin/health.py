@@ -9,7 +9,7 @@ critical issues, warnings, and service health monitoring.
 
 import time
 from datetime import UTC, datetime
-from typing import Literal, cast
+from typing import Literal
 
 import structlog
 from coaching.src.api.dependencies import (
