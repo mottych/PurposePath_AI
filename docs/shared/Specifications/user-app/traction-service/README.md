@@ -46,7 +46,7 @@ This directory contains detailed API specifications for the Traction Service, or
 | [Measure Data API](./measure-data-api.md) | MeasureDataController | 8 endpoints | Targets, actuals, projections |
 | [Actions API](./actions-api.md) | ActionsController | 7 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
-| [Coaching Insights API](./insights-api.md) | InsightsController | 5 endpoints | AI-generated coaching insights management |
+| [Coaching Insights API](./insights-api.md) | InsightsController | 5 endpoints | AI-generated coaching insights (CRUD) |
 | [Dashboard, Reports & Activities](./dashboard-reports-activities-api.md) | Multiple | 5 endpoints | Command center, reports, activity feeds |
 
 > **Note:** People API has been deferred and moved to Account Service for better organizational alignment.

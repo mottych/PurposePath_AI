@@ -40,7 +40,7 @@ This specification is split into multiple documents for efficient AI assistant c
    - Organization chart and relationships
    - User org structure endpoints
 
-6. **[Coaching Service](./coaching-service.md)**
+6. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
@@ -283,7 +283,7 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 **Navigation:**
 
 - [Account Service Specs →](./account-service.md)
-- [Coaching Service Specs →](./coaching-service.md)
+- [AI/Coaching Service Specs →](../ai-user/backend-integration-unified-ai.md)
 - [Traction Service Specs →](./traction-service/README.md)
 - [People & Org Structure →](./people-service.md)
 - [Common Patterns & Data Models →](./common-patterns.md)

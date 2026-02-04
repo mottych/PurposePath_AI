@@ -15,7 +15,6 @@ Specifications/
 ├── user-app/                    # User Application (React Frontend)
 │   ├── index.md                 # Master index for user-facing APIs
 │   ├── account-service.md       # Auth, users, billing
-│   ├── coaching-service.md      # AI/ML coaching endpoints
 │   ├── people-service.md        # People CRUD operations
 │   ├── org-structure-service.md # Roles, org chart (user endpoints)
 │   ├── common-patterns.md       # Shared patterns & data models
@@ -48,7 +47,7 @@ Specifications/
 | Document | Description | Endpoints |
 |----------|-------------|-----------|
 | [Account Service](./user-app/account-service.md) | Authentication, users, billing | ~20 |
-| [Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~15 |
+| [AI/Coaching Service](./ai-user/backend-integration-unified-ai.md) | AI/ML coaching features | ~15 |
 | [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
 | [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
 | [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | 66 |

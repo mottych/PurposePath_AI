@@ -1384,4 +1384,4 @@ const GRID_CONFIG = {
 - **[Goals API](./traction-service/goals-api.md)**: Goal data source
 - **[Measures API](./traction-service/measures-api.md)**: Measure data source
 - **[Issues API](./traction-service/issues-api.md)**: Issue data source
-- **[Coaching Service](./coaching-service.md)**: AI insights data source
+- **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**: AI insights data source

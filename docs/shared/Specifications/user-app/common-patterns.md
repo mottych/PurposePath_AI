@@ -1184,5 +1184,5 @@ spec:
 
 - [← Back to Index](./index.md)
 - [← Account Service](./account-service.md)
-- [← Coaching Service](./coaching-service.md)
+- [← AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)
 - [← Traction Service](./traction-service/README.md)
