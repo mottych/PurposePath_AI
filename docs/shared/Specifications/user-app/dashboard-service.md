@@ -1196,23 +1196,25 @@ Get AI-generated insights and recommendations.
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "insight_001",
-      "title": "Focus on Enterprise Segment",
-      "description": "Analysis shows 40% higher conversion rates in enterprise segment. This represents a significant opportunity to improve revenue quality and customer lifetime value.",
-      "category": "strategy",
-      "priority": "high",
-      "kiss_category": "start",
-      "alignment_impact": "This insight directly supports our growth objectives by targeting higher-value customer segments that align with our core competencies.",
-      "status": "active",
-      "created_at": "2026-02-02T23:09:51.327Z",
-      "metadata": {
-        "business_impact": "high",
-        "effort_required": "medium"
+  "data": {
+    "insights": [
+      {
+        "id": "insight_001",
+        "title": "Focus on Enterprise Segment",
+        "description": "Analysis shows 40% higher conversion rates in enterprise segment.",
+        "category": "strategy",
+        "priority": "high",
+        "kissCategory": "start",
+        "alignmentImpact": "This insight directly supports our growth objectives.",
+        "status": "active",
+        "businessImpact": "high",
+        "effortRequired": "medium",
+        "createdAt": "2026-02-02T23:09:51.327Z",
+        "updatedAt": "2026-02-02T23:09:51.327Z"
       }
-    }
-  ]
+    ],
+    "total": 1
+  }
 }
 ```
 
@@ -1220,20 +1222,25 @@ Get AI-generated insights and recommendations.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | Yes | Unique insight identifier |
-| `title` | string | Yes | Short, actionable insight title |
-| `description` | string | Yes | Detailed explanation of the insight |
-| `category` | string | Yes | Insight category: "strategy", "operations", "finance", "marketing", "leadership", "technology" |
-| `priority` | string | Yes | Priority level: "low", "medium", "high", "critical" |
-| `kiss_category` | string | Yes | KISS framework category: "keep", "improve", "start", "stop" |
-| `alignment_impact` | string | No | How this insight relates to business purpose, vision, and core values |
-| `status` | string | Yes | Current status: "active", "dismissed", "acknowledged", "in_progress", "completed" |
-| `created_at` | string | Yes | ISO 8601 timestamp |
-| `metadata.business_impact` | string | No | Business impact level: "low", "medium", "high" |
-| `metadata.effort_required` | string | No | Effort required to address: "low", "medium", "high" |
+| `data.insights` | array | Yes | Array of coaching insight objects |
+| `data.total` | number | Yes | Total count of insights returned |
+| `insights[].id` | string | Yes | Unique insight identifier |
+| `insights[].title` | string | Yes | Short, actionable insight title |
+| `insights[].description` | string | Yes | Detailed explanation of the insight |
+| `insights[].category` | string | Yes | "strategy", "operations", "finance", "marketing", "leadership", "technology" |
+| `insights[].priority` | string | Yes | "low", "medium", "high", "critical" |
+| `insights[].kissCategory` | string | Yes | KISS framework: "keep", "improve", "start", "stop" |
+| `insights[].alignmentImpact` | string | No | How this relates to business purpose and values |
+| `insights[].status` | string | Yes | "active", "dismissed", "acknowledged", "in_progress", "completed" |
+| `insights[].businessImpact` | string | No | "low", "medium", "high" |
+| `insights[].effortRequired` | string | No | "low", "medium", "high" |
+| `insights[].createdAt` | string | Yes | ISO 8601 timestamp |
+| `insights[].updatedAt` | string | Yes | ISO 8601 timestamp |
 
 **Notes:**
-- Widget groups insights by `kiss_category` for display in collapsible sections
+- Response format matches other dashboard widgets (object with insights array + total count)
+- All property names use camelCase convention (standard C# API pattern)
+- Widget can filter and sort insights by kissCategory for KISS framework display
 - Data is retrieved from stored coaching insights (not generated on-demand)
 - For generating new insights, frontend calls Python Coaching Service then persists to Traction Service
 
