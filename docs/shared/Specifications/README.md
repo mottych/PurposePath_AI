@@ -1,6 +1,6 @@
 # PurposePath API Specifications
 
-**Last Updated:** December 23, 2025
+**Last Updated:** February 4, 2026
 
 This folder contains all API specification documents for PurposePath, organized by consuming application.
 
@@ -14,9 +14,13 @@ Specifications/
 │
 ├── user-app/                    # User Application (React Frontend)
 │   ├── index.md                 # Master index for user-facing APIs
-│   ├── account-service.md       # Auth, users, billing
+│   ├── user-tenant-service.md   # User & tenant management (auth, profile, subscriptions)
+│   ├── business-foundation-service.md # Business foundation, wizard, values, ICAs
+│   ├── account-api.md           # Account, billing, subscriptions (consolidated)
 │   ├── people-service.md        # People CRUD operations
 │   ├── org-structure-service.md # Roles, org chart (user endpoints)
+│   ├── dashboard-service.md     # Dashboard configuration and widgets
+│   ├── coaching-service.md      # AI/ML coaching features
 │   ├── common-patterns.md       # Shared patterns & data models
 │   └── traction-service/        # Traction feature APIs
 │       ├── README.md            # Traction service index
@@ -29,7 +33,7 @@ Specifications/
 │       └── dashboard-reports-activities-api.md
 │
 ├── admin-portal/                # Admin Portal (Internal)
-│   └── admin-api-specification.md  # Complete admin API spec
+│   └── admin-api-specification.md  # Complete admin API spec (v2.0)
 │
 └── archive/                     # Obsolete/Reference Documents
     ├── README.md                # Archive index
@@ -46,19 +50,25 @@ Specifications/
 
 | Document | Description | Endpoints |
 |----------|-------------|-----------|
-| [Account Service](./user-app/account-service.md) | Authentication, users, billing | ~20 |
-| [AI/Coaching Service](./ai-user/backend-integration-unified-ai.md) | AI/ML coaching features | ~15 |
+| [Master Index](./user-app/index.md) | Complete user app API overview | All |
+| [User & Tenant Service](./user-app/user-tenant-service.md) | Authentication, profile, subscriptions | ~16 |
+| [Business Foundation Service](./user-app/business-foundation-service.md) | Business setup, wizard, values | ~25 |
+| [Account API](./user-app/account-api.md) | Auth, billing, subscriptions (consolidated) | ~40 |
+| [AI/Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~20 |
 | [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
 | [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
-| [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | 66 |
+| [Dashboard Service](./user-app/dashboard-service.md) | Dashboard configuration, widgets | ~15 |
+| [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | ~66 |
 
-**Total User App Endpoints:** ~146
+**Total User App Endpoints:** ~227
 
 ### Admin Portal APIs
 
 | Document | Description | Endpoints |
 |----------|-------------|-----------|
-| [Admin API](./admin-portal/admin-api-specification.md) | Complete admin portal spec | ~80 |
+| [Admin API v2.0](./admin-portal/admin-api-specification.md) | Complete admin portal spec (updated Feb 4, 2026) | 88 |
+
+**Total Admin Endpoints:** 88
 
 ---
 
@@ -118,11 +128,14 @@ Each API document follows this structure:
 - **Current Version:** 7.0 (December 2025)
 - **Traction Service:** v7 modular (controller-based docs)
 - **People/Org Service:** v1.1 (migrated to Account Lambda)
+- **Admin API:** v2.0 (comprehensive spec with all endpoints, Feb 4, 2026)
 
 ### Change History
 
 | Date | Version | Changes |
 |------|---------|---------|
+| Feb 4, 2026 | 2.0 | Admin API v2.0: Complete specification with all 88 endpoints documented |
+| Dec 30, 2025 | 1.0 | User/Tenant and Business Foundation services split from Account service |
 | Dec 23, 2025 | 7.0 | Documentation reorganization, v7 traction specs |
 | Dec 22, 2025 | 1.1 | People/Org endpoints migrated to Account service |
 | Dec 21, 2025 | 7.0 | Measure Link/Data refactoring, modular traction specs |
