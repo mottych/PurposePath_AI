@@ -11,35 +11,42 @@ This folder contains all API specification documents for PurposePath, organized 
 ```
 Specifications/
 ├── README.md                    ← You are here
+├── admin-api.md                 # Legacy admin API (see admin-portal/ for current)
 │
 ├── user-app/                    # User Application (React Frontend)
 │   ├── index.md                 # Master index for user-facing APIs
-│   ├── user-tenant-service.md   # User & tenant management (auth, profile, subscriptions)
-│   ├── business-foundation-service.md # Business foundation, wizard, values, ICAs
 │   ├── account-api.md           # Account, billing, subscriptions (consolidated)
+│   ├── account-gap.md           # Account service gap analysis
+│   ├── business-foundation-api.md # Business foundation, wizard, values, ICAs
 │   ├── people-service.md        # People CRUD operations
 │   ├── org-structure-service.md # Roles, org chart (user endpoints)
 │   ├── dashboard-service.md     # Dashboard configuration and widgets
-│   ├── coaching-service.md      # AI/ML coaching features
 │   ├── common-patterns.md       # Shared patterns & data models
-│   └── traction-service/        # Traction feature APIs
-│       ├── README.md            # Traction service index
-│       ├── goals-api.md
-│       ├── measures-api.md
-│       ├── measure-links-api.md
-│       ├── measure-data-api.md
-│       ├── actions-api.md
-│       ├── issues-api.md
-│       └── dashboard-reports-activities-api.md
+│   ├── traction-service/        # Traction feature APIs
+│   │   ├── README.md            # Traction service index
+│   │   ├── goals-api.md         # Goals management
+│   │   ├── strategies-api.md    # Strategies management
+│   │   ├── measures-api.md      # MEASUREs management
+│   │   ├── measure-links-api.md # MEASURE relationships
+│   │   ├── measure-data-api.md  # MEASURE data points
+│   │   ├── actions-api.md       # Actions/To-dos
+│   │   ├── issues-api.md        # Issues/Roadblocks
+│   │   ├── alignment-api.md     # Alignment calculations
+│   │   ├── insights-api.md      # AI insights
+│   │   └── dashboard-reports-activities-api.md
+│   └── Websocket/               # WebSocket specifications
 │
 ├── admin-portal/                # Admin Portal (Internal)
 │   └── admin-api-specification.md  # Complete admin API spec (v2.0)
 │
+├── ai-user/                     # AI/Coaching Services
+│   └── backend-integration-unified-ai.md  # Unified AI/Coaching API
+│
+├── ai-admin-portal/             # AI Admin Portal
+│
 └── archive/                     # Obsolete/Reference Documents
     ├── README.md                # Archive index
-    ├── admin-integration/       # Old admin docs (19 files)
-    ├── measure-refactor-issues/     # Measure refactoring issue specs
-    └── *.md                     # Various archived specs
+    └── ...                      # Various archived specs
 ```
 
 ---
