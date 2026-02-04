@@ -44,14 +44,12 @@ Save multiple coaching insights after generation from Python AI service.
       "description": "Analysis shows 40% higher conversion rates in enterprise segment.",
       "category": "strategy",
       "priority": "high",
-      "kiss_category": "start",
-      "alignment_impact": "This insight directly supports our growth objectives.",
+      "kissCategory": "start",
+      "alignmentImpact": "This insight directly supports our growth objectives.",
       "status": "active",
-      "created_at": "2026-02-02T23:09:51.327Z",
-      "metadata": {
-        "business_impact": "high",
-        "effort_required": "medium"
-      }
+      "businessImpact": "high",
+      "effortRequired": "medium",
+      "createdAt": "2026-02-02T23:09:51.327Z"
     }
   ]
 }
@@ -66,11 +64,11 @@ Save multiple coaching insights after generation from Python AI service.
 | `insights[].description` | string | Yes | Detailed explanation |
 | `insights[].category` | string | Yes | "strategy", "operations", "finance", "marketing", "leadership", "technology" |
 | `insights[].priority` | string | Yes | "low", "medium", "high", "critical" |
-| `insights[].kiss_category` | string | Yes | "keep", "improve", "start", "stop" |
-| `insights[].alignment_impact` | string | No | How this relates to business purpose/values |
+| `insights[].kissCategory` | string | Yes | "keep", "improve", "start", "stop" |
+| `insights[].alignmentImpact` | string | No | How this relates to business purpose/values |
 | `insights[].status` | string | No | Defaults to "active" |
-| `insights[].metadata.business_impact` | string | No | "low", "medium", "high" |
-| `insights[].metadata.effort_required` | string | No | "low", "medium", "high" |
+| `insights[].businessImpact` | string | No | "low", "medium", "high" |
+| `insights[].effortRequired` | string | No | "low", "medium", "high" |
 
 ### Response
 
@@ -102,11 +100,9 @@ Save multiple coaching insights after generation from Python AI service.
 ```
 
 **Notes:**
-- **Input**: Accepts snake_case (kiss_category, alignment_impact, business_impact, effort_required)
-- **Output**: Returns camelCase (kissCategory, alignmentImpact, businessImpact, effortRequired)
+- **Input/Output**: Uses standard camelCase for all properties (consistent with all other API endpoints)
 - Backend auto-generates GUID `id` if not provided
 - Backend auto-generates timestamps if not provided
-- Metadata fields flattened to top-level in response
 
 ---
 
