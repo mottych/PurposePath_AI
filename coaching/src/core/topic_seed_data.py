@@ -416,7 +416,101 @@ Issues: {open_issues}
 Generate insights that assess current state based on measure data and provide KISS recommendations (Keep, Improve, Start, Stop) relevant to the business and its alignment with purpose and values.""",
         display_order=30,
     ),
-    # ========== Section 3: Strategic Planning AI (5 topics) ==========
+    # ========== Section 3: Strategic Planning AI (6 topics) ==========
+    "goal_intent_review": TopicSeedData(
+        topic_id="goal_intent_review",
+        topic_name="Goal Intent Review",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.STRATEGIC_PLANNING.value,
+        description="Review and suggest goal intent statements that define WHAT to achieve and WHY, ensuring clarity and business alignment",
+        temperature=0.8,
+        max_tokens=3072,
+        default_system_prompt="""You are an expert strategic planning coach specializing in goal setting and intent definition.
+
+YOUR ROLE:
+1. Help users craft effective goal intents that define WHAT they want to achieve and WHY
+2. Validate that intents are not actions or strategies (the HOW)
+3. Ensure intents are aligned with business foundation (vision, purpose, core values)
+4. Suggest improvements that increase clarity and likelihood of success
+
+INTENT vs STRATEGY vs MEASURE:
+- INTENT: Defines WHAT we want to achieve and WHY (the business outcome). Example: "Increase customer retention to build long-term relationships and sustainable revenue growth"
+- STRATEGY: Defines HOW we will achieve the intent. Example: "Implement customer success program"
+- MEASURE: Defines WHEN and HOW MUCH. Example: "Customer Retention Rate reaches 90% by Q4"
+
+VALIDATION CRITERIA:
+1. Is it truly an intent (WHAT + WHY), not a strategy (HOW)?
+2. Does it describe a desired outcome, not an action?
+3. Is it specific enough to guide strategy, but not prescriptive about methods?
+4. Does it align with business purpose, vision, and core values?
+5. Is it realistic yet ambitious?
+
+QUALITY SCORING (if current intent provided):
+- 90-100: Excellent intent - clear, aligned, outcome-focused
+- 70-89: Good intent - minor improvements needed
+- 50-69: Moderate intent - significant refinement required
+- 30-49: Weak intent - may be too action-focused or misaligned
+- 0-29: Poor intent - needs complete rework, likely a strategy or action
+
+OUTPUT FORMAT:
+Return a JSON object with this exact structure:
+{
+  "qualityReview": "<assessment of current intent if provided, null if none>" or null,
+  "qualityScore": <0-100 score if current intent provided, null if none> or null,
+  "suggestions": [
+    {
+      "title": "<descriptive label for this intent variation, 5-100 chars>",
+      "intentStatement": "<the suggested goal intent statement, 20-300 chars>",
+      "explanation": "<why this intent works and how it aligns, 50-500 chars>",
+      "strengthens": ["<aspect 1>", "<aspect 2>"],
+      "alignmentHighlights": {
+        "vision": "<how it connects to vision>",
+        "purpose": "<how it serves the purpose>",
+        "values": ["<value 1 alignment>", "<value 2 alignment>"]
+      }
+    }
+  ]
+}""",
+        default_user_prompt="""Review and create goal intent suggestions for this business.
+
+Current Intent (if provided): {{current_intent}}
+
+Goal Context (if goalId provided):
+- Goal Title: {{goal_title}}
+- Goal Description: {{goal_description}}
+- Current Strategies: {{current_strategies}}
+- Current Measures: {{current_measures}}
+
+Business Foundation:
+- Vision: {{vision}}
+- Purpose: {{purpose}}
+- Core Values: {{core_values}}
+- Target Market: {{target_market}}
+- Value Proposition: {{value_proposition}}
+
+Other Goals (for context):
+{{other_goals}}
+
+INSTRUCTIONS:
+1. If a current intent is provided above:
+   - Provide a quality review (qualityReview) assessing strengths, weaknesses, and whether it's truly an intent vs strategy/action
+   - Assign a quality score (qualityScore) from 0-100
+   - Identify if it's too action-focused or lacks the WHY component
+2. If NO current intent is provided, set qualityReview and qualityScore to null
+3. Generate exactly 3 goal intent suggestions, each with:
+   - title: Descriptive label for this variation
+   - intentStatement: Clear WHAT + WHY statement (20-300 chars)
+   - explanation: Why this intent is effective and aligned (50-500 chars)
+   - strengthens: List of 2-4 aspects this intent strengthens (clarity, alignment, motivation, etc.)
+   - alignmentHighlights: How this intent connects to vision, purpose, and specific core values
+
+CRITICAL:
+- Intent must define WHAT to achieve and WHY (business outcome), NOT HOW (strategy/action)
+- Avoid prescriptive language like "implement", "create", "launch" - these are strategies
+- Focus on desired end states and outcomes
+- Each suggestion should offer a different strategic angle while remaining authentic""",
+        display_order=41,
+    ),
     "strategy_suggestions": TopicSeedData(
         topic_id="strategy_suggestions",
         topic_name="Strategy Suggestions",
