@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 1.1  
-**Status:** Verified Against Implementation  
-**Last Updated:** January 22, 2026  
+**Version:** 1.2  
+**Status:** In Progress - Audit Logs Pending Implementation  
+**Last Updated:** February 4, 2026  
 **Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
@@ -527,6 +527,241 @@ Delete an email template (soft delete).
 - Controller: `EmailTemplatesController.DeleteTemplate()`
 - Command: `DeleteEmailTemplateCommand`
 - Handler: `DeleteEmailTemplateCommandHandler`
+
+---
+
+## Admin Audit Log Endpoints
+
+These endpoints provide access to audit trail data for administrative actions and system operations. Audit logs are immutable records used for compliance, security monitoring, and troubleshooting.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `Content-Type: application/json`
+
+---
+
+### GET /admin/api/v1/audit-logs
+
+List audit logs with pagination and comprehensive filtering options.
+
+**Query Parameters (all optional):**
+
+- `adminEmail` (string, optional) - Filter by admin email who performed the action
+- `actionType` (string, optional) - Filter by action type (e.g., "USER_CREATED", "SUBSCRIPTION_CHANGED")
+- `tenantId` (string, GUID, optional) - Filter by affected tenant ID
+- `startDate` (string, ISO 8601, optional) - Start date for audit log entries
+- `endDate` (string, ISO 8601, optional) - End date for audit log entries
+- `page` (integer, optional) - Page number (1-based, default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 50, max: 100)
+
+**Response (200 OK):**
+
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "adminEmail": "admin@example.com",
+      "action": "USER_UPDATED",
+      "targetType": "user",
+      "targetId": "user-123",
+      "tenantId": "tenant-456",
+      "tenantName": "Acme Corp",
+      "details": {
+        "changes": [
+          {
+            "field": "email",
+            "oldValue": "old@example.com",
+            "newValue": "new@example.com"
+          }
+        ],
+        "reason": "User requested email change"
+      },
+      "timestamp": "2026-02-04T10:00:00Z",
+      "ipAddress": "192.168.1.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 50,
+    "totalCount": 100,
+    "totalPages": 2
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Audit logs retrieved successfully
+- `400 Bad Request` - Invalid query parameters (e.g., invalid date format, page < 1)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `AuditLogsController.ListAuditLogs()`
+- Query: `GetAuditLogsQuery`
+- Handler: `GetAuditLogsQueryHandler`
+
+**Notes:**
+
+- Response is returned directly (NOT wrapped in ApiResponse object)
+- Date filters use ISO 8601 format (e.g., "2026-02-04T10:00:00Z")
+- Results are sorted by timestamp descending (most recent first) by default
+- Maximum pageSize is 100 entries
+
+---
+
+### GET /admin/api/v1/audit-logs/{id}
+
+Get a single audit log entry by ID.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Audit log entry ID
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "adminEmail": "admin@example.com",
+  "action": "USER_UPDATED",
+  "targetType": "user",
+  "targetId": "user-123",
+  "tenantId": "tenant-456",
+  "tenantName": "Acme Corp",
+  "details": {
+    "changes": [
+      {
+        "field": "email",
+        "oldValue": "old@example.com",
+        "newValue": "new@example.com"
+      }
+    ],
+    "reason": "User requested email change"
+  },
+  "timestamp": "2026-02-04T10:00:00Z",
+  "ipAddress": "192.168.1.1",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Audit log entry retrieved successfully
+- `400 Bad Request` - Invalid ID format (not a valid GUID)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Audit log entry not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `AuditLogsController.GetAuditLogById()`
+- Query: `GetAuditLogByIdQuery`
+- Handler: `GetAuditLogByIdQueryHandler`
+
+**Notes:**
+
+- Response is returned directly (NOT wrapped in ApiResponse object)
+- Audit logs are immutable - cannot be modified or deleted after creation
+
+---
+
+### GET /admin/api/v1/audit-logs/export
+
+Export audit logs to CSV format with optional filtering.
+
+**Query Parameters (all optional):**
+
+- `adminEmail` (string, optional) - Filter by admin email
+- `actionType` (string, optional) - Filter by action type
+- `tenantId` (string, GUID, optional) - Filter by tenant ID
+- `startDate` (string, ISO 8601, optional) - Start date
+- `endDate` (string, ISO 8601, optional) - End date
+
+**Response (200 OK):**
+
+Content-Type: `text/csv`  
+Content-Disposition: `attachment; filename="audit-logs-{timestamp}.csv"`
+
+CSV file with columns:
+```csv
+Id,AdminEmail,Action,TargetType,TargetId,TenantId,TenantName,Timestamp,IpAddress,Details
+550e8400-e29b-41d4-a716-446655440000,admin@example.com,USER_UPDATED,user,user-123,tenant-456,Acme Corp,2026-02-04T10:00:00Z,192.168.1.1,"Field: email, Old: old@example.com, New: new@example.com"
+```
+
+**Status Codes:**
+
+- `200 OK` - CSV file generated successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `AuditLogsController.ExportAuditLogs()`
+- Query: `ExportAuditLogsQuery`
+- Handler: `ExportAuditLogsQueryHandler`
+
+**Notes:**
+
+- Response is a downloadable CSV file (not JSON)
+- Filename includes timestamp for easy identification
+- No pagination - returns all matching entries (use with caution on large datasets)
+- Consider adding date range to prevent excessive data exports
+
+---
+
+### GET /admin/api/v1/audit-logs/action-types
+
+Get list of all available audit log action types.
+
+**Response (200 OK):**
+
+```json
+[
+  "USER_CREATED",
+  "USER_UPDATED",
+  "USER_DELETED",
+  "USER_ACTIVATED",
+  "USER_DEACTIVATED",
+  "SUBSCRIPTION_CREATED",
+  "SUBSCRIPTION_CHANGED",
+  "SUBSCRIPTION_CANCELLED",
+  "TRIAL_EXTENDED",
+  "TENANT_CREATED",
+  "TENANT_DELETED",
+  "DISCOUNT_CODE_CREATED",
+  "DISCOUNT_CODE_REDEEMED",
+  "SETTINGS_UPDATED",
+  "EMAIL_TEMPLATE_UPDATED"
+]
+```
+
+**Status Codes:**
+
+- `200 OK` - Action types retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `AuditLogsController.GetActionTypes()`
+- Query: `GetAuditActionTypesQuery`
+- Handler: `GetAuditActionTypesQueryHandler`
+
+**Notes:**
+
+- Response is returned directly as an array of strings (NOT wrapped in ApiResponse object)
+- List is derived from the `AuditActionType` enum in the domain model
+- Used by frontend for filtering dropdown options
 
 ---
 
