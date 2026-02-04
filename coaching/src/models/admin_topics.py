@@ -1,6 +1,7 @@
 """Request and response models for admin topic management API."""
 
 from datetime import datetime
+from typing import Literal
 
 from coaching.src.core.constants import PromptType, TierLevel
 from pydantic import BaseModel, Field, field_validator
@@ -379,3 +380,103 @@ class ValidationErrorResponse(BaseModel):
 
     error: str = Field(..., description="Error message")
     validation_errors: list[ValidationErrorDetail] = Field(..., description="Detailed errors")
+
+
+# Admin Health Check Models
+
+
+class HealthIssue(BaseModel):
+    """Health check issue or warning."""
+
+    code: str = Field(..., description="Issue code")
+    message: str = Field(..., description="Issue description")
+    severity: Literal["critical", "warning"] = Field(..., description="Issue severity")
+
+
+class HealthRecommendation(BaseModel):
+    """Health check recommendation."""
+
+    code: str = Field(..., description="Recommendation code")
+    message: str = Field(..., description="Recommendation message")
+    priority: Literal["high", "medium", "low"] = Field(..., description="Priority level")
+
+
+class ServiceHealthStatus(BaseModel):
+    """Health status for a specific service."""
+
+    status: Literal["operational", "degraded", "down"] = Field(..., description="Service status")
+    last_check: str = Field(..., description="Last check timestamp (ISO 8601)")
+    response_time_ms: int = Field(..., description="Service response time in milliseconds")
+
+
+class ServiceStatuses(BaseModel):
+    """Health status for all monitored services."""
+
+    configurations: ServiceHealthStatus = Field(..., description="LLM configurations service")
+    templates: ServiceHealthStatus = Field(..., description="Prompt templates service")
+    models: ServiceHealthStatus = Field(..., description="AI models service")
+
+
+class AdminHealthResponse(BaseModel):
+    """Response for admin health check endpoint."""
+
+    overall_status: Literal["healthy", "warnings", "errors", "critical"] = Field(
+        ..., description="Overall system health status"
+    )
+    validation_status: Literal["healthy", "warnings", "errors"] = Field(
+        ..., description="Validation checks status"
+    )
+    last_validation: str = Field(..., description="Last validation timestamp (ISO 8601)")
+    critical_issues: list[HealthIssue] = Field(
+        default_factory=list, description="Critical issues requiring immediate attention"
+    )
+    warnings: list[HealthIssue] = Field(default_factory=list, description="Warnings to address")
+    recommendations: list[HealthRecommendation] = Field(
+        default_factory=list, description="System improvement recommendations"
+    )
+    service_status: ServiceStatuses = Field(..., description="Individual service health status")
+
+
+# Admin Stats Models
+
+
+class TrendDataPoint(BaseModel):
+    """Single data point in a trend series."""
+
+    date: str = Field(..., description="Date (ISO 8601)")
+    value: int = Field(..., description="Value for this date")
+
+
+class InteractionStats(BaseModel):
+    """Statistics about LLM interactions."""
+
+    total: int = Field(..., description="Total number of interactions")
+    by_tier: dict[str, int] = Field(..., description="Interaction count by tier")
+    by_model: dict[str, int] = Field(..., description="Interaction count by model")
+    trend: list[TrendDataPoint] = Field(default_factory=list, description="Trend data over time")
+
+
+class TemplateStats(BaseModel):
+    """Statistics about prompt templates."""
+
+    total: int = Field(..., description="Total number of templates")
+    active: int = Field(..., description="Number of active templates")
+    inactive: int = Field(..., description="Number of inactive templates")
+
+
+class ModelStats(BaseModel):
+    """Statistics about AI models."""
+
+    total: int = Field(..., description="Total number of models")
+    active: int = Field(..., description="Number of active models")
+    utilization: dict[str, int] = Field(..., description="Usage count per model")
+
+
+class AdminStatsResponse(BaseModel):
+    """Response for admin stats dashboard endpoint."""
+
+    interactions: InteractionStats = Field(..., description="Interaction statistics")
+    templates: TemplateStats = Field(..., description="Template statistics")
+    models: ModelStats = Field(..., description="Model statistics")
+    system_health: AdminHealthResponse = Field(..., description="System health status")
+    last_updated: str = Field(..., description="Last update timestamp (ISO 8601)")
