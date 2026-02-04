@@ -1199,18 +1199,43 @@ Get AI-generated insights and recommendations.
   "data": [
     {
       "id": "insight_001",
-      "type": "recommendation",
       "title": "Focus on Enterprise Segment",
-      "description": "Analysis shows 40% higher conversion rates in enterprise segment",
-      "priority": "high",
+      "description": "Analysis shows 40% higher conversion rates in enterprise segment. This represents a significant opportunity to improve revenue quality and customer lifetime value.",
       "category": "strategy",
-      "createdAt": "2026-01-07T14:00:00Z",
-      "actionable": true,
-      "actionLabel": "View Analysis"
+      "priority": "high",
+      "kiss_category": "start",
+      "alignment_impact": "This insight directly supports our growth objectives by targeting higher-value customer segments that align with our core competencies.",
+      "status": "active",
+      "created_at": "2026-02-02T23:09:51.327Z",
+      "metadata": {
+        "business_impact": "high",
+        "effort_required": "medium"
+      }
     }
   ]
 }
 ```
+
+**Field Definitions:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique insight identifier |
+| `title` | string | Yes | Short, actionable insight title |
+| `description` | string | Yes | Detailed explanation of the insight |
+| `category` | string | Yes | Insight category: "strategy", "operations", "finance", "marketing", "leadership", "technology" |
+| `priority` | string | Yes | Priority level: "low", "medium", "high", "critical" |
+| `kiss_category` | string | Yes | KISS framework category: "keep", "improve", "start", "stop" |
+| `alignment_impact` | string | No | How this insight relates to business purpose, vision, and core values |
+| `status` | string | Yes | Current status: "active", "dismissed", "acknowledged", "in_progress", "completed" |
+| `created_at` | string | Yes | ISO 8601 timestamp |
+| `metadata.business_impact` | string | No | Business impact level: "low", "medium", "high" |
+| `metadata.effort_required` | string | No | Effort required to address: "low", "medium", "high" |
+
+**Notes:**
+- Widget groups insights by `kiss_category` for display in collapsible sections
+- Data is retrieved from stored coaching insights (not generated on-demand)
+- For generating new insights, frontend calls Python Coaching Service then persists to Traction Service
 
 ---
 
