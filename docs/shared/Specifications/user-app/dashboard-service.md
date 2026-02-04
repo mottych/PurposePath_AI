@@ -1196,25 +1196,28 @@ Get AI-generated insights and recommendations with KISS framework categorization
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "insight_001",
-      "title": "Focus on Enterprise Segment",
-      "description": "Analysis shows 40% higher conversion rates in enterprise segment. This represents a significant opportunity to improve revenue quality and customer lifetime value.",
-      "category": "strategy",
-      "priority": "high",
-      "kissCategory": "start",
-      "alignmentImpact": "This insight directly supports our growth objectives by targeting higher-value customer segments that align with our core competencies.",
-      "status": "active",
-      "createdAt": "2026-02-02T23:09:51.3271249Z",
-      "updatedAt": "2026-02-02T23:09:51.3271249Z",
-      "metadata": {
-        "conversationCount": 0,
-        "businessImpact": "high",
-        "effortRequired": "medium"
+  "data": {
+    "insights": [
+      {
+        "id": "insight_001",
+        "title": "Focus on Enterprise Segment",
+        "description": "Analysis shows 40% higher conversion rates in enterprise segment. This represents a significant opportunity to improve revenue quality and customer lifetime value.",
+        "category": "strategy",
+        "priority": "high",
+        "kissCategory": "start",
+        "alignmentImpact": "This insight directly supports our growth objectives by targeting higher-value customer segments that align with our core competencies.",
+        "status": "active",
+        "createdAt": "2026-02-02T23:09:51.3271249Z",
+        "updatedAt": "2026-02-02T23:09:51.3271249Z",
+        "metadata": {
+          "conversationCount": 0,
+          "businessImpact": "high",
+          "effortRequired": "medium"
+        }
       }
-    }
-  ]
+    ],
+    "total": 1
+  }
 }
 ```
 
@@ -1222,24 +1225,26 @@ Get AI-generated insights and recommendations with KISS framework categorization
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | Yes | Unique insight identifier |
-| `title` | string | Yes | Short, actionable insight title |
-| `description` | string | Yes | Detailed explanation and context |
-| `category` | string | Yes | Insight category: "strategy" \| "operations" \| "finance" \| "marketing" \| "leadership" \| "technology" |
-| `priority` | string | Yes | Priority level: "low" \| "medium" \| "high" \| "critical" |
-| `kissCategory` | string | Yes | KISS framework: "keep" \| "improve" \| "start" \| "stop" |
-| `alignmentImpact` | string | No | How this affects purpose/values alignment and business outcomes |
-| `status` | string | Yes | Current status: "active" \| "dismissed" \| "acknowledged" \| "inProgress" \| "completed" |
-| `createdAt` | string | Yes | ISO 8601 timestamp of creation |
-| `updatedAt` | string | No | ISO 8601 timestamp of last update |
-| `metadata.conversationCount` | number | No | Number of coaching conversations |
-| `metadata.businessImpact` | string | No | Business impact: "low" \| "medium" \| "high" |
-| `metadata.effortRequired` | string | No | Required effort: "low" \| "medium" \| "high" |
+| `data.insights` | array | Yes | Array of insight objects |
+| `data.total` | number | Yes | Total count of insights |
+| `insights[].id` | string | Yes | Unique insight identifier |
+| `insights[].title` | string | Yes | Short, actionable insight title |
+| `insights[].description` | string | Yes | Detailed explanation and context |
+| `insights[].category` | string | Yes | Insight category: "strategy" \| "operations" \| "finance" \| "marketing" \| "leadership" \| "technology" |
+| `insights[].priority` | string | Yes | Priority level: "low" \| "medium" \| "high" \| "critical" |
+| `insights[].kissCategory` | string | Yes | KISS framework: "keep" \| "improve" \| "start" \| "stop" |
+| `insights[].alignmentImpact` | string | No | How this affects purpose/values alignment and business outcomes |
+| `insights[].status` | string | Yes | Current status: "active" \| "dismissed" \| "acknowledged" \| "inProgress" \| "completed" |
+| `insights[].createdAt` | string | Yes | ISO 8601 timestamp of creation |
+| `insights[].updatedAt` | string | No | ISO 8601 timestamp of last update |
+| `insights[].metadata.conversationCount` | number | No | Number of coaching conversations |
+| `insights[].metadata.businessImpact` | string | No | Business impact: "low" \| "medium" \| "high" |
+| `insights[].metadata.effortRequired` | string | No | Required effort: "low" \| "medium" \| "high" |
 
 ### Notes
 
 - **IMPORTANT:** All fields use **camelCase** (backend v4.0 standard)
-- **IMPORTANT:** Response must be a direct array in `data` field (NOT wrapped in `__array`)
+- **IMPORTANT:** Response format matches other dashboard widgets (object with array + count)
 - `kissCategory` is **required** for proper widget display
 - Widget groups insights by KISS category (Keep, Improve, Start, Stop)
 - See [Coaching Service](./coaching-service.md) for insight generation
