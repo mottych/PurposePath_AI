@@ -718,6 +718,7 @@ These parameters are automatically fetched from the Account Service:
 
 #### Strategic Planning
 
+- [goal_intent_review](#topic-goal_intent_review) - Review and suggest goal intent statements (WHAT + WHY)
 - [strategy_suggestions](#topic-strategy_suggestions) - Generate strategic planning suggestions
 - [measure_recommendations](#topic-measure_recommendations) - Recommend measures based on business goals
 - [alignment_check](#topic-alignment_check) - Calculate alignment score between goal and business foundation
@@ -1597,6 +1598,126 @@ insights.forEach(insight => {
 ---
 
 ### Strategic Planning Topics
+
+#### Topic: `goal_intent_review`
+
+Review and suggest goal intent statements that define WHAT to achieve and WHY, ensuring clarity and business alignment.
+
+**Purpose:**
+Help users craft effective goal intents that focus on desired outcomes (WHAT) and business rationale (WHY), not actions or strategies (HOW). Validates that intents are not too action-focused and align with business foundation.
+
+**Request Payload Structure:**
+
+```json
+{
+  "topic_id": "goal_intent_review",
+  "parameters": {
+    "current_intent": "Implement a customer success program",
+    "goalId": "goal-123"
+  }
+}
+```
+
+**Request Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `current_intent` | string | No | Draft goal intent to review (optional) |
+| `goalId` | string | No | ID of the goal (optional, for context) |
+
+**Auto-enriched Parameters:**
+- `vision` - Business vision statement
+- `purpose` - Business purpose statement
+- `core_values` - List of core values
+- `target_market` - Target market description
+- `value_proposition` - Value proposition
+- `goal_title` - Goal title (if goalId provided)
+- `goal_description` - Goal description (if goalId provided)
+- `current_strategies` - Existing strategies (if goalId provided)
+- `current_measures` - Existing measures (if goalId provided)
+- `other_goals` - All other goals for context
+
+**Key Concepts:**
+- **INTENT**: Defines WHAT we want to achieve and WHY (business outcome). Example: "Increase customer retention to build long-term relationships and sustainable revenue growth"
+- **STRATEGY**: Defines HOW we will achieve the intent. Example: "Implement customer success program"
+- **MEASURE**: Defines WHEN and HOW MUCH. Example: "Customer Retention Rate reaches 90% by Q4"
+
+**Functionality:**
+1. **Quality Review** (if current intent provided):
+   - Validates the intent is not a strategy or action
+   - Scores quality from 0-100
+   - Identifies if it lacks WHY component or is too action-focused
+2. **Intent Suggestions**: Generates exactly 3 intent variations that:
+   - Focus on desired outcomes (WHAT + WHY)
+   - Align with business vision, purpose, and core values
+   - Are specific enough to guide strategy but not prescriptive
+   - Are realistic yet ambitious
+
+**Response Model:** `GoalIntentReviewResponse`
+
+**Response Payload Structure:**
+
+```json
+{
+  "qualityReview": "string or null",
+  "qualityScore": 75,
+  "suggestions": [
+    {
+      "title": "Customer Retention Focus",
+      "intentStatement": "Increase customer retention to build long-term relationships and create predictable recurring revenue",
+      "explanation": "This intent clearly defines the desired outcome (increased retention) and the business rationale (long-term relationships and revenue stability)",
+      "strengthens": ["clarity", "alignment", "outcome-focus", "measurability"],
+      "alignmentHighlights": {
+        "vision": "Aligns with vision of becoming the trusted partner for growing businesses",
+        "purpose": "Supports purpose of empowering sustainable business growth",
+        "values": [
+          "Customer First: Prioritizes long-term customer relationships",
+          "Sustainability: Focuses on predictable, recurring revenue"
+        ]
+      }
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `qualityReview` | string \| null | Assessment of current intent (if provided), otherwise null |
+| `qualityScore` | number \| null | Quality score 0-100 (if current intent provided), otherwise null |
+| `suggestions` | array of IntentSuggestion | List of 3 intent statement variations |
+
+**IntentSuggestion Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Descriptive label for this intent variation (5-100 chars) |
+| `intentStatement` | string | The suggested goal intent statement (20-300 chars) |
+| `explanation` | string | Why this intent is effective and aligned (50-500 chars) |
+| `strengthens` | array of string | List of 2-4 aspects this intent strengthens (clarity, alignment, motivation, etc.) |
+| `alignmentHighlights` | object | How this intent connects to business foundation |
+
+**AlignmentHighlights Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `vision` | string | How intent connects to business vision |
+| `purpose` | string | How intent serves business purpose |
+| `values` | array of string | How intent aligns with specific core values |
+
+**Quality Score Interpretation:**
+- **90-100**: Excellent intent - clear, aligned, outcome-focused
+- **70-89**: Good intent - minor improvements needed
+- **50-69**: Moderate intent - significant refinement required
+- **30-49**: Weak intent - may be too action-focused or misaligned
+- **0-29**: Poor intent - needs complete rework, likely a strategy or action
+
+**Usage Notes:**
+- Intent should describe desired END STATE, not actions to take
+- Avoid prescriptive language like "implement", "create", "launch" - these are strategies
+- Focus on business outcomes and value creation
+- The WHY component explains business rationale and expected impact
+
+---
 
 #### Topic: `strategy_suggestions`
 
