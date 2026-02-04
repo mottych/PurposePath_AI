@@ -1183,7 +1183,7 @@ Get action counts grouped by status, assignee, or priority.
 
 **GET** `/traction/api/v1/dashboard/widgets/ai-insights/data`
 
-Get AI-generated insights and recommendations.
+Get AI-generated insights and recommendations with KISS framework categorization.
 
 ### Query Parameters
 
@@ -1196,53 +1196,55 @@ Get AI-generated insights and recommendations.
 ```json
 {
   "success": true,
-  "data": {
-    "insights": [
-      {
-        "id": "insight_001",
-        "title": "Focus on Enterprise Segment",
-        "description": "Analysis shows 40% higher conversion rates in enterprise segment.",
-        "category": "strategy",
-        "priority": "high",
-        "kissCategory": "start",
-        "alignmentImpact": "This insight directly supports our growth objectives.",
-        "status": "active",
+  "data": [
+    {
+      "id": "insight_001",
+      "title": "Focus on Enterprise Segment",
+      "description": "Analysis shows 40% higher conversion rates in enterprise segment. This represents a significant opportunity to improve revenue quality and customer lifetime value.",
+      "category": "strategy",
+      "priority": "high",
+      "kissCategory": "start",
+      "alignmentImpact": "This insight directly supports our growth objectives by targeting higher-value customer segments that align with our core competencies.",
+      "status": "active",
+      "createdAt": "2026-02-02T23:09:51.3271249Z",
+      "updatedAt": "2026-02-02T23:09:51.3271249Z",
+      "metadata": {
+        "conversationCount": 0,
         "businessImpact": "high",
-        "effortRequired": "medium",
-        "createdAt": "2026-02-02T23:09:51.327Z",
-        "updatedAt": "2026-02-02T23:09:51.327Z"
+        "effortRequired": "medium"
       }
-    ],
-    "total": 1
-  }
+    }
+  ]
 }
 ```
 
-**Field Definitions:**
+### Response Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `data.insights` | array | Yes | Array of coaching insight objects |
-| `data.total` | number | Yes | Total count of insights returned |
-| `insights[].id` | string | Yes | Unique insight identifier |
-| `insights[].title` | string | Yes | Short, actionable insight title |
-| `insights[].description` | string | Yes | Detailed explanation of the insight |
-| `insights[].category` | string | Yes | "strategy", "operations", "finance", "marketing", "leadership", "technology" |
-| `insights[].priority` | string | Yes | "low", "medium", "high", "critical" |
-| `insights[].kissCategory` | string | Yes | KISS framework: "keep", "improve", "start", "stop" |
-| `insights[].alignmentImpact` | string | No | How this relates to business purpose and values |
-| `insights[].status` | string | Yes | "active", "dismissed", "acknowledged", "in_progress", "completed" |
-| `insights[].businessImpact` | string | No | "low", "medium", "high" |
-| `insights[].effortRequired` | string | No | "low", "medium", "high" |
-| `insights[].createdAt` | string | Yes | ISO 8601 timestamp |
-| `insights[].updatedAt` | string | Yes | ISO 8601 timestamp |
+| `id` | string | Yes | Unique insight identifier |
+| `title` | string | Yes | Short, actionable insight title |
+| `description` | string | Yes | Detailed explanation and context |
+| `category` | string | Yes | Insight category: "strategy" \| "operations" \| "finance" \| "marketing" \| "leadership" \| "technology" |
+| `priority` | string | Yes | Priority level: "low" \| "medium" \| "high" \| "critical" |
+| `kissCategory` | string | Yes | KISS framework: "keep" \| "improve" \| "start" \| "stop" |
+| `alignmentImpact` | string | No | How this affects purpose/values alignment and business outcomes |
+| `status` | string | Yes | Current status: "active" \| "dismissed" \| "acknowledged" \| "inProgress" \| "completed" |
+| `createdAt` | string | Yes | ISO 8601 timestamp of creation |
+| `updatedAt` | string | No | ISO 8601 timestamp of last update |
+| `metadata.conversationCount` | number | No | Number of coaching conversations |
+| `metadata.businessImpact` | string | No | Business impact: "low" \| "medium" \| "high" |
+| `metadata.effortRequired` | string | No | Required effort: "low" \| "medium" \| "high" |
 
-**Notes:**
-- Response format matches other dashboard widgets (object with insights array + total count)
-- All property names use camelCase convention (standard C# API pattern)
-- Widget can filter and sort insights by kissCategory for KISS framework display
-- Data is retrieved from stored coaching insights (not generated on-demand)
-- For generating new insights, frontend calls Python Coaching Service then persists to Traction Service
+### Notes
+
+- **IMPORTANT:** All fields use **camelCase** (backend v4.0 standard)
+- **IMPORTANT:** Response must be a direct array in `data` field (NOT wrapped in `__array`)
+- `kissCategory` is **required** for proper widget display
+- Widget groups insights by KISS category (Keep, Improve, Start, Stop)
+- See [Coaching Service](./coaching-service.md) for insight generation
+- See [Common Patterns](./common-patterns.md) v4.0 for camelCase standard
+- See GitHub Issue #634 for implementation details
 
 ---
 
@@ -1384,4 +1386,4 @@ const GRID_CONFIG = {
 - **[Goals API](./traction-service/goals-api.md)**: Goal data source
 - **[Measures API](./traction-service/measures-api.md)**: Measure data source
 - **[Issues API](./traction-service/issues-api.md)**: Issue data source
-- **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**: AI insights data source
+- **[Coaching Service](./coaching-service.md)**: AI insights data source
