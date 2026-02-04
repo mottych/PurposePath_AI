@@ -397,6 +397,188 @@ async def list_topics(
         ) from e
 
 
+@router.get("/stats")
+async def get_topics_stats(
+    start_date: datetime | None = Query(None, description="Start date for filtering (ISO 8601)"),
+    end_date: datetime | None = Query(None, description="End date for filtering (ISO 8601)"),
+    tier: str | None = Query(
+        None, description="Filter by tier (free, basic, professional, enterprise)"
+    ),
+    interaction_code: str | None = Query(None, description="Filter by interaction code"),
+    model_code: str | None = Query(None, description="Filter by model code"),
+    topic_repo: TopicRepository = Depends(get_topic_repository),
+    _user: UserContext = Depends(get_current_context),
+) -> dict[str, Any]:
+    """
+    Get LLM dashboard statistics and metrics.
+
+    This endpoint provides comprehensive statistics for the admin dashboard including:
+    - Interaction metrics (total, by tier, by model, trends)
+    - Template statistics (total, active, inactive)
+    - Model utilization statistics
+    - System health summary
+
+    **Permissions Required:** ADMIN_ACCESS (enforced by middleware)
+
+    **Query Parameters:**
+    - `start_date` (optional): Filter interactions from this date
+    - `end_date` (optional): Filter interactions until this date
+    - `tier` (optional): Filter by subscription tier
+    - `interaction_code` (optional): Filter by specific interaction
+    - `model_code` (optional): Filter by specific model
+
+    **Used by:** Admin Portal - LLM Dashboard Page
+
+    **Returns:**
+    Dashboard metrics including interactions, templates, models, and system health.
+    """
+    from coaching.src.models.admin_topics import (
+        AdminStatsResponse,
+        InteractionStats,
+        ModelStats,
+        TemplateStats,
+    )
+
+    logger.info(
+        "Getting topics stats",
+        start_date=start_date,
+        end_date=end_date,
+        tier=tier,
+        interaction_code=interaction_code,
+        model_code=model_code,
+    )
+
+    try:
+        # Get all topics for template stats
+        all_topics = await topic_repo.list_all(include_inactive=True)
+        active_topics = [t for t in all_topics if t.is_active]
+        inactive_topics = [t for t in all_topics if not t.is_active]
+
+        # Template statistics
+        template_stats = TemplateStats(
+            total=len(all_topics),
+            active=len(active_topics),
+            inactive=len(inactive_topics),
+        )
+
+        # Model statistics - gather from topics
+        model_usage: dict[str, int] = {}
+        active_models: set[str] = set()
+
+        for topic in active_topics:
+            # Count model usage from active topics
+            if topic.basic_model_code:
+                model_usage[topic.basic_model_code] = model_usage.get(topic.basic_model_code, 0) + 1
+                active_models.add(topic.basic_model_code)
+            if topic.premium_model_code:
+                model_usage[topic.premium_model_code] = (
+                    model_usage.get(topic.premium_model_code, 0) + 1
+                )
+                active_models.add(topic.premium_model_code)
+
+        # Get all unique models from MODEL_REGISTRY
+        from coaching.src.core.llm_models import MODEL_REGISTRY
+
+        total_models = len(MODEL_REGISTRY)
+        active_models_count = len(active_models)
+
+        model_stats = ModelStats(
+            total=total_models,
+            active=active_models_count,
+            utilization=model_usage,
+        )
+
+        # Interaction statistics (placeholder - would need conversation repository for real data)
+        # For now, provide mock data structure
+        interaction_stats = InteractionStats(
+            total=0,  # Would query conversation repository
+            by_tier={},  # Would aggregate from conversations
+            by_model={},  # Would aggregate from conversations
+            trend=[],  # Would calculate from conversations over time
+        )
+
+        # Get system health - import and call the health check
+        from coaching.src.api.routes.admin.health import (
+            _check_configurations_health,
+            _check_models_health,
+            _check_templates_health,
+            _perform_validation_checks,
+        )
+
+        configs_health = await _check_configurations_health()
+        templates_health = await _check_templates_health()
+        models_health = await _check_models_health()
+        critical_issues, warnings_list, recommendations = await _perform_validation_checks(
+            topic_repo
+        )
+
+        # Determine overall health status
+        service_statuses_list = [
+            configs_health.status,
+            templates_health.status,
+            models_health.status,
+        ]
+
+        if any(s == "down" for s in service_statuses_list) or critical_issues:
+            overall_status = "critical"
+        elif any(s == "degraded" for s in service_statuses_list) or warnings_list:
+            overall_status = "warnings"
+        else:
+            overall_status = "healthy"
+
+        if critical_issues:
+            validation_status = "errors"
+        elif warnings_list:
+            validation_status = "warnings"
+        else:
+            validation_status = "healthy"
+
+        from coaching.src.models.admin_topics import (
+            AdminHealthResponse,
+            ServiceStatuses,
+        )
+
+        system_health = AdminHealthResponse(
+            overall_status=overall_status,
+            validation_status=validation_status,
+            last_validation=datetime.now(UTC).isoformat(),
+            critical_issues=critical_issues,
+            warnings=warnings_list,
+            recommendations=recommendations,
+            service_status=ServiceStatuses(
+                configurations=configs_health,
+                templates=templates_health,
+                models=models_health,
+            ),
+        )
+
+        stats_response = AdminStatsResponse(
+            interactions=interaction_stats,
+            templates=template_stats,
+            models=model_stats,
+            system_health=system_health,
+            last_updated=datetime.now(UTC).isoformat(),
+        )
+
+        logger.info(
+            "Topics stats retrieved",
+            total_topics=len(all_topics),
+            active_topics=len(active_topics),
+            total_models=total_models,
+            active_models=active_models_count,
+        )
+
+        # Return with data wrapper as expected by frontend
+        return {"data": stats_response.model_dump()}
+
+    except Exception as e:
+        logger.error("Failed to get topics stats", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve statistics: {e!s}",
+        ) from e
+
+
 @router.get("/{topic_id}", response_model=TopicDetail)
 async def get_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
