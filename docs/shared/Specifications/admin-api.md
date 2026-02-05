@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Status:** In Progress - Audit Logs Pending Implementation  
-**Last Updated:** February 4, 2026  
+**Last Updated:** February 5, 2026  
 **Base URL:** `{REACT_APP_ACCOUNT_API_URL}`  
 **Default (Localhost):** `http://localhost:8001`
 
@@ -10,9 +10,18 @@
 
 ## Overview
 
-The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, discount codes, tenant ownership, and tenant people.
+The Admin API provides administrative capabilities for managing user subscriptions, trial extensions, discount codes, tenant ownership, tenant people, system settings, and audit logs.
 
 **Authentication Required:** Admin role (JWT with "Admin" role claim)
+
+**Covered Endpoints:**
+- Email Template Management (9 endpoints)
+- Audit Log Access (4 endpoints)
+- System Settings Management (6 endpoints)
+- Tenant Management (4 endpoints)
+- Subscriber Management (2 endpoints)
+- Trial Management (2 endpoints)
+- Discount Code Management (7 endpoints)
 
 ---
 
@@ -762,6 +771,400 @@ Get list of all available audit log action types.
 - Response is returned directly as an array of strings (NOT wrapped in ApiResponse object)
 - List is derived from the `AuditActionType` enum in the domain model
 - Used by frontend for filtering dropdown options
+
+---
+
+## Admin System Settings Endpoints
+
+These endpoints manage system-wide configuration settings for the PurposePath platform. Settings control operational parameters, security policies, email configuration, payment processing, and feature flags.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `Content-Type: application/json`
+
+---
+
+### GET /admin/api/v1/settings
+
+Get all system settings as a flat array of individual setting objects.
+
+**Query Parameters:**
+
+- `category` (string, optional) - Filter by category ("authentication", "email", "billing", "system")
+- `search` (string, optional) - Search settings by key or description
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "key": "general.appName",
+      "value": "PurposePath",
+      "dataType": "string",
+      "category": "system",
+      "description": "The name of the application displayed to users",
+      "defaultValue": "PurposePath",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "security.passwordMinLength",
+      "value": "8",
+      "dataType": "number",
+      "category": "authentication",
+      "description": "Minimum required length for user passwords",
+      "defaultValue": "8",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "admin@example.com"
+    },
+    {
+      "key": "security.passwordRequireUppercase",
+      "value": "true",
+      "dataType": "boolean",
+      "category": "authentication",
+      "description": "Require at least one uppercase letter in passwords",
+      "defaultValue": "true",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "email.provider",
+      "value": "aws-ses",
+      "dataType": "string",
+      "category": "email",
+      "description": "Email service provider (aws-ses, sendgrid, smtp)",
+      "defaultValue": "aws-ses",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "payment.trialPeriodDays",
+      "value": "14",
+      "dataType": "number",
+      "category": "billing",
+      "description": "Number of days for trial subscriptions",
+      "defaultValue": "14",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    }
+  ]
+}
+```
+
+**SystemSetting Object Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | string | Unique setting identifier (e.g., "general.appName") |
+| `value` | string | Current value (stored as string, converted based on dataType) |
+| `dataType` | string | Data type: "boolean", "string", "number", "json" |
+| `category` | string | Setting category: "authentication", "email", "billing", "system" |
+| `description` | string | Human-readable description of the setting |
+| `defaultValue` | string | Default value if reset |
+| `isActive` | boolean | Whether setting is active |
+| `lastModifiedAt` | string | ISO 8601 timestamp of last modification |
+| `lastModifiedBy` | string | Email of admin who last modified |
+
+**Setting Categories:**
+
+| Category | Description | Example Keys |
+|----------|-------------|--------------|
+| `authentication` | Security and authentication policies | passwordMinLength, maxLoginAttempts, sessionTimeout |
+| `email` | Email delivery configuration | provider, fromAddress, fromName, smtpHost |
+| `billing` | Payment processing settings | trialPeriodDays, billingCycleDays, currency, provider |
+| `system` | General system configuration | appName, companyName, timezone, maintenanceMode |
+
+**Status Codes:**
+
+- `200 OK` - Settings retrieved successfully
+- `400 Bad Request` - Invalid category value
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ListSettings()`
+- Query: `ListSystemSettingsQuery`
+- Handler: `ListSystemSettingsQueryHandler`
+
+**Notes:**
+
+- Response follows standard ApiResponse wrapper format with `success` and `data` fields
+- Settings are returned as a flat array (not nested objects)
+- All values are stored as strings and converted based on `dataType`
+- Sensitive values may be masked in responses
+- Frontend uses this endpoint with `useSettings()` hook
+
+---
+
+### GET /admin/api/v1/settings/{key}
+
+Get a specific system setting by its key.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key (e.g., "general.appName", "security.passwordMinLength")
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "security.passwordMinLength",
+    "value": "8",
+    "dataType": "number",
+    "category": "authentication",
+    "description": "Minimum required length for user passwords",
+    "defaultValue": "8",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T01:08:46Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting retrieved successfully
+- `400 Bad Request` - Invalid setting key format
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.GetSetting()`
+- Query: `GetSystemSettingQuery`
+- Handler: `GetSystemSettingQueryHandler`
+
+---
+
+### PATCH /admin/api/v1/settings/{key}
+
+Update a specific system setting.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key (e.g., "general.appName")
+
+**Request Body:**
+
+```json
+{
+  "value": "MyCompany Platform",
+  "reason": "Rebranding initiative"
+}
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `value` | string | Yes | New value for the setting (will be validated based on dataType) |
+| `reason` | string | Yes | Reason for the change (for audit trail) |
+
+**Validation Rules by Setting:**
+
+| Key | Data Type | Constraints |
+|-----|-----------|-------------|
+| `general.appName` | string | 1-100 characters |
+| `general.companyName` | string | 1-200 characters |
+| `general.supportEmail` | string | Valid email format |
+| `general.timezone` | string | Valid IANA timezone |
+| `general.maintenanceMode` | boolean | "true" or "false" |
+| `security.passwordMinLength` | number | 6-128 |
+| `security.maxLoginAttempts` | number | 1-10 |
+| `security.lockoutDuration` | number | 1-1440 (minutes) |
+| `email.fromAddress` | string | Valid email format |
+| `payment.trialPeriodDays` | number | 0-365 |
+| `payment.billingCycleDays` | number | 1, 7, 14, 30, 90, 365 |
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "general.appName",
+    "value": "MyCompany Platform",
+    "dataType": "string",
+    "category": "system",
+    "description": "The name of the application displayed to users",
+    "defaultValue": "PurposePath",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T10:30:00Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting updated successfully
+- `400 Bad Request` - Validation error (invalid value for data type, out of range, etc.)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Error Response Example:**
+
+```json
+{
+  "success": false,
+  "error": "Validation failed: Value must be between 6 and 128",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.UpdateSetting()`
+- Command: `UpdateSystemSettingCommand`
+- Handler: `UpdateSystemSettingCommandHandler`
+
+**Notes:**
+
+- Value is provided as string and validated/converted based on setting's `dataType`
+- Changes are logged in audit trail with action type "SETTINGS_UPDATED"
+- `reason` field is required for audit compliance
+- Some settings may require application restart to take effect
+
+---
+
+### POST /admin/api/v1/settings/{key}/validate
+
+Validate a setting value without saving it.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key to validate
+
+**Request Body:**
+
+```json
+{
+  "value": "5"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "errors": []
+  }
+}
+```
+
+**Response (Validation Failed):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": false,
+    "errors": [
+      "Value must be at least 6",
+      "Value must be at most 128"
+    ]
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Validation completed (check `valid` field in response)
+- `400 Bad Request` - Invalid setting key
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ValidateSetting()`
+- Command: `ValidateSystemSettingCommand`
+- Handler: `ValidateSystemSettingCommandHandler`
+
+**Notes:**
+
+- Performs validation without persisting changes
+- Useful for real-time validation in UI forms
+- Returns validation errors without saving
+
+---
+
+### POST /admin/api/v1/settings/{key}/reset
+
+Reset a specific setting to its default value.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key to reset
+
+**Request Body:**
+
+```json
+{
+  "reason": "Reverting to default configuration"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "security.passwordMinLength",
+    "value": "8",
+    "dataType": "number",
+    "category": "authentication",
+    "description": "Minimum required length for user passwords",
+    "defaultValue": "8",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T11:00:00Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting reset successfully
+- `400 Bad Request` - Invalid setting key or missing reason
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ResetSetting()`
+- Command: `ResetSystemSettingCommand`
+- Handler: `ResetSystemSettingCommandHandler`
+
+**Notes:**
+
+- Resets the setting to its `defaultValue`
+- `reason` is required for audit trail
+- Action is logged with "SETTINGS_UPDATED" action type
+- Consider impact before resetting critical settings
 
 ---
 
