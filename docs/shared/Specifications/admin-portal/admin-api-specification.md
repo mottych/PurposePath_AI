@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Status:** Complete  
-**Last Updated:** February 4, 2026  
+**Last Updated:** February 5, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
 **Default (Localhost):** `http://localhost:8003/admin/api/v1`  
 **Production:** `https://api.purposepath.app/admin/api/v1`
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Feb 5, 2026 | 2.1 | Added System Settings Management (5 endpoints) and Role Template Management (8 endpoints) | System |
 | Feb 4, 2026 | 2.0 | Complete specification with all endpoints documented | System |
 | Jan 22, 2026 | 1.1 | Added tenant management and discount codes | System |
 | Dec 15, 2025 | 1.0 | Initial specification | System |
@@ -35,6 +36,8 @@
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
    - [Subscription Operations](#subscription-operations)
+   - [System Settings Management](#system-settings-management)
+   - [Role Template Management](#role-template-management)
    - [People Management](#people-management)
 5. [Data Models](#data-models)
 6. [Error Handling](#error-handling)
@@ -46,6 +49,8 @@
 The Admin API provides comprehensive administrative capabilities for managing the PurposePath platform. It includes functionality for:
 
 - **System Configuration**: Seeding reference data (tiers, settings, templates)
+- **System Settings**: Managing operational parameters, security policies, email/payment configuration
+- **Role Templates**: Managing organizational structure templates for tenants
 - **Subscription Management**: Managing plans, pricing, subscribers, features
 - **Email Templates**: Creating and managing email templates
 - **Issue Configuration**: Configuring issue types and statuses
@@ -2811,6 +2816,851 @@ Get subscription audit log.
 
 ---
 
+## System Settings Management
+
+These endpoints manage system-wide configuration settings for the PurposePath platform. Settings control operational parameters, security policies, email configuration, payment processing, and feature flags.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `Content-Type: application/json`
+
+---
+
+### GET /settings
+
+Get all system settings as a flat array of individual setting objects.
+
+**Query Parameters:**
+
+- `category` (string, optional) - Filter by category ("authentication", "email", "billing", "system")
+- `search` (string, optional) - Search settings by key or description
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "key": "general.appName",
+      "value": "PurposePath",
+      "dataType": "string",
+      "category": "system",
+      "description": "The name of the application displayed to users",
+      "defaultValue": "PurposePath",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "security.passwordMinLength",
+      "value": "8",
+      "dataType": "number",
+      "category": "authentication",
+      "description": "Minimum required length for user passwords",
+      "defaultValue": "8",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "admin@example.com"
+    },
+    {
+      "key": "security.passwordRequireUppercase",
+      "value": "true",
+      "dataType": "boolean",
+      "category": "authentication",
+      "description": "Require at least one uppercase letter in passwords",
+      "defaultValue": "true",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "email.provider",
+      "value": "aws-ses",
+      "dataType": "string",
+      "category": "email",
+      "description": "Email service provider (aws-ses, sendgrid, smtp)",
+      "defaultValue": "aws-ses",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    },
+    {
+      "key": "payment.trialPeriodDays",
+      "value": "14",
+      "dataType": "number",
+      "category": "billing",
+      "description": "Number of days for trial subscriptions",
+      "defaultValue": "14",
+      "isActive": true,
+      "lastModifiedAt": "2026-02-05T01:08:46Z",
+      "lastModifiedBy": "system"
+    }
+  ]
+}
+```
+
+**SystemSetting Object Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | string | Unique setting identifier (e.g., "general.appName") |
+| `value` | string | Current value (stored as string, converted based on dataType) |
+| `dataType` | string | Data type: "boolean", "string", "number", "json" |
+| `category` | string | Setting category: "authentication", "email", "billing", "system" |
+| `description` | string | Human-readable description of the setting |
+| `defaultValue` | string | Default value if reset |
+| `isActive` | boolean | Whether setting is active |
+| `lastModifiedAt` | string | ISO 8601 timestamp of last modification |
+| `lastModifiedBy` | string | Email of admin who last modified |
+
+**Setting Categories:**
+
+| Category | Description | Example Keys |
+|----------|-------------|--------------|
+| `authentication` | Security and authentication policies | passwordMinLength, maxLoginAttempts, sessionTimeout |
+| `email` | Email delivery configuration | provider, fromAddress, fromName, smtpHost |
+| `billing` | Payment processing settings | trialPeriodDays, billingCycleDays, currency, provider |
+| `system` | General system configuration | appName, companyName, timezone, maintenanceMode |
+
+**Status Codes:**
+
+- `200 OK` - Settings retrieved successfully
+- `400 Bad Request` - Invalid category value
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ListSettings()`
+- Query: `ListSystemSettingsQuery`
+- Handler: `ListSystemSettingsQueryHandler`
+
+**Notes:**
+
+- Response follows standard ApiResponse wrapper format with `success` and `data` fields
+- Settings are returned as a flat array (not nested objects)
+- All values are stored as strings and converted based on `dataType`
+- Sensitive values may be masked in responses
+- Frontend uses this endpoint with `useSettings()` hook
+
+---
+
+### GET /settings/{key}
+
+Get a specific system setting by its key.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key (e.g., "general.appName", "security.passwordMinLength")
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "security.passwordMinLength",
+    "value": "8",
+    "dataType": "number",
+    "category": "authentication",
+    "description": "Minimum required length for user passwords",
+    "defaultValue": "8",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T01:08:46Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting retrieved successfully
+- `400 Bad Request` - Invalid setting key format
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.GetSetting()`
+- Query: `GetSystemSettingQuery`
+- Handler: `GetSystemSettingQueryHandler`
+
+---
+
+### PATCH /settings/{key}
+
+Update a specific system setting.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key (e.g., "general.appName")
+
+**Request Body:**
+
+```json
+{
+  "value": "MyCompany Platform",
+  "reason": "Rebranding initiative"
+}
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `value` | string | Yes | New value for the setting (will be validated based on dataType) |
+| `reason` | string | Yes | Reason for the change (for audit trail) |
+
+**Validation Rules by Setting:**
+
+| Key | Data Type | Constraints |
+|-----|-----------|-------------|
+| `general.appName` | string | 1-100 characters |
+| `general.companyName` | string | 1-200 characters |
+| `general.supportEmail` | string | Valid email format |
+| `general.timezone` | string | Valid IANA timezone |
+| `general.maintenanceMode` | boolean | "true" or "false" |
+| `security.passwordMinLength` | number | 6-128 |
+| `security.maxLoginAttempts` | number | 1-10 |
+| `security.lockoutDuration` | number | 1-1440 (minutes) |
+| `email.fromAddress` | string | Valid email format |
+| `payment.trialPeriodDays` | number | 0-365 |
+| `payment.billingCycleDays` | number | 1, 7, 14, 30, 90, 365 |
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "general.appName",
+    "value": "MyCompany Platform",
+    "dataType": "string",
+    "category": "system",
+    "description": "The name of the application displayed to users",
+    "defaultValue": "PurposePath",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T10:30:00Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting updated successfully
+- `400 Bad Request` - Validation error (invalid value for data type, out of range, etc.)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Error Response Example:**
+
+```json
+{
+  "success": false,
+  "error": "Validation failed: Value must be between 6 and 128",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.UpdateSetting()`
+- Command: `UpdateSystemSettingCommand`
+- Handler: `UpdateSystemSettingCommandHandler`
+
+**Notes:**
+
+- Value is provided as string and validated/converted based on setting's `dataType`
+- Changes are logged in audit trail with action type "SETTINGS_UPDATED"
+- `reason` field is required for audit compliance
+- Some settings may require application restart to take effect
+
+---
+
+### POST /settings/{key}/validate
+
+Validate a setting value without saving it.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key to validate
+
+**Request Body:**
+
+```json
+{
+  "value": "5"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "errors": []
+  }
+}
+```
+
+**Response (Validation Failed):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": false,
+    "errors": [
+      "Value must be at least 6",
+      "Value must be at most 128"
+    ]
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Validation completed (check `valid` field in response)
+- `400 Bad Request` - Invalid setting key
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ValidateSetting()`
+- Command: `ValidateSystemSettingCommand`
+- Handler: `ValidateSystemSettingCommandHandler`
+
+**Notes:**
+
+- Performs validation without persisting changes
+- Useful for real-time validation in UI forms
+- Returns validation errors without saving
+
+---
+
+### POST /settings/{key}/reset
+
+Reset a specific setting to its default value.
+
+**Path Parameters:**
+
+- `key` (string, required) - Setting key to reset
+
+**Request Body:**
+
+```json
+{
+  "reason": "Reverting to default configuration"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "key": "security.passwordMinLength",
+    "value": "8",
+    "dataType": "number",
+    "category": "authentication",
+    "description": "Minimum required length for user passwords",
+    "defaultValue": "8",
+    "isActive": true,
+    "lastModifiedAt": "2026-02-05T11:00:00Z",
+    "lastModifiedBy": "admin@example.com"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Setting reset successfully
+- `400 Bad Request` - Invalid setting key or missing reason
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Setting key not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `SystemSettingsController.ResetSetting()`
+- Command: `ResetSystemSettingCommand`
+- Handler: `ResetSystemSettingCommandHandler`
+
+**Notes:**
+
+- Resets the setting to its `defaultValue`
+- `reason` is required for audit trail
+- Action is logged with "SETTINGS_UPDATED" action type
+- Consider impact before resetting critical settings
+
+---
+
+## Role Template Management
+
+These endpoints manage organizational role templates that tenants can use to quickly set up their organizational structure. Templates contain predefined roles with reporting hierarchies.
+
+**Headers Required:**
+
+- `Authorization: Bearer {accessToken}`
+- `Content-Type: application/json`
+
+---
+
+### GET /role-templates
+
+Get list of all role templates with optional filtering.
+
+**Query Parameters:**
+
+- `search` (string, optional) - Search by template name
+- `category` (string, optional) - Filter by category ("STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING")
+- `is_active` (boolean, optional) - Filter by active status
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Technology Startup",
+      "description": "Basic organizational structure for tech startups",
+      "category": "STARTUP",
+      "roles_count": 8,
+      "is_active": true,
+      "preview": {
+        "total_roles": 8,
+        "sample_roles": ["CEO", "CTO", "CFO"]
+      },
+      "created_at": "2026-01-15T10:00:00Z",
+      "updated_at": "2026-02-01T14:30:00Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Templates retrieved successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.ListTemplates()`
+- Query: `ListRoleTemplatesQuery`
+- Handler: `ListRoleTemplatesQueryHandler`
+
+---
+
+### GET /role-templates/{id}
+
+Get a specific role template with all its roles.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Technology Startup",
+    "description": "Complete organizational structure for tech startups",
+    "category": "STARTUP",
+    "is_active": true,
+    "roles": [
+      {
+        "id": "role-uuid",
+        "code": "CEO",
+        "name": "Chief Executive Officer",
+        "description": "Leads the company",
+        "responsibilities": "Set vision, manage executives...",
+        "reports_to_code": null,
+        "created_at": "2026-01-15T10:00:00Z"
+      },
+      {
+        "id": "role-uuid-2",
+        "code": "CTO",
+        "name": "Chief Technology Officer",
+        "description": "Oversees technology",
+        "responsibilities": "Manage tech stack, lead dev team...",
+        "reports_to_code": "CEO",
+        "created_at": "2026-01-15T10:05:00Z"
+      }
+    ],
+    "created_at": "2026-01-15T10:00:00Z",
+    "updated_at": "2026-02-01T14:30:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Template retrieved successfully
+- `400 Bad Request` - Invalid template ID format
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.GetTemplate()`
+- Query: `GetRoleTemplateQuery`
+- Handler: `GetRoleTemplateQueryHandler`
+
+---
+
+### POST /role-templates
+
+Create a new role template.
+
+**Request Body:**
+
+```json
+{
+  "name": "Technology Startup",
+  "description": "Basic tech startup org structure",
+  "category": "STARTUP",
+  "is_active": true
+}
+```
+
+**Validation Rules:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | Yes | 1-100 characters, unique |
+| `description` | string | No | Max 500 characters |
+| `category` | string | Yes | Enum: "STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING" |
+| `is_active` | boolean | No | Default: true |
+
+**Response (201 Created):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "new-uuid",
+    "name": "Technology Startup",
+    "description": "Basic tech startup org structure",
+    "category": "STARTUP",
+    "is_active": true,
+    "roles": [],
+    "created_at": "2026-02-05T15:00:00Z",
+    "updated_at": "2026-02-05T15:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201 Created` - Template created successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `409 Conflict` - Template name already exists
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.CreateTemplate()`
+- Command: `CreateRoleTemplateCommand`
+- Handler: `CreateRoleTemplateCommandHandler`
+
+---
+
+### PUT /role-templates/{id}
+
+Update an existing role template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Template Name",
+  "description": "Updated description",
+  "category": "ENTERPRISE",
+  "is_active": false
+}
+```
+
+**Notes:**
+
+- All fields are optional (partial update supported)
+- Cannot change template ID
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Updated Template Name",
+    "description": "Updated description",
+    "category": "ENTERPRISE",
+    "is_active": false,
+    "roles": [...],
+    "created_at": "2026-01-15T10:00:00Z",
+    "updated_at": "2026-02-05T15:30:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Template updated successfully
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template not found
+- `409 Conflict` - Duplicate name
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.UpdateTemplate()`
+- Command: `UpdateRoleTemplateCommand`
+- Handler: `UpdateRoleTemplateCommandHandler`
+
+---
+
+### DELETE /role-templates/{id}
+
+Delete a role template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+
+**Response:**
+
+```
+204 No Content
+```
+
+**Status Codes:**
+
+- `204 No Content` - Template deleted successfully
+- `400 Bad Request` - Invalid template ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.DeleteTemplate()`
+- Command: `DeleteRoleTemplateCommand`
+- Handler: `DeleteRoleTemplateCommandHandler`
+
+---
+
+### POST /role-templates/{id}/roles
+
+Add a role to a template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+
+**Request Body:**
+
+```json
+{
+  "code": "VP_SALES",
+  "name": "Vice President of Sales",
+  "description": "Leads sales team",
+  "responsibilities": "* Drive revenue\n* Manage team\n* Set targets",
+  "reports_to_code": "CEO"
+}
+```
+
+**Validation Rules:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `code` | string | Yes | 2-50 chars, uppercase, alphanumeric + underscore, unique within template |
+| `name` | string | Yes | 1-100 characters |
+| `description` | string | No | Max 500 characters |
+| `responsibilities` | string | No | Max 2000 characters, markdown supported |
+| `reports_to_code` | string | No | Must be a valid role code within same template |
+
+**Response (201 Created):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "role-uuid",
+    "code": "VP_SALES",
+    "name": "Vice President of Sales",
+    "description": "Leads sales team",
+    "responsibilities": "* Drive revenue\n* Manage team\n* Set targets",
+    "reports_to_code": "CEO",
+    "created_at": "2026-02-05T15:30:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `201 Created` - Role added successfully
+- `400 Bad Request` - Validation error (invalid code format, circular reference)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template not found
+- `409 Conflict` - Role code already exists in template
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.AddRole()`
+- Command: `AddTemplateRoleCommand`
+- Handler: `AddTemplateRoleCommandHandler`
+
+**Notes:**
+
+- Role codes must be uppercase (e.g., "CEO", "VP_SALES")
+- `reports_to_code` creates hierarchical structure
+- System validates against circular references
+
+---
+
+### PUT /role-templates/{id}/roles/{roleId}
+
+Update a role within a template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+- `roleId` (string, GUID) - Role ID
+
+**Request Body:**
+
+```json
+{
+  "name": "Vice President of Sales & Marketing",
+  "description": "Oversees sales and marketing",
+  "responsibilities": "Updated responsibilities...",
+  "reports_to_code": "COO"
+}
+```
+
+**Notes:**
+
+- All fields are optional (partial update supported)
+- Cannot change `code` after creation
+- Can set `reports_to_code` to null to remove reporting relationship
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "role-uuid",
+    "code": "VP_SALES",
+    "name": "Vice President of Sales & Marketing",
+    "description": "Oversees sales and marketing",
+    "responsibilities": "Updated responsibilities...",
+    "reports_to_code": "COO",
+    "created_at": "2026-01-15T10:05:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Role updated successfully
+- `400 Bad Request` - Validation error (circular reference, invalid reports_to_code)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template or role not found
+- `500 Internal Server Error` - Server error
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.UpdateRole()`
+- Command: `UpdateTemplateRoleCommand`
+- Handler: `UpdateTemplateRoleCommandHandler`
+
+---
+
+### DELETE /role-templates/{id}/roles/{roleId}
+
+Remove a role from a template.
+
+**Path Parameters:**
+
+- `id` (string, GUID) - Template ID
+- `roleId` (string, GUID) - Role ID
+
+**Response:**
+
+```
+204 No Content
+```
+
+**Status Codes:**
+
+- `204 No Content` - Role deleted successfully
+- `400 Bad Request` - Cannot delete role (other roles report to it)
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - User lacks admin role
+- `404 Not Found` - Template or role not found
+- `500 Internal Server Error` - Server error
+
+**Error Response (Role Has Subordinates):**
+
+```json
+{
+  "success": false,
+  "error": "Cannot delete role 'CEO' because roles ['CTO', 'CFO'] report to it",
+  "code": "ROLE_HAS_SUBORDINATES"
+}
+```
+
+**Implementation:**
+
+- Controller: `RoleTemplatesController.DeleteRole()`
+- Command: `DeleteTemplateRoleCommand`
+- Handler: `DeleteTemplateRoleCommandHandler`
+
+**Notes:**
+
+- Cannot delete a role if other roles have `reports_to_code` pointing to it
+- Must reassign or delete subordinate roles first
+
+---
+
 ## People Management
 
 Manage people within specific tenants (admin cross-tenant access).
@@ -3074,7 +3924,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 88
+**Total Endpoints:** 101
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -3087,6 +3937,8 @@ Business rule violations return 400 Bad Request with context:
 - Plan Management: 8
 - Feature Management: 12
 - Subscription Operations: 6
+- System Settings Management: 5
+- Role Template Management: 8
 - People Management: 1
 
 **All endpoints require Admin role authorization except:**
