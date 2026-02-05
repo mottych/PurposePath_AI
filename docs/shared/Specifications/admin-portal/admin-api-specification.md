@@ -1,6 +1,6 @@
 # Admin API Specification
 
-**Version:** 2.1  
+**Version:** 2.2  
 **Status:** Complete  
 **Last Updated:** February 5, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Feb 5, 2026 | 2.2 | Added Discount Code Management (9 endpoints), User Management (5 endpoints), and Audit Log Management (4 endpoints) | System |
 | Feb 5, 2026 | 2.1 | Added System Settings Management (5 endpoints) and Role Template Management (8 endpoints) | System |
 | Feb 4, 2026 | 2.0 | Complete specification with all endpoints documented | System |
 | Jan 22, 2026 | 1.1 | Added tenant management and discount codes | System |
@@ -36,8 +37,11 @@
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
    - [Subscription Operations](#subscription-operations)
+   - [Discount Code Management](#discount-code-management)
    - [System Settings Management](#system-settings-management)
    - [Role Template Management](#role-template-management)
+   - [User Management](#user-management)
+   - [Audit Log Management](#audit-log-management)
    - [People Management](#people-management)
 5. [Data Models](#data-models)
 6. [Error Handling](#error-handling)
@@ -51,11 +55,12 @@ The Admin API provides comprehensive administrative capabilities for managing th
 - **System Configuration**: Seeding reference data (tiers, settings, templates)
 - **System Settings**: Managing operational parameters, security policies, email/payment configuration
 - **Role Templates**: Managing organizational structure templates for tenants
-- **Subscription Management**: Managing plans, pricing, subscribers, features
+- **Subscription Management**: Managing plans, pricing, subscribers, features, discount codes
 - **Email Templates**: Creating and managing email templates
 - **Issue Configuration**: Configuring issue types and statuses
 - **User Support**: Trial extensions, discounts, feature grants
-- **Audit Logging**: Tracking all administrative actions
+- **User Management**: Account operations (unlock, suspend, reactivate)
+- **Audit Logging**: Comprehensive tracking and reporting of all administrative actions
 
 **Security**: All endpoints require Admin role authorization via JWT token with "Admin" policy claim.
 
@@ -2816,6 +2821,426 @@ Get subscription audit log.
 
 ---
 
+## Discount Code Management
+
+Manage promotional discount codes for subscriptions. Discount codes can be percentage or fixed amount discounts, applicable to specific tiers, tenants, or system-wide.
+
+### GET /discount-codes
+
+Get paginated list of discount codes with optional filtering.
+
+**Query Parameters:**
+- `page` (integer, optional) - Page number (default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 50, max: 100)
+- `search` (string, optional) - Search by code name or description
+- `status` ('active' | 'inactive' | 'all', optional) - Filter by status (default: 'all')
+- `discountType` ('percentage' | 'fixed_amount' | 'all', optional) - Filter by discount type (default: 'all')
+- `applicability` ('new_tenants' | 'renewals' | 'all', optional) - Filter by applicability (default: 'all')
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "aa0e8400-e29b-41d4-a716-446655440000",
+      "codeName": "WELCOME20",
+      "description": "20% discount for new customers",
+      "discountType": "percentage",
+      "discountValue": 20,
+      "applicability": "new_tenants",
+      "applicableTiers": ["tier-id-1", "tier-id-2"],
+      "isSystemWide": true,
+      "tenantRestrictions": [],
+      "expiresAt": "2026-12-31T23:59:59Z",
+      "usageLimit": 100,
+      "currentUsage": 45,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "createdBy": "admin-user-id",
+      "updatedAt": "2026-02-01T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 50,
+    "totalCount": 12,
+    "totalPages": 1
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Discount codes retrieved successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+---
+
+### GET /discount-codes/{id}
+
+Get details of a specific discount code.
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "aa0e8400-e29b-41d4-a716-446655440000",
+    "codeName": "WELCOME20",
+    "description": "20% discount for new customers",
+    "discountType": "percentage",
+    "discountValue": 20,
+    "applicability": "new_tenants",
+    "applicableTiers": ["tier-id-1", "tier-id-2"],
+    "isSystemWide": true,
+    "tenantRestrictions": [],
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageLimit": 100,
+    "currentUsage": 45,
+    "isActive": true,
+    "createdAt": "2026-01-01T00:00:00Z",
+    "createdBy": "admin-user-id",
+    "updatedAt": "2026-02-01T10:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Discount code retrieved successfully
+- `400 Bad Request` - Invalid discount code ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+---
+
+### GET /discount-codes/{id}/usage
+
+Get usage history for a specific discount code.
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Query Parameters:**
+- `page` (integer, optional) - Page number (default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 50, max: 100)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "usage-id-1",
+        "discountCodeId": "aa0e8400-e29b-41d4-a716-446655440000",
+        "tenantId": "tenant-id-1",
+        "tenantName": "Acme Corp",
+        "subscriptionId": "sub-id-1",
+        "tierId": "tier-id-1",
+        "tierName": "Professional",
+        "discountApplied": 20.00,
+        "appliedAt": "2026-02-01T10:00:00Z",
+        "appliedBy": "admin-user-id"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "pageSize": 50,
+      "totalCount": 45,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Usage history retrieved successfully
+- `400 Bad Request` - Invalid discount code ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+---
+
+### POST /discount-codes
+
+Create a new discount code.
+
+**Request:**
+```json
+{
+  "codeName": "NEWYEAR2026",
+  "description": "New Year promotional discount",
+  "discountType": "percentage",
+  "discountValue": 15,
+  "applicability": "all",
+  "applicableTiers": ["tier-id-1", "tier-id-2"],
+  "isSystemWide": true,
+  "tenantRestrictions": [],
+  "expiresAt": "2026-01-31T23:59:59Z",
+  "usageLimit": 50,
+  "isActive": true
+}
+```
+
+**Validations:**
+- `codeName`: Required, 4-20 characters, alphanumeric, must be unique
+- `description`: Required, 1-500 characters
+- `discountType`: Required, 'percentage' or 'fixed_amount'
+- `discountValue`: Required, > 0; for percentage: <= 100
+- `applicability`: Required, 'new_tenants', 'renewals', or 'all'
+- `applicableTiers`: Required array (can be empty for no restrictions)
+- `isSystemWide`: Required boolean
+- `tenantRestrictions`: Optional array of tenant IDs
+- `expiresAt`: Optional ISO 8601 date, must be future date
+- `usageLimit`: Optional integer, > 0
+- `isActive`: Required boolean
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "codeName": "NEWYEAR2026",
+    "description": "New Year promotional discount",
+    "discountType": "percentage",
+    "discountValue": 15,
+    "applicability": "all",
+    "applicableTiers": ["tier-id-1", "tier-id-2"],
+    "isSystemWide": true,
+    "tenantRestrictions": [],
+    "expiresAt": "2026-01-31T23:59:59Z",
+    "usageLimit": 50,
+    "currentUsage": 0,
+    "isActive": true,
+    "createdAt": "2026-02-04T12:00:00Z",
+    "createdBy": "admin-user-id"
+  }
+}
+```
+
+**Status Codes:**
+- `201 Created` - Discount code created successfully
+- `400 Bad Request` - Validation errors
+- `401 Unauthorized` - Missing or invalid admin token
+- `409 Conflict` - Code name already exists
+
+**Implementation:**
+- **Controller:** `DiscountCodeController.CreateDiscountCode`
+- **Command:** `CreateDiscountCodeCommand`
+- **Handler:** `CreateDiscountCodeCommandHandler`
+
+---
+
+### PATCH /discount-codes/{id}
+
+Update an existing discount code (partial update supported).
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Request:**
+```json
+{
+  "description": "Updated description",
+  "expiresAt": "2026-03-31T23:59:59Z",
+  "usageLimit": 100,
+  "isActive": false
+}
+```
+
+**Validations:**
+- Same as creation validations (all fields optional for PATCH)
+- Cannot change `codeName` after creation
+- Cannot change `discountType` after creation
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "codeName": "NEWYEAR2026",
+    "description": "Updated description",
+    "discountType": "percentage",
+    "discountValue": 15,
+    "applicability": "all",
+    "applicableTiers": ["tier-id-1", "tier-id-2"],
+    "isSystemWide": true,
+    "tenantRestrictions": [],
+    "expiresAt": "2026-03-31T23:59:59Z",
+    "usageLimit": 100,
+    "currentUsage": 15,
+    "isActive": false,
+    "createdAt": "2026-02-04T12:00:00Z",
+    "createdBy": "admin-user-id",
+    "updatedAt": "2026-02-05T10:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Discount code updated successfully
+- `400 Bad Request` - Validation errors
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+**Implementation:**
+- **Controller:** `DiscountCodeController.UpdateDiscountCode`
+- **Command:** `UpdateDiscountCodeCommand`
+- **Handler:** `UpdateDiscountCodeCommandHandler`
+
+---
+
+### POST /discount-codes/{id}/enable
+
+Enable a discount code (make it active).
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "codeName": "NEWYEAR2026",
+    "isActive": true,
+    "updatedAt": "2026-02-05T10:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Discount code enabled successfully
+- `400 Bad Request` - Invalid discount code ID or already enabled
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+---
+
+### POST /discount-codes/{id}/disable
+
+Disable a discount code (make it inactive).
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "codeName": "NEWYEAR2026",
+    "isActive": false,
+    "updatedAt": "2026-02-05T10:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Discount code disabled successfully
+- `400 Bad Request` - Invalid discount code ID or already disabled
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+---
+
+### DELETE /discount-codes/{id}
+
+Delete a discount code (soft delete - preserves usage history).
+
+**Path Parameters:**
+- `id` (string, GUID) - Discount code ID
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Status Codes:**
+- `204 No Content` - Discount code deleted successfully
+- `400 Bad Request` - Invalid discount code ID or cannot delete (active usage)
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Discount code not found
+
+**Notes:**
+- Soft delete preserves usage history
+- Cannot delete codes with active subscriptions using them
+- Audit trail maintained for all deletions
+
+---
+
+### POST /discount-codes/validate
+
+Validate a discount code for a specific subscription context.
+
+**Request:**
+```json
+{
+  "Code": "WELCOME20",
+  "TierId": "tier-id-1",
+  "Frequency": "monthly",
+  "tenantId": "tenant-id-1"
+}
+```
+
+**Validations:**
+- `Code`: Required, 4-20 characters
+- `TierId`: Required, valid GUID
+- `Frequency`: Required, 'monthly' or 'yearly'
+- `tenantId`: Optional, valid GUID
+
+**Response (Valid):**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "code": {
+      "id": "aa0e8400-e29b-41d4-a716-446655440000",
+      "codeName": "WELCOME20",
+      "discountType": "percentage",
+      "discountValue": 20,
+      "description": "20% discount for new customers"
+    }
+  }
+}
+```
+
+**Response (Invalid):**
+```json
+{
+  "success": true,
+  "data": {
+    "valid": false,
+    "reason": "Code has expired"
+  }
+}
+```
+
+**Validation Rules:**
+- Code must be active (`isActive: true`)
+- Code must not be expired
+- If `usageLimit` is set, must not be exceeded
+- Tenant must match `applicability` rules
+- Tier must be in `applicableTiers` (if restricted)
+- Tenant must not be in `tenantRestrictions`
+
+**Status Codes:**
+- `200 OK` - Validation result returned
+- `400 Bad Request` - Invalid request parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+---
+
 ## System Settings Management
 
 These endpoints manage system-wide configuration settings for the PurposePath platform. Settings control operational parameters, security policies, email configuration, payment processing, and feature flags.
@@ -3661,6 +4086,430 @@ Remove a role from a template.
 
 ---
 
+## User Management
+
+Manage user accounts across tenants, including account status operations (unlock, suspend, reactivate).
+
+### GET /users
+
+Get paginated list of users with optional filtering.
+
+**Query Parameters:**
+- `page` (integer, optional) - Page number (default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 50, max: 100)
+- `search` (string, optional) - Search by name or email
+- `tenantId` (string, optional) - Filter by tenant ID
+- `status` ('Active' | 'Suspended' | 'Locked' | 'Inactive', optional) - Filter by user status
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "user-id-1",
+        "email": "user@example.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "tenantId": "tenant-id-1",
+        "tenantName": "Acme Corp",
+        "status": "Active",
+        "failedLoginAttempts": 0,
+        "lastLoginAt": "2026-02-04T10:00:00Z",
+        "createdAt": "2026-01-01T00:00:00Z",
+        "role": "User"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "pageSize": 50,
+      "totalCount": 245,
+      "totalPages": 5
+    }
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Users retrieved successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+**Implementation:**
+- **Controller:** `UserController.GetUsers`
+- **Query:** `GetUsersQuery`
+- **Handler:** `GetUsersQueryHandler`
+
+---
+
+### GET /users/{id}
+
+Get detailed information for a specific user, including activity history.
+
+**Path Parameters:**
+- `id` (string, GUID) - User ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user-id-1",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "tenantId": "tenant-id-1",
+    "tenantName": "Acme Corp",
+    "status": "Active",
+    "failedLoginAttempts": 0,
+    "lastLoginAt": "2026-02-04T10:00:00Z",
+    "createdAt": "2026-01-01T00:00:00Z",
+    "role": "User",
+    "activityHistory": {
+      "loginHistory": [
+        {
+          "timestamp": "2026-02-04T10:00:00Z",
+          "ipAddress": "192.168.1.1",
+          "userAgent": "Mozilla/5.0...",
+          "success": true
+        }
+      ],
+      "featureUsage": [
+        {
+          "feature": "Dashboard",
+          "usageCount": 150,
+          "lastUsedAt": "2026-02-04T10:00:00Z"
+        }
+      ],
+      "subscriptionChanges": [
+        {
+          "timestamp": "2026-01-15T10:00:00Z",
+          "changeType": "upgrade",
+          "details": "Upgraded to Professional tier",
+          "performedBy": "admin-user-id"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - User details retrieved successfully
+- `400 Bad Request` - Invalid user ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - User not found
+
+**Implementation:**
+- **Controller:** `UserController.GetUserDetails`
+- **Query:** `GetUserDetailsQuery`
+- **Handler:** `GetUserDetailsQueryHandler`
+
+---
+
+### POST /users/{id}/unlock
+
+Unlock a user account (reset failed login attempts).
+
+**Path Parameters:**
+- `id` (string, GUID) - User ID
+
+**Request:**
+```json
+{
+  "reason": "User contacted support, verified identity",
+  "notifyUser": true
+}
+```
+
+**Validations:**
+- `reason`: Required, 1-500 characters
+- `notifyUser`: Optional boolean (default: false)
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Status Codes:**
+- `200 OK` - Account unlocked successfully
+- `400 Bad Request` - Invalid user ID or account not locked
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - User not found
+
+**Implementation:**
+- **Controller:** `UserController.UnlockAccount`
+- **Command:** `UnlockAccountCommand`
+- **Handler:** `UnlockAccountCommandHandler`
+
+**Notes:**
+- Resets `failedLoginAttempts` to 0
+- Changes status from 'Locked' to 'Active'
+- Optionally sends email notification to user
+- Audit log entry created with admin ID and reason
+
+---
+
+### POST /users/{id}/suspend
+
+Suspend a user account (prevent login).
+
+**Path Parameters:**
+- `id` (string, GUID) - User ID
+
+**Request:**
+```json
+{
+  "reason": "Suspicious activity detected",
+  "notifyUser": true
+}
+```
+
+**Validations:**
+- `reason`: Required, 1-500 characters
+- `notifyUser`: Optional boolean (default: false)
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Status Codes:**
+- `200 OK` - Account suspended successfully
+- `400 Bad Request` - Invalid user ID or account already suspended
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - User not found
+
+**Implementation:**
+- **Controller:** `UserController.SuspendAccount`
+- **Command:** `SuspendAccountCommand`
+- **Handler:** `SuspendAccountCommandHandler`
+
+**Notes:**
+- Changes status to 'Suspended'
+- User cannot log in while suspended
+- Optionally sends email notification to user
+- Audit log entry created with admin ID and reason
+
+---
+
+### POST /users/{id}/reactivate
+
+Reactivate a suspended user account.
+
+**Path Parameters:**
+- `id` (string, GUID) - User ID
+
+**Request:**
+```json
+{
+  "reason": "Issue resolved, account verified",
+  "notifyUser": true
+}
+```
+
+**Validations:**
+- `reason`: Required, 1-500 characters
+- `notifyUser`: Optional boolean (default: false)
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Status Codes:**
+- `200 OK` - Account reactivated successfully
+- `400 Bad Request` - Invalid user ID or account not suspended
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - User not found
+
+**Implementation:**
+- **Controller:** `UserController.ReactivateAccount`
+- **Command:** `ReactivateAccountCommand`
+- **Handler:** `ReactivateAccountCommandHandler`
+
+**Notes:**
+- Changes status from 'Suspended' to 'Active'
+- User can log in normally after reactivation
+- Optionally sends email notification to user
+- Audit log entry created with admin ID and reason
+
+---
+
+## Audit Log Management
+
+Comprehensive audit logging for all administrative actions. All write operations are automatically logged with admin user ID, action details, timestamps, and contextual metadata.
+
+### GET /audit-logs
+
+Get paginated list of audit log entries with optional filtering.
+
+**Query Parameters:**
+- `page` (integer, optional) - Page number (default: 1)
+- `pageSize` (integer, optional) - Items per page (default: 50, max: 100)
+- `adminEmail` (string, optional) - Filter by admin user email
+- `actionType` (string, optional) - Filter by action type (e.g., 'CREATE', 'UPDATE', 'DELETE')
+- `tenantId` (string, optional) - Filter by affected tenant ID
+- `startDate` (string, optional) - Filter by date range start (ISO 8601)
+- `endDate` (string, optional) - Filter by date range end (ISO 8601)
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "log-id-1",
+      "adminUserId": "admin-user-id",
+      "adminEmail": "admin@purposepath.app",
+      "actionType": "UPDATE",
+      "resourceType": "SystemSetting",
+      "resourceId": "MaxLoginAttempts",
+      "message": "Updated system setting MaxLoginAttempts from 5 to 3",
+      "metadata": {
+        "oldValue": "5",
+        "newValue": "3",
+        "reason": "Security policy update"
+      },
+      "tenantId": null,
+      "ipAddress": "192.168.1.1",
+      "timestamp": "2026-02-04T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 50,
+    "totalCount": 1234,
+    "totalPages": 25
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Audit logs retrieved successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+**Implementation:**
+- **Controller:** `AuditLogController.GetAuditLogs`
+- **Query:** `GetAuditLogsQuery`
+- **Handler:** `GetAuditLogsQueryHandler`
+
+**Notes:**
+- All write operations automatically create audit entries
+- Includes detailed metadata for each action
+- Filterable by admin, action type, tenant, and date range
+- Used for compliance, security auditing, and troubleshooting
+
+---
+
+### GET /audit-logs/{id}
+
+Get a single audit log entry by ID.
+
+**Path Parameters:**
+- `id` (string, GUID) - Audit log entry ID
+
+**Response:**
+```json
+{
+  "id": "log-id-1",
+  "adminUserId": "admin-user-id",
+  "adminEmail": "admin@purposepath.app",
+  "actionType": "UPDATE",
+  "resourceType": "SystemSetting",
+  "resourceId": "MaxLoginAttempts",
+  "message": "Updated system setting MaxLoginAttempts from 5 to 3",
+  "metadata": {
+    "oldValue": "5",
+    "newValue": "3",
+    "reason": "Security policy update"
+  },
+  "tenantId": null,
+  "ipAddress": "192.168.1.1",
+  "timestamp": "2026-02-04T10:00:00Z"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Audit log entry retrieved successfully
+- `400 Bad Request` - Invalid audit log ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Audit log entry not found
+
+---
+
+### GET /audit-logs/export
+
+Export audit logs to CSV format.
+
+**Query Parameters:**
+- Same filters as GET /audit-logs (without pagination)
+- `adminEmail` (string, optional) - Filter by admin user email
+- `actionType` (string, optional) - Filter by action type
+- `tenantId` (string, optional) - Filter by affected tenant ID
+- `startDate` (string, optional) - Filter by date range start (ISO 8601)
+- `endDate` (string, optional) - Filter by date range end (ISO 8601)
+
+**Response:**
+- Content-Type: `text/csv`
+- CSV file with headers: ID, Admin Email, Action Type, Resource Type, Resource ID, Message, Timestamp, IP Address
+
+**Status Codes:**
+- `200 OK` - CSV export generated successfully
+- `400 Bad Request` - Invalid query parameters
+- `401 Unauthorized` - Missing or invalid admin token
+
+**Implementation:**
+- **Controller:** `AuditLogController.ExportAuditLogs`
+- **Query:** `ExportAuditLogsQuery`
+- **Handler:** `ExportAuditLogsQueryHandler`
+
+**Notes:**
+- Large exports may take time to generate
+- Filtered by same criteria as list endpoint
+- Useful for compliance reporting and analysis
+
+---
+
+### GET /audit-logs/action-types
+
+Get list of available action types for filtering.
+
+**Response:**
+```json
+[
+  "CREATE",
+  "UPDATE",
+  "DELETE",
+  "EXTEND_TRIAL",
+  "APPLY_DISCOUNT",
+  "GRANT_FEATURE",
+  "UNLOCK_ACCOUNT",
+  "SUSPEND_ACCOUNT",
+  "REACTIVATE_ACCOUNT",
+  "RESET_SETTING",
+  "VALIDATE_SETTING"
+]
+```
+
+**Status Codes:**
+- `200 OK` - Action types retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+
+**Notes:**
+- Dynamically generated from actual audit log entries
+- Used to populate filter dropdowns in UI
+- Action types are automatically added as new operations are logged
+
+---
+
 ## People Management
 
 Manage people within specific tenants (admin cross-tenant access).
@@ -3924,7 +4773,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 101
+**Total Endpoints:** 119
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -3937,8 +4786,11 @@ Business rule violations return 400 Bad Request with context:
 - Plan Management: 8
 - Feature Management: 12
 - Subscription Operations: 6
+- Discount Code Management: 9
 - System Settings Management: 5
 - Role Template Management: 8
+- User Management: 5
+- Audit Log Management: 4
 - People Management: 1
 
 **All endpoints require Admin role authorization except:**
