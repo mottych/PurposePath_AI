@@ -35,7 +35,6 @@ from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
     SessionConflictError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
@@ -476,7 +475,7 @@ class CoachingSessionService:
         # Load configuration
         endpoint_def, llm_topic = await self._load_topic_config(topic_id)
 
-        # Check for existing active session
+        # Check for existing active session - /start ALWAYS creates NEW session
         existing = await self.session_repository.get_active_for_user_topic(
             user_id=UserId(user_id),
             topic_id=topic_id,
@@ -485,37 +484,27 @@ class CoachingSessionService:
 
         if existing is not None:
             logger.info(
-                "coaching_service.resuming_existing_session",
-                session_id=str(existing.session_id),
+                "coaching_service.start_canceling_existing_session",
+                existing_session_id=str(existing.session_id),
+                existing_status=existing.status.value,
+                reason="start_always_creates_new_session",
             )
-            # Check if session is idle - if so, close it and create a new one
-            if existing.is_idle():
-                logger.info(
-                    "coaching_service.session_idle_creating_new",
-                    old_session_id=str(existing.session_id),
-                    last_activity_at=(
-                        existing.last_activity_at.isoformat() if existing.last_activity_at else None
-                    ),
-                    session_status=existing.status.value,
-                )
-                # Handle idle sessions based on their status
-                if existing.is_active():
-                    existing.complete(result={})
-                elif existing.is_paused():
-                    existing.mark_abandoned()
-                else:
-                    # For other statuses (completed, cancelled, etc.), just cancel
-                    existing.cancel()
-                await self.session_repository.update(existing)
-                # Fall through to create a new session
+            # Cancel existing session - user explicitly wants to start fresh
+            # Use /resume endpoint to continue an existing session instead
+            if existing.is_active():
+                existing.cancel()
+            elif existing.is_paused():
+                existing.mark_abandoned()
             else:
-                return await self._resume_session(
-                    session=existing,
-                    endpoint_def=endpoint_def,
-                    llm_topic=llm_topic,
+                # Already terminal, just log
+                logger.info(
+                    "coaching_service.existing_session_already_terminal",
+                    session_id=str(existing.session_id),
+                    status=existing.status.value,
                 )
+            await self.session_repository.update(existing)
 
-        # Create new session
+        # Create new session with INITIATION template
         return await self._create_new_session(
             topic_id=topic_id,
             tenant_id=tenant_id,
@@ -716,6 +705,65 @@ class CoachingSessionService:
             metadata=response_metadata,
         )
 
+    async def resume_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> SessionResponse:
+        """Resume an existing session with RESUME template.
+
+        This endpoint continues an existing session, using the RESUME template
+        which welcomes the user back and summarizes the conversation so far.
+
+        Works for both ACTIVE and PAUSED sessions:
+        - PAUSED: User explicitly paused or session was idle when they left
+        - ACTIVE: Chat window was closed by mistake, user wants to continue
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            SessionResponse with resume message
+
+        Raises:
+            SessionNotFoundError: If session not found
+            SessionAccessDeniedError: If user doesn't own session
+            InvalidTopicError: If topic configuration invalid
+        """
+        logger.info(
+            "coaching_service.resume_session",
+            session_id=session_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # Load session (validates ownership but doesn't check active status)
+        session = await self.session_repository.get_by_id_for_tenant(
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+
+        if session is None:
+            raise SessionNotFoundError(session_id=session_id, tenant_id=tenant_id)
+
+        # Validate ownership
+        if str(session.user_id) != user_id:
+            raise SessionAccessDeniedError(session_id=session_id, user_id=user_id)
+
+        # Load topic configuration
+        endpoint_def, llm_topic = await self._load_topic_config(session.topic_id)
+
+        # Use private method to perform resume with RESUME template
+        return await self._resume_session(
+            session=session,
+            endpoint_def=endpoint_def,
+            llm_topic=llm_topic,
+        )
+
     async def _resume_session(
         self,
         *,
@@ -723,7 +771,7 @@ class CoachingSessionService:
         endpoint_def: TopicDefinition,  # noqa: ARG002
         llm_topic: LLMTopic,
     ) -> SessionResponse:
-        """Resume an existing paused or active session.
+        """Resume an existing paused or active session (internal).
 
         Args:
             session: Existing session to resume
@@ -734,7 +782,7 @@ class CoachingSessionService:
             SessionResponse with resume message
 
         Note:
-            Caller should check is_idle() before calling this method.
+            This is a private method. Uses RESUME template to welcome user back.
         """
         # Load resume template
         resume_template = await self._load_template(session.topic_id, TemplateType.RESUME)
@@ -992,15 +1040,9 @@ class CoachingSessionService:
                 current_status=session.status.value,
             )
 
-        # Check idle timeout
-        if session.is_idle():
-            raise SessionIdleTimeoutError(
-                session_id=session_id,
-                last_activity_at=(
-                    session.last_activity_at.isoformat() if session.last_activity_at else "unknown"
-                ),
-                idle_timeout_minutes=session.idle_timeout_minutes,
-            )
+        # Note: Idle check removed - idle sessions can be resumed
+        # Users may have stepped away, had power outage, etc.
+        # TTL handles cleanup of truly abandoned sessions
 
         return session
 

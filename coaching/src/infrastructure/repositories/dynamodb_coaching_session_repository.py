@@ -46,6 +46,11 @@ class DynamoDBCoachingSessionRepository:
     # TTL duration for completed/cancelled sessions (14 days)
     COMPLETED_SESSION_TTL_DAYS = 14
 
+    # TTL duration for active/paused sessions (14 days for long-term idle cleanup)
+    # This ensures truly abandoned sessions are eventually cleaned up while
+    # giving users flexibility for breaks, power outages, travel, etc.
+    ACTIVE_SESSION_TTL_DAYS = 14
+
     def __init__(
         self,
         dynamodb_resource: Any,  # boto3.resources.base.ServiceResource
@@ -99,6 +104,14 @@ class DynamoDBCoachingSessionRepository:
 
         try:
             item = self._to_dynamodb_item(session)
+
+            # Add TTL for new sessions (active/paused get 14 days)
+            if session.status in (ConversationStatus.ACTIVE, ConversationStatus.PAUSED):
+                ttl_timestamp = int(
+                    datetime.now(UTC).timestamp() + (self.ACTIVE_SESSION_TTL_DAYS * 24 * 60 * 60)
+                )
+                item["ttl"] = ttl_timestamp
+
             self.table.put_item(Item=item)
 
             logger.info(
@@ -127,15 +140,26 @@ class DynamoDBCoachingSessionRepository:
         try:
             item = self._to_dynamodb_item(session)
 
-            # Add TTL for terminal states
+            # Add TTL based on session state
             if session.status in (
                 ConversationStatus.COMPLETED,
                 ConversationStatus.CANCELLED,
                 ConversationStatus.ABANDONED,
             ):
-                # Set TTL to 14 days from now
+                # Terminal states: 14 days TTL (shorter cleanup)
                 ttl_timestamp = int(
                     datetime.now(UTC).timestamp() + (self.COMPLETED_SESSION_TTL_DAYS * 24 * 60 * 60)
+                )
+                item["ttl"] = ttl_timestamp
+            elif session.status in (
+                ConversationStatus.ACTIVE,
+                ConversationStatus.PAUSED,
+            ):
+                # Active/Paused states: 14 days TTL (user flexibility)
+                # This allows users to resume after stepping away, power outages, etc.
+                # But still cleans up truly abandoned sessions after 2 weeks
+                ttl_timestamp = int(
+                    datetime.now(UTC).timestamp() + (self.ACTIVE_SESSION_TTL_DAYS * 24 * 60 * 60)
                 )
                 item["ttl"] = ttl_timestamp
 

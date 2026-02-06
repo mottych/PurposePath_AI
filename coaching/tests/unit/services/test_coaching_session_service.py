@@ -219,7 +219,7 @@ class TestCoachingSessionService:
         mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initiate_resumes_existing_session(
+    async def test_initiate_cancels_existing_and_creates_new(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
@@ -229,14 +229,18 @@ class TestCoachingSessionService:
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
-        """Test that initiating when session exists resumes it instead."""
+        """Test that /start ALWAYS creates new session (cancels existing).
+        
+        NEW BEHAVIOR (v2.6): /start endpoint always creates a fresh session.
+        Use /resume endpoint to continue existing sessions.
+        """
         # Arrange
         service._topic_index["core_values"] = sample_endpoint_definition
         mock_topic_repository.get.return_value = sample_llm_topic
         mock_session_repository.get_active_for_user_topic.return_value = sample_session
         mock_s3_prompt_storage.get_prompt.side_effect = [
-            "Let's continue where we left off.",  # resume template
             "You are a coaching assistant.",  # system template
+            "Hello! I'm your coach.",  # initiation template
         ]
 
         # Act
@@ -248,13 +252,13 @@ class TestCoachingSessionService:
 
         # Assert
         assert isinstance(response, SessionResponse)
-        assert response.resumed is True
-        assert response.session_id == "test-session-123"
+        assert response.resumed is False  # Not resumed - new session
+        assert response.session_id != "test-session-123"  # New session ID
 
-        # Verify create was NOT called (session exists)
-        mock_session_repository.create.assert_not_called()
-        # Verify update was called for resume
+        # Verify old session was cancelled
         mock_session_repository.update.assert_called_once()
+        # Verify new session was created
+        mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_initiate_invalid_topic_raises_error(
@@ -494,13 +498,17 @@ class TestCoachingSessionService:
             )
 
     @pytest.mark.asyncio
-    async def test_send_message_checks_idle_timeout(
+    async def test_send_message_allows_idle_sessions(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
     ) -> None:
-        """Test that sending message to idle session raises SessionIdleTimeoutError."""
-        # Arrange - session with old last_activity_at
+        """Test that idle sessions can still receive messages (user may have stepped away).
+        
+        Idle timeout is NOT a hard error - users may have power outages, stepped away, etc.
+        TTL handles cleanup of truly abandoned sessions after extended period (30 days).
+        """
+        # Arrange - session with old last_activity_at (idle but should still work)
         idle_session = CoachingSession(
             session_id=SessionId("idle-session"),
             tenant_id=TenantId("tenant-123"),
@@ -514,14 +522,39 @@ class TestCoachingSessionService:
         )
         mock_session_repository.get_by_id_for_tenant.return_value = idle_session
 
-        # Act & Assert
-        with pytest.raises(SessionIdleTimeoutError):
-            await service.send_message(
-                session_id="idle-session",
-                tenant_id="tenant-123",
-                user_id="user-123",
-                user_message="Hello",
+        # Mock the topic config and LLM response
+        from unittest.mock import AsyncMock, MagicMock
+        
+        mock_endpoint = MagicMock()
+        mock_endpoint.result_model = None
+        mock_topic = MagicMock()
+        
+        service._load_topic_config = AsyncMock(return_value=(mock_endpoint, mock_topic))
+        service._load_template = AsyncMock(return_value="test template")
+        service._render_template = MagicMock(return_value="rendered")
+        service._execute_llm_call = AsyncMock(
+            return_value=(
+                "AI response",
+                ResponseMetadata(
+                    model="test-model",
+                    tokens_used=100,
+                    provider="test-provider",
+                ),
             )
+        )
+
+        # Act - should succeed even though session is idle
+        response = await service.send_message(
+            session_id="idle-session",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            user_message="Hello after being idle",
+        )
+
+        # Assert - message was processed successfully
+        assert response is not None
+        assert response.message == "AI response"
+        mock_session_repository.update.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_message_not_active_session(
