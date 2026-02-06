@@ -783,12 +783,12 @@ class CoachingSessionService:
             llm_topic=llm_topic,
         )
 
-        # Add resume interaction to session
-        session.add_assistant_message(llm_response)
-
-        # Update session status if it was paused
+        # Update session status if it was paused (must happen before adding messages)
         if session.status == ConversationStatus.PAUSED:
             session.resume()
+
+        # Add resume interaction to session
+        session.add_assistant_message(llm_response)
 
         # Persist
         await self.session_repository.update(session)
