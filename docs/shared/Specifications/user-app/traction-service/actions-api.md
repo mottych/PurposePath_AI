@@ -1,7 +1,7 @@
 # Actions API Specification
 
-**Version:** 7.0  
-**Last Updated:** December 23, 2025  
+**Version:** 7.1  
+**Last Updated:** February 6, 2026  
 **Base Path:** `/operations/actions`  
 **Controller:** `ActionsController.cs`
 
@@ -584,7 +584,61 @@ Link an action to one or more strategies.
 
 ---
 
-### 9. Remove All Relationships
+### 9. Link Action to Issues
+
+Link an action to one or more issues.
+
+**Endpoint:** `PUT /operations/actions/{actionId}/issues`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `actionId` | string (GUID) | **Yes** | Action identifier |
+
+#### Request Body
+
+```json
+{
+  "issueIds": ["issue-001", "issue-002"]
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `issueIds` | string[] (GUID) | **Yes** | Issue IDs to link (replaces existing links, empty array clears links) |
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "action-123",
+    "connections": {
+      "goalIds": ["goal-001"],
+      "strategyIds": ["strategy-002"],
+      "issueIds": ["issue-001", "issue-002"]
+    }
+  },
+  "error": null
+}
+```
+
+#### Business Rules
+
+- **Replace behavior:** Replaces existing issue links (not additive)
+- **Multi-issue:** Actions can be linked to multiple issues
+- **Empty array support:** Passing an empty array (`[]`) clears all issue connections
+- **Validation:** All issue IDs must be valid GUIDs
+
+---
+
+### 10. Remove All Relationships
 
 Remove all connections (goals, strategies, issues) from an action.
 
@@ -703,6 +757,16 @@ await traction.put(`/operations/actions/${actionId}/goals`, {
   goalIds: ['goal-001', 'goal-002']
 });
 
+// Link to issues
+await traction.put(`/operations/actions/${actionId}/issues`, {
+  issueIds: ['issue-001', 'issue-002']
+});
+
+// Clear issue links (empty array)
+await traction.put(`/operations/actions/${actionId}/issues`, {
+  issueIds: []
+});
+
 // Delete action
 await traction.delete(`/operations/actions/${actionId}`);
 ```
@@ -719,6 +783,12 @@ await traction.delete(`/operations/actions/${actionId}`);
 ---
 
 ## Changelog
+
+### v7.1 (February 6, 2026)
+- ✅ Added endpoint #9: `PUT /operations/actions/{actionId}/issues` - Link action to issues
+- 📝 Added support for empty array to clear issue connections
+- 📝 Updated endpoint count from 9 to 10 endpoints
+- 📝 Renumbered "Remove All Relationships" from #9 to #10
 
 ### v7.0 (December 23, 2025)
 - ✅ Documented all 9 endpoints with complete examples
