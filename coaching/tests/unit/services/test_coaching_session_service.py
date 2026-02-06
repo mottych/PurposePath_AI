@@ -27,7 +27,6 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
@@ -230,7 +229,7 @@ class TestCoachingSessionService:
         sample_session: CoachingSession,
     ) -> None:
         """Test that /start ALWAYS creates new session (cancels existing).
-        
+
         NEW BEHAVIOR (v2.6): /start endpoint always creates a fresh session.
         Use /resume endpoint to continue existing sessions.
         """
@@ -504,7 +503,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
     ) -> None:
         """Test that idle sessions can still receive messages (user may have stepped away).
-        
+
         Idle timeout is NOT a hard error - users may have power outages, stepped away, etc.
         TTL handles cleanup of truly abandoned sessions after extended period (30 days).
         """
@@ -524,11 +523,11 @@ class TestCoachingSessionService:
 
         # Mock the topic config and LLM response
         from unittest.mock import AsyncMock, MagicMock
-        
+
         mock_endpoint = MagicMock()
         mock_endpoint.result_model = None
         mock_topic = MagicMock()
-        
+
         service._load_topic_config = AsyncMock(return_value=(mock_endpoint, mock_topic))
         service._load_template = AsyncMock(return_value="test template")
         service._render_template = MagicMock(return_value="rendered")
