@@ -477,6 +477,90 @@ class ActionSuggestionsResponse(StrategicPlanningBaseModel):
     )
 
 
+# =============================================================================
+# GoalIntentReview Response Models
+# =============================================================================
+
+
+class AlignmentHighlights(StrategicPlanningBaseModel):
+    """Alignment highlights for an intent suggestion."""
+
+    vision: str = Field(
+        ...,
+        description="How this intent connects to the vision",
+    )
+    purpose: str = Field(
+        ...,
+        description="How this intent serves the purpose",
+    )
+    values: list[str] = Field(
+        ...,
+        description="How this intent aligns with specific core values",
+    )
+
+
+class IntentSuggestion(StrategicPlanningBaseModel):
+    """Individual goal intent suggestion."""
+
+    title: str = Field(
+        ...,
+        min_length=5,
+        max_length=100,
+        description="Descriptive label for this intent variation",
+    )
+    intent_statement: str = Field(
+        ...,
+        alias="intentStatement",
+        min_length=20,
+        max_length=300,
+        description="The suggested goal intent statement (WHAT + WHY)",
+    )
+    explanation: str = Field(
+        ...,
+        min_length=50,
+        max_length=500,
+        description="Why this intent is effective and aligned",
+    )
+    strengthens: list[str] = Field(
+        ...,
+        min_length=2,
+        max_length=4,
+        description="Aspects this intent strengthens (clarity, alignment, motivation, etc.)",
+    )
+    alignment_highlights: AlignmentHighlights = Field(
+        ...,
+        alias="alignmentHighlights",
+        description="How this intent aligns with vision, purpose, and values",
+    )
+
+
+class GoalIntentReviewResponse(StrategicPlanningBaseModel):
+    """Response for goal_intent_review topic.
+
+    Reviews and suggests goal intent statements (WHAT + WHY), ensuring
+    clarity and business alignment.
+    """
+
+    quality_review: str | None = Field(
+        default=None,
+        alias="qualityReview",
+        description="Assessment of current intent if provided, null otherwise",
+    )
+    quality_score: int | None = Field(
+        default=None,
+        alias="qualityScore",
+        ge=0,
+        le=100,
+        description="Quality score 0-100 if current intent provided, null otherwise",
+    )
+    suggestions: list[IntentSuggestion] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+        description="List of exactly 3 intent statement variations",
+    )
+
+
 __all__ = [
     "ActionSuggestion",
     "ActionSuggestionsData",
@@ -484,6 +568,9 @@ __all__ = [
     "AlignmentBreakdown",
     "AlignmentCheckData",
     "AlignmentCheckResponse",
+    "AlignmentHighlights",
+    "GoalIntentReviewResponse",
+    "IntentSuggestion",
     "MeasureRecommendation",
     "MeasureRecommendationsData",
     "MeasureRecommendationsResponse",

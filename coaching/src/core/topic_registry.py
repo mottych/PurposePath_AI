@@ -348,7 +348,35 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _opt_req("issues"),  # All open issues
         ),
     ),
-    # ========== Section 4: Strategic Planning AI (5 endpoints) ==========
+    # ========== Section 4: Strategic Planning AI (6 endpoints) ==========
+    "goal_intent_review": TopicDefinition(
+        topic_id="goal_intent_review",
+        endpoint_path="/coaching/goal-intent-review",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="GoalIntentReviewResponse",
+        topic_type=TopicType.SINGLE_SHOT,
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description="Review and suggest goal intent statements (WHAT + WHY) that define desired outcomes and business rationale",
+        is_active=True,
+        parameter_refs=(
+            # Optional request parameters:
+            _opt_req("current_intent"),  # Optional: draft goal intent to review
+            _opt_req("goalId"),  # Optional: goal ID for context
+            # Auto-enriched business foundation parameters:
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("core_values"),  # Auto-enriched from business_foundation
+            _onb("target_market"),  # Auto-enriched from business_foundation
+            _onb("value_proposition"),  # Auto-enriched from business_foundation
+            # Goal context (if goalId provided):
+            _goal("goal_title"),  # Auto-enriched from goal (if goalId provided)
+            _goal("goal_description"),  # Auto-enriched from goal (if goalId provided)
+            _strategies("current_strategies"),  # Auto-enriched: strategies for goal (if goalId provided)
+            _measures("current_measures"),  # Auto-enriched: measures for goal (if goalId provided)
+            # Other goals for context:
+            _goals("other_goals"),  # Auto-enriched: all other goals for context
+        ),
+    ),
     "strategy_suggestions": TopicDefinition(
         topic_id="strategy_suggestions",
         endpoint_path="/coaching/strategy-suggestions",  # Legacy route
