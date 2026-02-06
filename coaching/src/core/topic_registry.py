@@ -371,7 +371,9 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             # Goal context (if goalId provided):
             _goal("goal_title"),  # Auto-enriched from goal (if goalId provided)
             _goal("goal_description"),  # Auto-enriched from goal (if goalId provided)
-            _strategies("current_strategies"),  # Auto-enriched: strategies for goal (if goalId provided)
+            _strategies(
+                "current_strategies"
+            ),  # Auto-enriched: strategies for goal (if goalId provided)
             _measures("current_measures"),  # Auto-enriched: measures for goal (if goalId provided)
             # Other goals for context:
             _goals("other_goals"),  # Auto-enriched: all other goals for context
