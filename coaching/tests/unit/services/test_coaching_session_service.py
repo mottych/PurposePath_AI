@@ -494,13 +494,17 @@ class TestCoachingSessionService:
             )
 
     @pytest.mark.asyncio
-    async def test_send_message_checks_idle_timeout(
+    async def test_send_message_allows_idle_sessions(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
     ) -> None:
-        """Test that sending message to idle session raises SessionIdleTimeoutError."""
-        # Arrange - session with old last_activity_at
+        """Test that idle sessions can still receive messages (user may have stepped away).
+        
+        Idle timeout is NOT a hard error - users may have power outages, stepped away, etc.
+        TTL handles cleanup of truly abandoned sessions after extended period (30 days).
+        """
+        # Arrange - session with old last_activity_at (idle but should still work)
         idle_session = CoachingSession(
             session_id=SessionId("idle-session"),
             tenant_id=TenantId("tenant-123"),
@@ -514,14 +518,39 @@ class TestCoachingSessionService:
         )
         mock_session_repository.get_by_id_for_tenant.return_value = idle_session
 
-        # Act & Assert
-        with pytest.raises(SessionIdleTimeoutError):
-            await service.send_message(
-                session_id="idle-session",
-                tenant_id="tenant-123",
-                user_id="user-123",
-                user_message="Hello",
+        # Mock the topic config and LLM response
+        from unittest.mock import AsyncMock, MagicMock
+        
+        mock_endpoint = MagicMock()
+        mock_endpoint.result_model = None
+        mock_topic = MagicMock()
+        
+        service._load_topic_config = AsyncMock(return_value=(mock_endpoint, mock_topic))
+        service._load_template = AsyncMock(return_value="test template")
+        service._render_template = MagicMock(return_value="rendered")
+        service._execute_llm_call = AsyncMock(
+            return_value=(
+                "AI response",
+                ResponseMetadata(
+                    model="test-model",
+                    tokens_used=100,
+                    provider="test-provider",
+                ),
             )
+        )
+
+        # Act - should succeed even though session is idle
+        response = await service.send_message(
+            session_id="idle-session",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            user_message="Hello after being idle",
+        )
+
+        # Assert - message was processed successfully
+        assert response is not None
+        assert response.message == "AI response"
+        mock_session_repository.update.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_message_not_active_session(

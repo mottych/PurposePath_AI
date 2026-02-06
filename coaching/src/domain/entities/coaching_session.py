@@ -20,7 +20,6 @@ from coaching.src.core.types import (
 from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionExpiredError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
 )
 from pydantic import BaseModel, Field, field_validator
@@ -361,13 +360,9 @@ class CoachingSession(BaseModel):
         if self.is_expired():
             raise SessionExpiredError(self.session_id)
 
-        # Check idle timeout
-        if self.is_idle():
-            raise SessionIdleTimeoutError(
-                session_id=self.session_id,
-                last_activity_at=self.updated_at.isoformat(),
-                idle_timeout_minutes=self.idle_timeout_minutes,
-            )
+        # Note: Idle check removed - idle sessions can still receive messages
+        # Users may have stepped away, had power outage, etc.
+        # TTL handles cleanup of truly abandoned sessions after extended period
 
         # Check turn limit for user messages
         if role == MessageRole.USER and not self.can_add_turn():

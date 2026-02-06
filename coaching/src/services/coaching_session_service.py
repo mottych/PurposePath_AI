@@ -35,7 +35,6 @@ from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
     SessionConflictError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
@@ -487,33 +486,17 @@ class CoachingSessionService:
             logger.info(
                 "coaching_service.resuming_existing_session",
                 session_id=str(existing.session_id),
+                status=existing.status.value,
+                is_idle=existing.is_idle(),
             )
-            # Check if session is idle - if so, close it and create a new one
-            if existing.is_idle():
-                logger.info(
-                    "coaching_service.session_idle_creating_new",
-                    old_session_id=str(existing.session_id),
-                    last_activity_at=(
-                        existing.last_activity_at.isoformat() if existing.last_activity_at else None
-                    ),
-                    session_status=existing.status.value,
-                )
-                # Handle idle sessions based on their status
-                if existing.is_active():
-                    existing.complete(result={})
-                elif existing.is_paused():
-                    existing.mark_abandoned()
-                else:
-                    # For other statuses (completed, cancelled, etc.), just cancel
-                    existing.cancel()
-                await self.session_repository.update(existing)
-                # Fall through to create a new session
-            else:
-                return await self._resume_session(
-                    session=existing,
-                    endpoint_def=endpoint_def,
-                    llm_topic=llm_topic,
-                )
+            # Resume existing session regardless of idle status
+            # Idle sessions can be resumed - user may have stepped away
+            # TTL will handle cleanup of long-abandoned sessions
+            return await self._resume_session(
+                session=existing,
+                endpoint_def=endpoint_def,
+                llm_topic=llm_topic,
+            )
 
         # Create new session
         return await self._create_new_session(
@@ -992,15 +975,9 @@ class CoachingSessionService:
                 current_status=session.status.value,
             )
 
-        # Check idle timeout
-        if session.is_idle():
-            raise SessionIdleTimeoutError(
-                session_id=session_id,
-                last_activity_at=(
-                    session.last_activity_at.isoformat() if session.last_activity_at else "unknown"
-                ),
-                idle_timeout_minutes=session.idle_timeout_minutes,
-            )
+        # Note: Idle check removed - idle sessions can be resumed
+        # Users may have stepped away, had power outage, etc.
+        # TTL handles cleanup of truly abandoned sessions
 
         return session
 

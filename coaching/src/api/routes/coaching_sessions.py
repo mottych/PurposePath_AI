@@ -4,21 +4,23 @@ This module provides FastAPI endpoints for the generic coaching conversation
 engine supporting topic-based coaching with configurable prompts.
 
 Endpoints:
-    GET  /ai/coaching/topics    - Get available topics with user status
+    GET  /ai/coaching/topics       - Get available topics with user status
         USED BY: FE - BusinessOnboarding.tsx
-    POST /ai/coaching/start     - Start or resume a coaching session
+    GET  /ai/coaching/session/check - Check if session exists for topic (NEW)
+        USED BY: FE - To detect existing sessions and conflicts
+    POST /ai/coaching/start        - Start or resume a coaching session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/message   - Send a message in active session
+    POST /ai/coaching/message      - Send a message in active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/pause     - Pause an active session
+    POST /ai/coaching/pause        - Pause an active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/complete  - Complete a session with result extraction
+    POST /ai/coaching/complete     - Complete a session with result extraction
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/cancel    - Cancel an active session
+    POST /ai/coaching/cancel       - Cancel an active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    GET  /ai/coaching/session   - Get session details
+    GET  /ai/coaching/session      - Get session details
         USED BY: FE - api.ts (getCoachingSession)
-    GET  /ai/coaching/sessions  - List user sessions (UNUSED - verify if needed)
+    GET  /ai/coaching/sessions     - List user sessions (UNUSED - verify if needed)
 
 All endpoints require authentication and enforce tenant isolation.
 
@@ -771,6 +773,101 @@ async def cancel_session(
         raise HTTPException(
             status_code=500,
             detail="Failed to cancel session",
+        ) from e
+
+
+@router.get("/session/check", response_model=ApiResponse[dict[str, Any]])
+async def check_session_exists(
+    topic_id: str = Query(..., description="Coaching topic ID to check"),
+    context: RequestContext = Depends(get_current_context),
+    repo: DynamoDBCoachingSessionRepository = Depends(get_coaching_session_repository),
+) -> ApiResponse[dict[str, Any]]:
+    """Check if an active or paused session exists for a topic.
+
+    This endpoint allows the frontend to check for existing sessions before
+    starting/resuming, and to detect if another user from the same tenant
+    has an active session (conflict detection).
+
+    Args:
+        topic_id: Coaching topic ID to check
+
+    Returns:
+        ApiResponse with session status information:
+        - has_session: boolean - whether current user has active/paused session
+        - session_id: string | null - session ID if exists
+        - status: string | null - session status if exists
+        - conflict: boolean - whether another user has active session
+        - conflict_user_id: string | null - other user's ID if conflict
+
+    Example Response:
+        {
+          "success": true,
+          "data": {
+            "has_session": true,
+            "session_id": "sess_xxx",
+            "status": "paused",
+            "conflict": false,
+            "conflict_user_id": null
+          }
+        }
+    """
+    logger.info(
+        "coaching_sessions.check_session",
+        tenant_id=context.tenant_id,
+        user_id=context.user_id,
+        topic_id=topic_id,
+    )
+
+    try:
+        # Check for user's own session
+        user_session = await repo.get_active_for_user_topic(
+            user_id=context.user_id,
+            topic_id=topic_id,
+            tenant_id=context.tenant_id,
+        )
+
+        # Check for any active session for this tenant+topic
+        tenant_session = await repo.get_active_by_tenant_topic(
+            tenant_id=context.tenant_id,
+            topic_id=topic_id,
+        )
+
+        result = {
+            "has_session": user_session is not None,
+            "session_id": str(user_session.session_id) if user_session else None,
+            "status": user_session.status.value if user_session else None,
+            "conflict": (
+                tenant_session is not None and str(tenant_session.user_id) != context.user_id
+            ),
+            "conflict_user_id": (
+                str(tenant_session.user_id)
+                if tenant_session and str(tenant_session.user_id) != context.user_id
+                else None
+            ),
+        }
+
+        logger.info(
+            "coaching_sessions.check_session.result",
+            has_session=result["has_session"],
+            conflict=result["conflict"],
+        )
+
+        return ApiResponse(
+            success=True,
+            data=result,
+        )
+
+    except Exception as e:
+        logger.error(
+            "coaching_sessions.check_session.error",
+            error=str(e),
+            topic_id=topic_id,
+            tenant_id=context.tenant_id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to check session status",
         ) from e
 
 
