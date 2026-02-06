@@ -1,7 +1,7 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 2.4  
-**Last Updated:** January 29, 2026  
+**Version:** 2.6  
+**Last Updated:** February 5, 2026  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -14,6 +14,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-02-05 | 2.6 | **Session Management Overhaul:** Changed `/start` to ALWAYS create new session (cancels existing). Added `/resume` endpoint with RESUME template for continuing sessions. Added `/session/check` endpoint for detecting existing sessions and conflicts. Idle sessions (>30min) are now resumable (not auto-abandoned). TTL set to 14 days for all sessions. |
 | 2026-02-02 | 2.5 | **Insights Enhancement:** Enhanced insights_generation topic with KISS framework (Keep, Improve, Start, Stop), purpose-driven alignment analysis, measure-based state assessment, and leadership-focused framing. Now includes strategies and detailed measures data for comprehensive business analysis |
 | 2026-01-29 | 2.4 | **Issue #201 Completion:** Redesigned website_scan response structure to align with BusinessFoundation data model - now extracts industry, founding year, vision/purpose hints, core values, and structures data for direct population of business foundation fields |
 | 2026-01-29 | 2.3 | **Issue #200 Completion:** Enriched alignment_check topic with strategies parameter - alignment analysis now considers implementation strategies alongside goal and business foundation |
@@ -442,9 +443,62 @@ Get all coaching topics with user's completion status.
 }
 ```
 
+#### GET /ai/coaching/session/check
+
+**NEW in v2.6** - Check if a resumable session exists for a topic.
+
+**Full URL:** `{BASE_URL}/ai/coaching/session/check?topic_id={topic_id}`
+
+**Request Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `topic_id` | string | Yes | ID of the coaching topic to check |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "has_session": true,
+    "session_id": "sess_abc123",
+    "status": "paused",
+    "actual_status": "active",
+    "is_idle": true,
+    "conflict": false,
+    "conflict_user_id": null
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `has_session` | boolean | Whether current user has an active/paused session for this topic |
+| `session_id` | string \| null | Session ID if exists |
+| `status` | string \| null | Computed status: "active" or "paused" (see below) |
+| `actual_status` | string \| null | Raw database status |
+| `is_idle` | boolean | Whether session has been idle > 30 minutes |
+| `conflict` | boolean | Whether another user from same tenant has active session |
+| `conflict_user_id` | string \| null | Other user's ID if conflict |
+
+**Status Logic:**
+- Returns `"paused"` if session is explicitly PAUSED **OR** ACTIVE but idle > 30 minutes
+- Returns `"active"` if session is ACTIVE and NOT idle
+
+**Use Case:** Frontend calls this before starting/resuming to show appropriate UI:
+- If `status === "paused"` → Show "Resume or Start New?" dialog
+- If `conflict === true` → Show "Another user is using this topic"
+- If `has_session === false` → Show "Start Session"
+
+---
+
 #### POST /ai/coaching/start
 
-Start a new coaching session or resume an existing one.
+**CHANGED in v2.6** - Now ALWAYS creates a new session (cancels any existing session).
+
+Start a brand new coaching session. If user has an existing session for this topic,
+it will be cancelled/abandoned first. Use `/resume` endpoint to continue existing sessions.
 
 **Full URL:** `{BASE_URL}/ai/coaching/start`
 
@@ -471,7 +525,7 @@ Start a new coaching session or resume an existing one.
 {
   "success": true,
   "data": {
-    "session_id": "sess_abc123",
+    "session_id": "sess_new456",
     "tenant_id": "tenant-123",
     "topic_id": "core_values",
     "status": "active",
@@ -490,9 +544,65 @@ Start a new coaching session or resume an existing one.
 }
 ```
 
+**Note:** Uses INITIATION template for fresh start conversation.
+
+---
+
+#### POST /ai/coaching/resume
+
+**NEW in v2.6** - Resume an existing coaching session with welcome-back message.
+
+Continue an existing session using the RESUME template, which welcomes the user back
+and summarizes the conversation so far. Works for both PAUSED and ACTIVE sessions.
+
+**Full URL:** `{BASE_URL}/ai/coaching/resume`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | ID of the session to resume |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "tenant_id": "tenant-123",
+    "topic_id": "core_values",
+    "status": "active",
+    "message": "Welcome back! Last time we discussed your core values: integrity and innovation. Let's continue...",
+    "turn": 3,
+    "max_turns": 10,
+    "is_final": false,
+    "resumed": true,
+    "metadata": {
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "processing_time_ms": 1350,
+      "tokens_used": 180
+    }
+  },
+  "message": "Session resumed successfully"
+}
+```
+
+**Note:** Uses RESUME template with conversation summary. If session was PAUSED, status changes to ACTIVE.
+
 #### POST /ai/coaching/message
 
 Send a message in an active coaching session.
+
+**CHANGED in v2.6:** No longer checks idle timeout. Messages continue active conversations
+even if idle > 30 minutes (user may have chat window open with breaks). Only rejects
+messages to explicitly PAUSED sessions.
 
 **Full URL:** `{BASE_URL}/ai/coaching/message`
 
@@ -522,6 +632,20 @@ Send a message in an active coaching session.
   }
 }
 ```
+
+**Error Response (Session Paused):**
+
+If session is explicitly PAUSED (not just idle), returns HTTP 400:
+
+```json
+{
+  "code": "SESSION_NOT_ACTIVE",
+  "message": "Session is not active (status: paused)",
+  "current_status": "paused"
+}
+```
+
+Frontend should catch this and prompt user to resume or start new session.
 
 **Response (Auto-Completed):**
 

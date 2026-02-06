@@ -219,7 +219,7 @@ class TestCoachingSessionService:
         mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initiate_resumes_existing_session(
+    async def test_initiate_cancels_existing_and_creates_new(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
@@ -229,14 +229,18 @@ class TestCoachingSessionService:
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
-        """Test that initiating when session exists resumes it instead."""
+        """Test that /start ALWAYS creates new session (cancels existing).
+        
+        NEW BEHAVIOR (v2.6): /start endpoint always creates a fresh session.
+        Use /resume endpoint to continue existing sessions.
+        """
         # Arrange
         service._topic_index["core_values"] = sample_endpoint_definition
         mock_topic_repository.get.return_value = sample_llm_topic
         mock_session_repository.get_active_for_user_topic.return_value = sample_session
         mock_s3_prompt_storage.get_prompt.side_effect = [
-            "Let's continue where we left off.",  # resume template
             "You are a coaching assistant.",  # system template
+            "Hello! I'm your coach.",  # initiation template
         ]
 
         # Act
@@ -248,13 +252,13 @@ class TestCoachingSessionService:
 
         # Assert
         assert isinstance(response, SessionResponse)
-        assert response.resumed is True
-        assert response.session_id == "test-session-123"
+        assert response.resumed is False  # Not resumed - new session
+        assert response.session_id != "test-session-123"  # New session ID
 
-        # Verify create was NOT called (session exists)
-        mock_session_repository.create.assert_not_called()
-        # Verify update was called for resume
+        # Verify old session was cancelled
         mock_session_repository.update.assert_called_once()
+        # Verify new session was created
+        mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_initiate_invalid_topic_raises_error(

@@ -4,23 +4,25 @@ This module provides FastAPI endpoints for the generic coaching conversation
 engine supporting topic-based coaching with configurable prompts.
 
 Endpoints:
-    GET  /ai/coaching/topics       - Get available topics with user status
+    GET  /ai/coaching/topics         - Get available topics with user status
         USED BY: FE - BusinessOnboarding.tsx
-    GET  /ai/coaching/session/check - Check if session exists for topic (NEW)
-        USED BY: FE - To detect existing sessions and conflicts
-    POST /ai/coaching/start        - Start or resume a coaching session
+    GET  /ai/coaching/session/check  - Check if session exists for topic
+        USED BY: FE - To detect existing sessions and conflicts before start/resume
+    POST /ai/coaching/start          - Start NEW coaching session (cancels existing)
+        USED BY: FE - When user wants to start fresh conversation
+    POST /ai/coaching/resume         - Resume existing session with RESUME template
+        USED BY: FE - When user wants to continue existing conversation
+    POST /ai/coaching/message        - Send a message in active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/message      - Send a message in active session
+    POST /ai/coaching/pause          - Pause an active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/pause        - Pause an active session
+    POST /ai/coaching/complete       - Complete a session with result extraction
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/complete     - Complete a session with result extraction
+    POST /ai/coaching/cancel         - Cancel an active session
         USED BY: FE - OnboardingCoachPanel.tsx
-    POST /ai/coaching/cancel       - Cancel an active session
-        USED BY: FE - OnboardingCoachPanel.tsx
-    GET  /ai/coaching/session      - Get session details
+    GET  /ai/coaching/session        - Get session details
         USED BY: FE - api.ts (getCoachingSession)
-    GET  /ai/coaching/sessions     - List user sessions (UNUSED - verify if needed)
+    GET  /ai/coaching/sessions       - List user sessions (UNUSED - verify if needed)
 
 All endpoints require authentication and enforce tenant isolation.
 
@@ -345,6 +347,111 @@ async def start_session(
         raise HTTPException(
             status_code=500,
             detail="Failed to start coaching session",
+        ) from e
+
+
+@router.post("/resume", response_model=ApiResponse[SessionResponse])
+async def resume_session(
+    request: SessionIdRequest,
+    context: RequestContext = Depends(get_current_context),
+    service: CoachingSessionService = Depends(get_coaching_session_service),
+) -> ApiResponse[SessionResponse]:
+    """Resume an existing coaching session with RESUME template.
+
+    This endpoint continues an existing session using the RESUME template,
+    which welcomes the user back and summarizes the conversation so far.
+
+    Works for both ACTIVE and PAUSED sessions:
+    - PAUSED: User explicitly paused or session was idle when they left
+    - ACTIVE: Chat window was closed by mistake, user wants to continue
+
+    Args:
+        request: Contains session_id
+
+    Returns:
+        ApiResponse with SessionResponse containing:
+        - session_id: ID of the resumed session
+        - message: Welcome back message with conversation summary
+        - status: Session status (will be ACTIVE after resume)
+        - resumed: True
+
+    Raises:
+        HTTPException 403: User does not own this session
+        HTTPException 422: Session not found
+        HTTPException 500: Failed to resume session
+
+    Example Response:
+        {
+          "success": true,
+          "data": {
+            "session_id": "sess_abc123",
+            "message": "Welcome back! Last time we discussed...",
+            "status": "active",
+            "turn": 3,
+            "max_turns": 10,
+            "resumed": true
+          }
+        }
+    """
+    logger.info(
+        "coaching_sessions.resume",
+        session_id=request.session_id,
+        tenant_id=context.tenant_id,
+    )
+
+    try:
+        response = await service.resume_session(
+            session_id=request.session_id,
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+        )
+
+        logger.info(
+            "coaching_sessions.resume.success",
+            session_id=request.session_id,
+            status=response.status.value,
+        )
+
+        return ApiResponse(
+            success=True,
+            data=response,
+            message="Session resumed successfully",
+        )
+
+    except SessionNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.resume.not_found",
+            session_id=request.session_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except SessionAccessDeniedError as e:
+        logger.warning(
+            "coaching_sessions.resume.access_denied",
+            session_id=request.session_id,
+            user_id=context.user_id,
+            error_code=e.code,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"code": e.code, "message": str(e)},
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "coaching_sessions.resume.error",
+            error=str(e),
+            session_id=request.session_id,
+            tenant_id=context.tenant_id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to resume session",
         ) from e
 
 
@@ -782,11 +889,19 @@ async def check_session_exists(
     context: RequestContext = Depends(get_current_context),
     repo: DynamoDBCoachingSessionRepository = Depends(get_coaching_session_repository),
 ) -> ApiResponse[dict[str, Any]]:
-    """Check if an active or paused session exists for a topic.
+    """Check if a resumable session exists for a topic.
 
     This endpoint allows the frontend to check for existing sessions before
     starting/resuming, and to detect if another user from the same tenant
     has an active session (conflict detection).
+
+    Status Logic:
+    - Returns "paused" if:
+      - Session is explicitly PAUSED (user clicked pause), OR
+      - Session is ACTIVE but idle > 30 minutes (implied pause)
+    - Returns "active" if session is ACTIVE and NOT idle
+
+    This allows frontend to show "Resume or Start New?" dialog appropriately.
 
     Args:
         topic_id: Coaching topic ID to check
@@ -795,17 +910,21 @@ async def check_session_exists(
         ApiResponse with session status information:
         - has_session: boolean - whether current user has active/paused session
         - session_id: string | null - session ID if exists
-        - status: string | null - session status if exists
+        - status: string - "active" | "paused" (computed based on idle time)
+        - actual_status: string - raw session status from database
+        - is_idle: boolean - whether session has been idle > 30 minutes
         - conflict: boolean - whether another user has active session
         - conflict_user_id: string | null - other user's ID if conflict
 
-    Example Response:
+    Example Response (Idle Session - returned as "paused"):
         {
           "success": true,
           "data": {
             "has_session": true,
             "session_id": "sess_xxx",
             "status": "paused",
+            "actual_status": "active",
+            "is_idle": true,
             "conflict": false,
             "conflict_user_id": null
           }
@@ -832,10 +951,27 @@ async def check_session_exists(
             topic_id=topic_id,
         )
 
+        # Compute status for frontend: "paused" if explicitly paused OR idle
+        computed_status = None
+        actual_status = None
+        is_idle = False
+
+        if user_session:
+            actual_status = user_session.status.value
+            is_idle = user_session.is_idle()
+
+            # Return "paused" if explicitly PAUSED or if ACTIVE but idle
+            if user_session.status.value == "paused" or is_idle:
+                computed_status = "paused"
+            else:
+                computed_status = "active"
+
         result = {
             "has_session": user_session is not None,
             "session_id": str(user_session.session_id) if user_session else None,
-            "status": user_session.status.value if user_session else None,
+            "status": computed_status,  # Computed status for frontend
+            "actual_status": actual_status,  # Raw DB status
+            "is_idle": is_idle,  # Helper flag
             "conflict": (
                 tenant_session is not None and str(tenant_session.user_id) != context.user_id
             ),
@@ -849,6 +985,8 @@ async def check_session_exists(
         logger.info(
             "coaching_sessions.check_session.result",
             has_session=result["has_session"],
+            status=result["status"],
+            is_idle=result["is_idle"],
             conflict=result["conflict"],
         )
 

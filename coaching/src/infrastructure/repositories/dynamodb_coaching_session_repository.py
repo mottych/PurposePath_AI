@@ -46,9 +46,10 @@ class DynamoDBCoachingSessionRepository:
     # TTL duration for completed/cancelled sessions (14 days)
     COMPLETED_SESSION_TTL_DAYS = 14
 
-    # TTL duration for active/paused sessions (30 days for long-term idle cleanup)
-    # This ensures truly abandoned sessions are eventually cleaned up
-    ACTIVE_SESSION_TTL_DAYS = 30
+    # TTL duration for active/paused sessions (14 days for long-term idle cleanup)
+    # This ensures truly abandoned sessions are eventually cleaned up while
+    # giving users flexibility for breaks, power outages, travel, etc.
+    ACTIVE_SESSION_TTL_DAYS = 14
 
     def __init__(
         self,
@@ -104,7 +105,7 @@ class DynamoDBCoachingSessionRepository:
         try:
             item = self._to_dynamodb_item(session)
 
-            # Add TTL for new sessions (active/paused get 30 days)
+            # Add TTL for new sessions (active/paused get 14 days)
             if session.status in (ConversationStatus.ACTIVE, ConversationStatus.PAUSED):
                 ttl_timestamp = int(
                     datetime.now(UTC).timestamp() + (self.ACTIVE_SESSION_TTL_DAYS * 24 * 60 * 60)
@@ -154,9 +155,9 @@ class DynamoDBCoachingSessionRepository:
                 ConversationStatus.ACTIVE,
                 ConversationStatus.PAUSED,
             ):
-                # Active/Paused states: 30 days TTL (longer for user flexibility)
+                # Active/Paused states: 14 days TTL (user flexibility)
                 # This allows users to resume after stepping away, power outages, etc.
-                # But still cleans up truly abandoned sessions eventually
+                # But still cleans up truly abandoned sessions after 2 weeks
                 ttl_timestamp = int(
                     datetime.now(UTC).timestamp() + (self.ACTIVE_SESSION_TTL_DAYS * 24 * 60 * 60)
                 )
