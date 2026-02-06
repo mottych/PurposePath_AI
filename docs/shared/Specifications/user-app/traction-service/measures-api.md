@@ -677,6 +677,9 @@ X-Tenant-Id: {tenantId}
     "createdAt": "2025-01-15T10:30:00Z",
     "updatedAt": "2025-12-15T14:25:00Z",
     "isDeleted": false,
+    "progress": {
+      "progressPercent": 83.3
+    },
     "linkedGoals": [
       {
         "goalId": "goal-001",
@@ -705,6 +708,8 @@ X-Tenant-Id: {tenantId}
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `progress` | object | Progress information (null if no links or insufficient data) |
+| `progress.progressPercent` | decimal | Progress percentage (0-100+) calculated from baseline to target using primary link (or first link if no primary). Note: Status and variance are not included at measure level - those require thresholds which are at the link level. |
 | `linkedGoals` | array | Goals linked to this Measure |
 | `linkedGoals[].goalId` | string (GUID) | Goal identifier |
 | `linkedGoals[].goalName` | string | Goal name |
@@ -1381,6 +1386,14 @@ await traction.delete(`/measures/${measureId}`);
 ---
 
 ## Changelog
+
+### v7.5 (February 6, 2026) - Issue #640: Measure Progress Calculation
+- ✨ **Added:** `progress` field to GET /measures/{id} response
+- 📊 Progress calculation at measure level includes only `progressPercent` (0-100+)
+- 🔧 Progress calculated using primary link (or first link if no primary) thresholds
+- ⚠️ **Note:** Status and variance are NOT included at measure level - those require thresholds which exist at the link level
+- 💡 Calculated from baseline (first actual) to target using domain service for uniform calculation
+- 🔄 Returns `null` if no links exist or insufficient data (requires 2+ actuals and 1+ target)
 
 ### v7.4 (January 10, 2026) - Issue #527: Link-Level Progress
 - ✨ **Added:** `progress` field to `goalLinks` and `strategyLinks` in GET /measures/summary response
