@@ -39,7 +39,7 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -131,11 +131,7 @@ class SessionResponse(BaseModel):
     tenant_id: str
     topic_id: str
     status: ConversationStatus
-    message: str = Field(
-        description="Coach's message",
-        validation_alias=AliasChoices("coach_message", "message"),
-        serialization_alias="coach_message",
-    )
+    message: str = Field(description="Coach's message")
     turn: int = Field(default=1, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
     is_final: bool = Field(default=False, description="Whether session is complete")
@@ -147,11 +143,7 @@ class MessageResponse(BaseModel):
     """Response from sending a message."""
 
     session_id: str
-    message: str = Field(
-        description="Coach's response",
-        validation_alias=AliasChoices("coach_message", "message"),
-        serialization_alias="coach_message",
-    )
+    message: str = Field(description="Coach's response")
     status: ConversationStatus
     turn: int = Field(default=0, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
@@ -860,21 +852,35 @@ class CoachingSessionService:
         )
 
     def _summarize_conversation(self, messages: list[CoachingMessage]) -> str:
-        """Create a brief summary of the conversation for resume context.
+        """Create a formatted conversation history for resume context.
+
+        Provides the full conversation history formatted for LLM context
+        so it can naturally continue the conversation without asking the user
+        to recap what was discussed.
 
         Args:
             messages: List of conversation messages
 
         Returns:
-            Summary string
-        """
-        user_messages = [m for m in messages if m.role == MessageRole.USER]
-        assistant_messages = [m for m in messages if m.role == MessageRole.ASSISTANT]
+            Formatted conversation history string
 
-        return (
-            f"Conversation has {len(user_messages)} user messages and "
-            f"{len(assistant_messages)} assistant responses."
-        )
+        Note:
+            No truncation is applied to individual messages. The message count
+            is already limited by get_messages_for_llm(max_messages=20) and
+            LLMs have sufficient context windows (200K+ tokens) to handle this.
+        """
+        if not messages:
+            return "This is the start of the conversation."
+
+        # Format conversation for readability
+        lines = []
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                continue  # Skip system messages in summary
+            role = "User" if msg.role == MessageRole.USER else "Coach"
+            lines.append(f"{role}: {msg.content}")
+
+        return "\n\n".join(lines)
 
     # =========================================================================
     # Session Lifecycle - Send Message
@@ -1063,9 +1069,24 @@ class CoachingSessionService:
             data = json.loads(response)
             message = data.get("message", response)
             is_final = data.get("is_final", False)
+
+            logger.info(
+                "coaching_service.llm_response_parsed",
+                is_json=True,
+                is_final=is_final,
+                message_length=len(message),
+                has_result=bool(data.get("result")),
+            )
+
             return message, is_final
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Not JSON, return as-is
+            logger.info(
+                "coaching_service.llm_response_not_json",
+                is_json=False,
+                response_preview=response[:200],
+                parse_error=str(e),
+            )
             return response, False
 
     # =========================================================================
@@ -1183,6 +1204,8 @@ class CoachingSessionService:
         logger.info(
             "coaching_service.session_completed",
             session_id=str(session.session_id),
+            has_result=bool(extracted),
+            result_keys=list(extracted.keys()) if isinstance(extracted, dict) else None,
         )
 
         return SessionCompletionResponse(
