@@ -152,6 +152,63 @@ This means frontend only needs to provide **request-level parameters** (e.g., `g
 
 Topic definitions do not include endpoint paths or HTTP methods—these are determined by the endpoint handlers based on the topic's type.
 
+---
+
+### Standard Response Envelope
+
+**CRITICAL:** All API responses (coaching, single-shot, admin, health, etc.) are wrapped in a standard envelope structure. This is consistent across **ALL endpoints**.
+
+**Success Response Structure:**
+
+```json
+{
+  "success": true,
+  "data": {
+    // Endpoint-specific response data (varies by endpoint)
+  },
+  "message": "Operation completed successfully",  // Optional success message
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",  // UUID for request tracing
+  "timestamp": "2026-02-08T21:45:23.123456Z"  // ISO 8601 timestamp with microseconds
+}
+```
+
+**Error Response Structure:**
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": null,
+  "error": "Detailed error message here",
+  "error_code": "ERROR_CODE_HERE",  // Optional structured error code
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
+}
+```
+
+**Envelope Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `success` | boolean | Yes | `true` for successful responses, `false` for errors |
+| `data` | object \| null | Yes | Response payload (endpoint-specific), `null` on error |
+| `message` | string \| null | No | Optional success or info message |
+| `error` | string \| null | No | Error message (only present when `success: false`) |
+| `error_code` | string \| null | No | Structured error code for programmatic error handling |
+| `request_id` | string | Yes | Unique UUID for request tracing and debugging |
+| `timestamp` | string | Yes | ISO 8601 timestamp with microseconds (UTC) |
+
+**Important Notes:**
+- **All endpoints** use this envelope - there are no exceptions
+- Frontend should always check the `success` field first
+- Use `request_id` for debugging and error reporting
+- The `data` field structure varies by endpoint (documented in each endpoint section below)
+- When `success: false`, `data` is always `null` and `error` contains the error message
+
+---
+
 ### POST /ai/execute
 
 Execute any registered single-shot AI topic.
@@ -540,7 +597,11 @@ it will be cancelled/abandoned first. Use `/resume` endpoint to continue existin
       "tokens_used": 150
     }
   },
-  "message": "Session started successfully"
+  "message": "Session started successfully",
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
 }
 ```
 
@@ -590,7 +651,11 @@ and summarizes the conversation so far. Works for both PAUSED and ACTIVE session
       "tokens_used": 180
     }
   },
-  "message": "Session resumed successfully"
+  "message": "Session resumed successfully",
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
 }
 ```
 
@@ -628,8 +693,18 @@ messages to explicitly PAUSED sessions.
     "max_turns": 10,
     "is_final": false,
     "message_count": 6,
-    "result": null
-  }
+    "result": null,
+    "metadata": {
+      "model": "CLAUDE_3_5_SONNET_V2",
+      "processing_time_ms": 1234,
+      "tokens_used": 567
+    }
+  },
+  "message": "Message processed successfully",
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
 }
 ```
 
@@ -657,12 +732,29 @@ Frontend should catch this and prompt user to resume or start new session.
     "message": "Thank you for this wonderful conversation! I've captured your core values...",
     "status": "completed",
     "turn": 8,
+    "max_turns": 10,
     "is_final": true,
+    "message_count": 16,
     "result": {
-      "values": [...],
-      "summary": "..."
+      "core_values": ["Integrity", "Innovation", "Collaboration"],
+      "value_descriptions": {
+        "Integrity": "Doing the right thing even when no one is watching",
+        "Innovation": "Constantly seeking better ways to serve our customers",
+        "Collaboration": "Working together to achieve shared goals"
+      },
+      "how_they_guide": "These values shape our hiring decisions, product development, and customer relationships."
+    },
+    "metadata": {
+      "model": "CLAUDE_3_5_SONNET_V2",
+      "processing_time_ms": 2150,
+      "tokens_used": 892
     }
-  }
+  },
+  "message": "Message processed successfully",
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
 }
 ```
 
