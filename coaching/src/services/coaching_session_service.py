@@ -19,6 +19,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from pydantic import BaseModel, Field
+
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
@@ -39,7 +41,6 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -1672,7 +1673,51 @@ class CoachingSessionService:
             tokens_used=response.usage.get("total_tokens", 0),
         )
 
-        return response.content, metadata
+        # Validate response and add fallback for empty content
+        content = response.content
+        if not content or not content.strip():
+            fallback = self._get_fallback_message(response.finish_reason)
+            logger.warning(
+                "coaching_service.empty_llm_response",
+                finish_reason=response.finish_reason,
+                model_code=model_code,
+                fallback_used=True,
+            )
+            content = fallback
+
+        return content, metadata
+
+    def _get_fallback_message(self, finish_reason: str) -> str:
+        """Get appropriate fallback message based on LLM failure reason.
+
+        Args:
+            finish_reason: The finish_reason from the LLM response
+
+        Returns:
+            User-friendly fallback message appropriate for the failure reason
+
+        Business Rule: Empty responses should degrade gracefully with helpful guidance
+        """
+        fallbacks = {
+            "length": (
+                "I apologize, but I've run out of space to respond properly. "
+                "This sometimes happens with lengthy conversations. Could you try "
+                "rephrasing your message more concisely, or we can start a fresh session?"
+            ),
+            "content_filter": (
+                "I'm unable to respond due to content policy restrictions. "
+                "Could you rephrase your message?"
+            ),
+            "error": (
+                "I encountered a technical issue and couldn't generate a response. "
+                "Let's try again - could you repeat your last message?"
+            ),
+        }
+
+        return fallbacks.get(
+            finish_reason,
+            "I had trouble generating a response. Could you try again?",
+        )
 
 
 # =============================================================================
