@@ -261,11 +261,31 @@ class BedrockLLMProvider:
                 cache_enabled=resolved_model in CACHE_SUPPORTED_MODELS,
             )
 
-            # Run synchronous boto3 call in thread pool
+            # Run synchronous boto3 call in thread pool with graceful caching fallback
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, lambda: self.bedrock_client.converse(**request_params)
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None, lambda: self.bedrock_client.converse(**request_params)
+                )
+            except Exception as bedrock_error:
+                # Handle AccessDeniedException for prompt caching
+                error_msg = str(bedrock_error)
+                if "AccessDeniedException" in error_msg and "prompt caching" in error_msg:
+                    logger.warning(
+                        "Prompt caching not available, retrying without cache",
+                        model=resolved_model,
+                        error=error_msg,
+                    )
+                    # Retry without caching - use simple system prompt format
+                    if system_prompt:
+                        request_params["system"] = [{"text": system_prompt}]
+
+                    response = await loop.run_in_executor(
+                        None, lambda: self.bedrock_client.converse(**request_params)
+                    )
+                else:
+                    # Re-raise if not a caching-related error
+                    raise
 
             # Extract content from Converse API response
             output = response.get("output", {})
@@ -387,12 +407,32 @@ class BedrockLLMProvider:
                 resolved_model=resolved_model,
             )
 
-            # Use Converse Stream API
+            # Use Converse Stream API with graceful caching fallback
             # Run in thread pool since boto3 is synchronous
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, lambda: self.bedrock_client.converse_stream(**request_params)
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None, lambda: self.bedrock_client.converse_stream(**request_params)
+                )
+            except Exception as bedrock_error:
+                # Handle AccessDeniedException for prompt caching
+                error_msg = str(bedrock_error)
+                if "AccessDeniedException" in error_msg and "prompt caching" in error_msg:
+                    logger.warning(
+                        "Prompt caching not available for streaming, retrying without cache",
+                        model=resolved_model,
+                        error=error_msg,
+                    )
+                    # Retry without caching - use simple system prompt format
+                    if system_prompt:
+                        request_params["system"] = [{"text": system_prompt}]
+
+                    response = await loop.run_in_executor(
+                        None, lambda: self.bedrock_client.converse_stream(**request_params)
+                    )
+                else:
+                    # Re-raise if not a caching-related error
+                    raise
 
             # Process streaming response
             stream = response.get("stream")
