@@ -235,8 +235,8 @@ Retrieve detailed information about a specific goal, including strategies, Measu
         "direction": "up",
         "currentValue": 125000,
         "targetValue": null,
-        "progress": null,
-        "variance": null,
+        "progress": 78.5,
+        "variance": -5.2,
         "category": "revenue",
         "catalogId": "catalog-mrr-001",
         "aggregationType": "sum",
@@ -303,7 +303,7 @@ The `measures` array contains enriched measure data combining both MeasureLink a
 | `type` | string | No | Input type: "quantitative" (numeric), "qualitative" (options), "binary" (yes/no) |
 | `ownerId` | string (UUID) | Yes | Measure owner - the person responsible for this measure |
 
-**Note:** `progress` and `variance` are currently returned as `null` since target values are stored separately in the system. Clients should calculate these using target data from other endpoints.
+**Note:** `progress`, `variance`, and `progressStatus` are calculated from measure targets and actuals using the domain progress calculation service (same as the measures endpoint). `targetValue` remains `null` as targets are stored separately in the system. `progressStatus` reflects the calculated status relative to link thresholds ("on_track", "at_risk", "behind"). If insufficient data exists for a measure (less than 2 actuals or no target), these fields will be `null`.
 
 ---
 
@@ -1091,6 +1091,14 @@ await traction.post(`/goals/${goalId}:close`, {
 ---
 
 ## Changelog
+
+### v7.6 (Issue #645)
+- **Enhanced** `/goals/{id}` endpoint to calculate measure progress using domain service
+- `progress`, `variance`, and `progressStatus` fields in measures array now return actual calculated values (instead of `null`)
+- Progress calculated using `IProgressCalculationService` for consistency with measures endpoint
+- Handler pre-calculates progress for each measure link before passing to mapper
+- Mapper remains pure transformation (no business logic)
+- Uses new `MeasureLinkWithProgress` result record for type-safe, cohesive data structure
 
 ### v7.1 (December 27, 2025)
 - **Restored** `/goals/{goalId}/available-measures` endpoint (Issue #413)
