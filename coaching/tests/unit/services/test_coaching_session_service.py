@@ -925,3 +925,211 @@ class TestMessageResponse:
         assert response.is_final is True
         assert response.result is not None
         assert "core_values" in response.result
+
+
+class TestLLMResponseParsing:
+    """Tests for LLM response parsing methods (Issue #220).
+
+    Tests robust JSON extraction from various LLM response formats.
+    Different LLMs may wrap JSON in Markdown code fences or return plain JSON.
+    """
+
+    @pytest.fixture
+    def service(
+        self,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        mock_template_processor: AsyncMock,
+        mock_provider_factory: Mock,
+    ) -> CoachingSessionService:
+        """Create a coaching session service for testing."""
+        with patch.object(CoachingSessionService, "_build_topic_index"):
+            svc = CoachingSessionService(
+                session_repository=mock_session_repository,
+                topic_repository=mock_topic_repository,
+                s3_prompt_storage=mock_s3_prompt_storage,
+                template_processor=mock_template_processor,
+                provider_factory=mock_provider_factory,
+            )
+            svc._topic_index = {}
+            return svc
+
+    @pytest.fixture
+    def mock_session_repository(self) -> AsyncMock:
+        """Create a mock session repository."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_topic_repository(self) -> AsyncMock:
+        """Create a mock topic repository."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_s3_prompt_storage(self) -> AsyncMock:
+        """Create a mock S3 prompt storage."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_template_processor(self) -> AsyncMock:
+        """Create a mock template processor."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_provider_factory(self) -> Mock:
+        """Create a mock LLM provider factory."""
+        return Mock()
+
+    # =========================================================================
+    # _extract_json_from_response Tests
+    # =========================================================================
+
+    def test_extract_json_plain(self, service: CoachingSessionService) -> None:
+        """Test extracting plain JSON without any wrappers."""
+        response = '{"message": "Hello", "is_final": true}'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_with_language(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ```json ... ``` (Issue #220)."""
+        response = '```json\n{"message": "Hello", "is_final": true}\n```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_without_language(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ``` ... ``` without language identifier."""
+        response = '```\n{"message": "Hello", "is_final": true}\n```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_no_newlines(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ```json{...}``` without newlines."""
+        response = '```json{"message": "Hello", "is_final": true}```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_with_extra_whitespace(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON with leading/trailing whitespace."""
+        response = '  \n  {"message": "Hello", "is_final": true}  \n  '
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_with_whitespace(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON from markdown with various whitespace patterns."""
+        response = '  ```json  \n  {"message": "Hello"}  \n  ```  '
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello"}'
+
+    def test_extract_json_complex_structure(self, service: CoachingSessionService) -> None:
+        """Test extracting complex nested JSON from markdown (real-world example)."""
+        response = """```json
+{
+  "message": "It has been a privilege...",
+  "is_final": true,
+  "result": {
+    "values": [
+      {
+        "name": "Integrity",
+        "definition": "Standing firm on your principles"
+      }
+    ]
+  }
+}
+```"""
+        result = service._extract_json_from_response(response)
+        # Should strip markdown and whitespace
+        assert result.startswith("{")
+        assert result.endswith("}")
+        assert "message" in result
+        assert "is_final" in result
+
+    # =========================================================================
+    # _parse_llm_response Tests
+    # =========================================================================
+
+    def test_parse_llm_response_plain_json(self, service: CoachingSessionService) -> None:
+        """Test parsing plain JSON response."""
+        response = '{"message": "Hello world", "is_final": false}'
+        message, is_final = service._parse_llm_response(response)
+        assert message == "Hello world"
+        assert is_final is False
+
+    def test_parse_llm_response_markdown_wrapped_json(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test parsing JSON wrapped in markdown code fences (Issue #220)."""
+        response = '```json\n{"message": "Session complete!", "is_final": true}\n```'
+        message, is_final = service._parse_llm_response(response)
+        assert message == "Session complete!"
+        assert is_final is True
+
+    def test_parse_llm_response_with_result(self, service: CoachingSessionService) -> None:
+        """Test parsing response with result object."""
+        response = """```json
+{
+  "message": "We've identified your values",
+  "is_final": true,
+  "result": {
+    "values": ["Integrity", "Honesty"]
+  }
+}
+```"""
+        message, is_final = service._parse_llm_response(response)
+        assert message == "We've identified your values"
+        assert is_final is True
+
+    def test_parse_llm_response_non_json(self, service: CoachingSessionService) -> None:
+        """Test parsing non-JSON response falls back to full text."""
+        response = "This is just a plain text response without JSON"
+        message, is_final = service._parse_llm_response(response)
+        assert message == response
+        assert is_final is False
+
+    def test_parse_llm_response_malformed_json(self, service: CoachingSessionService) -> None:
+        """Test parsing malformed JSON falls back to full text."""
+        response = '```json\n{"message": "Incomplete JSON...\n```'
+        message, is_final = service._parse_llm_response(response)
+        # Should return the original response when JSON parsing fails
+        assert message == response
+        assert is_final is False
+
+    def test_parse_llm_response_missing_message_field(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test parsing JSON without message field uses full response."""
+        response = '{"is_final": true, "result": {"values": []}}'
+        message, is_final = service._parse_llm_response(response)
+        # When message field is missing, should use original response
+        assert message == response
+        assert is_final is True
+
+    def test_parse_llm_response_real_world_issue_220(self, service: CoachingSessionService) -> None:
+        """Test parsing the exact format from Issue #220."""
+        # This is the actual problematic response from the issue
+        response = """```json
+{
+  "message": "It has been a privilege to walk through this discovery process with you, Tamatha. Your values paint a picture of someone who has fought hard to reclaim their voice and independence.",
+  "is_final": true,
+  "result": {
+    "values": [
+      {
+        "name": "Integrity",
+        "definition": "Standing firm on your principles and having the courage to reject abuse or toxicity, regardless of the cost.",
+        "behaviors": [
+          "Speaking up against mistreatment",
+          "Setting clear boundaries even when it risks a job or relationship"
+        ],
+        "red_flag": "Self-Betrayal: Rationalizing a toxic situation or staying silent to avoid the appearance of failure."
+      }
+    ],
+    "summary": "Tamatha's core values reflect a journey of claiming personal power and independence."
+  },
+  "confidence": 0.95
+}
+```"""
+        message, is_final = service._parse_llm_response(response)
+        assert (
+            message
+            == "It has been a privilege to walk through this discovery process with you, Tamatha. Your values paint a picture of someone who has fought hard to reclaim their voice and independence."
+        )
+        assert is_final is True
