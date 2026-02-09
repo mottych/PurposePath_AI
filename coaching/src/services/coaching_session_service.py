@@ -1056,6 +1056,11 @@ class CoachingSessionService:
         """Parse LLM response for message and completion signal.
 
         Attempts to parse JSON response with structured output format.
+        Handles multiple formats:
+        - Plain JSON: {"message": "...", "is_final": true}
+        - Markdown-wrapped: ```json\n{...}\n```
+        - Code fence without language: ```\n{...}\n```
+
         Falls back to treating entire response as message.
 
         Args:
@@ -1064,9 +1069,12 @@ class CoachingSessionService:
         Returns:
             Tuple of (message, is_final)
         """
+        # Extract JSON from various wrapper formats
+        json_content = self._extract_json_from_response(response)
+
         try:
             # Try to parse as JSON
-            data = json.loads(response)
+            data = json.loads(json_content)
             message = data.get("message", response)
             is_final = data.get("is_final", False)
 
@@ -1088,6 +1096,45 @@ class CoachingSessionService:
                 parse_error=str(e),
             )
             return response, False
+
+    def _extract_json_from_response(self, response: str) -> str:
+        """Extract JSON content from various response formats.
+
+        Handles multiple LLM response formats:
+        1. Plain JSON
+        2. JSON wrapped in ```json ... ```
+        3. JSON wrapped in ``` ... ```
+        4. JSON with extra whitespace
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Cleaned JSON string ready for parsing
+        """
+        # Strip leading/trailing whitespace
+        cleaned = response.strip()
+
+        # Pattern 1: ```json\n{...}\n``` or ```json {... } ```
+        if cleaned.startswith("```json"):
+            # Remove opening fence
+            cleaned = cleaned[7:]  # len("```json") = 7
+            # Remove closing fence if present
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            return cleaned.strip()
+
+        # Pattern 2: ```\n{...}\n``` or ``` {... } ```
+        if cleaned.startswith("```"):
+            # Remove opening fence
+            cleaned = cleaned[3:]  # len("```") = 3
+            # Remove closing fence if present
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            return cleaned.strip()
+
+        # Pattern 3: Plain JSON (no wrapper)
+        return cleaned
 
     # =========================================================================
     # Session Lifecycle - Complete
