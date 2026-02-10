@@ -30,6 +30,18 @@ class AIJobStatus(str, Enum):
     FAILED = "failed"
 
 
+class AIJobType(str, Enum):
+    """Type of AI job.
+
+    Types:
+        SINGLE_SHOT: One-time AI execution (e.g., purpose discovery, goal setting)
+        CONVERSATION_MESSAGE: Coaching conversation message (multi-turn dialogue)
+    """
+
+    SINGLE_SHOT = "single_shot"
+    CONVERSATION_MESSAGE = "conversation_message"
+
+
 class AIJobErrorCode(str, Enum):
     """Error codes for AI job failures.
 
@@ -53,10 +65,14 @@ class AIJob(BaseModel):
 
     Attributes:
         job_id: Unique job identifier
+        job_type: Type of job (single_shot or conversation_message)
         tenant_id: Tenant that owns this job
         user_id: User who initiated the job
         topic_id: AI topic being executed
+        session_id: Coaching session ID (for conversation messages)
+        user_message: User's message content (for conversation messages)
         parameters: Input parameters for the AI topic
+        jwt_token: JWT token for enrichment API calls (excluded from serialization)
         status: Current job status
         result: AI execution result (when completed)
         error: Error message (when failed)
@@ -73,6 +89,10 @@ class AIJob(BaseModel):
         default_factory=lambda: str(uuid4()),
         description="Unique job identifier",
     )
+    job_type: AIJobType = Field(
+        default=AIJobType.SINGLE_SHOT,
+        description="Type of AI job (single_shot or conversation_message)",
+    )
     tenant_id: str = Field(
         ...,
         description="Tenant that owns this job",
@@ -84,6 +104,14 @@ class AIJob(BaseModel):
     topic_id: str = Field(
         ...,
         description="AI topic being executed",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description="Coaching session ID (for conversation_message jobs)",
+    )
+    user_message: str | None = Field(
+        default=None,
+        description="User's message content (for conversation_message jobs)",
     )
     parameters: dict[str, Any] = Field(
         default_factory=dict,

@@ -46,6 +46,7 @@ from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
 )
 from coaching.src.core.config_multitenant import settings
+from coaching.src.domain.entities.ai_job import AIJob, AIJobStatus
 from coaching.src.domain.exceptions.session_exceptions import (
     ExtractionFailedError,
     MaxTurnsReachedError,
@@ -58,6 +59,14 @@ from coaching.src.domain.exceptions.session_exceptions import (
 )
 from coaching.src.infrastructure.repositories.dynamodb_coaching_session_repository import (
     DynamoDBCoachingSessionRepository,
+)
+from coaching.src.infrastructure.repositories.dynamodb_job_repository import (
+    DynamoDBJobRepository,
+)
+from coaching.src.services.coaching_message_job_service import (
+    CoachingMessageJobService,
+    MessageJobNotFoundError,
+    MessageJobValidationError,
 )
 from coaching.src.services.coaching_session_service import (
     CoachingSessionService,
@@ -79,6 +88,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
+from shared.services.eventbridge_client import EventBridgePublisher
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/ai/coaching", tags=["coaching-sessions"])
@@ -115,6 +125,32 @@ class SessionIdRequest(BaseModel):
     """Request with just a session ID."""
 
     session_id: str = Field(..., description="ID of the coaching session")
+
+
+class MessageJobResponse(BaseModel):
+    """Response for async message job creation."""
+
+    job_id: str = Field(..., description="Unique job identifier for tracking")
+    session_id: str = Field(..., description="Coaching session ID")
+    status: str = Field(default="pending", description="Initial job status")
+    estimated_duration_ms: int = Field(
+        default=45000, description="Estimated processing time in milliseconds"
+    )
+
+
+class MessageJobStatusResponse(BaseModel):
+    """Response for message job status polling."""
+
+    job_id: str = Field(..., description="Unique job identifier")
+    session_id: str = Field(..., description="Coaching session ID")
+    status: str = Field(..., description="Current job status (pending/processing/completed/failed)")
+    message: str | None = Field(default=None, description="Coach's response (when completed)")
+    is_final: bool | None = Field(default=None, description="Whether this is the final message")
+    result: dict[str, Any] | None = Field(default=None, description="Extraction result (if final)")
+    error: str | None = Field(default=None, description="Error message (if failed)")
+    processing_time_ms: int | None = Field(
+        default=None, description="Actual processing time (if completed/failed)"
+    )
 
 
 # =============================================================================
@@ -170,6 +206,36 @@ async def get_coaching_session_service(
         s3_prompt_storage=s3_prompt_storage,
         template_processor=template_processor,
         provider_factory=provider_factory,
+    )
+
+
+async def get_job_repository() -> DynamoDBJobRepository:
+    """Get job repository instance."""
+    dynamodb = get_dynamodb_client()
+    return DynamoDBJobRepository(
+        dynamodb_resource=dynamodb,
+        table_name=settings.ai_jobs_table,
+    )
+
+
+async def get_event_publisher() -> EventBridgePublisher:
+    """Get EventBridge publisher instance."""
+    return EventBridgePublisher(
+        region_name="us-east-1",
+        stage=settings.stage,
+    )
+
+
+async def get_coaching_message_job_service(
+    job_repository: DynamoDBJobRepository = Depends(get_job_repository),
+    session_service: CoachingSessionService = Depends(get_coaching_session_service),
+    event_publisher: EventBridgePublisher = Depends(get_event_publisher),
+) -> CoachingMessageJobService:
+    """Get coaching message job service with dependencies injected."""
+    return CoachingMessageJobService(
+        job_repository=job_repository,
+        session_service=session_service,
+        event_publisher=event_publisher,
     )
 
 
@@ -455,122 +521,81 @@ async def resume_session(
         ) from e
 
 
-@router.post("/message", response_model=ApiResponse[ServiceMessageResponse])
-async def send_message(
+@router.post("/message", response_model=ApiResponse[MessageJobResponse], status_code=202)
+async def send_message_async(
     request: SendMessageRequest,
     context: RequestContext = Depends(get_current_context),
-    service: CoachingSessionService = Depends(get_coaching_session_service),
-) -> ApiResponse[ServiceMessageResponse]:
-    """Send a message in an active coaching session.
+    job_service: CoachingMessageJobService = Depends(get_coaching_message_job_service),
+) -> ApiResponse[MessageJobResponse]:
+    """Send a message in an active coaching session (async processing).
 
-    Processes the user's message and generates a coach response using
-    the configured LLM and prompt templates.
+    Creates an async job and returns immediately with 202 Accepted.
+    The message is processed in the background to avoid API Gateway 30s timeout.
+
+    Frontend should:
+    1. Connect to WebSocket to receive ai.message.completed event
+    2. Or poll GET /message/{job_id} for status
 
     Args:
         request: Contains session_id and message content
 
     Returns:
-        ApiResponse with MessageResponse containing coach's reply
+        ApiResponse with MessageJobResponse (job_id for tracking)
 
     Raises:
-        HTTPException 400: Session not active (paused/completed/cancelled)
-        HTTPException 403: User does not own this session
-        HTTPException 410: Session expired or idle timeout
-        HTTPException 422: Session not found or max turns reached
-        HTTPException 500: Failed to process message
+        HTTPException 422: Invalid parameters or session not found
+        HTTPException 500: Failed to create job
     """
     logger.info(
-        "coaching_sessions.send_message",
+        "coaching_sessions.send_message_async",
         session_id=request.session_id,
         tenant_id=context.tenant_id,
         message_length=len(request.message),
     )
 
     try:
-        response = await service.send_message(
+        # Create async job (returns immediately)
+        job = await job_service.create_message_job(
             session_id=request.session_id,
             tenant_id=context.tenant_id,
             user_id=context.user_id,
+            topic_id="conversation_coaching",  # Get from session if needed
             user_message=request.message,
         )
 
-        logger.info(
-            "coaching_sessions.send_message.success",
+        response = MessageJobResponse(
+            job_id=job.job_id,
             session_id=request.session_id,
-            message_count=response.message_count,
-            status=response.status.value,
+            status=job.status.value,
+            estimated_duration_ms=job.estimated_duration_ms,
+        )
+
+        logger.info(
+            "coaching_sessions.send_message_async.job_created",
+            job_id=job.job_id,
+            session_id=request.session_id,
         )
 
         return ApiResponse(
             success=True,
             data=response,
-            message="Message processed successfully",
+            message="Message job created, processing asynchronously",
         )
 
-    except SessionNotFoundError as e:
+    except MessageJobValidationError as e:
         logger.warning(
-            "coaching_sessions.send_message.not_found",
+            "coaching_sessions.send_message_async.validation_error",
             session_id=request.session_id,
-            tenant_id=context.tenant_id,
-            error_code=e.code,
+            error=str(e),
         )
         raise HTTPException(
             status_code=422,
-            detail={"code": e.code, "message": str(e)},
-        ) from e
-
-    except SessionAccessDeniedError as e:
-        logger.warning(
-            "coaching_sessions.send_message.access_denied",
-            session_id=request.session_id,
-            tenant_id=context.tenant_id,
-            user_id=context.user_id,
-            error_code=e.code,
-        )
-        raise HTTPException(
-            status_code=403,
-            detail={"code": e.code, "message": str(e)},
-        ) from e
-
-    except SessionNotActiveError as e:
-        logger.warning(
-            "coaching_sessions.send_message.not_active",
-            session_id=request.session_id,
-            current_status=e.current_status,
-            error_code=e.code,
-        )
-        raise HTTPException(
-            status_code=400,
-            detail={"code": e.code, "message": str(e)},
-        ) from e
-
-    except (SessionExpiredError, SessionIdleTimeoutError) as e:
-        logger.warning(
-            "coaching_sessions.send_message.expired",
-            session_id=request.session_id,
-            error_code=e.code,
-        )
-        raise HTTPException(
-            status_code=410,
-            detail={"code": e.code, "message": str(e)},
-        ) from e
-
-    except MaxTurnsReachedError as e:
-        logger.warning(
-            "coaching_sessions.send_message.max_turns",
-            session_id=request.session_id,
-            current_turn=e.current_turn,
-            max_turns=e.max_turns,
-            error_code=e.code,
-        )
-        raise HTTPException(
-            status_code=422,
-            detail={"code": e.code, "message": str(e)},
+            detail={"code": "JOB_VALIDATION_ERROR", "message": str(e)},
         ) from e
 
     except Exception as e:
         logger.error(
-            "coaching_sessions.send_message.error",
+            "coaching_sessions.send_message_async.error",
             error=str(e),
             session_id=request.session_id,
             tenant_id=context.tenant_id,
@@ -578,7 +603,85 @@ async def send_message(
         )
         raise HTTPException(
             status_code=500,
-            detail="Failed to process message",
+            detail="Failed to create message job",
+        ) from e
+
+
+@router.get("/message/{job_id}", response_model=ApiResponse[MessageJobStatusResponse])
+async def get_message_job_status(
+    job_id: str,
+    context: RequestContext = Depends(get_current_context),
+    job_service: CoachingMessageJobService = Depends(get_coaching_message_job_service),
+) -> ApiResponse[MessageJobStatusResponse]:
+    """Get status of an async message job (polling fallback).
+
+    Used when WebSocket is unavailable or for debugging.
+
+    Args:
+        job_id: Job identifier from POST /message response
+
+    Returns:
+        ApiResponse with MessageJobStatusResponse
+
+    Raises:
+        HTTPException 404: Job not found
+        HTTPException 500: Failed to retrieve job status
+    """
+    logger.info(
+        "coaching_sessions.get_message_job_status",
+        job_id=job_id,
+        tenant_id=context.tenant_id,
+    )
+
+    try:
+        job = await job_service.get_job(job_id=job_id, tenant_id=context.tenant_id)
+
+        # Build response based on job status
+        response = MessageJobStatusResponse(
+            job_id=job.job_id,
+            session_id=job.session_id or "",
+            status=job.status.value,
+            processing_time_ms=job.processing_time_ms,
+        )
+
+        # Add result data if completed
+        if job.status == AIJobStatus.COMPLETED and job.result:
+            response.message = job.result.get("message")
+            response.is_final = job.result.get("is_final")
+            response.result = job.result.get("result")
+
+        # Add error if failed
+        if job.status == AIJobStatus.FAILED:
+            response.error = job.error
+
+        return ApiResponse(
+            success=True,
+            data=response,
+            message=f"Job status: {job.status.value}",
+        )
+
+    except MessageJobNotFoundError as e:
+        logger.warning(
+            "coaching_sessions.get_message_job_status.not_found",
+            job_id=job_id,
+            tenant_id=context.tenant_id,
+        )
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "JOB_NOT_FOUND", "message": str(e)},
+        ) from e
+
+    except Exception as e:
+        logger.error(
+            "coaching_sessions.get_message_job_status.error",
+            error=str(e),
+            job_id=job_id,
+            tenant_id=context.tenant_id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve job status",
         ) from e
 
 
