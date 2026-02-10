@@ -14,10 +14,10 @@
 This directory contains detailed API specifications for the Traction Service, organized by controller/feature area for easier maintenance and reference.
 
 **Version 7 Changes:**
-- Removed all deprecated GoalKpiLink, KpiMilestone, KpiActual, and KpiReading endpoints
+- Removed all deprecated GoalMeasureLink, MeasureMilestone, MeasureActual, and MeasureReading endpoints
 - Documented only actively implemented endpoints
 - Split large specification into maintainable controller-based documents
-- Updated to reflect KpiLink and KpiData design (Epic #362)
+- Updated to reflect MeasureLink and MeasureData design (Epic #362)
 
 ---
 
@@ -38,22 +38,22 @@ This directory contains detailed API specifications for the Traction Service, or
 
 | Document | Controller | Endpoints | Description |
 |----------|------------|-----------|-------------|
-| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management, strategies |
-| [KPIs API](./kpis-api.md) | KpisController | 5 endpoints | KPI instance management |
-| [KPI Links API](./kpi-links-api.md) | KpiLinksController | 6 endpoints | Link KPIs to goals, people, strategies |
-| [KPI Data API](./kpi-data-api.md) | KpiDataController | 8 endpoints | Targets, actuals, projections |
-| [Actions API](./actions-api.md) | ActionsController | 7 endpoints | Action items management |
+| [Goals API](./goals-api.md) | GoalsController | 11 endpoints | Goal lifecycle management |
+| [Strategies API](./strategies-api.md) | StrategiesController | 6 endpoints | Strategy management and alignment |
+| [Alignment API](./alignment-api.md) | AlignmentController | 1 endpoint | Cached goal alignment lookup |
+| [Measures API](./measures-api.md) | MeasuresController | 7 endpoints | Measure instance management |
+| [Measure Links API](./measure-links-api.md) | MeasureLinksController | 6 endpoints | Link Measures to goals, people, strategies |
+| [Measure Data API](./measure-data-api.md) | MeasureDataController | 8 endpoints | Targets, actuals, projections |
+| [Actions API](./actions-api.md) | ActionsController | 10 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
-| [People API](./people-api.md) | PeopleController | 4 endpoints | People/team management |
-| [Dashboard API](./dashboard-api.md) | DashboardController | 3 endpoints | Command center data |
-| [Reports API](./reports-api.md) | ReportsController | 2 endpoints | Reporting and analytics |
-| [Activities API](./activities-api.md) | ActivitiesController | 2 endpoints | Activity feeds |
+| [Coaching Insights API](./insights-api.md) | InsightsController | 5 endpoints | AI-generated coaching insights (CRUD) |
+| [Dashboard, Reports & Activities](./dashboard-reports-activities-api.md) | Multiple | 5 endpoints | Command center, reports, activity feeds |
+
+> **Note:** People API has been deferred and moved to Account Service for better organizational alignment.
 
 ### Reference Data APIs
 
-| Document | Description |
-|----------|-------------|
-| [Reference Data API](./reference-data-api.md) | Issue types, statuses, person types, tags, roles |
+> **Note:** Reference data endpoints (issue types, statuses, tags) are integrated within their respective API documents above.
 
 ---
 
@@ -143,10 +143,10 @@ Example: `"2025-12-23T15:30:00.000Z"`
 | Create goal | POST | `/goals` |
 | Get goal details | GET | `/goals/{id}` |
 | Update goal | PUT | `/goals/{id}` |
-| List KPIs | GET | `/kpis` |
-| Create KPI | POST | `/kpis` |
-| Link KPI to goal | POST | `/kpi-links` |
-| Record KPI data | POST | `/kpi-data` |
+| List Measures | GET | `/measures` |
+| Create Measure | POST | `/measures` |
+| Link Measure to goal | POST | `/measure-links` |
+| Record Measure data | POST | `/measure-data` |
 | List actions | GET | `/operations/actions` |
 | Create action | POST | `/operations/actions` |
 | List issues | GET | `/issues` |
@@ -157,19 +157,19 @@ Example: `"2025-12-23T15:30:00.000Z"`
 ## Migration from v6
 
 **Removed Endpoints (Deprecated):**
-- All `/goals/{goalId}/kpis:link` endpoints → Use `/kpi-links` instead
-- All `/goals/{goalId}/kpis:unlink` endpoints → Use `/kpi-links` DELETE
-- All `/goals/{goalId}/available-kpis` endpoints → New design pending
-- All `/kpi-planning/*` endpoints → Redesigned as `/kpi-data`
-- All shared KPI endpoints → Consolidated into `/kpi-links`
+- All `/goals/{goalId}/measures:link` endpoints → Use `/measure-links` instead
+- All `/goals/{goalId}/measures:unlink` endpoints → Use `/measure-links` DELETE
+- All `/goals/{goalId}/available-measures` endpoints → New design pending
+- All `/measure-planning/*` endpoints → Redesigned as `/measure-data`
+- All shared Measure endpoints → Consolidated into `/measure-links`
 
 **New Endpoints (v7):**
-- `/kpi-links` - Unified KPI linking
-- `/kpi-data` - All KPI data operations (targets, actuals, projections)
-- Simplified KPI management
+- `/measure-links` - Unified Measure linking
+- `/measure-data` - All Measure data operations (targets, actuals, projections)
+- Simplified Measure management
 
 **Changed Endpoints:**
-- KPI operations moved from goals context to dedicated KPI resources
+- Measure operations moved from goals context to dedicated Measure resources
 - More RESTful resource design
 
 ---
@@ -203,14 +203,14 @@ Example: `"2025-12-23T15:30:00.000Z"`
 ## Version History
 
 ### v7.0 (December 23, 2025)
-- Removed deprecated KPI endpoints (GoalKpiLink, KpiMilestone, KpiActual, KpiReading)
+- Removed deprecated Measure endpoints (GoalMeasureLink, MeasureMilestone, MeasureActual, MeasureReading)
 - Split monolithic spec into controller-based documents
-- Updated to reflect KpiLink and KpiData design
+- Updated to reflect MeasureLink and MeasureData design
 - 121 files changed, 15,902 lines of deprecated code removed
 
 ### v6.0 (December 21, 2025)
-- Added KPI linking endpoints
-- Added KPI planning endpoints
+- Added Measure linking endpoints
+- Added Measure planning endpoints
 - Documented nested object structures
 
 ### v5.0 (Previous)

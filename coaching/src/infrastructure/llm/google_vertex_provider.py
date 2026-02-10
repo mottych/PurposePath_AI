@@ -89,7 +89,7 @@ class GoogleVertexLLMProvider:
     def __init__(
         self,
         project_id: str | None = None,
-        location: str = "us-central1",
+        location: str = "global",
         credentials: Any | None = None,
         enable_caching: bool = True,
     ):
@@ -98,7 +98,8 @@ class GoogleVertexLLMProvider:
 
         Args:
             project_id: GCP project ID (optional - will retrieve from config/secrets if not provided)
-            location: GCP location/region (default: us-central1)
+            location: GCP location/region (default: global).
+                     Note: Gemini 3 models require "global". Older models support regional endpoints.
             credentials: Optional GCP credentials object (will retrieve from Secrets Manager if not provided)
             enable_caching: Whether to enable context caching for system prompts (default: True)
         """
@@ -147,33 +148,46 @@ class GoogleVertexLLMProvider:
             project_id = self.project_id
             credentials = self.credentials
 
-            if not project_id or not credentials:
-                from coaching.src.core.config_multitenant import (
-                    get_google_vertex_credentials,
-                    get_settings,
-                )
+            from coaching.src.core.config_multitenant import (
+                get_google_vertex_credentials,
+                get_settings,
+            )
+            from google.oauth2 import service_account
 
-                settings = get_settings()
+            settings = get_settings()
 
-                # Get project_id from config if not provided
-                if not project_id:
-                    project_id = settings.google_project_id
+            # Get project_id from config if not provided
+            if not project_id:
+                project_id = settings.google_project_id
 
-                # Get credentials from Secrets Manager if not provided
-                if not credentials:
-                    creds_dict = get_google_vertex_credentials()
-                    if creds_dict:
-                        # For google-genai SDK, we can pass credentials dict directly
-                        # or use service account credentials
-                        from google.oauth2 import service_account
+            # Get credentials from Secrets Manager if not provided
+            if not credentials:
+                creds_dict = get_google_vertex_credentials()
+                if creds_dict:
+                    # For google-genai SDK, create service account credentials
+                    # Vertex AI requires specific IAM roles on the service account:
+                    # - roles/aiplatform.user (for Vertex AI API access)
+                    # - roles/ml.developer (for ML operations)
+                    creds_map: dict[str, Any] = creds_dict
+                    credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
+                        creds_map,
+                    )
+                    # Update project_id from credentials if still not set
+                    if not project_id:
+                        project_id = creds_dict.get("project_id")
 
-                        creds_map: dict[str, Any] = creds_dict
-                        credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
-                            creds_map
-                        )
-                        # Update project_id from credentials if still not set
-                        if not project_id:
-                            project_id = creds_dict.get("project_id")
+            # ALWAYS ensure credentials have the required OAuth scope for Vertex AI
+            # This handles both: credentials passed via constructor AND loaded from secrets
+            # The google-genai SDK requires cloud-platform scope for Vertex AI API access
+            if credentials is not None and isinstance(credentials, service_account.Credentials):
+                # Check if credentials already have required scope
+                required_scope = "https://www.googleapis.com/auth/cloud-platform"
+                if not credentials.scopes or required_scope not in credentials.scopes:
+                    credentials = credentials.with_scopes([required_scope])
+                    logger.debug(
+                        "Added OAuth scope to credentials",
+                        scope=required_scope,
+                    )
 
             if not project_id:
                 raise ValueError(

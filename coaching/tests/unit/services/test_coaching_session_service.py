@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from coaching.src.core.constants import ConversationStatus, TopicCategory, TopicType
 from coaching.src.core.topic_registry import (
-    EndpointDefinition,
     TemplateType,
+    TopicDefinition,
 )
 from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingSession
@@ -27,7 +27,6 @@ from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
@@ -95,9 +94,9 @@ class TestCoachingSessionService:
         return factory
 
     @pytest.fixture
-    def sample_endpoint_definition(self) -> EndpointDefinition:
+    def sample_endpoint_definition(self) -> TopicDefinition:
         """Create a sample endpoint definition."""
-        return EndpointDefinition(
+        return TopicDefinition(
             topic_id="core_values",
             description="Discover your core values",
             topic_type=TopicType.CONVERSATION_COACHING,
@@ -119,7 +118,8 @@ class TestCoachingSessionService:
             topic_name="Core Values Discovery",
             topic_type="conversation_coaching",
             category="strategic_planning",
-            model_code="claude-haiku",
+            basic_model_code="claude-haiku",
+            premium_model_code="claude-haiku",
             is_active=True,
             max_tokens=2000,
             temperature=0.7,
@@ -181,7 +181,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that initiating a session creates a new one when none exists."""
@@ -218,24 +218,28 @@ class TestCoachingSessionService:
         mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initiate_resumes_existing_session(
+    async def test_initiate_cancels_existing_and_creates_new(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
-        """Test that initiating when session exists resumes it instead."""
+        """Test that /start ALWAYS creates new session (cancels existing).
+
+        NEW BEHAVIOR (v2.6): /start endpoint always creates a fresh session.
+        Use /resume endpoint to continue existing sessions.
+        """
         # Arrange
         service._topic_index["core_values"] = sample_endpoint_definition
         mock_topic_repository.get.return_value = sample_llm_topic
         mock_session_repository.get_active_for_user_topic.return_value = sample_session
         mock_s3_prompt_storage.get_prompt.side_effect = [
-            "Let's continue where we left off.",  # resume template
             "You are a coaching assistant.",  # system template
+            "Hello! I'm your coach.",  # initiation template
         ]
 
         # Act
@@ -247,13 +251,13 @@ class TestCoachingSessionService:
 
         # Assert
         assert isinstance(response, SessionResponse)
-        assert response.resumed is True
-        assert response.session_id == "test-session-123"
+        assert response.resumed is False  # Not resumed - new session
+        assert response.session_id != "test-session-123"  # New session ID
 
-        # Verify create was NOT called (session exists)
-        mock_session_repository.create.assert_not_called()
-        # Verify update was called for resume
+        # Verify old session was cancelled
         mock_session_repository.update.assert_called_once()
+        # Verify new session was created
+        mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_initiate_invalid_topic_raises_error(
@@ -280,7 +284,7 @@ class TestCoachingSessionService:
         self,
         service: CoachingSessionService,
         mock_topic_repository: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that initiating with inactive topic raises TopicNotActiveError."""
@@ -308,7 +312,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -371,7 +375,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -426,7 +430,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -493,13 +497,17 @@ class TestCoachingSessionService:
             )
 
     @pytest.mark.asyncio
-    async def test_send_message_checks_idle_timeout(
+    async def test_send_message_allows_idle_sessions(
         self,
         service: CoachingSessionService,
         mock_session_repository: AsyncMock,
     ) -> None:
-        """Test that sending message to idle session raises SessionIdleTimeoutError."""
-        # Arrange - session with old last_activity_at
+        """Test that idle sessions can still receive messages (user may have stepped away).
+
+        Idle timeout is NOT a hard error - users may have power outages, stepped away, etc.
+        TTL handles cleanup of truly abandoned sessions after extended period (30 days).
+        """
+        # Arrange - session with old last_activity_at (idle but should still work)
         idle_session = CoachingSession(
             session_id=SessionId("idle-session"),
             tenant_id=TenantId("tenant-123"),
@@ -513,14 +521,39 @@ class TestCoachingSessionService:
         )
         mock_session_repository.get_by_id_for_tenant.return_value = idle_session
 
-        # Act & Assert
-        with pytest.raises(SessionIdleTimeoutError):
-            await service.send_message(
-                session_id="idle-session",
-                tenant_id="tenant-123",
-                user_id="user-123",
-                user_message="Hello",
+        # Mock the topic config and LLM response
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_endpoint = MagicMock()
+        mock_endpoint.result_model = None
+        mock_topic = MagicMock()
+
+        service._load_topic_config = AsyncMock(return_value=(mock_endpoint, mock_topic))
+        service._load_template = AsyncMock(return_value="test template")
+        service._render_template = MagicMock(return_value="rendered")
+        service._execute_llm_call = AsyncMock(
+            return_value=(
+                "AI response",
+                ResponseMetadata(
+                    model="test-model",
+                    tokens_used=100,
+                    provider="test-provider",
+                ),
             )
+        )
+
+        # Act - should succeed even though session is idle
+        response = await service.send_message(
+            session_id="idle-session",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            user_message="Hello after being idle",
+        )
+
+        # Assert - message was processed successfully
+        assert response is not None
+        assert response.message == "AI response"
+        mock_session_repository.update.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_message_not_active_session(
@@ -558,7 +591,7 @@ class TestCoachingSessionService:
         mock_session_repository: AsyncMock,
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
     ) -> None:
         """Test that sending message when max turns reached raises MaxTurnsReachedError."""
@@ -605,7 +638,7 @@ class TestCoachingSessionService:
         mock_topic_repository: AsyncMock,
         mock_s3_prompt_storage: AsyncMock,
         mock_provider_factory: Mock,
-        sample_endpoint_definition: EndpointDefinition,
+        sample_endpoint_definition: TopicDefinition,
         sample_llm_topic: LLMTopic,
         sample_session: CoachingSession,
     ) -> None:
@@ -892,3 +925,211 @@ class TestMessageResponse:
         assert response.is_final is True
         assert response.result is not None
         assert "core_values" in response.result
+
+
+class TestLLMResponseParsing:
+    """Tests for LLM response parsing methods (Issue #220).
+
+    Tests robust JSON extraction from various LLM response formats.
+    Different LLMs may wrap JSON in Markdown code fences or return plain JSON.
+    """
+
+    @pytest.fixture
+    def service(
+        self,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        mock_template_processor: AsyncMock,
+        mock_provider_factory: Mock,
+    ) -> CoachingSessionService:
+        """Create a coaching session service for testing."""
+        with patch.object(CoachingSessionService, "_build_topic_index"):
+            svc = CoachingSessionService(
+                session_repository=mock_session_repository,
+                topic_repository=mock_topic_repository,
+                s3_prompt_storage=mock_s3_prompt_storage,
+                template_processor=mock_template_processor,
+                provider_factory=mock_provider_factory,
+            )
+            svc._topic_index = {}
+            return svc
+
+    @pytest.fixture
+    def mock_session_repository(self) -> AsyncMock:
+        """Create a mock session repository."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_topic_repository(self) -> AsyncMock:
+        """Create a mock topic repository."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_s3_prompt_storage(self) -> AsyncMock:
+        """Create a mock S3 prompt storage."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_template_processor(self) -> AsyncMock:
+        """Create a mock template processor."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_provider_factory(self) -> Mock:
+        """Create a mock LLM provider factory."""
+        return Mock()
+
+    # =========================================================================
+    # _extract_json_from_response Tests
+    # =========================================================================
+
+    def test_extract_json_plain(self, service: CoachingSessionService) -> None:
+        """Test extracting plain JSON without any wrappers."""
+        response = '{"message": "Hello", "is_final": true}'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_with_language(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ```json ... ``` (Issue #220)."""
+        response = '```json\n{"message": "Hello", "is_final": true}\n```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_without_language(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ``` ... ``` without language identifier."""
+        response = '```\n{"message": "Hello", "is_final": true}\n```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_no_newlines(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON wrapped in ```json{...}``` without newlines."""
+        response = '```json{"message": "Hello", "is_final": true}```'
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_with_extra_whitespace(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON with leading/trailing whitespace."""
+        response = '  \n  {"message": "Hello", "is_final": true}  \n  '
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello", "is_final": true}'
+
+    def test_extract_json_markdown_with_whitespace(self, service: CoachingSessionService) -> None:
+        """Test extracting JSON from markdown with various whitespace patterns."""
+        response = '  ```json  \n  {"message": "Hello"}  \n  ```  '
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Hello"}'
+
+    def test_extract_json_complex_structure(self, service: CoachingSessionService) -> None:
+        """Test extracting complex nested JSON from markdown (real-world example)."""
+        response = """```json
+{
+  "message": "It has been a privilege...",
+  "is_final": true,
+  "result": {
+    "values": [
+      {
+        "name": "Integrity",
+        "definition": "Standing firm on your principles"
+      }
+    ]
+  }
+}
+```"""
+        result = service._extract_json_from_response(response)
+        # Should strip markdown and whitespace
+        assert result.startswith("{")
+        assert result.endswith("}")
+        assert "message" in result
+        assert "is_final" in result
+
+    # =========================================================================
+    # _parse_llm_response Tests
+    # =========================================================================
+
+    def test_parse_llm_response_plain_json(self, service: CoachingSessionService) -> None:
+        """Test parsing plain JSON response."""
+        response = '{"message": "Hello world", "is_final": false}'
+        message, is_final = service._parse_llm_response(response)
+        assert message == "Hello world"
+        assert is_final is False
+
+    def test_parse_llm_response_markdown_wrapped_json(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test parsing JSON wrapped in markdown code fences (Issue #220)."""
+        response = '```json\n{"message": "Session complete!", "is_final": true}\n```'
+        message, is_final = service._parse_llm_response(response)
+        assert message == "Session complete!"
+        assert is_final is True
+
+    def test_parse_llm_response_with_result(self, service: CoachingSessionService) -> None:
+        """Test parsing response with result object."""
+        response = """```json
+{
+  "message": "We've identified your values",
+  "is_final": true,
+  "result": {
+    "values": ["Integrity", "Honesty"]
+  }
+}
+```"""
+        message, is_final = service._parse_llm_response(response)
+        assert message == "We've identified your values"
+        assert is_final is True
+
+    def test_parse_llm_response_non_json(self, service: CoachingSessionService) -> None:
+        """Test parsing non-JSON response falls back to full text."""
+        response = "This is just a plain text response without JSON"
+        message, is_final = service._parse_llm_response(response)
+        assert message == response
+        assert is_final is False
+
+    def test_parse_llm_response_malformed_json(self, service: CoachingSessionService) -> None:
+        """Test parsing malformed JSON falls back to full text."""
+        response = '```json\n{"message": "Incomplete JSON...\n```'
+        message, is_final = service._parse_llm_response(response)
+        # Should return the original response when JSON parsing fails
+        assert message == response
+        assert is_final is False
+
+    def test_parse_llm_response_missing_message_field(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test parsing JSON without message field uses full response."""
+        response = '{"is_final": true, "result": {"values": []}}'
+        message, is_final = service._parse_llm_response(response)
+        # When message field is missing, should use original response
+        assert message == response
+        assert is_final is True
+
+    def test_parse_llm_response_real_world_issue_220(self, service: CoachingSessionService) -> None:
+        """Test parsing the exact format from Issue #220."""
+        # This is the actual problematic response from the issue
+        response = """```json
+{
+  "message": "It has been a privilege to walk through this discovery process with you, Tamatha. Your values paint a picture of someone who has fought hard to reclaim their voice and independence.",
+  "is_final": true,
+  "result": {
+    "values": [
+      {
+        "name": "Integrity",
+        "definition": "Standing firm on your principles and having the courage to reject abuse or toxicity, regardless of the cost.",
+        "behaviors": [
+          "Speaking up against mistreatment",
+          "Setting clear boundaries even when it risks a job or relationship"
+        ],
+        "red_flag": "Self-Betrayal: Rationalizing a toxic situation or staying silent to avoid the appearance of failure."
+      }
+    ],
+    "summary": "Tamatha's core values reflect a journey of claiming personal power and independence."
+  },
+  "confidence": 0.95
+}
+```"""
+        message, is_final = service._parse_llm_response(response)
+        assert (
+            message
+            == "It has been a privilege to walk through this discovery process with you, Tamatha. Your values paint a picture of someone who has fought hard to reclaim their voice and independence."
+        )
+        assert is_final is True

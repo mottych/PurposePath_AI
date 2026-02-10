@@ -101,7 +101,7 @@ class TestAnalysisType:
         # Assert
         assert AnalysisType.ALIGNMENT.value == "alignment"
         assert AnalysisType.STRATEGY.value == "strategy"
-        assert AnalysisType.KPI.value == "kpi"
+        assert AnalysisType.MEASURE.value == "measure"
         assert AnalysisType.SWOT.value == "swot"
         assert AnalysisType.ROOT_CAUSE.value == "root_cause"
         assert AnalysisType.ACTION_PLAN.value == "action_plan"
@@ -109,7 +109,6 @@ class TestAnalysisType:
 
     def test_analysis_type_count(self) -> None:
         """Test that AnalysisType enum has the expected number of values."""
-        # Assert
         assert len(AnalysisType) == 7
 
     def test_analysis_type_values_are_strings(self) -> None:

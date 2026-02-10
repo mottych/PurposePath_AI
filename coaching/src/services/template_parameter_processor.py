@@ -17,6 +17,7 @@ Key Design Principles:
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -324,7 +325,16 @@ class TemplateParameterProcessor:
                             req.name,
                         )
                         if value is not None:
-                            result[req.name] = value
+                            # Serialize value to handle datetime and other non-JSON types
+                            serialized = self._serialize_value(value)
+                            logger.debug(
+                                "template_processor.value_serialized",
+                                param=req.name,
+                                original_type=type(value).__name__,
+                                serialized_type=type(serialized).__name__,
+                                has_datetime=self._contains_datetime(value),
+                            )
+                            result[req.name] = serialized
                         elif req.definition.default is not None:
                             result[req.name] = req.definition.default
 
@@ -341,6 +351,51 @@ class TemplateParameterProcessor:
                         result[req.name] = req.definition.default
 
         return result
+
+    def _contains_datetime(self, value: Any) -> bool:
+        """Check if a value contains any datetime objects.
+
+        Args:
+            value: Value to check
+
+        Returns:
+            True if value contains datetime objects
+        """
+        if isinstance(value, datetime):
+            return True
+        if isinstance(value, dict):
+            return any(self._contains_datetime(v) for v in value.values())
+        if isinstance(value, list):
+            return any(self._contains_datetime(item) for item in value)
+        return False
+
+    def _serialize_value(self, value: Any) -> Any:
+        """Serialize a value to be JSON-compatible.
+
+        Converts datetime objects and other non-JSON types to strings.
+        Recursively processes lists and dicts.
+
+        Args:
+            value: The value to serialize
+
+        Returns:
+            JSON-serializable version of the value
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            logger.debug(
+                "template_processor.datetime_converted",
+                datetime_value=str(value),
+                iso_value=value.isoformat(),
+            )
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: self._serialize_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._serialize_value(item) for item in value]
+        # For other types (str, int, float, bool), return as-is
+        return value
 
     def _extract_value(
         self,

@@ -62,9 +62,9 @@ def parameter_to_response(param: ParameterDefinition) -> ParameterDefinitionResp
 
 def topic_to_response(topic: LLMTopic) -> TopicResponse:
     """Convert domain topic to response model."""
-    # Reconstruct config for backward compatibility
+    # Reconstruct config for backward compatibility (use premium model for legacy compatibility)
     config = {
-        "model_code": topic.model_code,
+        "model_code": topic.premium_model_code,
         "temperature": topic.temperature,
         "max_tokens": topic.max_tokens,
         "top_p": topic.top_p,
@@ -261,7 +261,8 @@ async def create_topic(
             description=request.description,
             is_active=request.is_active,
             prompts=[],  # Prompts added separately
-            model_code=model_code,
+            basic_model_code=model_code,
+            premium_model_code=model_code,
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
@@ -386,12 +387,16 @@ async def update_topic(
         if request.config is not None:
             config_dict = request.config.model_dump()
 
-            # Map default_model
+            # Map default_model (set both for backward compatibility)
             if "default_model" in config_dict:
-                topic.model_code = config_dict.pop("default_model")
+                model_value = config_dict.pop("default_model")
+                topic.basic_model_code = model_value
+                topic.premium_model_code = model_value
 
             if "model_code" in config_dict:
-                topic.model_code = config_dict.pop("model_code")
+                model_value = config_dict.pop("model_code")
+                topic.basic_model_code = model_value
+                topic.premium_model_code = model_value
 
             if config_dict.get("temperature") is not None:
                 topic.temperature = config_dict.pop("temperature")

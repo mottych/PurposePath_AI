@@ -54,7 +54,7 @@ Successfully implemented the complete plan management feature set for the Purpos
 - Plan Name & Description
 - Pricing (monthly/yearly)
 - Feature count
-- Resource limits (goals, KPIs, actions)
+- Resource limits (goals, Measures, actions)
 - Billing frequencies
 - Status badge
 - Action buttons
@@ -65,7 +65,7 @@ Successfully implemented the complete plan management feature set for the Purpos
 - Form sections:
   - Basic Information (name, display name, description)
   - Feature Selection (multi-select with core feature indicators)
-  - Resource Limits (goals, KPIs, actions, strategies, attachments, reports)
+  - Resource Limits (goals, Measures, actions, strategies, attachments, reports)
   - Pricing (monthly and yearly)
   - Billing Frequencies (monthly, yearly)
   - Status (active, allow new subscriptions)

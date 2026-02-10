@@ -11,7 +11,7 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel
 
 from shared.domain_types.common import JSONDict
-from shared.models.domain import KPI, Goal, Issue
+from shared.models.domain import Goal, Issue, Measure
 from shared.models.multitenant import User
 
 # Generic type for domain models
@@ -206,60 +206,63 @@ class GoalRepository(BaseRepository[Goal]):
             raise RuntimeError(f"Failed to list goals: {e}") from e
 
 
-class KPIRepository(BaseRepository[KPI]):
-    """Repository for KPI domain objects."""
+class MeasureRepository(BaseRepository[Measure]):
+    """Repository for Measure domain objects."""
 
     def __init__(self, table: Any) -> None:
-        super().__init__(table, KPI)
+        super().__init__(table, Measure)
 
-    def create(self, tenant_id: str, model: KPI) -> KPI:
-        """Create a new KPI."""
+    def create(self, tenant_id: str, model: Measure) -> Measure:
+        """Create a new Measure."""
         item = self._model_to_item(model, tenant_id)
         item["pk"] = f"TENANT#{tenant_id}"
-        item["sk"] = f"KPI#{model.id}"
+        item["sk"] = f"MEASURE#{model.id}"
         item["created_at"] = datetime.now(UTC).isoformat()
 
         self.table.put_item(Item=item)
         return self._item_to_model(item)
 
-    def get(self, tenant_id: str, entity_id: str) -> KPI | None:
-        """Get KPI by ID."""
+    def get(self, tenant_id: str, entity_id: str) -> Measure | None:
+        """Get Measure by ID."""
         try:
             response = self.table.get_item(
-                Key={"pk": f"TENANT#{tenant_id}", "sk": f"KPI#{entity_id}"}
+                Key={"pk": f"TENANT#{tenant_id}", "sk": f"MEASURE#{entity_id}"}
             )
             if "Item" in response:
                 return self._item_to_model(response["Item"])
             return None
         except Exception as e:
-            raise RuntimeError(f"Failed to get KPI {entity_id}: {e}") from e
+            raise RuntimeError(f"Failed to get Measure {entity_id}: {e}") from e
 
-    def update(self, tenant_id: str, entity_id: str, model: KPI) -> KPI | None:
-        """Update KPI."""
+    def update(self, tenant_id: str, entity_id: str, model: Measure) -> Measure | None:
+        """Update Measure."""
         item = self._model_to_item(model, tenant_id)
         item["pk"] = f"TENANT#{tenant_id}"
-        item["sk"] = f"KPI#{entity_id}"
+        item["sk"] = f"MEASURE#{entity_id}"
 
         try:
             self.table.put_item(Item=item)
             return self._item_to_model(item)
         except Exception as e:
-            raise RuntimeError(f"Failed to update KPI {entity_id}: {e}") from e
+            raise RuntimeError(f"Failed to update Measure {entity_id}: {e}") from e
 
     def delete(self, tenant_id: str, entity_id: str) -> bool:
-        """Delete KPI."""
+        """Delete Measure."""
         try:
-            self.table.delete_item(Key={"pk": f"TENANT#{tenant_id}", "sk": f"KPI#{entity_id}"})
+            self.table.delete_item(Key={"pk": f"TENANT#{tenant_id}", "sk": f"MEASURE#{entity_id}"})
             return True
         except Exception as e:
-            raise RuntimeError(f"Failed to delete KPI {entity_id}: {e}") from e
+            raise RuntimeError(f"Failed to delete Measure {entity_id}: {e}") from e
 
-    def list(self, tenant_id: str, limit: int = 20, last_key: str | None = None) -> list[KPI]:
-        """List KPIs with pagination."""
+    def list(self, tenant_id: str, limit: int = 20, last_key: str | None = None) -> list[Measure]:
+        """List Measures with pagination."""
         try:
             query_kwargs: dict[str, Any] = {
                 "KeyConditionExpression": "pk = :pk AND begins_with(sk, :sk_prefix)",
-                "ExpressionAttributeValues": {":pk": f"TENANT#{tenant_id}", ":sk_prefix": "KPI#"},
+                "ExpressionAttributeValues": {
+                    ":pk": f"TENANT#{tenant_id}",
+                    ":sk_prefix": "MEASURE#",
+                },
                 "Limit": limit,
             }
 

@@ -4,7 +4,7 @@ This service provides the application logic for managing coaching sessions,
 coordinating between domain entities, infrastructure services, and LLM providers.
 
 Architecture:
-- Topic definition from ENDPOINT_REGISTRY (EndpointDefinition)
+- Topic definition from TOPIC_REGISTRY (TopicDefinition)
 - Runtime config from TopicRepository (LLMTopic from DynamoDB)
 - Templates from S3PromptStorage
 - Parameter resolution via TemplateParameterProcessor
@@ -19,15 +19,15 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from coaching.src.core.constants import ConversationStatus, MessageRole, TopicType
+from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
 )
 from coaching.src.core.topic_registry import (
-    EndpointDefinition,
     TemplateType,
-    list_endpoints_by_topic_type,
+    TopicDefinition,
+    list_topics_by_topic_type,
 )
 from coaching.src.core.types import TenantId, UserId
 from coaching.src.domain.entities.coaching_session import CoachingMessage, CoachingSession
@@ -35,12 +35,11 @@ from coaching.src.domain.exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
     SessionConflictError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -132,11 +131,7 @@ class SessionResponse(BaseModel):
     tenant_id: str
     topic_id: str
     status: ConversationStatus
-    message: str = Field(
-        description="Coach's message",
-        validation_alias=AliasChoices("coach_message", "message"),
-        serialization_alias="coach_message",
-    )
+    message: str = Field(description="Coach's message")
     turn: int = Field(default=1, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
     is_final: bool = Field(default=False, description="Whether session is complete")
@@ -148,11 +143,7 @@ class MessageResponse(BaseModel):
     """Response from sending a message."""
 
     session_id: str
-    message: str = Field(
-        description="Coach's response",
-        validation_alias=AliasChoices("coach_message", "message"),
-        serialization_alias="coach_message",
-    )
+    message: str = Field(description="Coach's response")
     status: ConversationStatus
     turn: int = Field(default=0, description="Current turn number")
     max_turns: int = Field(default=0, description="Maximum turns (0=unlimited)")
@@ -271,13 +262,13 @@ class CoachingSessionService:
         self.provider_factory = provider_factory
 
         # Build topic index for quick lookup
-        self._topic_index: dict[str, EndpointDefinition] = {}
+        self._topic_index: dict[str, TopicDefinition] = {}
         self._build_topic_index()
 
     def _build_topic_index(self) -> None:
         """Build index of coaching topics from ENDPOINT_REGISTRY."""
-        coaching_endpoints = list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING)
-        for endpoint in coaching_endpoints:
+        coaching_topics = list_topics_by_topic_type(TopicType.CONVERSATION_COACHING)
+        for endpoint in coaching_topics:
             self._topic_index[endpoint.topic_id] = endpoint
         logger.debug(
             "coaching_service.topic_index_built",
@@ -289,14 +280,14 @@ class CoachingSessionService:
     # Configuration Loading
     # =========================================================================
 
-    def _get_endpoint_definition(self, topic_id: str) -> EndpointDefinition:
-        """Get EndpointDefinition from the topic index.
+    def _get_endpoint_definition(self, topic_id: str) -> TopicDefinition:
+        """Get TopicDefinition from the topic index.
 
         Args:
             topic_id: Topic identifier (e.g., "core_values")
 
         Returns:
-            EndpointDefinition for the topic
+            TopicDefinition for the topic
 
         Raises:
             InvalidTopicError: If topic not found in registry
@@ -332,7 +323,7 @@ class CoachingSessionService:
             raise TopicNotActiveError(topic_id=topic_id)
         return llm_topic
 
-    async def _load_topic_config(self, topic_id: str) -> tuple[EndpointDefinition, LLMTopic]:
+    async def _load_topic_config(self, topic_id: str) -> tuple[TopicDefinition, LLMTopic]:
         """Load complete topic configuration.
 
         Combines static definition from ENDPOINT_REGISTRY with
@@ -342,7 +333,7 @@ class CoachingSessionService:
             topic_id: Topic identifier
 
         Returns:
-            Tuple of (EndpointDefinition, LLMTopic)
+            Tuple of (TopicDefinition, LLMTopic)
 
         Raises:
             InvalidTopicError: If topic not found
@@ -354,8 +345,14 @@ class CoachingSessionService:
         logger.debug(
             "coaching_service.topic_config_loaded",
             topic_id=topic_id,
-            model_code=llm_topic.model_code,
-            max_turns=llm_topic.additional_config.get("max_turns", 10),
+            tier_level=llm_topic.tier_level.value,
+            basic_model=llm_topic.basic_model_code,
+            premium_model=llm_topic.premium_model_code,
+            max_turns=(
+                llm_topic.additional_config.get("max_turns")
+                or llm_topic.additional_config.get("estimated_messages")
+                or 10
+            ),
         )
 
         return endpoint_def, llm_topic
@@ -470,7 +467,7 @@ class CoachingSessionService:
         # Load configuration
         endpoint_def, llm_topic = await self._load_topic_config(topic_id)
 
-        # Check for existing active session
+        # Check for existing active session - /start ALWAYS creates NEW session
         existing = await self.session_repository.get_active_for_user_topic(
             user_id=UserId(user_id),
             topic_id=topic_id,
@@ -479,29 +476,27 @@ class CoachingSessionService:
 
         if existing is not None:
             logger.info(
-                "coaching_service.resuming_existing_session",
-                session_id=str(existing.session_id),
+                "coaching_service.start_canceling_existing_session",
+                existing_session_id=str(existing.session_id),
+                existing_status=existing.status.value,
+                reason="start_always_creates_new_session",
             )
-            # Check if session is idle - if so, close it and create a new one
-            if existing.is_idle():
-                logger.info(
-                    "coaching_service.session_idle_creating_new",
-                    old_session_id=str(existing.session_id),
-                    last_activity_at=existing.last_activity_at.isoformat()
-                    if existing.last_activity_at
-                    else None,
-                )
-                existing.complete(result={})
-                await self.session_repository.update(existing)
-                # Fall through to create a new session
+            # Cancel existing session - user explicitly wants to start fresh
+            # Use /resume endpoint to continue an existing session instead
+            if existing.is_active():
+                existing.cancel()
+            elif existing.is_paused():
+                existing.mark_abandoned()
             else:
-                return await self._resume_session(
-                    session=existing,
-                    endpoint_def=endpoint_def,
-                    llm_topic=llm_topic,
+                # Already terminal, just log
+                logger.info(
+                    "coaching_service.existing_session_already_terminal",
+                    session_id=str(existing.session_id),
+                    status=existing.status.value,
                 )
+            await self.session_repository.update(existing)
 
-        # Create new session
+        # Create new session with INITIATION template
         return await self._create_new_session(
             topic_id=topic_id,
             tenant_id=tenant_id,
@@ -518,7 +513,7 @@ class CoachingSessionService:
         tenant_id: str,
         user_id: str,
         parameters: dict[str, Any],
-        endpoint_def: EndpointDefinition,
+        endpoint_def: TopicDefinition,
         llm_topic: LLMTopic,
     ) -> SessionResponse:
         """Create a new coaching session.
@@ -539,10 +534,12 @@ class CoachingSessionService:
         initiation_template = await self._load_template(topic_id, TemplateType.INITIATION)
 
         # Resolve parameters using template processor
+        # Scan BOTH templates for parameters (they may have different placeholders)
         required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
+        combined_template = system_template + "\n\n" + initiation_template
 
         param_result = await self.template_processor.process_template_parameters(
-            template=system_template,
+            template=combined_template,
             payload=parameters,
             user_id=user_id,
             tenant_id=tenant_id,
@@ -550,13 +547,46 @@ class CoachingSessionService:
         )
         resolved_params = param_result.parameters
 
+        # Log resolved parameters for debugging
+        logger.info(
+            "coaching_service.parameters_resolved",
+            topic_id=topic_id,
+            resolved_params=resolved_params,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            param_warnings=param_result.warnings,
+            missing_required=param_result.missing_required,
+            param_count=len(resolved_params),
+        )
+
         # Render system prompt
         rendered_system = self._render_template(system_template, resolved_params)
 
+        # Log rendered templates for debugging
+        logger.info(
+            "coaching_service.templates_rendered",
+            topic_id=topic_id,
+            system_prompt_preview=rendered_system[:200] + "..."
+            if len(rendered_system) > 200
+            else rendered_system,
+            initiation_prompt_preview=initiation_template[:200] + "..."
+            if len(initiation_template) > 200
+            else initiation_template,
+        )
+
         # Create session entity
         # Get conversation settings from additional_config (stored in DynamoDB)
-        max_turns = llm_topic.additional_config.get("max_turns", 10)
-        idle_timeout_minutes = llm_topic.additional_config.get("idle_timeout_minutes", 30)
+        # Support both 'max_turns' and 'estimated_messages' as aliases
+        max_turns = (
+            llm_topic.additional_config.get("max_turns")
+            or llm_topic.additional_config.get("estimated_messages")
+            or 10
+        )
+        idle_timeout_minutes = (
+            llm_topic.additional_config.get("idle_timeout_minutes")
+            or llm_topic.additional_config.get("inactivity_timeout_minutes")
+            or 30
+        )
         # Session TTL in hours - default 336 hours (2 weeks) for paused sessions deletion
         session_ttl_hours = llm_topic.additional_config.get("session_ttl_hours", 336)
 
@@ -575,11 +605,33 @@ class CoachingSessionService:
             context=resolved_params,
         )
 
+        # Render initiation template with resolved params
+        rendered_initiation = self._render_template(initiation_template, resolved_params)
+
         # Build messages for LLM
         messages = [
             {"role": "system", "content": rendered_system},
-            {"role": "user", "content": initiation_template},
+            {"role": "user", "content": rendered_initiation},
         ]
+
+        logger.info(
+            "coaching_service.llm_messages_assembled",
+            topic_id=topic_id,
+            message_count=len(messages),
+            system_preview=rendered_system[:150] + "...",
+            user_preview=rendered_initiation[:150] + "...",
+        )
+
+        # CRITICAL: Log full prompts for debugging template parameter resolution
+        logger.info(
+            "coaching_service.FULL_PROMPTS_SENT_TO_LLM",
+            topic_id=topic_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            resolved_params=resolved_params,
+            system_prompt_full=rendered_system,
+            initiation_prompt_full=rendered_initiation,
+        )
 
         # Execute LLM call
         llm_response, response_metadata = await self._execute_llm_call(
@@ -645,14 +697,73 @@ class CoachingSessionService:
             metadata=response_metadata,
         )
 
+    async def resume_session(
+        self,
+        *,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+    ) -> SessionResponse:
+        """Resume an existing session with RESUME template.
+
+        This endpoint continues an existing session, using the RESUME template
+        which welcomes the user back and summarizes the conversation so far.
+
+        Works for both ACTIVE and PAUSED sessions:
+        - PAUSED: User explicitly paused or session was idle when they left
+        - ACTIVE: Chat window was closed by mistake, user wants to continue
+
+        Args:
+            session_id: Session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+
+        Returns:
+            SessionResponse with resume message
+
+        Raises:
+            SessionNotFoundError: If session not found
+            SessionAccessDeniedError: If user doesn't own session
+            InvalidTopicError: If topic configuration invalid
+        """
+        logger.info(
+            "coaching_service.resume_session",
+            session_id=session_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # Load session (validates ownership but doesn't check active status)
+        session = await self.session_repository.get_by_id_for_tenant(
+            session_id=session_id,
+            tenant_id=tenant_id,
+        )
+
+        if session is None:
+            raise SessionNotFoundError(session_id=session_id, tenant_id=tenant_id)
+
+        # Validate ownership
+        if str(session.user_id) != user_id:
+            raise SessionAccessDeniedError(session_id=session_id, user_id=user_id)
+
+        # Load topic configuration
+        endpoint_def, llm_topic = await self._load_topic_config(session.topic_id)
+
+        # Use private method to perform resume with RESUME template
+        return await self._resume_session(
+            session=session,
+            endpoint_def=endpoint_def,
+            llm_topic=llm_topic,
+        )
+
     async def _resume_session(
         self,
         *,
         session: CoachingSession,
-        endpoint_def: EndpointDefinition,  # noqa: ARG002
+        endpoint_def: TopicDefinition,  # noqa: ARG002
         llm_topic: LLMTopic,
     ) -> SessionResponse:
-        """Resume an existing paused or active session.
+        """Resume an existing paused or active session (internal).
 
         Args:
             session: Existing session to resume
@@ -663,7 +774,7 @@ class CoachingSessionService:
             SessionResponse with resume message
 
         Note:
-            Caller should check is_idle() before calling this method.
+            This is a private method. Uses RESUME template to welcome user back.
         """
         # Load resume template
         resume_template = await self._load_template(session.topic_id, TemplateType.RESUME)
@@ -676,12 +787,27 @@ class CoachingSessionService:
             "max_turns": session.max_turns,
         }
 
+        logger.info(
+            "coaching_service.resume_context_assembled",
+            session_id=str(session.session_id),
+            topic_id=session.topic_id,
+            context_params=list(context.keys()),
+            user_name=context.get("user_name", "NOT_SET"),
+        )
+
         # Render resume template
         rendered_resume = self._render_template(resume_template, context)
 
         # Load and render system prompt
         system_template = await self._load_template(session.topic_id, TemplateType.SYSTEM)
         rendered_system = self._render_template(system_template, session.context)
+
+        logger.info(
+            "coaching_service.resume_prompts_rendered",
+            session_id=str(session.session_id),
+            resume_preview=rendered_resume[:150] + "...",
+            system_preview=rendered_system[:150] + "...",
+        )
 
         # Build messages with history
         history = session.get_messages_for_llm(max_messages=20)
@@ -697,12 +823,12 @@ class CoachingSessionService:
             llm_topic=llm_topic,
         )
 
-        # Add resume interaction to session
-        session.add_assistant_message(llm_response)
-
-        # Update session status if it was paused
+        # Update session status if it was paused (must happen before adding messages)
         if session.status == ConversationStatus.PAUSED:
             session.resume()
+
+        # Add resume interaction to session
+        session.add_assistant_message(llm_response)
 
         # Persist
         await self.session_repository.update(session)
@@ -726,21 +852,35 @@ class CoachingSessionService:
         )
 
     def _summarize_conversation(self, messages: list[CoachingMessage]) -> str:
-        """Create a brief summary of the conversation for resume context.
+        """Create a formatted conversation history for resume context.
+
+        Provides the full conversation history formatted for LLM context
+        so it can naturally continue the conversation without asking the user
+        to recap what was discussed.
 
         Args:
             messages: List of conversation messages
 
         Returns:
-            Summary string
-        """
-        user_messages = [m for m in messages if m.role == MessageRole.USER]
-        assistant_messages = [m for m in messages if m.role == MessageRole.ASSISTANT]
+            Formatted conversation history string
 
-        return (
-            f"Conversation has {len(user_messages)} user messages and "
-            f"{len(assistant_messages)} assistant responses."
-        )
+        Note:
+            No truncation is applied to individual messages. The message count
+            is already limited by get_messages_for_llm(max_messages=20) and
+            LLMs have sufficient context windows (200K+ tokens) to handle this.
+        """
+        if not messages:
+            return "This is the start of the conversation."
+
+        # Format conversation for readability
+        lines = []
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                continue  # Skip system messages in summary
+            role = "User" if msg.role == MessageRole.USER else "Coach"
+            lines.append(f"{role}: {msg.content}")
+
+        return "\n\n".join(lines)
 
     # =========================================================================
     # Session Lifecycle - Send Message
@@ -906,15 +1046,9 @@ class CoachingSessionService:
                 current_status=session.status.value,
             )
 
-        # Check idle timeout
-        if session.is_idle():
-            raise SessionIdleTimeoutError(
-                session_id=session_id,
-                last_activity_at=session.last_activity_at.isoformat()
-                if session.last_activity_at
-                else "unknown",
-                idle_timeout_minutes=session.idle_timeout_minutes,
-            )
+        # Note: Idle check removed - idle sessions can be resumed
+        # Users may have stepped away, had power outage, etc.
+        # TTL handles cleanup of truly abandoned sessions
 
         return session
 
@@ -922,6 +1056,11 @@ class CoachingSessionService:
         """Parse LLM response for message and completion signal.
 
         Attempts to parse JSON response with structured output format.
+        Handles multiple formats:
+        - Plain JSON: {"message": "...", "is_final": true}
+        - Markdown-wrapped: ```json\n{...}\n```
+        - Code fence without language: ```\n{...}\n```
+
         Falls back to treating entire response as message.
 
         Args:
@@ -930,15 +1069,72 @@ class CoachingSessionService:
         Returns:
             Tuple of (message, is_final)
         """
+        # Extract JSON from various wrapper formats
+        json_content = self._extract_json_from_response(response)
+
         try:
             # Try to parse as JSON
-            data = json.loads(response)
+            data = json.loads(json_content)
             message = data.get("message", response)
             is_final = data.get("is_final", False)
+
+            logger.info(
+                "coaching_service.llm_response_parsed",
+                is_json=True,
+                is_final=is_final,
+                message_length=len(message),
+                has_result=bool(data.get("result")),
+            )
+
             return message, is_final
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Not JSON, return as-is
+            logger.info(
+                "coaching_service.llm_response_not_json",
+                is_json=False,
+                response_preview=response[:200],
+                parse_error=str(e),
+            )
             return response, False
+
+    def _extract_json_from_response(self, response: str) -> str:
+        """Extract JSON content from various response formats.
+
+        Handles multiple LLM response formats:
+        1. Plain JSON
+        2. JSON wrapped in ```json ... ```
+        3. JSON wrapped in ``` ... ```
+        4. JSON with extra whitespace
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Cleaned JSON string ready for parsing
+        """
+        # Strip leading/trailing whitespace
+        cleaned = response.strip()
+
+        # Pattern 1: ```json\n{...}\n``` or ```json {... } ```
+        if cleaned.startswith("```json"):
+            # Remove opening fence
+            cleaned = cleaned[7:]  # len("```json") = 7
+            # Remove closing fence if present
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            return cleaned.strip()
+
+        # Pattern 2: ```\n{...}\n``` or ``` {... } ```
+        if cleaned.startswith("```"):
+            # Remove opening fence
+            cleaned = cleaned[3:]  # len("```") = 3
+            # Remove closing fence if present
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            return cleaned.strip()
+
+        # Pattern 3: Plain JSON (no wrapper)
+        return cleaned
 
     # =========================================================================
     # Session Lifecycle - Complete
@@ -986,7 +1182,7 @@ class CoachingSessionService:
         self,
         *,
         session: CoachingSession,
-        endpoint_def: EndpointDefinition,
+        endpoint_def: TopicDefinition,
         llm_topic: LLMTopic,
     ) -> SessionCompletionResponse:
         """Extract results and complete session.
@@ -1055,6 +1251,8 @@ class CoachingSessionService:
         logger.info(
             "coaching_service.session_completed",
             session_id=str(session.session_id),
+            has_result=bool(extracted),
+            result_keys=list(extracted.keys()) if isinstance(extracted, dict) else None,
         )
 
         return SessionCompletionResponse(
@@ -1433,6 +1631,7 @@ class CoachingSessionService:
         messages: list[dict[str, str]],
         llm_topic: LLMTopic,
         temperature_override: float | None = None,
+        user_tier: TierLevel | None = None,
     ) -> tuple[str, ResponseMetadata]:
         """Execute LLM call through provider factory with dynamic model resolution.
 
@@ -1443,20 +1642,28 @@ class CoachingSessionService:
             messages: Messages to send to LLM
             llm_topic: Topic config with model settings
             temperature_override: Optional temperature override
+            user_tier: User's subscription tier (for model selection)
 
         Returns:
             Tuple of (response_content, metadata)
         """
         import time
 
+        from coaching.src.core.constants import TierLevel
         from coaching.src.domain.ports.llm_provider_port import LLMMessage
 
         temperature = temperature_override or llm_topic.temperature
         start_time = time.perf_counter()
 
+        # Select model based on user tier, default to ULTIMATE for backward compatibility
+        if user_tier is None:
+            user_tier = TierLevel.ULTIMATE
+        model_code = llm_topic.get_model_code_for_tier(user_tier)
+
         logger.debug(
             "coaching_service.executing_llm_call",
-            model_code=llm_topic.model_code,
+            model_code=model_code,
+            user_tier=user_tier.value,
             temperature=temperature,
             message_count=len(messages),
         )
@@ -1465,18 +1672,14 @@ class CoachingSessionService:
         # This properly resolves model_code (e.g., "CLAUDE_3_5_SONNET") to
         # provider instance and actual model name (e.g., "us.anthropic.claude-3-5-sonnet-...")
         try:
-            provider, model_name = self.provider_factory.get_provider_for_model(
-                llm_topic.model_code
-            )
+            provider, model_name = self.provider_factory.get_provider_for_model(model_code)
         except Exception as e:
             logger.error(
                 "coaching_service.provider_resolution_failed",
-                model_code=llm_topic.model_code,
+                model_code=model_code,
                 error=str(e),
             )
-            raise RuntimeError(
-                f"Failed to resolve LLM provider for {llm_topic.model_code}: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to resolve LLM provider for {model_code}: {e}") from e
 
         # Convert messages to LLMMessage format
         llm_messages: list[LLMMessage] = []
@@ -1504,7 +1707,7 @@ class CoachingSessionService:
 
         logger.info(
             "coaching_service.llm_call_completed",
-            model_code=llm_topic.model_code,
+            model_code=model_code,
             model_name=model_name,
             tokens_used=response.usage.get("total_tokens", 0),
             processing_time_ms=processing_time_ms,
@@ -1516,7 +1719,51 @@ class CoachingSessionService:
             tokens_used=response.usage.get("total_tokens", 0),
         )
 
-        return response.content, metadata
+        # Validate response and add fallback for empty content
+        content = response.content
+        if not content or not content.strip():
+            fallback = self._get_fallback_message(response.finish_reason)
+            logger.warning(
+                "coaching_service.empty_llm_response",
+                finish_reason=response.finish_reason,
+                model_code=model_code,
+                fallback_used=True,
+            )
+            content = fallback
+
+        return content, metadata
+
+    def _get_fallback_message(self, finish_reason: str) -> str:
+        """Get appropriate fallback message based on LLM failure reason.
+
+        Args:
+            finish_reason: The finish_reason from the LLM response
+
+        Returns:
+            User-friendly fallback message appropriate for the failure reason
+
+        Business Rule: Empty responses should degrade gracefully with helpful guidance
+        """
+        fallbacks = {
+            "length": (
+                "I apologize, but I've run out of space to respond properly. "
+                "This sometimes happens with lengthy conversations. Could you try "
+                "rephrasing your message more concisely, or we can start a fresh session?"
+            ),
+            "content_filter": (
+                "I'm unable to respond due to content policy restrictions. "
+                "Could you rephrase your message?"
+            ),
+            "error": (
+                "I encountered a technical issue and couldn't generate a response. "
+                "Let's try again - could you repeat your last message?"
+            ),
+        }
+
+        return fallbacks.get(
+            finish_reason,
+            "I had trouble generating a response. Could you try again?",
+        )
 
 
 # =============================================================================
@@ -1524,10 +1771,10 @@ class CoachingSessionService:
 # =============================================================================
 
 
-def list_coaching_topics() -> list[EndpointDefinition]:
+def list_coaching_topics() -> list[TopicDefinition]:
     """List all coaching topic definitions.
 
     Returns:
-        List of EndpointDefinition for coaching topics
+        List of TopicDefinition for coaching topics
     """
-    return list(list_endpoints_by_topic_type(TopicType.CONVERSATION_COACHING))
+    return list(list_topics_by_topic_type(TopicType.CONVERSATION_COACHING))

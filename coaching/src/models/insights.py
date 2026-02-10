@@ -18,6 +18,15 @@ class InsightCategory(str, Enum):
     TECHNOLOGY = "technology"
 
 
+class KISSCategory(str, Enum):
+    """KISS framework categories for actionable insights."""
+
+    KEEP = "keep"  # What's working well, continue doing
+    IMPROVE = "improve"  # What needs optimization
+    START = "start"  # What should be initiated
+    STOP = "stop"  # What's misaligned or counterproductive
+
+
 class InsightPriority(str, Enum):
     """Priority levels for insights."""
 
@@ -58,6 +67,14 @@ class Insight(BaseModel):
     )
     category: InsightCategory = Field(..., description="Insight category")
     priority: InsightPriority = Field(..., description="Priority level")
+    kiss_category: KISSCategory | None = Field(
+        default=None, description="KISS framework category (Keep, Improve, Start, Stop)"
+    )
+    alignment_impact: str | None = Field(
+        default=None,
+        max_length=500,
+        description="How this affects purpose/values alignment and business outcomes",
+    )
     status: InsightStatus = Field(default=InsightStatus.ACTIVE, description="Current status")
     suggested_actions: list[SuggestedAction] = Field(
         default_factory=list, description="List of suggested actions"
@@ -95,6 +112,8 @@ class BusinessDataContext(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     foundation: dict[str, Any] = Field(default_factory=dict, description="Business foundation data")
     goals: list[dict[str, Any]] = Field(default_factory=list, description="Goals data")
+    strategies: list[dict[str, Any]] = Field(default_factory=list, description="Strategies data")
+    measures: list[dict[str, Any]] = Field(default_factory=list, description="Measures data")
     goal_stats: dict[str, Any] = Field(default_factory=dict, description="Goal statistics")
     performance_score: dict[str, Any] = Field(
         default_factory=dict, description="Performance metrics"
@@ -116,6 +135,8 @@ class BusinessDataContext(BaseModel):
         return {
             "foundation": 1 if self.foundation else 0,
             "goals": len(self.goals),
+            "strategies": len(self.strategies),
+            "measures": len(self.measures),
             "goal_stats": 1 if self.goal_stats else 0,
             "performance_score": 1 if self.performance_score else 0,
             "recent_actions": len(self.recent_actions),
@@ -161,5 +182,6 @@ __all__ = [
     "InsightPriority",
     "InsightStatus",
     "InsightsCacheEntry",
+    "KISSCategory",
     "SuggestedAction",
 ]

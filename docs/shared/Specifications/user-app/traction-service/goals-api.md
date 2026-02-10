@@ -2,8 +2,8 @@
 
 **Controller:** `GoalsController`  
 **Base Route:** `/goals`  
-**Version:** 7.0  
-**Last Updated:** December 23, 2025
+**Version:** 7.1  
+**Last Updated:** December 27, 2025
 
 [← Back to API Index](./README.md)
 
@@ -13,13 +13,13 @@
 
 The Goals API manages the complete lifecycle of business goals, including creation, updates, status transitions, strategies, and activity tracking.
 
-**Endpoints:** 13 total
+**Endpoints:** 14 total
 - 3 CRUD operations (List, Create, Get, Update, Delete)
 - 3 status transitions (Close, Activate, Pause)
 - 2 activity endpoints (Get activity, Add activity)
 - 1 notes endpoint
 - 1 statistics endpoint
-- 1 KPI threshold endpoint
+- 2 Measure endpoints (Set Measure threshold, Get available Measures)
 - 2 strategy endpoints (Create strategy, Update strategy)
 
 ---
@@ -77,7 +77,7 @@ Retrieve a filtered, paginated list of goals.
           "email": "john@example.com"
         },
         "strategiesCount": 3,
-        "kpisCount": 5,
+        "measuresCount": 5,
         "actionsCount": 12,
         "issuesCount": 2,
         "createdAt": "2025-01-01T00:00:00.000Z",
@@ -180,7 +180,7 @@ Create a new goal.
 
 **GET** `/goals/{id}`
 
-Retrieve detailed information about a specific goal, including strategies, KPIs, and metrics.
+Retrieve detailed information about a specific goal, including strategies, Measures, and metrics.
 
 #### Path Parameters
 
@@ -218,25 +218,36 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
         "order": 1,
         "status": "active",
         "progress": 60,
-        "kpisCount": 3,
+        "measuresCount": 3,
         "createdAt": "2025-01-15T00:00:00.000Z"
       }
     ],
-    "kpis": [
+    "measures": [
       {
-        "id": "kpi-001",
+        "measureLinkId": "link-001",
+        "strategyId": null,
+        "isPrimary": true,
+        "thresholdPct": 10.0,
+        "progressStatus": "on_track",
+        "measureId": "measure-001",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
+        "direction": "up",
         "currentValue": 125000,
-        "targetValue": 150000,
-        "progress": 83.3,
-        "status": "on_track",
-        "isPrimary": true
+        "targetValue": null,
+        "progress": 78.5,
+        "variance": -5.2,
+        "category": "revenue",
+        "catalogId": "catalog-mrr-001",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "type": "quantitative",
+        "ownerId": "user-456"
       }
     ],
     "statistics": {
       "strategiesCount": 3,
-      "kpisCount": 5,
+      "measuresCount": 5,
       "actionsCount": 12,
       "openIssuesCount": 2,
       "completedActionsCount": 8,
@@ -245,7 +256,7 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
     "recentActivity": [
       {
         "id": "act-001",
-        "type": "kpi_updated",
+        "type": "measure_updated",
         "description": "MRR updated to $125,000",
         "createdAt": "2025-12-22T15:30:00.000Z",
         "createdBy": {
@@ -263,6 +274,36 @@ Retrieve detailed information about a specific goal, including strategies, KPIs,
   "timestamp": "2025-12-23T10:30:00.000Z"
 }
 ```
+
+#### Measure Response Fields
+
+The `measures` array contains enriched measure data combining both MeasureLink and Measure properties:
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| **MeasureLink Properties** | | | |
+| `measureLinkId` | string (UUID) | No | Unique identifier for the measure-goal link |
+| `strategyId` | string (UUID) | Yes | Strategy this measure is linked to (null for goal-level measures) |
+| `isPrimary` | boolean | No | Whether this is the primary measure for the goal |
+| `thresholdPct` | number | Yes | Variance threshold percentage for alerts (0-100) |
+| `progressStatus` | string | Yes | Calculated status: "on_track", "at_risk", "behind" |
+| **Measure Properties** | | | |
+| `measureId` | string (UUID) | No | Unique identifier for the measure |
+| `name` | string | No | Measure name |
+| `unit` | string | No | Unit of measurement (e.g., "USD", "users", "%") |
+| `direction` | string | No | Expected direction: "up", "down", "maintain" |
+| `currentValue` | number | Yes | Current/latest measured value |
+| `targetValue` | number | Yes | (Deprecated) Target value - now stored separately |
+| `progress` | number | Yes | Progress percentage toward target (calculated separately) |
+| `variance` | number | Yes | Difference from target (calculated separately) |
+| `category` | string | Yes | Business category (e.g., "revenue", "growth", "efficiency") |
+| `catalogId` | string (UUID) | Yes | Reference to measure catalog entry |
+| `aggregationType` | string | Yes | How values aggregate: "sum", "average", "count", "min", "max", "latest", "point_in_time" |
+| `aggregationPeriod` | string | Yes | Time period: "daily", "weekly", "monthly", "quarterly", "yearly" |
+| `type` | string | No | Input type: "quantitative" (numeric), "qualitative" (options), "binary" (yes/no) |
+| `ownerId` | string (UUID) | Yes | Measure owner - the person responsible for this measure |
+
+**Note:** `progress`, `variance`, and `progressStatus` are calculated from measure targets and actuals using the domain progress calculation service (same as the measures endpoint). `targetValue` remains `null` as targets are stored separately in the system. `progressStatus` reflects the calculated status relative to link thresholds ("on_track", "at_risk", "behind"). If insufficient data exists for a measure (less than 2 actuals or no target), these fields will be `null`.
 
 ---
 
@@ -304,6 +345,44 @@ All fields are optional (only include fields to update):
 
 **Note:** Status is updated via dedicated endpoints (activate, pause, close)
 
+#### Owner Change Propagation
+
+When the `ownerId` field is updated, the system automatically propagates the ownership change to related entities following the **unified measure ownership model**:
+
+**Propagation Logic:**
+1. System identifies all Measures linked to this goal
+2. For each Measure where `Measure.OwnerId` equals the goal's **previous owner**:
+   - Updates `Measure.OwnerId` to the new owner
+   - Fetches **ALL MeasureLinks** for that Measure (across all goals and strategies)
+   - Updates `MeasureLink.personId` to the new owner for every link
+
+**Example Scenario:**
+```
+Initial State:
+- Goal A (owner: Alice)
+- Measure M1 (owner: Alice) linked to Goal A
+- MeasureLinks: Link1→Goal A, Link2→Goal B, Link3→Strategy S1 (all with personId: Alice)
+
+After updating Goal A owner to Bob:
+- Goal A (owner: Bob)
+- Measure M1 (owner: Bob) - UPDATED because it matched old owner
+- MeasureLinks: Link1, Link2, Link3 (all with personId: Bob) - ALL updated
+
+If Measure M2 had a different owner (Charlie), it would NOT be affected.
+```
+
+**Key Behaviors:**
+- ✅ Only affects Measures that were owned by the previous goal owner
+- ✅ Updates ALL links for affected Measures (maintains unified ownership)
+- ✅ Preserves explicitly assigned owners (Measures not matching old owner remain unchanged)
+- ✅ Handles multi-goal scenarios correctly (Measure linked to multiple goals)
+- ✅ Operation is atomic and logged for audit purposes
+
+**Logging:** The operation logs:
+- Number of Measures updated
+- Number of MeasureLinks updated
+- Individual Measure updates with owner transition details
+
 #### Response 200
 
 ```json
@@ -336,7 +415,7 @@ All fields are optional (only include fields to update):
 
 **DELETE** `/goals/{id}`
 
-Permanently delete a goal and all associated data (strategies, KPI links, activities).
+Permanently delete a goal and all associated data (strategies, Measure links, activities).
 
 ⚠️ **Warning:** This operation cannot be undone. Consider closing instead.
 
@@ -512,7 +591,7 @@ Retrieve activity feed for a goal (updates, changes, comments).
 **Activity Types:**
 - `goal_created`, `goal_updated`, `goal_status_changed`
 - `strategy_added`, `strategy_updated`, `strategy_removed`
-- `kpi_linked`, `kpi_unlinked`, `kpi_updated`
+- `measure_linked`, `measure_unlinked`, `measure_updated`
 - `comment_added`, `note_added`
 
 #### Response 200
@@ -524,12 +603,12 @@ Retrieve activity feed for a goal (updates, changes, comments).
     "items": [
       {
         "id": "activity-001",
-        "type": "kpi_updated",
-        "entityType": "kpi",
-        "entityId": "kpi-001",
+        "type": "measure_updated",
+        "entityType": "measure",
+        "entityId": "measure-001",
         "description": "MRR updated from $120,000 to $125,000",
         "metadata": {
-          "kpiName": "Monthly Recurring Revenue",
+          "measureName": "Monthly Recurring Revenue",
           "previousValue": 120000,
           "newValue": 125000
         },
@@ -697,7 +776,7 @@ Get aggregated statistics across all goals for the tenant.
     "onTrackCount": 25,
     "atRiskCount": 8,
     "offTrackCount": 2,
-    "totalKpis": 125,
+    "totalMeasures": 125,
     "totalStrategies": 89,
     "totalActions": 456
   },
@@ -708,18 +787,18 @@ Get aggregated statistics across all goals for the tenant.
 
 ---
 
-### 13. Set KPI Threshold
+### 13. Set Measure Threshold
 
-**POST** `/goals/{goalId}/kpis/{kpiId}:setThreshold`
+**POST** `/goals/{goalId}/measures/{measureId}:setThreshold`
 
-Set a threshold percentage for a KPI linked to a goal.
+Set a threshold percentage for a Measure linked to a goal.
 
 #### Path Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `goalId` | string (UUID) | Goal identifier |
-| `kpiId` | string (UUID) | KPI identifier |
+| `measureId` | string (UUID) | Measure identifier |
 
 #### Request Body
 
@@ -736,7 +815,7 @@ Set a threshold percentage for a KPI linked to a goal.
 | `thresholdPct` | number | Yes | 0-100 | Threshold percentage |
 
 **Threshold Behavior:**
-- KPI shows warning when progress falls below this percentage
+- Measure shows warning when progress falls below this percentage
 - Used for status calculations (on_track, at_risk, off_track)
 - Typical values: 80-90%
 
@@ -747,7 +826,7 @@ Set a threshold percentage for a KPI linked to a goal.
   "success": true,
   "data": {
     "goalId": "550e8400-e29b-41d4-a716-446655440000",
-    "kpiId": "kpi-001",
+    "measureId": "measure-001",
     "thresholdPct": 85.0,
     "updatedAt": "2025-12-23T11:20:00.000Z"
   },
@@ -755,6 +834,150 @@ Set a threshold percentage for a KPI linked to a goal.
   "timestamp": "2025-12-23T11:20:00.000Z"
 }
 ```
+
+---
+
+### 14. Get Available Measures
+
+**GET** `/goals/{goalId}/available-measures`
+
+Retrieve all Measures available for linking to a specific goal, including:
+- Catalog Measures (predefined industry-standard Measures)
+- Tenant custom Measures (organization-specific Measures)
+
+Each Measure includes usage statistics showing how many goals are currently using it and whether the specified goal is already using it.
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `goalId` | string (UUID) | Goal identifier |
+
+#### Response 200
+
+```json
+{
+  "success": true,
+  "data": {
+    "catalogMeasures": [
+      {
+        "id": "catalog-001",
+        "name": "Monthly Recurring Revenue",
+        "description": "Total predictable revenue from subscriptions",
+        "category": "Financial",
+        "unit": "USD",
+        "direction": "increase",
+        "type": "leading",
+        "valueType": "currency",
+        "aggregationType": "sum",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Sum of all active subscription values",
+        "isIntegrationEnabled": true,
+        "usageInfo": {
+          "goalCount": 3,
+          "isUsedByThisGoal": false
+        }
+      }
+    ],
+    "tenantCustomMeasures": [
+      {
+        "id": "custom-measure-001",
+        "name": "Customer Satisfaction Score",
+        "description": "Average CSAT from post-purchase surveys",
+        "category": "Customer Experience",
+        "unit": "score",
+        "direction": "increase",
+        "type": "lagging",
+        "valueType": "percentage",
+        "aggregationType": "average",
+        "aggregationPeriod": "monthly",
+        "calculationMethod": "Average of all survey responses",
+        "measureCatalogId": null,
+        "isIntegrationEnabled": false,
+        "createdAt": "2025-01-15T10:00:00.000Z",
+        "createdBy": "user-123",
+        "usageInfo": {
+          "goalCount": 1,
+          "isUsedByThisGoal": true
+        }
+      }
+    ]
+  },
+  "error": null,
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+#### Response Fields
+
+**Catalog Measure:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | Measure catalog entry ID |
+| `name` | string | Measure display name |
+| `description` | string | What the Measure measures |
+| `category` | string | Business category (Financial, Operations, Customer, etc.) |
+| `unit` | string | Measurement unit (USD, %, count, score, etc.) |
+| `direction` | string | `"increase"` or `"decrease"` - desired trend |
+| `type` | string | `"leading"` or `"lagging"` indicator |
+| `valueType` | string | `"number"`, `"currency"`, `"percentage"`, `"boolean"` |
+| `aggregationType` | string | `"sum"`, `"average"`, `"max"`, `"min"`, `"count"`, `"latest"` |
+| `aggregationPeriod` | string | `"daily"`, `"weekly"`, `"monthly"`, `"quarterly"`, `"annually"` |
+| `calculationMethod` | string | How the Measure is calculated |
+| `isIntegrationEnabled` | boolean | Whether external integrations can populate this Measure |
+| `usageInfo` | object | Usage statistics for this Measure |
+
+**Tenant Custom Measure:**
+| Field | Type | Description |
+|-------|------|-------------|
+| All fields from Catalog Measure | - | Same as above |
+| `measureCatalogId` | string (UUID) or null | Reference to catalog Measure if based on template |
+| `createdAt` | string (ISO 8601) | When the custom Measure was created |
+| `createdBy` | string (UUID) | User who created the custom Measure |
+
+**Usage Info:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `goalCount` | number | Number of goals currently using this Measure |
+| `isUsedByThisGoal` | boolean | Whether the specified goal is already using this Measure |
+
+#### Use Cases
+
+1. **Measure Selection Dialog**: Display available Measures when user wants to link Measure to goal
+2. **Prevent Duplicates**: Show `isUsedByThisGoal` to prevent linking same Measure twice
+3. **Popular Measures**: Sort by `goalCount` to show most commonly used Measures
+4. **Filter by Category**: Group Measures by category for better UX
+
+#### Error Responses
+
+**404 Not Found**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Goal not found",
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+**400 Bad Request**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid goal ID format",
+  "timestamp": "2025-12-23T11:30:00.000Z"
+}
+```
+
+#### Notes
+
+- Returns both catalog Measures (predefined) and tenant custom Measures
+- Usage statistics updated in real-time
+- Only returns Measures accessible to the tenant
+- Catalog Measures are read-only; tenant custom Measures can be modified
+- Use [Measure Links API](./measure-links-api.md) to actually link a Measure to the goal
+- For new (unpersisted) goals, use `GET /goals/available-measures` (see Measures API) to fetch the catalog without a goalId
 
 ---
 
@@ -808,10 +1031,10 @@ Valid transitions:
 
 ### Deletion Rules
 
-- Cannot delete goal with active linked KPIs
+- Cannot delete goal with active linked Measures
 - Cannot delete goal with open issues
 - Deleting goal also deletes: strategies, activity history, notes
-- Deleting goal unlinks: KPIs (KPI instances remain), actions, people
+- Deleting goal unlinks: Measures (Measure instances remain), actions, people
 
 ### Validation Rules
 
@@ -861,7 +1084,7 @@ await traction.post(`/goals/${goalId}:close`, {
 ## Related APIs
 
 - [Strategies API](./strategies-api.md) - Manage goal strategies
-- [KPI Links API](./kpi-links-api.md) - Link KPIs to goals
+- [Measure Links API](./measure-links-api.md) - Link Measures to goals
 - [Actions API](./actions-api.md) - Link actions to goals
 - [Activities API](./activities-api.md) - Activity feeds
 
@@ -869,14 +1092,28 @@ await traction.post(`/goals/${goalId}:close`, {
 
 ## Changelog
 
+### v7.6 (Issue #645)
+- **Enhanced** `/goals/{id}` endpoint to calculate measure progress using domain service
+- `progress`, `variance`, and `progressStatus` fields in measures array now return actual calculated values (instead of `null`)
+- Progress calculated using `IProgressCalculationService` for consistency with measures endpoint
+- Handler pre-calculates progress for each measure link before passing to mapper
+- Mapper remains pure transformation (no business logic)
+- Uses new `MeasureLinkWithProgress` result record for type-safe, cohesive data structure
+
+### v7.1 (December 27, 2025)
+- **Restored** `/goals/{goalId}/available-measures` endpoint (Issue #413)
+- Updated to work with new `IMeasureLinkRepository` architecture
+- Added comprehensive documentation with usage examples
+- Endpoint now supports unified Measure linking for Goals, Strategies, and People
+
 ### v7.0 (December 23, 2025)
-- Removed deprecated `/goals/{goalId}/kpis:link` endpoint
-- Removed deprecated `/goals/{goalId}/kpis:unlink` endpoint  
-- Removed deprecated `/goals/{goalId}/available-kpis` endpoint
-- KPI operations moved to dedicated `/kpi-links` API
+- Removed deprecated `/goals/{goalId}/measures:link` endpoint
+- Removed deprecated `/goals/{goalId}/measures:unlink` endpoint  
+- ~~Removed deprecated `/goals/{goalId}/available-measures` endpoint~~ (Restored in v7.1)
+- Measure operations moved to dedicated `/measure-links` API
 - Added comprehensive documentation with examples
 
 ### v6.0 (December 21, 2025)
-- Added KPI linking endpoints (now deprecated)
+- Added Measure linking endpoints (now deprecated)
 - Added activity endpoints
 - Added statistics endpoint

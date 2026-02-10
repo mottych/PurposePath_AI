@@ -12,12 +12,11 @@ from coaching.src.api.models.strategic_planning import (
     AlignmentBreakdown,
     AlignmentCheckData,
     AlignmentCheckResponse,
-    KPIRecommendation,
-    KPIRecommendationsData,
-    KPIRecommendationsResponseV2,
+    MeasureRecommendation,
+    MeasureRecommendationsData,
+    MeasureRecommendationsResponse,
     StrategySuggestion,
-    StrategySuggestionsData,
-    StrategySuggestionsResponseV2,
+    StrategySuggestionsResponse,
     SuggestedTarget,
 )
 from pydantic import ValidationError
@@ -127,36 +126,36 @@ class TestAlignmentCheckResponse:
 
 
 @pytest.mark.unit
-class TestStrategySuggestionsResponseV2:
-    """Tests for StrategySuggestionsResponseV2 model."""
+class TestStrategySuggestionsResponse:
+    """Tests for StrategySuggestionsResponse model."""
 
     def test_valid_strategy_suggestions(self):
         """Test creating valid strategy suggestions."""
-        response = StrategySuggestionsResponseV2(
-            data=StrategySuggestionsData(
-                suggestions=[
-                    StrategySuggestion(
-                        title="Expand to new markets",
-                        description="Identify and enter three new geographic markets within the next 18 months to diversify revenue streams.",
-                        reasoning="This approach leverages existing strengths while reducing geographic concentration risk.",
-                        alignment_score=85,
-                        suggested_kpis=["Market share", "Revenue growth"],
-                    ),
-                    StrategySuggestion(
-                        title="Digital transformation initiative",
-                        description="Invest in cloud infrastructure and automation tools to reduce operational costs by 30% over two years.",
-                        reasoning="Aligns with company purpose of innovation and efficiency while improving competitive position.",
-                        alignment_score=80,
-                        suggested_kpis=["Cost reduction"],
-                    ),
-                ],
-                analysis_notes="These strategies complement each other and address both growth and efficiency objectives.",
-            )
+        response = StrategySuggestionsResponse(
+            suggestions=[
+                StrategySuggestion(
+                    title="Expand to new markets",
+                    description="Identify and enter three new geographic markets within the next 18 months to diversify revenue streams.",
+                    reasoning="This approach leverages existing strengths while reducing geographic concentration risk.",
+                    alignment_score=85,
+                    suggested_kpis=["Market share", "Revenue growth"],
+                ),
+                StrategySuggestion(
+                    title="Digital transformation initiative",
+                    description="Invest in cloud infrastructure and automation tools to reduce operational costs by 30% over two years.",
+                    reasoning="Aligns with company purpose of innovation and efficiency while improving competitive position.",
+                    alignment_score=80,
+                    suggested_kpis=["Cost reduction"],
+                ),
+            ],
+            confidence=0.85,
+            reasoning="These strategies complement each other and address both growth and efficiency objectives.",
         )
 
-        assert len(response.data.suggestions) == 2
-        assert response.data.suggestions[0].alignment_score == 85
-        assert response.data.suggestions[1].title == "Digital transformation initiative"
+        assert len(response.suggestions) == 2
+        assert response.suggestions[0].alignment_score == 85
+        assert response.suggestions[1].title == "Digital transformation initiative"
+        assert response.confidence == 0.85
 
     def test_alignment_score_boundaries(self):
         """Test alignment score at boundaries."""
@@ -193,20 +192,20 @@ class TestStrategySuggestionsResponseV2:
 
 
 @pytest.mark.unit
-class TestKPIRecommendationsResponseV2:
-    """Tests for KPIRecommendationsResponseV2 model."""
+class TestMeasureRecommendationsResponse:
+    """Tests for MeasureRecommendationsResponse model."""
 
-    def test_valid_kpi_recommendations(self):
-        """Test creating valid KPI recommendations."""
-        response = KPIRecommendationsResponseV2(
-            data=KPIRecommendationsData(
+    def test_valid_measure_recommendations(self):
+        """Test creating valid Measure recommendations."""
+        response = MeasureRecommendationsResponse(
+            data=MeasureRecommendationsData(
                 recommendations=[
-                    KPIRecommendation(
+                    MeasureRecommendation(
                         name="Customer Retention Rate",
                         description="Measures the percentage of customers retained over a given period.",
                         unit="%",
                         direction="up",
-                        kpi_type="quantitative",
+                        measure_type="quantitative",
                         reasoning="Critical for sustainable growth as it measures customer satisfaction and loyalty.",
                         suggested_target=SuggestedTarget(
                             value=85.0,
@@ -217,18 +216,18 @@ class TestKPIRecommendationsResponseV2:
                         measurement_frequency="monthly",
                         is_primary_candidate=True,
                     ),
-                    KPIRecommendation(
+                    MeasureRecommendation(
                         name="Net Promoter Score",
                         description="Gauges customer loyalty and satisfaction through survey.",
                         unit="points",
                         direction="up",
-                        kpi_type="quantitative",
+                        measure_type="quantitative",
                         reasoning="Leading indicator of growth potential through word-of-mouth and referrals.",
                         measurement_approach="Survey customers with 0-10 scale, calculate promoters minus detractors",
                         measurement_frequency="quarterly",
                     ),
                 ],
-                analysis_notes="These KPIs focus on customer-centric metrics that drive sustainable growth.",
+                analysis_notes="These Measures focus on customer-centric metrics that drive sustainable growth.",
             )
         )
 
@@ -239,46 +238,46 @@ class TestKPIRecommendationsResponseV2:
     def test_direction_options(self):
         """Test valid direction options."""
         for direction in ["up", "down"]:
-            kpi = KPIRecommendation(
-                name=f"Test {direction} KPI",
-                description=f"A KPI with {direction} direction for testing purposes.",
+            measure = MeasureRecommendation(
+                name=f"Test {direction} Measure",
+                description=f"A Measure with {direction} direction for testing purposes.",
                 unit="%",
                 direction=direction,
-                kpi_type="quantitative",
+                measure_type="quantitative",
                 reasoning="Testing that both direction options are accepted by the model validation.",
                 measurement_approach="Standard tracking method via analytics dashboard.",
                 measurement_frequency="monthly",
             )
-            assert kpi.direction == direction
+            assert measure.direction == direction
 
     def test_invalid_direction(self):
         """Test that invalid direction is rejected."""
         with pytest.raises(ValidationError):
-            KPIRecommendation(
-                name="Invalid direction KPI",
-                description="This KPI has an invalid direction value.",
+            MeasureRecommendation(
+                name="Invalid direction Measure",
+                description="This Measure has an invalid direction value.",
                 unit="%",
                 direction="sideways",  # Invalid
-                kpi_type="quantitative",
+                measure_type="quantitative",
                 reasoning="Testing that invalid direction values are rejected by validation.",
                 measurement_approach="Standard measurement approach.",
                 measurement_frequency="monthly",
             )
 
-    def test_kpi_type_options(self):
-        """Test valid KPI type options."""
-        for kpi_type in ["quantitative", "qualitative", "binary"]:
-            kpi = KPIRecommendation(
-                name=f"Test {kpi_type} KPI",
-                description=f"A KPI with {kpi_type} type for testing purposes.",
+    def test_measure_type_options(self):
+        """Test valid Measure type options."""
+        for measure_type in ["quantitative", "qualitative", "binary"]:
+            measure = MeasureRecommendation(
+                name=f"Test {measure_type} Measure",
+                description=f"A Measure with {measure_type} type for testing purposes.",
                 unit="units",
                 direction="up",
-                kpi_type=kpi_type,
-                reasoning="Testing that all KPI type options are accepted by the model validation.",
+                measure_type=measure_type,
+                reasoning="Testing that all Measure type options are accepted by the model validation.",
                 measurement_approach="Standard tracking method via analytics dashboard.",
                 measurement_frequency="monthly",
             )
-            assert kpi.kpi_type == kpi_type
+            assert measure.measure_type == measure_type
 
 
 @pytest.mark.unit
@@ -346,6 +345,38 @@ class TestActionSuggestionsResponse:
                 sequence_order=1,
             )
 
+    def test_action_with_strategy_association(self):
+        """Test action with strategy association fields."""
+        action = ActionSuggestion(
+            title="Launch marketing campaign",
+            description="Develop and execute a multi-channel marketing campaign to reach target market segments.",
+            reasoning="Directly supports market expansion strategy by building brand awareness in new regions.",
+            priority="high",
+            estimated_duration="3 months",
+            dependencies=[],
+            sequence_order=1,
+            associated_strategy_id="strategy-456",
+            associated_strategy_name="Expand to new markets",
+        )
+        assert action.associated_strategy_id == "strategy-456"
+        assert action.associated_strategy_name == "Expand to new markets"
+
+    def test_action_without_strategy_association(self):
+        """Test action without strategy association (goal-level action)."""
+        action = ActionSuggestion(
+            title="Conduct quarterly review",
+            description="Review overall goal progress and adjust plans as needed.",
+            reasoning="Ensures goal stays on track across all strategies.",
+            priority="medium",
+            estimated_duration="1 week",
+            dependencies=[],
+            sequence_order=10,
+            associated_strategy_id=None,
+            associated_strategy_name=None,
+        )
+        assert action.associated_strategy_id is None
+        assert action.associated_strategy_name is None
+
     def test_action_without_dependencies(self):
         """Test action with empty dependencies."""
         action = ActionSuggestion(
@@ -359,20 +390,6 @@ class TestActionSuggestionsResponse:
         )
         assert action.dependencies == []
 
-    def test_title_min_length(self):
-        """Test title minimum length."""
-        with pytest.raises(ValidationError) as exc_info:
-            ActionSuggestion(
-                title="Hi",  # Less than 5 characters
-                description="This is a valid description that meets the minimum length requirement.",
-                reasoning="Testing that title minimum length validation is enforced correctly.",
-                priority="low",
-                estimated_duration="1 day",
-                dependencies=[],
-                sequence_order=1,
-            )
-        assert "at least 5 characters" in str(exc_info.value)
-
 
 @pytest.mark.unit
 class TestResponseModelRegistry:
@@ -384,8 +401,8 @@ class TestResponseModelRegistry:
 
         expected_models = [
             "AlignmentCheckResponse",
-            "StrategySuggestionsResponseV2",
-            "KPIRecommendationsResponseV2",
+            "StrategySuggestionsResponse",
+            "MeasureRecommendationsResponse",
             "ActionSuggestionsResponse",
         ]
 
@@ -397,11 +414,9 @@ class TestResponseModelRegistry:
         from coaching.src.core.response_model_registry import RESPONSE_MODEL_REGISTRY
 
         assert RESPONSE_MODEL_REGISTRY["AlignmentCheckResponse"] is AlignmentCheckResponse
+        assert RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponse"] is StrategySuggestionsResponse
         assert (
-            RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponseV2"]
-            is StrategySuggestionsResponseV2
-        )
-        assert (
-            RESPONSE_MODEL_REGISTRY["KPIRecommendationsResponseV2"] is KPIRecommendationsResponseV2
+            RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponse"]
+            is MeasureRecommendationsResponse
         )
         assert RESPONSE_MODEL_REGISTRY["ActionSuggestionsResponse"] is ActionSuggestionsResponse

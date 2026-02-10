@@ -127,12 +127,12 @@ class TestAsyncAIExecutionService:
 
         # Mock the endpoint registry to return a valid topic
         with patch(
-            "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
+            "coaching.src.services.async_execution_service.get_topic_by_topic_id"
         ) as mock_get_endpoint:
             from coaching.src.core.constants import TopicType
-            from coaching.src.core.topic_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import TopicDefinition
 
-            mock_endpoint = MagicMock(spec=EndpointDefinition)
+            mock_endpoint = MagicMock(spec=TopicDefinition)
             mock_endpoint.is_active = True
             mock_endpoint.topic_type = TopicType.SINGLE_SHOT
             mock_endpoint.response_model = "NicheReviewResponse"
@@ -185,12 +185,12 @@ class TestAsyncAIExecutionService:
 
         # Mock the endpoint registry to return a valid topic
         with patch(
-            "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
+            "coaching.src.services.async_execution_service.get_topic_by_topic_id"
         ) as mock_get_endpoint:
             from coaching.src.core.constants import TopicType
-            from coaching.src.core.topic_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import TopicDefinition
 
-            mock_endpoint = MagicMock(spec=EndpointDefinition)
+            mock_endpoint = MagicMock(spec=TopicDefinition)
             mock_endpoint.is_active = True
             mock_endpoint.topic_type = TopicType.SINGLE_SHOT
             mock_endpoint.response_model = "NicheReviewResponse"
@@ -240,11 +240,11 @@ class TestAsyncAIExecutionService:
 
         # Mock the endpoint registry
         with patch(
-            "coaching.src.services.async_execution_service.get_endpoint_by_topic_id"
+            "coaching.src.services.async_execution_service.get_topic_by_topic_id"
         ) as mock_get_endpoint:
-            from coaching.src.core.topic_registry import EndpointDefinition
+            from coaching.src.core.topic_registry import TopicDefinition
 
-            mock_endpoint = MagicMock(spec=EndpointDefinition)
+            mock_endpoint = MagicMock(spec=TopicDefinition)
             mock_endpoint.response_model = "NicheReviewResponse"
             mock_get_endpoint.return_value = mock_endpoint
 

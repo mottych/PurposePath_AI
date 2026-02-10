@@ -124,6 +124,7 @@ class TestMultitenantConversationService:
         mock_conversation.conversation_id = conversation_id
         mock_conversation.topic = SharedCoachingTopic.GOALS.value
         mock_conversation.context = {"tenant_id": "tenant-123", "current_phase": "exploration"}
+        mock_conversation.llm_config = {"max_turns": 10}
         mock_conversation.get_conversation_history.return_value = []
         mock_conversation.calculate_progress.return_value = 0.1
 

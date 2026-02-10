@@ -5,13 +5,14 @@ topic-driven configuration, supporting both single-shot and conversation flows.
 """
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
-from coaching.src.core.constants import CoachingTopic, MessageRole
+from coaching.src.core.constants import CoachingTopic, MessageRole, TierLevel
 from coaching.src.core.topic_registry import get_required_parameter_names_for_topic
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.conversation import Conversation
@@ -28,6 +29,78 @@ if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
 
 logger = structlog.get_logger()
+
+# AI Debug logging control - set AI_DEBUG_LOGGING=true to enable detailed AI execution logging
+AI_DEBUG_ENABLED = os.getenv("AI_DEBUG_LOGGING", "false").lower() == "true"
+
+
+def _sanitize_unicode(obj: Any) -> Any:
+    """Recursively sanitize Unicode characters in objects for safe logging.
+
+    Replaces problematic Unicode characters with ASCII equivalents or removes them
+    to prevent encoding errors when logging to console/stream.
+
+    Args:
+        obj: Object to sanitize (str, dict, list, or other)
+
+    Returns:
+        Sanitized version of the object
+    """
+    if isinstance(obj, str):
+        # Replace common Unicode characters with ASCII equivalents
+        replacements = {
+            "\u2192": "->",  # → (rightward arrow)
+            "\u2190": "<-",  # ← (leftward arrow)
+            "\u2191": "^",  # ↑ (upward arrow)
+            "\u2193": "v",  # ↓ (downward arrow)
+            "\u2014": "--",  # — (em dash)
+            "\u2013": "-",  # - (en dash)
+            "\u2018": "'",  # ' (left single quote)
+            "\u2019": "'",  # ' (right single quote)
+            "\u201c": '"',  # " (left double quote)
+            "\u201d": '"',  # " (right double quote)
+            "\u2022": "*",  # • (bullet)
+            "\u2026": "...",  # … (ellipsis)
+        }
+        result = obj
+        for unicode_char, ascii_replacement in replacements.items():
+            result = result.replace(unicode_char, ascii_replacement)
+        # Remove any remaining non-ASCII characters
+        return result.encode("ascii", errors="replace").decode("ascii")
+    elif isinstance(obj, dict):
+        return {key: _sanitize_unicode(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_unicode(item) for item in obj]
+    else:
+        return obj
+
+
+def _log_ai_debug(message: str, data: dict[str, Any] | None = None) -> None:
+    """Log AI debug information when AI_DEBUG_LOGGING is enabled.
+
+    Logs detailed information about AI execution including templates, parameters,
+    enrichment results, prompts, and responses for debugging purposes.
+
+    Args:
+        message: Debug message describing the log entry
+        data: Optional structured data to include in the log
+    """
+    if AI_DEBUG_ENABLED:
+        log_entry = {"ai_debug": message}
+        if data:
+            # Truncate very long strings for readability and sanitize Unicode
+            truncated_data = {}
+            for key, value in data.items():
+                sanitized_value = _sanitize_unicode(value)
+                if isinstance(sanitized_value, str) and len(sanitized_value) > 2000:
+                    truncated_data[key] = (
+                        sanitized_value[:2000]
+                        + f"... (truncated, total length: {len(sanitized_value)})"
+                    )
+                else:
+                    truncated_data[key] = sanitized_value
+            log_entry.update(truncated_data)
+        logger.info("AI_DEBUG", **log_entry)
 
 
 @dataclass
@@ -89,6 +162,25 @@ class TopicNotFoundError(UnifiedAIEngineError):
             topic_id: Topic that was not found
         """
         super().__init__(topic_id, "Topic not found or inactive")
+
+
+class TopicAccessDeniedError(UnifiedAIEngineError):
+    """Raised when user tier cannot access topic tier."""
+
+    def __init__(self, topic_id: str, user_tier: TierLevel, topic_tier: TierLevel) -> None:
+        """Initialize topic access denied error.
+
+        Args:
+            topic_id: Topic that was denied
+            user_tier: User's subscription tier
+            topic_tier: Topic's required tier
+        """
+        self.user_tier = user_tier
+        self.topic_tier = topic_tier
+        super().__init__(
+            topic_id,
+            f"Access denied: {user_tier.value} tier cannot access {topic_tier.value} topic",
+        )
 
 
 class ParameterValidationError(UnifiedAIEngineError):
@@ -182,18 +274,20 @@ class UnifiedAIEngine:
         tenant_id: str | None = None,
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
         Flow:
         1. Get topic configuration from DynamoDB
-        2. Load prompts from S3
-        3. Enrich parameters (if template_processor is provided)
-        4. Validate parameters against topic schema
-        5. Render prompts with enriched parameters
-        6. Call LLM using topic model config
-        7. Serialize response to expected model
-        8. Return typed result
+        2. Check user tier can access topic tier
+        3. Load prompts from S3
+        4. Enrich parameters (if template_processor is provided)
+        5. Validate parameters against topic schema
+        6. Render prompts with enriched parameters
+        7. Call LLM using topic model config (selected based on user tier)
+        8. Serialize response to expected model
+        9. Return typed result
 
         Args:
             topic_id: Topic identifier
@@ -203,12 +297,15 @@ class UnifiedAIEngine:
             tenant_id: Optional tenant ID for parameter enrichment
             template_processor: Optional processor for automatic parameter enrichment
                 (created per-request with user's JWT token for API calls)
+            allow_inactive: Allow execution on inactive topics (for testing)
+            user_tier: User's subscription tier (default: ULTIMATE for full access)
 
         Returns:
             Instance of response_model with AI-generated data
 
         Raises:
             TopicNotFoundError: If topic doesn't exist or is inactive
+            TopicAccessDeniedError: If user tier cannot access topic tier
             ParameterValidationError: If required parameters are missing
             PromptRenderError: If prompt rendering fails
             SerializationError: If response serialization fails
@@ -221,6 +318,7 @@ class UnifiedAIEngine:
             tenant_id=tenant_id,
             template_processor=template_processor,
             allow_inactive=allow_inactive,
+            user_tier=user_tier,
         )
 
         return context.serialized_response
@@ -235,8 +333,23 @@ class UnifiedAIEngine:
         tenant_id: str | None = None,
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> SingleShotExecutionContext:
-        """Execute single-shot and return debug context with prompts and metadata."""
+        """Execute single-shot and return debug context with prompts and metadata.
+
+        Args:
+            topic_id: Topic identifier
+            parameters: Request parameters
+            response_model: Expected response model
+            user_id: Optional user ID
+            tenant_id: Optional tenant ID
+            template_processor: Optional parameter processor
+            allow_inactive: Allow inactive topics
+            user_tier: User's subscription tier (default: ULTIMATE)
+
+        Returns:
+            Full execution context with debug information
+        """
 
         return await self._build_single_shot_context(
             topic_id=topic_id,
@@ -246,6 +359,7 @@ class UnifiedAIEngine:
             tenant_id=tenant_id,
             template_processor=template_processor,
             allow_inactive=allow_inactive,
+            user_tier=user_tier,
         )
 
     async def _build_single_shot_context(
@@ -258,6 +372,7 @@ class UnifiedAIEngine:
         tenant_id: str | None,
         template_processor: "TemplateParameterProcessor | None",
         allow_inactive: bool,
+        user_tier: TierLevel,
     ) -> SingleShotExecutionContext:
         """Execute single-shot flow and return full context for debugging."""
 
@@ -267,16 +382,89 @@ class UnifiedAIEngine:
             response_model=response_model.__name__,
             param_count=len(parameters),
             allow_inactive=allow_inactive,
+            user_tier=user_tier.value,
+        )
+
+        _log_ai_debug(
+            "Starting AI execution",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "input_parameters": parameters,
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "user_tier": user_tier.value,
+            },
         )
 
         # Step 1: Get topic configuration
         topic = await self._get_active_topic(topic_id, allow_inactive=allow_inactive)
 
+        _log_ai_debug(
+            "Topic configuration loaded",
+            {
+                "topic_id": topic_id,
+                "topic_name": topic.topic_name,
+                "temperature": topic.temperature,
+                "max_tokens": topic.max_tokens,
+                "tier_level": topic.tier_level.value,
+                "model_configuration": {
+                    "basic": topic.basic_model_code,
+                    "premium": topic.premium_model_code,
+                },
+            },
+        )
+
+        # Step 1.5: Check tier-based access control
+        if not TierLevel.can_access_topic(user_tier, topic.tier_level):
+            self.logger.warning(
+                "Topic access denied",
+                topic_id=topic_id,
+                user_tier=user_tier.value,
+                topic_tier=topic.tier_level.value,
+            )
+            raise TopicAccessDeniedError(topic_id, user_tier, topic.tier_level)
+
         # Step 2: Load prompts from S3
+        self.logger.info(
+            "Loading prompts from S3",
+            topic_id=topic_id,
+            prompt_count=len(topic.prompts),
+        )
         system_prompt_content = await self._load_prompt(topic, "system")
         user_prompt_content = await self._load_prompt(topic, "user")
+        self.logger.info(
+            "Prompts loaded successfully",
+            topic_id=topic_id,
+            system_length=len(system_prompt_content),
+            user_length=len(user_prompt_content),
+        )
+
+        _log_ai_debug(
+            "Prompt templates loaded",
+            {
+                "topic_id": topic_id,
+                "system_prompt_template": system_prompt_content,
+                "user_prompt_template": user_prompt_content,
+            },
+        )
 
         # Step 3: Enrich parameters if template processor is provided
+        _log_ai_debug(
+            "Starting parameter enrichment",
+            {
+                "topic_id": topic_id,
+                "has_template_processor": template_processor is not None,
+                "parameters_before_enrichment": parameters,
+            },
+        )
+
+        self.logger.info(
+            "Starting parameter enrichment",
+            topic_id=topic_id,
+            has_template_processor=template_processor is not None,
+            input_param_count=len(parameters),
+        )
         enriched_params = await self._enrich_parameters(
             parameters=parameters,
             system_prompt=system_prompt_content,
@@ -285,6 +473,20 @@ class UnifiedAIEngine:
             user_id=str(user_id or parameters.get("user_id", "")),
             tenant_id=str(tenant_id or parameters.get("tenant_id", "")),
             template_processor=template_processor,
+        )
+        self.logger.info(
+            "Parameter enrichment completed",
+            topic_id=topic_id,
+            enriched_param_count=len(enriched_params),
+        )
+
+        _log_ai_debug(
+            "Parameter enrichment completed",
+            {
+                "topic_id": topic_id,
+                "parameters_after_enrichment": enriched_params,
+                "enriched_keys": list(set(enriched_params.keys()) - set(parameters.keys())),
+            },
         )
 
         # Step 4: Validate parameters (after enrichment)
@@ -296,18 +498,74 @@ class UnifiedAIEngine:
         )
         rendered_user = self._render_prompt(topic_id, "user", user_prompt_content, enriched_params)
 
+        _log_ai_debug(
+            "Prompts rendered with parameters",
+            {
+                "topic_id": topic_id,
+                "rendered_system_prompt": rendered_system,
+                "rendered_user_prompt": rendered_user,
+            },
+        )
+
         # Step 5.5: Inject response format instructions into system prompt
         # Also get the JSON schema for structured output providers (OpenAI)
         rendered_system, response_schema = self._inject_response_format_with_schema(
             rendered_system, response_model
         )
 
-        # Step 6: Get provider and resolved model name from factory
-        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+        _log_ai_debug(
+            "Response format injected",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "response_schema": response_schema,
+                "final_system_prompt": rendered_system,
+            },
+        )
+
+        # Step 6: Select model based on user tier and get provider
+        self.logger.info(
+            "About to select model for tier",
+            user_tier=user_tier.value,
+            topic_id=topic_id,
+            has_get_model_method=hasattr(topic, "get_model_code_for_tier"),
+        )
+        model_code = topic.get_model_code_for_tier(user_tier)
+        self.logger.info(
+            "Selected model for tier",
+            user_tier=user_tier.value,
+            model_code=model_code,
+            topic_id=topic_id,
+        )
+        provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
         # Step 7: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
 
+        _log_ai_debug(
+            "Calling LLM",
+            {
+                "topic_id": topic_id,
+                "model_code": model_code,
+                "model_name": model_name,
+                "temperature": topic.temperature,
+                "max_tokens": topic.max_tokens,
+                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+                "system_prompt": rendered_system,
+                "has_response_schema": response_schema is not None,
+            },
+        )
+
+        self.logger.info(
+            "Calling LLM provider",
+            topic_id=topic_id,
+            model_code=model_code,
+            model_name=model_name,
+            temperature=topic.temperature,
+            max_tokens=topic.max_tokens,
+            system_prompt_length=len(rendered_system),
+            user_prompt_length=len(rendered_user),
+        )
         llm_response = await provider.generate(
             messages=messages,
             model=model_name,  # Use resolved model name, not model code
@@ -325,6 +583,17 @@ class UnifiedAIEngine:
             finish_reason=llm_response.finish_reason,
         )
 
+        _log_ai_debug(
+            "LLM response received",
+            {
+                "topic_id": topic_id,
+                "model": llm_response.model,
+                "finish_reason": llm_response.finish_reason,
+                "usage": llm_response.usage,
+                "response_content": llm_response.content,
+            },
+        )
+
         # Step 8: Serialize response
         serialized = await self.response_serializer.serialize(
             ai_response=llm_response.content,
@@ -336,6 +605,31 @@ class UnifiedAIEngine:
             "Single-shot execution completed",
             topic_id=topic_id,
             result_type=type(serialized).__name__,
+        )
+
+        _log_ai_debug(
+            "Response serialization completed",
+            {
+                "topic_id": topic_id,
+                "response_model": response_model.__name__,
+                "serialized_response": serialized.model_dump()
+                if hasattr(serialized, "model_dump")
+                else str(serialized),
+            },
+        )
+
+        _log_ai_debug(
+            "AI execution completed successfully",
+            {
+                "topic_id": topic_id,
+                "execution_summary": {
+                    "input_parameters": parameters,
+                    "enriched_parameters": enriched_params,
+                    "model_used": llm_response.model,
+                    "tokens_used": llm_response.usage.get("total_tokens", 0),
+                    "response_type": type(serialized).__name__,
+                },
+            },
         )
 
         return SingleShotExecutionContext(
@@ -379,6 +673,10 @@ class UnifiedAIEngine:
             Enriched parameters dictionary
         """
         if template_processor is None:
+            _log_ai_debug(
+                "No template processor provided, skipping enrichment",
+                {"topic_id": topic.topic_id, "parameters": parameters},
+            )
             # No enrichment - return original parameters
             return parameters
 
@@ -623,7 +921,8 @@ class UnifiedAIEngine:
         """
         try:
             # Get full schema for structured output (OpenAI Responses API)
-            full_schema = response_model.model_json_schema()
+            # Use by_alias=True to ensure camelCase field names match the aliases
+            full_schema = response_model.model_json_schema(by_alias=True)
 
             # Prepare schema for OpenAI structured output (needs specific format)
             structured_schema = self._prepare_schema_for_structured_output(
@@ -692,18 +991,28 @@ class UnifiedAIEngine:
     def _add_additional_properties_false(self, schema: dict[str, Any]) -> None:
         """Recursively add additionalProperties: false to all object schemas.
 
-        Also ensures 'required' array includes all properties for OpenAI strict mode.
+        OpenAI's structured output with additionalProperties: false requires:
+        1. ALL properties to be in the 'required' array, even those with defaults
+        2. $ref cannot have sibling keywords like 'description'
 
         Args:
             schema: JSON schema dict to modify in place
         """
+        # Fix $ref with extra keywords (OpenAI doesn't allow this)
+        if "$ref" in schema:
+            # Remove all keys except $ref to comply with OpenAI's strict validation
+            ref_value = schema["$ref"]
+            schema.clear()
+            schema["$ref"] = ref_value
+            return  # $ref properties don't need further processing
+
         if schema.get("type") == "object":
             schema["additionalProperties"] = False
 
-            # OpenAI strict mode requires 'required' to include all properties
             properties = schema.get("properties", {})
             if properties:
-                # Set required to include all property keys if not already set
+                # OpenAI requires ALL properties in 'required' when using additionalProperties: false
+                # This is different from Pydantic's default which only includes fields without defaults
                 schema["required"] = list(properties.keys())
 
             for prop in properties.values():
@@ -745,18 +1054,25 @@ class UnifiedAIEngine:
         result, _ = self._inject_response_format_with_schema(system_prompt, response_model)
         return result
 
-    def _simplify_schema_for_prompt(self, schema: dict[str, Any]) -> dict[str, Any]:
+    def _simplify_schema_for_prompt(
+        self, schema: dict[str, Any], root_schema: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Simplify JSON schema for LLM prompt injection.
 
         Removes internal Pydantic details and creates a cleaner schema
         that's easier for the LLM to understand.
 
         Args:
-            schema: Full Pydantic JSON schema
+            schema: Schema (or sub-schema) to simplify
+            root_schema: Full root schema with $defs (for resolving nested refs)
 
         Returns:
             Simplified schema dict
         """
+        # On first call, root_schema is the schema itself
+        if root_schema is None:
+            root_schema = schema
+
         result: dict[str, Any] = {}
 
         # Include title if present
@@ -767,6 +1083,19 @@ class UnifiedAIEngine:
         if "properties" in schema:
             result["properties"] = {}
             for name, prop in schema["properties"].items():
+                # Handle direct $ref properties (e.g., "data": {"$ref": "#/$defs/SomeModel"})
+                if "$ref" in prop:
+                    ref_name = prop["$ref"].split("/")[-1]
+                    if "$defs" in root_schema and ref_name in root_schema["$defs"]:
+                        # Recursively simplify the referenced schema, passing root_schema
+                        result["properties"][name] = self._simplify_schema_for_prompt(
+                            root_schema["$defs"][ref_name], root_schema
+                        )
+                    else:
+                        # Reference not found, keep empty object
+                        result["properties"][name] = {}
+                    continue
+
                 simplified_prop: dict[str, Any] = {}
 
                 # Include type
@@ -798,14 +1127,16 @@ class UnifiedAIEngine:
                 if prop.get("type") == "array" and "items" in prop:
                     items = prop["items"]
                     if "$ref" in items:
-                        # Resolve reference from $defs
+                        # Resolve reference from root schema $defs
                         ref_name = items["$ref"].split("/")[-1]
-                        if "$defs" in schema and ref_name in schema["$defs"]:
+                        if "$defs" in root_schema and ref_name in root_schema["$defs"]:
                             simplified_prop["items"] = self._simplify_schema_for_prompt(
-                                schema["$defs"][ref_name]
+                                root_schema["$defs"][ref_name], root_schema
                             )
                     else:
-                        simplified_prop["items"] = self._simplify_schema_for_prompt(items)
+                        simplified_prop["items"] = self._simplify_schema_for_prompt(
+                            items, root_schema
+                        )
 
                 result["properties"][name] = simplified_prop
 
@@ -914,6 +1245,7 @@ class UnifiedAIEngine:
         conversation_id: ConversationId,
         user_message: str,
         tenant_id: TenantId,
+        user_tier: TierLevel = TierLevel.ULTIMATE,
     ) -> dict[str, Any]:
         """Send message in existing conversation.
 
@@ -921,12 +1253,14 @@ class UnifiedAIEngine:
             conversation_id: Conversation identifier
             user_message: User's message content
             tenant_id: Tenant identifier for isolation
+            user_tier: User's subscription tier (default: ULTIMATE for full access)
 
         Returns:
             Dictionary with AI response and conversation state
 
         Raises:
             UnifiedAIEngineError: If conversation not found or send fails
+            TopicAccessDeniedError: If user tier cannot access topic tier
         """
         if self.conversation_repo is None:
             raise UnifiedAIEngineError("unknown", "Conversation repository not configured")
@@ -945,6 +1279,16 @@ class UnifiedAIEngine:
         # Get topic
         topic = await self._get_active_topic(conversation.topic)
 
+        # Check tier-based access control
+        if not TierLevel.can_access_topic(user_tier, topic.tier_level):
+            self.logger.warning(
+                "Topic access denied in conversation",
+                conversation_id=conversation_id,
+                user_tier=user_tier.value,
+                topic_tier=topic.tier_level.value,
+            )
+            raise TopicAccessDeniedError(conversation.topic, user_tier, topic.tier_level)
+
         # Build conversation history for context
         messages = self._build_message_history(conversation, user_message)
 
@@ -957,8 +1301,15 @@ class UnifiedAIEngine:
             conversation.context.model_dump(),
         )
 
-        # Get provider and resolved model name from factory
-        provider, model_name = self.provider_factory.get_provider_for_model(topic.model_code)
+        # Select model based on user tier and get provider
+        model_code = topic.get_model_code_for_tier(user_tier)
+        self.logger.info(
+            "Selected model for conversation tier",
+            user_tier=user_tier.value,
+            model_code=model_code,
+            conversation_id=conversation_id,
+        )
+        provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
         # Call LLM with resolved model name
         llm_response = await provider.generate(

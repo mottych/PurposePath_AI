@@ -3,11 +3,13 @@
 Response models for strategic planning AI topics:
 - alignment_check: Goal alignment with business foundation
 - strategy_suggestions: Strategy recommendations
-- kpi_recommendations: KPI suggestions
+- measure_recommendations: Measure suggestions
 - action_suggestions: Action plan recommendations
 
 These models match the specifications in Issue #182.
 """
+
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -101,8 +103,56 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
 
 
 # =============================================================================
-# StrategySuggestions Response Models
+# StrategySuggestions Request & Response Models
 # =============================================================================
+
+
+class StrategySuggestionsRequest(StrategicPlanningBaseModel):
+    """Request for AI-generated strategy recommendations for a specific goal.
+
+    Updated to be goal-centric: requires goal_id and optionally accepts goal_intent.
+    Auto-enriches goal data, business foundation, and existing strategies for the goal.
+    """
+
+    goal_id: str = Field(
+        ...,
+        alias="goalId",
+        description="The unique identifier of the goal requiring strategies",
+        examples=["goal-123"],
+    )
+
+    goal_intent: str | None = Field(
+        default=None,
+        alias="goalIntent",
+        min_length=5,
+        max_length=500,
+        description="Optional goal intent/description. If not provided, will be extracted from goal data.",
+        examples=["Increase customer retention by 20%"],
+    )
+
+    business_context: dict[str, Any] | None = Field(
+        default=None,
+        alias="businessContext",
+        description="Optional additional business context. Business foundation (vision, purpose, core values) is auto-enriched.",
+        examples=[
+            {
+                "targetMarket": "Small to medium businesses",
+                "valueProposition": "Comprehensive solutions with personal service",
+                "businessName": "Sample Business",
+                "industry": "Software",
+                "businessType": "B2B SaaS",
+                "currentChallenges": ["High churn", "Competition"],
+            }
+        ],
+    )
+
+    constraints: dict[str, Any] | None = Field(
+        default=None,
+        description="Resource constraints",
+        examples=[
+            {"budget": 50000, "timeline": "6 months", "resources": ["2 developers", "1 designer"]}
+        ],
+    )
 
 
 class StrategySuggestion(StrategicPlanningBaseModel):
@@ -123,7 +173,6 @@ class StrategySuggestion(StrategicPlanningBaseModel):
     reasoning: str = Field(
         ...,
         min_length=50,
-        max_length=300,
         description="Why this strategy makes sense for the goal",
     )
     alignment_score: int = Field(
@@ -133,16 +182,20 @@ class StrategySuggestion(StrategicPlanningBaseModel):
         le=100,
         description="How well this strategy aligns with business foundation",
     )
-    suggested_kpis: list[str] = Field(
+    suggested_measures: list[str] = Field(
         default_factory=list,
-        alias="suggestedKpis",
+        alias="suggestedMeasures",
         max_length=3,
-        description="Brief KPI names to track this strategy (0-3 items)",
+        description="Brief Measure names to track this strategy (0-3 items)",
     )
 
 
-class StrategySuggestionsData(StrategicPlanningBaseModel):
-    """Data payload for strategy suggestions response."""
+class StrategySuggestionsResponse(StrategicPlanningBaseModel):
+    """Response for strategy_suggestions topic.
+
+    Generates suggested strategies for achieving a goal.
+    Flat structure matching frontend specification.
+    """
 
     suggestions: list[StrategySuggestion] = Field(
         ...,
@@ -150,37 +203,16 @@ class StrategySuggestionsData(StrategicPlanningBaseModel):
         max_length=5,
         description="List of strategy suggestions (1-5 items)",
     )
-    analysis_notes: str = Field(
+    confidence: float = Field(
         ...,
-        alias="analysisNotes",
+        ge=0.0,
+        le=1.0,
+        description="Confidence score for suggestions (0-1)",
+    )
+    reasoning: str = Field(
+        ...,
         min_length=50,
-        max_length=300,
-        description="Meta-commentary on the suggestions",
-    )
-
-
-class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
-    """Response for strategy_suggestions topic.
-
-    Generates suggested strategies for achieving a goal.
-    Note: Named V2 to distinguish from existing StrategySuggestionsResponse.
-    """
-
-    topic_id: str = Field(
-        default="strategy_suggestions",
-        description="Topic identifier",
-    )
-    success: bool = Field(
-        default=True,
-        description="Whether the request succeeded",
-    )
-    data: StrategySuggestionsData = Field(
-        ...,
-        description="Strategy suggestions",
-    )
-    schema_ref: str = Field(
-        default="StrategySuggestionsResponseV2",
-        description="Reference to this schema",
+        description="Overall reasoning for the suggestions",
     )
 
 
@@ -190,7 +222,7 @@ class StrategySuggestionsResponseV2(StrategicPlanningBaseModel):
 
 
 class SuggestedTarget(StrategicPlanningBaseModel):
-    """Suggested target for a KPI."""
+    """Suggested target for a Measure."""
 
     value: float = Field(
         ...,
@@ -206,20 +238,20 @@ class SuggestedTarget(StrategicPlanningBaseModel):
     )
 
 
-class KPIRecommendation(StrategicPlanningBaseModel):
-    """Individual KPI recommendation."""
+class MeasureRecommendation(StrategicPlanningBaseModel):
+    """Individual Measure recommendation."""
 
     name: str = Field(
         ...,
         min_length=5,
         max_length=100,
-        description="KPI name",
+        description="Measure name",
     )
     description: str = Field(
         ...,
         min_length=20,
         max_length=300,
-        description="What this KPI measures",
+        description="What this Measure measures",
     )
     unit: str = Field(
         ...,
@@ -232,17 +264,17 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         description="Desired direction: 'up' or 'down'",
         pattern="^(up|down)$",
     )
-    kpi_type: str = Field(
+    measure_type: str = Field(
         ...,
         alias="type",
-        description="KPI type: 'quantitative', 'qualitative', or 'binary'",
+        description="Measure type: 'quantitative', 'qualitative', or 'binary'",
         pattern="^(quantitative|qualitative|binary)$",
     )
     reasoning: str = Field(
         ...,
         min_length=50,
         max_length=300,
-        description="Why this KPI is recommended",
+        description="Why this Measure is recommended",
     )
     suggested_target: SuggestedTarget | None = Field(
         default=None,
@@ -254,7 +286,7 @@ class KPIRecommendation(StrategicPlanningBaseModel):
         alias="measurementApproach",
         min_length=20,
         max_length=200,
-        description="How to measure this KPI",
+        description="How to measure this Measure",
     )
     measurement_frequency: str = Field(
         ...,
@@ -265,18 +297,49 @@ class KPIRecommendation(StrategicPlanningBaseModel):
     is_primary_candidate: bool = Field(
         default=False,
         alias="isPrimaryCandidate",
-        description="Whether this should be the primary KPI",
+        description="Whether this should be the primary Measure",
+    )
+    catalog_measure_id: str | None = Field(
+        default=None,
+        alias="catalogMeasureId",
+        description="ID of recommended catalog measure (if from catalog)",
+    )
+    suggested_owner_id: str | None = Field(
+        default=None,
+        alias="suggestedOwnerId",
+        description="Suggested person ID to assign as measure owner",
+    )
+    suggested_owner_name: str | None = Field(
+        default=None,
+        alias="suggestedOwnerName",
+        description="Suggested person name to assign as measure owner",
+    )
+    suggested_position_id: str | None = Field(
+        default=None,
+        alias="suggestedPositionId",
+        description="Suggested position ID (optional, if position-based assignment)",
+    )
+    association_type: str | None = Field(
+        default=None,
+        alias="associationType",
+        description="Whether measure is for 'goal' or 'strategy'",
+        pattern="^(goal|strategy)$",
+    )
+    associated_entity_id: str | None = Field(
+        default=None,
+        alias="associatedEntityId",
+        description="Goal ID or Strategy ID this measure is associated with",
     )
 
 
-class KPIRecommendationsData(StrategicPlanningBaseModel):
-    """Data payload for KPI recommendations response."""
+class MeasureRecommendationsData(StrategicPlanningBaseModel):
+    """Data payload for Measure recommendations response."""
 
-    recommendations: list[KPIRecommendation] = Field(
+    recommendations: list[MeasureRecommendation] = Field(
         ...,
         min_length=1,
         max_length=5,
-        description="List of KPI recommendations (1-5 items)",
+        description="List of Measure recommendations (1-5 items)",
     )
     analysis_notes: str = Field(
         ...,
@@ -287,27 +350,26 @@ class KPIRecommendationsData(StrategicPlanningBaseModel):
     )
 
 
-class KPIRecommendationsResponseV2(StrategicPlanningBaseModel):
-    """Response for kpi_recommendations topic.
+class MeasureRecommendationsResponse(StrategicPlanningBaseModel):
+    """Response for measure_recommendations topic.
 
-    Recommends KPIs for measuring goal or strategy success.
-    Note: Named V2 to distinguish from existing KPIRecommendationsResponse.
+    Recommends Measures for measuring goal or strategy success.
     """
 
     topic_id: str = Field(
-        default="kpi_recommendations",
+        default="measure_recommendations",
         description="Topic identifier",
     )
     success: bool = Field(
         default=True,
         description="Whether the request succeeded",
     )
-    data: KPIRecommendationsData = Field(
+    data: MeasureRecommendationsData = Field(
         ...,
-        description="KPI recommendations",
+        description="Measure recommendations",
     )
     schema_ref: str = Field(
-        default="KPIRecommendationsResponseV2",
+        default="MeasureRecommendationsResponse",
         description="Reference to this schema",
     )
 
@@ -322,20 +384,14 @@ class ActionSuggestion(StrategicPlanningBaseModel):
 
     title: str = Field(
         ...,
-        min_length=5,
-        max_length=100,
         description="Action title",
     )
     description: str = Field(
         ...,
-        min_length=50,
-        max_length=500,
         description="Detailed action description",
     )
     reasoning: str = Field(
         ...,
-        min_length=50,
-        max_length=200,
         description="Why this action is important",
     )
     priority: str = Field(
@@ -364,6 +420,16 @@ class ActionSuggestion(StrategicPlanningBaseModel):
         ge=1,
         description="Suggested execution order",
     )
+    associated_strategy_id: str | None = Field(
+        default=None,
+        alias="associatedStrategyId",
+        description="Strategy ID this action supports (null for goal-level actions)",
+    )
+    associated_strategy_name: str | None = Field(
+        default=None,
+        alias="associatedStrategyName",
+        description="Strategy name this action supports",
+    )
 
 
 class ActionSuggestionsData(StrategicPlanningBaseModel):
@@ -378,8 +444,6 @@ class ActionSuggestionsData(StrategicPlanningBaseModel):
     analysis_notes: str = Field(
         ...,
         alias="analysisNotes",
-        min_length=50,
-        max_length=200,
         description="Meta-commentary on the suggestions",
     )
     timeline_estimate: str | None = Field(
@@ -413,6 +477,90 @@ class ActionSuggestionsResponse(StrategicPlanningBaseModel):
     )
 
 
+# =============================================================================
+# GoalIntentReview Response Models
+# =============================================================================
+
+
+class AlignmentHighlights(StrategicPlanningBaseModel):
+    """Alignment highlights for an intent suggestion."""
+
+    vision: str = Field(
+        ...,
+        description="How this intent connects to the vision",
+    )
+    purpose: str = Field(
+        ...,
+        description="How this intent serves the purpose",
+    )
+    values: list[str] = Field(
+        ...,
+        description="How this intent aligns with specific core values",
+    )
+
+
+class IntentSuggestion(StrategicPlanningBaseModel):
+    """Individual goal intent suggestion."""
+
+    title: str = Field(
+        ...,
+        min_length=5,
+        max_length=100,
+        description="Descriptive label for this intent variation",
+    )
+    intent_statement: str = Field(
+        ...,
+        alias="intentStatement",
+        min_length=20,
+        max_length=300,
+        description="The suggested goal intent statement (WHAT + WHY)",
+    )
+    explanation: str = Field(
+        ...,
+        min_length=50,
+        max_length=500,
+        description="Why this intent is effective and aligned",
+    )
+    strengthens: list[str] = Field(
+        ...,
+        min_length=2,
+        max_length=4,
+        description="Aspects this intent strengthens (clarity, alignment, motivation, etc.)",
+    )
+    alignment_highlights: AlignmentHighlights = Field(
+        ...,
+        alias="alignmentHighlights",
+        description="How this intent aligns with vision, purpose, and values",
+    )
+
+
+class GoalIntentReviewResponse(StrategicPlanningBaseModel):
+    """Response for goal_intent_review topic.
+
+    Reviews and suggests goal intent statements (WHAT + WHY), ensuring
+    clarity and business alignment.
+    """
+
+    quality_review: str | None = Field(
+        default=None,
+        alias="qualityReview",
+        description="Assessment of current intent if provided, null otherwise",
+    )
+    quality_score: int | None = Field(
+        default=None,
+        alias="qualityScore",
+        ge=0,
+        le=100,
+        description="Quality score 0-100 if current intent provided, null otherwise",
+    )
+    suggestions: list[IntentSuggestion] = Field(
+        ...,
+        min_length=3,
+        max_length=3,
+        description="List of exactly 3 intent statement variations",
+    )
+
+
 __all__ = [
     "ActionSuggestion",
     "ActionSuggestionsData",
@@ -420,11 +568,14 @@ __all__ = [
     "AlignmentBreakdown",
     "AlignmentCheckData",
     "AlignmentCheckResponse",
-    "KPIRecommendation",
-    "KPIRecommendationsData",
-    "KPIRecommendationsResponseV2",
+    "AlignmentHighlights",
+    "GoalIntentReviewResponse",
+    "IntentSuggestion",
+    "MeasureRecommendation",
+    "MeasureRecommendationsData",
+    "MeasureRecommendationsResponse",
     "StrategySuggestion",
-    "StrategySuggestionsData",
-    "StrategySuggestionsResponseV2",
+    "StrategySuggestionsRequest",
+    "StrategySuggestionsResponse",
     "SuggestedTarget",
 ]

@@ -41,7 +41,7 @@ This document details the technical implementation of the People & Organizationa
 | **User** | Contains FirstName, LastName, Email, Phone | Add PersonId; Remove FirstName, LastName, Phone; Rename Email to Username |
 | **Action** | AssignedPersonId: UserId | Change to PersonId |
 | **Issue** | OwnerId: UserId | Change to PersonId |
-| **Kpi** | OwnerId: UserId | Change to PersonId |
+| **Measure** | OwnerId: UserId | Change to PersonId |
 | **Goal** | OwnerId: UserId | Change to PersonId |
 | **Strategy** | OwnerId: UserId | Change to PersonId |
 | **Subscription** | OwnerId: UserId | Keep as UserId (billing is user-specific) |
@@ -55,7 +55,7 @@ PurposePath.Domain/
 │   ├── User.cs                 # MAJOR: Remove name/phone, add PersonId
 │   ├── Action.cs               # MINOR: Change AssignedPersonId type
 │   ├── Issue.cs                # MINOR: Change OwnerId type
-│   ├── Kpi.cs                  # MINOR: Change OwnerId type
+│   ├── Measure.cs                  # MINOR: Change OwnerId type
 │   ├── Goal.cs                 # MINOR: Change OwnerId type
 │   ├── Strategy.cs             # MINOR: Change OwnerId type
 │   ├── Person.cs               # NEW
@@ -941,7 +941,7 @@ public class PersonDataModel : BaseDataModel
 1. Create GetAssignablePeople query/endpoint
 2. Update Action entity to use PersonId
 3. Update Issue entity to use PersonId
-4. Update Kpi entity to use PersonId
+4. Update Measure entity to use PersonId
 5. Update Goal entity to use PersonId
 6. Update Strategy entity to use PersonId
 7. Update all related queries and commands
@@ -1385,7 +1385,7 @@ All endpoints return consistent error responses:
   "roleAssignmentsTerminated": 2,
   "workItemsAffected": {
     "actions": 5,
-    "kpis": 2,
+    "measures": 2,
     "issues": 1
   },
   "workItemsReassignedTo": "guid"  // or null if not reassigned

@@ -131,6 +131,16 @@ class BusinessApiClient:
             data = response.json()
             user_data = data.get("data", {})
 
+            logger.info(
+                "Account Service /user/profile response received",
+                user_id=user_id,
+                tenant_id=tenant_id,
+                response_data=user_data,
+                has_firstName=bool(user_data.get("firstName")),
+                has_first_name=bool(user_data.get("first_name")),
+                has_email=bool(user_data.get("email")),
+            )
+
             # Build context with MVP fallbacks
             # Note: Account Service returns camelCase (firstName, lastName)
             first_name = user_data.get("firstName", "") or user_data.get("first_name", "")
@@ -142,7 +152,7 @@ class BusinessApiClient:
                 "email": user_data.get("email"),
                 "first_name": first_name,
                 "last_name": last_name,
-                "name": full_name,
+                "user_name": full_name,  # Changed from "name" to "user_name" to match parameter extraction
                 "tenant_id": tenant_id,
                 # MVP Fallbacks
                 "role": "Business Owner",
@@ -150,9 +160,12 @@ class BusinessApiClient:
                 "position": "Owner",
             }
 
-            logger.debug(
-                "User context retrieved",
+            logger.info(
+                "User context built successfully",
                 user_id=user_context.get("user_id"),
+                user_name=user_context.get("user_name"),
+                first_name=user_context.get("first_name"),
+                email=user_context.get("email"),
                 status_code=response.status_code,
             )
 
@@ -174,57 +187,53 @@ class BusinessApiClient:
             )
             raise
 
-    async def get_organizational_context(self, tenant_id: str) -> dict[str, Any]:
+    async def get_business_foundation(self, tenant_id: str) -> dict[str, Any]:
         """
-        Get organizational/business foundation context data.
+        Get complete business foundation data.
 
-        Calls the new business foundation endpoint to retrieve:
-        - Vision, purpose, core values
-        - Industry, business type, company size
-        - Target market, value proposition
-        - Strategic priorities
+        Endpoint: GET /business/foundation
 
-        Note: Endpoint implementation tracked in PurposePath_API#152
+        Returns business foundation with 6 strategic pillars:
+        - profile: businessName, industry, companyStage, companySize, etc.
+        - identity: vision, purpose, values[]
+        - market: nicheStatement, icas[]
+        - products: product catalog[]
+        - proposition: uniqueSellingProposition, keyDifferentiators, etc.
+        - model: types[], revenueStreams, etc.
 
         Args:
             tenant_id: Tenant identifier
 
         Returns:
-            Business foundation context data:
-            - tenant_id, organization_name
-            - vision, purpose, core_values
-            - industry, business_type, company_size
-            - target_market, value_proposition
-            - strategic_priorities
+            Business foundation data with all pillars.
 
         Raises:
             httpx.HTTPStatusError: If API returns error status
             httpx.RequestError: If request fails
         """
         try:
-            logger.info("Fetching organizational context", tenant_id=tenant_id)
+            logger.info("Fetching business foundation", tenant_id=tenant_id)
 
-            # GET /api/tenants/{tenantId}/business-foundation
             response = await self.client.get(
-                f"/api/tenants/{tenant_id}/business-foundation",
+                "/business/foundation",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
 
             data = response.json()
-            org_context: dict[str, Any] = dict(data.get("data", {}))
+            foundation: dict[str, Any] = dict(data.get("data", {}))
 
             logger.debug(
-                "Organizational context retrieved",
+                "Business foundation retrieved",
                 tenant_id=tenant_id,
                 status_code=response.status_code,
             )
 
-            return org_context
+            return foundation
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                "HTTP error fetching organizational context",
+                "HTTP error fetching business foundation",
                 tenant_id=tenant_id,
                 status_code=e.response.status_code,
                 error=str(e),
@@ -232,11 +241,16 @@ class BusinessApiClient:
             raise
         except httpx.RequestError as e:
             logger.error(
-                "Request error fetching organizational context",
+                "Request error fetching business foundation",
                 tenant_id=tenant_id,
                 error=str(e),
             )
             raise
+
+    # Alias for backward compatibility during migration
+    async def get_organizational_context(self, tenant_id: str) -> dict[str, Any]:
+        """Deprecated: Use get_business_foundation instead."""
+        return await self.get_business_foundation(tenant_id)
 
     async def get_user_goals(self, user_id: str, tenant_id: str) -> list[dict[str, Any]]:
         """
@@ -308,128 +322,32 @@ class BusinessApiClient:
             )
             raise
 
-    # NOTE: get_metrics() removed - not in MVP scope
-    # User performance metrics will be added post-MVP when tracking is implemented.
-    # For tenant-wide metrics, use Traction Service endpoints:
-    #   - GET /goals/stats
-    #   - GET /performance/score
-    #   - GET /team/alignment
+    # NOTE: get_metrics(), get_goal_stats(), get_performance_score() removed
+    # These endpoints don't exist in current API specifications.
+    # Goal statistics can be derived from GET /goals list endpoint.
+    # Performance metrics will be computed from measures data.
 
-    async def get_goal_stats(self, tenant_id: str) -> dict[str, Any]:
-        """
-        Get goal statistics from Traction Service.
+    async def get_goal_by_id(self, goal_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get single goal by ID from Traction Service.
+
+        Endpoint: GET /traction/api/v1/goals/{id}
 
         Args:
+            goal_id: Goal identifier
             tenant_id: Tenant identifier
 
         Returns:
-            Goal statistics:
-            - total_goals, completion_rate
-            - at_risk, behind_schedule
-            - by_horizon, by_status
-
-        Raises:
-            httpx.HTTPStatusError: If API returns error status
-            httpx.RequestError: If request fails
+            Goal data including name, description, status, type, progress, owner, etc.
         """
         try:
-            logger.info("Fetching goal stats", tenant_id=tenant_id)
+            logger.info("Fetching goal", goal_id=goal_id, tenant_id=tenant_id)
+
+            # Goals are in Traction service, not Account service
+            # Construct full traction URL from base URL
+            traction_url = self.base_url.replace("/account/api/v1", "/traction/api/v1")
 
             response = await self.client.get(
-                "/goals/stats",
-                headers=self._get_headers(tenant_id),
-            )
-            response.raise_for_status()
-
-            payload = response.json()
-            data = self._extract_data(payload)
-            stats: dict[str, Any] = dict(data if isinstance(data, dict) else {})
-
-            logger.debug(
-                "Goal stats retrieved",
-                tenant_id=tenant_id,
-                status_code=response.status_code,
-            )
-
-            return stats
-
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                "HTTP error fetching goal stats",
-                tenant_id=tenant_id,
-                status_code=e.response.status_code,
-                error=str(e),
-            )
-            raise
-        except httpx.RequestError as e:
-            logger.error(
-                "Request error fetching goal stats",
-                tenant_id=tenant_id,
-                error=str(e),
-            )
-            raise
-
-    async def get_performance_score(self, tenant_id: str) -> dict[str, Any]:
-        """
-        Get performance score from Traction Service.
-
-        Args:
-            tenant_id: Tenant identifier
-
-        Returns:
-            Performance score data:
-            - overall_score
-            - component_scores (goals, strategies, kpis, actions)
-            - trend, last_updated
-
-        Raises:
-            httpx.HTTPStatusError: If API returns error status
-            httpx.RequestError: If request fails
-        """
-        try:
-            logger.info("Fetching performance score", tenant_id=tenant_id)
-
-            response = await self.client.get(
-                "/performance/score",
-                headers=self._get_headers(tenant_id),
-            )
-            response.raise_for_status()
-
-            payload = response.json()
-            data = self._extract_data(payload)
-            score: dict[str, Any] = dict(data if isinstance(data, dict) else {})
-
-            logger.debug(
-                "Performance score retrieved",
-                tenant_id=tenant_id,
-                status_code=response.status_code,
-            )
-
-            return score
-
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                "HTTP error fetching performance score",
-                tenant_id=tenant_id,
-                status_code=e.response.status_code,
-                error=str(e),
-            )
-            raise
-        except httpx.RequestError as e:
-            logger.error(
-                "Request error fetching performance score",
-                tenant_id=tenant_id,
-                error=str(e),
-            )
-            raise
-
-    async def get_kpi_by_id(self, kpi_id: str, tenant_id: str) -> dict[str, Any]:
-        """Get KPI details by ID from Traction Service."""
-        try:
-            logger.info("Fetching KPI", kpi_id=kpi_id, tenant_id=tenant_id)
-
-            response = await self.client.get(
-                f"/kpis/{kpi_id}",
+                f"{traction_url}/goals/{goal_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
@@ -441,31 +359,72 @@ class BusinessApiClient:
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                "HTTP error fetching KPI",
-                kpi_id=kpi_id,
+                "HTTP error fetching goal",
+                goal_id=goal_id,
                 tenant_id=tenant_id,
                 status_code=e.response.status_code,
                 error=str(e),
             )
             raise
         except httpx.RequestError as e:
-            logger.error("Request error fetching KPI", kpi_id=kpi_id, error=str(e))
+            logger.error("Request error fetching goal", goal_id=goal_id, error=str(e))
             raise
 
-    async def get_kpis(
-        self, tenant_id: str, params: dict[str, Any] | None = None
-    ) -> list[dict[str, Any]]:
-        """List KPIs for the tenant.
+    async def get_strategy_by_id(self, strategy_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get single strategy by ID from Traction Service.
+
+        Endpoint: GET /strategies/{id}
 
         Args:
-            tenant_id: Tenant identifier for multi-tenancy header
-            params: Optional query parameters (catalogOnly, customOnly, includeShared, category, page, pageSize)
+            strategy_id: Strategy identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Strategy data including name, description, status, type, progress, etc.
         """
         try:
-            logger.info("Fetching KPIs", tenant_id=tenant_id)
+            logger.info("Fetching strategy", strategy_id=strategy_id, tenant_id=tenant_id)
 
             response = await self.client.get(
-                "/kpis",
+                f"/strategies/{strategy_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching strategy",
+                strategy_id=strategy_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching strategy", strategy_id=strategy_id, error=str(e))
+            raise
+
+    async def get_strategies(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """List strategies for the tenant.
+
+        Endpoint: GET /strategies
+
+        Args:
+            tenant_id: Tenant identifier
+            params: Optional query parameters (status, type, goalId, page, pageSize)
+        """
+        try:
+            logger.info("Fetching strategies", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/strategies",
                 headers=self._get_headers(tenant_id),
                 params=params or None,
             )
@@ -475,25 +434,153 @@ class BusinessApiClient:
             data = self._extract_data(payload)
 
             if isinstance(data, list):
-                kpis = data
+                strategies = data
             elif isinstance(data, dict):
-                kpis = data.get("kpis") or data.get("data") or []
+                strategies = data.get("items") or data.get("strategies") or data.get("data") or []
             else:
-                kpis = []
+                strategies = []
 
-            return cast(list[dict[str, Any]], kpis)
+            return cast(list[dict[str, Any]], strategies)
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                "HTTP error fetching KPIs",
+                "HTTP error fetching strategies",
                 tenant_id=tenant_id,
                 status_code=e.response.status_code,
                 error=str(e),
             )
             raise
         except httpx.RequestError as e:
-            logger.error("Request error fetching KPIs", tenant_id=tenant_id, error=str(e))
+            logger.error("Request error fetching strategies", tenant_id=tenant_id, error=str(e))
             raise
+
+    async def get_measure_by_id(self, measure_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get measure details by ID from Traction Service.
+
+        Endpoint: GET /measures/{id}
+        """
+        try:
+            logger.info("Fetching measure", measure_id=measure_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/measures/{measure_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching measure",
+                measure_id=measure_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching measure", measure_id=measure_id, error=str(e))
+            raise
+
+    async def get_measures(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """List measures for the tenant.
+
+        Endpoint: GET /measures
+
+        Args:
+            tenant_id: Tenant identifier for multi-tenancy header
+            params: Optional query parameters (category, page, pageSize, etc.)
+        """
+        try:
+            logger.info("Fetching measures", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/measures",
+                headers=self._get_headers(tenant_id),
+                params=params or None,
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                measures = data
+            elif isinstance(data, dict):
+                measures = data.get("items") or data.get("measures") or data.get("data") or []
+            else:
+                measures = []
+
+            return cast(list[dict[str, Any]], measures)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching measures",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching measures", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_measures_summary(self, tenant_id: str) -> dict[str, Any]:
+        """Get comprehensive measures summary with progress and statistics.
+
+        Endpoint: GET /measures/summary
+
+        Returns all measures with:
+        - Full measure details
+        - Progress per goal/strategy link
+        - Summary statistics (totals, by status, by category, by owner)
+        - Overall health score
+        - Trend data
+        """
+        try:
+            logger.info("Fetching measures summary", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/measures/summary",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching measures summary",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching measures summary", tenant_id=tenant_id, error=str(e)
+            )
+            raise
+
+    # Aliases for backward compatibility during migration
+    async def get_kpi_by_id(self, kpi_id: str, tenant_id: str) -> dict[str, Any]:
+        """Deprecated: Use get_measure_by_id instead."""
+        return await self.get_measure_by_id(kpi_id, tenant_id)
+
+    async def get_kpis(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """Deprecated: Use get_measures instead."""
+        return await self.get_measures(tenant_id, params)
 
     async def get_operations_actions(self, tenant_id: str, limit: int = 50) -> list[dict[str, Any]]:
         """
@@ -640,6 +727,491 @@ class BusinessApiClient:
             logger.error(
                 "Request error fetching operations issues",
                 tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_issues(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Get issues from Traction Service.
+
+        Endpoint: GET /api/issues
+
+        Args:
+            tenant_id: Tenant identifier
+            params: Optional query parameters (status, priority, assignedPersonId, etc.)
+
+        Returns:
+            List of issues with full data including connections.
+        """
+        try:
+            logger.info("Fetching issues", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/api/issues",
+                headers=self._get_headers(tenant_id),
+                params=params or None,
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                issues = data
+            elif isinstance(data, dict):
+                issues = data.get("items") or data.get("issues") or data.get("data") or []
+            else:
+                issues = []
+
+            return cast(list[dict[str, Any]], issues)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching issues",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching issues", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_issue_by_id(self, issue_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get single issue by ID.
+
+        Endpoint: GET /api/issues/{issueId}
+        """
+        try:
+            logger.info("Fetching issue", issue_id=issue_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/api/issues/{issue_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching issue",
+                issue_id=issue_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching issue", issue_id=issue_id, error=str(e))
+            raise
+
+    async def get_actions(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Get actions from Traction Service.
+
+        Endpoint: GET /operations/actions
+
+        Args:
+            tenant_id: Tenant identifier
+            params: Optional query parameters (status, priority, assignedPersonId, etc.)
+
+        Returns:
+            List of actions with full data including connections.
+        """
+        try:
+            logger.info("Fetching actions", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/operations/actions",
+                headers=self._get_headers(tenant_id),
+                params=params or None,
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, dict) and "data" in data:
+                inner_data = data.get("data")
+                if isinstance(inner_data, list):
+                    actions = inner_data
+                elif isinstance(inner_data, dict) and "items" in inner_data:
+                    actions = inner_data.get("items", [])
+                else:
+                    actions = []
+            elif isinstance(data, list):
+                actions = data
+            elif isinstance(data, dict):
+                actions = data.get("items") or data.get("actions") or data.get("data") or []
+            else:
+                actions = []
+
+            return cast(list[dict[str, Any]], actions)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching actions",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching actions", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_action_by_id(self, action_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get single action by ID.
+
+        Endpoint: GET /operations/actions/{id}
+        """
+        try:
+            logger.info("Fetching action", action_id=action_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/operations/actions/{action_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching action",
+                action_id=action_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching action", action_id=action_id, error=str(e))
+            raise
+
+    async def get_people(
+        self, tenant_id: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """List people (team members) for the tenant.
+
+        Endpoint: GET /people
+
+        Args:
+            tenant_id: Tenant identifier
+            params: Optional query parameters (department, status, page, pageSize)
+
+        Returns:
+            List of people with name, email, role, department, position, etc.
+        """
+        try:
+            logger.info("Fetching people", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/people",
+                headers=self._get_headers(tenant_id),
+                params=params or None,
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                people = data
+            elif isinstance(data, dict):
+                people = data.get("items") or data.get("people") or data.get("data") or []
+            else:
+                people = []
+
+            return cast(list[dict[str, Any]], people)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching people",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching people", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_person_by_id(self, person_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get single person by ID.
+
+        Endpoint: GET /people/{id}
+
+        Args:
+            person_id: Person identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Person data including name, email, role, department, position, etc.
+        """
+        try:
+            logger.info("Fetching person", person_id=person_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/people/{person_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching person",
+                person_id=person_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching person", person_id=person_id, error=str(e))
+            raise
+
+    async def get_departments(self, tenant_id: str) -> list[dict[str, Any]]:
+        """List departments for the tenant.
+
+        Endpoint: GET /org/departments
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            List of departments with id, name, description, headCount, etc.
+        """
+        try:
+            logger.info("Fetching departments", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/org/departments",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                departments = data
+            elif isinstance(data, dict):
+                departments = data.get("items") or data.get("departments") or data.get("data") or []
+            else:
+                departments = []
+
+            return cast(list[dict[str, Any]], departments)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching departments",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching departments", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_positions(self, tenant_id: str) -> list[dict[str, Any]]:
+        """List positions for the tenant.
+
+        Endpoint: GET /org/positions
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            List of positions with id, name, departmentId, level, etc.
+        """
+        try:
+            logger.info("Fetching positions", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/org/positions",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                positions = data
+            elif isinstance(data, dict):
+                positions = data.get("items") or data.get("positions") or data.get("data") or []
+            else:
+                positions = []
+
+            return cast(list[dict[str, Any]], positions)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching positions",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching positions", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_position_by_id(self, position_id: str, tenant_id: str) -> dict[str, Any]:
+        """Get position details by ID.
+
+        Endpoint: GET /org/positions/{id}
+
+        Args:
+            position_id: Position identifier
+            tenant_id: Tenant identifier
+
+        Returns:
+            Position details with id, name, role, organizationUnit, person, etc.
+        """
+        try:
+            logger.info("Fetching position", position_id=position_id, tenant_id=tenant_id)
+
+            response = await self.client.get(
+                f"/org/positions/{position_id}",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching position",
+                position_id=position_id,
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching position",
+                position_id=position_id,
+                tenant_id=tenant_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_roles(self, tenant_id: str) -> list[dict[str, Any]]:
+        """List all roles for the tenant.
+
+        Endpoint: GET /roles
+
+        Args:
+            tenant_id: Tenant identifier
+
+        Returns:
+            List of roles with id, code, name, accountability, roleType, etc.
+        """
+        try:
+            logger.info("Fetching roles", tenant_id=tenant_id)
+
+            response = await self.client.get(
+                "/roles",
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            if isinstance(data, list):
+                roles = data
+            elif isinstance(data, dict):
+                roles = data.get("items") or data.get("roles") or data.get("data") or []
+            else:
+                roles = []
+
+            return cast(list[dict[str, Any]], roles)
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching roles",
+                tenant_id=tenant_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error("Request error fetching roles", tenant_id=tenant_id, error=str(e))
+            raise
+
+    async def get_measure_catalog(
+        self, tenant_id: str, goal_id: str | None = None
+    ) -> dict[str, Any]:
+        """Get measure catalog (available measures for goals).
+
+        Endpoint: GET /goals/available-measures (if goal_id is None)
+                  GET /goals/{goalId}/available-measures (if goal_id is provided)
+
+        Args:
+            tenant_id: Tenant identifier
+            goal_id: Optional goal ID to get measures for specific goal
+
+        Returns:
+            Dictionary with catalogMeasures and tenantCustomMeasures arrays
+        """
+        try:
+            logger.info("Fetching measure catalog", tenant_id=tenant_id, goal_id=goal_id)
+
+            if goal_id:
+                endpoint = f"/goals/{goal_id}/available-measures"
+            else:
+                endpoint = "/goals/available-measures"
+
+            response = await self.client.get(
+                endpoint,
+                headers=self._get_headers(tenant_id),
+            )
+            response.raise_for_status()
+
+            payload = response.json()
+            data = self._extract_data(payload)
+
+            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error fetching measure catalog",
+                tenant_id=tenant_id,
+                goal_id=goal_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Request error fetching measure catalog",
+                tenant_id=tenant_id,
+                goal_id=goal_id,
                 error=str(e),
             )
             raise

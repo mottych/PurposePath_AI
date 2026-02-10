@@ -67,7 +67,7 @@
 - [ ] **Task 1.2:** Create `src/types/realtime.ts`
   - [ ] `ConnectionStatus` type
   - [ ] `WebSocketMessage<T>` interface
-  - [ ] All event payload types (goals, actions, KPIs, issues)
+  - [ ] All event payload types (goals, actions, Measures, issues)
   - [ ] Event handler types
   
 - [ ] **Task 1.3:** Update environment configuration
@@ -112,7 +112,7 @@
 - [ ] **Task 2.1:** Expand event type support
   - [ ] Goal events (created, activated, completed, cancelled, activity.created)
   - [ ] Action events (created, status_changed, completed, priority_changed, reassigned, progress_updated)
-  - [ ] KPI events (reading.created)
+  - [ ] Measure events (reading.created)
   - [ ] Issue events (created, status_changed)
   - [ ] Decision events (created)
   - [ ] Attachment events (created)
@@ -220,7 +220,7 @@
   - [ ] Goal created/completed events
   - [ ] High-priority action created
   - [ ] Critical issue created
-  - [ ] KPI threshold breached (red zone)
+  - [ ] Measure threshold breached (red zone)
   - [ ] Use existing `sonner` library
   
 - [ ] **Task 4.4:** Update activity feeds

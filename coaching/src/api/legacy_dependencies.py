@@ -10,7 +10,7 @@ import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
-from coaching.src.application.analysis.kpi_service import KPIAnalysisService
+from coaching.src.application.analysis.measure_service import MeasureAnalysisService
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
@@ -27,16 +27,12 @@ from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,
 )
-from coaching.src.infrastructure.repositories.llm_config.llm_configuration_repository import (
-    LLMConfigurationRepository,
-)
 from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.cache_service import CacheService
 from coaching.src.services.insights_service import InsightsService
-from coaching.src.services.llm_configuration_service import LLMConfigurationService
 from coaching.src.services.llm_template_service import LLMTemplateService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
@@ -118,22 +114,6 @@ async def get_conversation_repository() -> DynamoDBConversationRepository:
     )
 
 
-async def get_llm_configuration_repository() -> LLMConfigurationRepository:
-    """Get LLM configuration repository.
-
-    Returns:
-        LLMConfigurationRepository instance configured with settings
-    """
-    dynamodb = get_dynamodb_resource_singleton()
-    # Use a dedicated table for LLM configurations
-    # For now, using a default name - this should be in settings
-    table_name = getattr(settings, "llm_config_table", "llm_configurations")
-    return LLMConfigurationRepository(
-        dynamodb_resource=dynamodb,
-        table_name=table_name,
-    )
-
-
 async def get_template_metadata_repository() -> TemplateMetadataRepository:
     """Get template metadata repository.
 
@@ -175,21 +155,6 @@ async def get_cache_service() -> CacheService:
     return CacheService(
         redis_client=redis_client,
         key_prefix="llm:",  # Namespace for LLM-related caching
-    )
-
-
-async def get_llm_configuration_service() -> LLMConfigurationService:
-    """Get LLM configuration service.
-
-    Returns:
-        LLMConfigurationService instance with repositories and caching
-    """
-    config_repo = await get_llm_configuration_repository()
-    cache_service = await get_cache_service()
-
-    return LLMConfigurationService(
-        configuration_repository=config_repo,
-        cache_service=cache_service,
     )
 
 
@@ -290,16 +255,16 @@ async def get_strategy_service() -> StrategyAnalysisService:
     return StrategyAnalysisService(llm_service=llm_service)
 
 
-async def get_kpi_service() -> KPIAnalysisService:
-    """Get KPI analysis service (Phase 5).
+async def get_measure_service() -> MeasureAnalysisService:
+    """Get Measure analysis service (Phase 5).
 
-    This service analyzes KPI effectiveness and recommends improvements.
+    This service analyzes Measure effectiveness and recommends improvements.
 
     Returns:
-        KPIAnalysisService instance
+        MeasureAnalysisService instance
     """
     llm_service = await get_llm_service()
-    return KPIAnalysisService(llm_service=llm_service)
+    return MeasureAnalysisService(llm_service=llm_service)
 
 
 async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisService:
@@ -308,7 +273,7 @@ async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisServic
     Factory function to get the appropriate analysis service based on type.
 
     Args:
-        analysis_type: Type of analysis (alignment, strategy, kpi)
+        analysis_type: Type of analysis (alignment, strategy, measure)
 
     Returns:
         Appropriate analysis service instance
@@ -320,8 +285,8 @@ async def get_analysis_service_by_type(analysis_type: str) -> BaseAnalysisServic
         return await get_alignment_service()
     elif analysis_type.lower() in ("strategy", "strategy_analysis"):
         return await get_strategy_service()
-    elif analysis_type.lower() in ("kpi", "kpi_analysis"):
-        return await get_kpi_service()
+    elif analysis_type.lower() in ("measure", "measure_analysis"):
+        return await get_measure_service()
     else:
         raise ValueError(f"Unknown analysis type: {analysis_type}")
 
@@ -397,11 +362,9 @@ __all__ = [
     "get_conversation_repository",
     "get_conversation_service",
     "get_insights_service",
-    "get_kpi_service",
-    "get_llm_configuration_repository",
-    "get_llm_configuration_service",
     "get_llm_service",
     "get_llm_template_service",
+    "get_measure_service",
     "get_model_config_service",
     "get_prompt_service",
     "get_s3_prompt_storage",

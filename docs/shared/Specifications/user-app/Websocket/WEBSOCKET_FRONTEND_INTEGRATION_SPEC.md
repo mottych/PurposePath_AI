@@ -52,7 +52,7 @@ interface WebSocketMessage<T = any> {
 
 ### Key Points:
 
-- **`type`**: Always a string, always present, uses dot notation (e.g., `goal.created`, `kpi.reading_created`)
+- **`type`**: Always a string, always present, uses dot notation (e.g., `goal.created`, `measure.reading_created`)
 - **`timestamp`**: Always ISO 8601 UTC format, millisecond precision
 - **`data`**: Always an object (never null), structure depends on event type
 - **No additional envelope fields**: No `version`, `id`, or `source` fields
@@ -85,7 +85,7 @@ interface WebSocketMessage<T = any> {
 
 | Entity | Field Names (camelCase) |
 |--------|-------------------------|
-| **IDs** | `goalId`, `kpiId`, `actionId`, `issueId`, `tenantId`, `userId` |
+| **IDs** | `goalId`, `measureId`, `actionId`, `issueId`, `tenantId`, `userId` |
 | **Timestamps** | `createdAt`, `updatedAt`, `deletedAt`, `completedAt`, `pausedAt` |
 | **Actions** | `createdBy`, `updatedBy`, `deletedBy`, `completedBy`, `assignedTo` |
 | **Nested** | `targetDate`, `targetValue`, `currentValue`, `dueDate`, `achievementRate` |
@@ -395,19 +395,19 @@ interface WebSocketMessage<T = any> {
 
 ---
 
-### 3.3 KPI Events (3 types)
+### 3.3 Measure Events (3 types)
 
-#### `kpi.reading.created`
+#### `measure.reading.created`
 
-**When**: New KPI value recorded via `POST /api/kpis/{id}/readings`
+**When**: New Measure value recorded via `POST /api/measures/{id}/readings`
 
 **Payload**:
 ```typescript
 {
   readingId: string;
-  kpiId: string;
+  measureId: string;
   tenantId: string;
-  value: number;               // The actual KPI value
+  value: number;               // The actual Measure value
   date: string;                // ISO 8601 date (e.g., "2025-11-03")
   note?: string;               // Optional note
   recordedAt: string;          // When recorded (ISO 8601)
@@ -419,11 +419,11 @@ interface WebSocketMessage<T = any> {
 **Real Example**:
 ```json
 {
-  "type": "kpi.reading.created",
+  "type": "measure.reading.created",
   "timestamp": "2025-11-03T16:30:00.000Z",
   "data": {
     "readingId": "reading-333",
-    "kpiId": "kpi-111",
+    "measureId": "measure-111",
     "tenantId": "tenant-123",
     "value": 125000,
     "date": "2025-11-03",
@@ -897,13 +897,13 @@ X-Tenant-Id: tenant-123
 
 ---
 
-### Example 3: KPI Reading with Chart Update
+### Example 3: Measure Reading with Chart Update
 
-**User Action**: User records new KPI value
+**User Action**: User records new Measure value
 
 **REST API Call**:
 ```http
-POST /api/kpis/kpi-111/readings
+POST /api/measures/measure-111/readings
 Content-Type: application/json
 Authorization: Bearer {token}
 X-Tenant-Id: tenant-123
@@ -918,11 +918,11 @@ X-Tenant-Id: tenant-123
 **WebSocket Event**:
 ```json
 {
-  "type": "kpi.reading.created",
+  "type": "measure.reading.created",
   "timestamp": "2025-11-03T16:30:00.000Z",
   "data": {
     "readingId": "reading-333",
-    "kpiId": "kpi-111",
+    "measureId": "measure-111",
     "tenantId": "tenant-123",
     "value": 125000,
     "date": "2025-11-03",
@@ -938,7 +938,7 @@ X-Tenant-Id: tenant-123
 1. Add data point to chart (Chart.js/Recharts)
 2. Update progress bar (25%)
 3. Animate chart transition
-4. Show notification: "KPI updated: 25% complete"
+4. Show notification: "Measure updated: 25% complete"
 
 ---
 
@@ -970,7 +970,7 @@ X-Tenant-Id: tenant-123
 
 - [ ] Update goals list on `goal.*` events
 - [ ] Update actions list on `action.*` events
-- [ ] Update KPI charts on `kpi.reading.created`
+- [ ] Update Measure charts on `measure.reading.created`
 - [ ] Update issues board on `issue.*` events
 - [ ] Show notifications for relevant events
 
@@ -984,7 +984,7 @@ X-Tenant-Id: tenant-123
 
 ### ✅ Phase 6: Performance
 
-- [ ] Debounce rapid updates (KPI readings)
+- [ ] Debounce rapid updates (Measure readings)
 - [ ] Batch UI updates
 - [ ] Memoize event handlers
 - [ ] Optimize re-renders with React.memo
@@ -1045,9 +1045,9 @@ export interface ActionCreatedEventData {
   createdBy: string;
 }
 
-export interface KPIReadingCreatedEventData {
+export interface MeasureReadingCreatedEventData {
   readingId: string;
-  kpiId: string;
+  measureId: string;
   tenantId: string;
   value: number;
   date: string;

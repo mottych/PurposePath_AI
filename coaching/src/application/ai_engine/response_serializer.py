@@ -86,20 +86,25 @@ class ResponseSerializer:
         try:
             return self._serialize_json_direct(ai_response, response_model)
         except (json.JSONDecodeError, ValidationError) as e:
-            self.logger.debug(
+            self.logger.warning(
                 "Direct JSON parsing failed",
                 topic_id=topic_id,
                 error=str(e),
+                error_type=type(e).__name__,
+                response_preview=ai_response[:200],
             )
 
         # Strategy 2: Extract JSON from markdown code blocks
         try:
             return self._serialize_json_from_markdown(ai_response, response_model)
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            self.logger.debug(
+            self.logger.warning(
                 "Markdown JSON extraction failed",
                 topic_id=topic_id,
                 error=str(e),
+                error_type=type(e).__name__,
+                response_has_code_blocks=("```" in ai_response),
+                response_has_json_markers=(("{" in ai_response) and ("}" in ai_response)),
             )
 
         # Strategy 3: Pattern-based extraction (for specific models)
@@ -118,6 +123,13 @@ class ResponseSerializer:
             error_msg,
             topic_id=topic_id,
             response_sample=ai_response[:500],
+            response_length=len(ai_response),
+            response_starts_with=ai_response[:50] if ai_response else None,
+            response_ends_with=ai_response[-50:] if len(ai_response) > 50 else None,
+            has_code_blocks=("```" in ai_response),
+            has_json_structure=(("{" in ai_response) and ("}" in ai_response)),
+            expected_model_fields=list(response_model.model_fields.keys()),
+            full_response=ai_response,  # Log full response for debugging (may cause encoding errors in logs)
         )
         raise SerializationError(
             topic_id=topic_id,
@@ -170,15 +182,28 @@ class ResponseSerializer:
             json.JSONDecodeError: If extracted text is not valid JSON
             ValidationError: If JSON doesn't match model schema
         """
-        # Pattern to match JSON in code blocks
-        json_pattern = r"```(?:json)?\s*\n(.*?)\n```"
+        # Pattern to match JSON in code blocks - more flexible with whitespace
+        # Matches: ```json\n{...}\n``` or ```\n{...}\n``` or ```json{...}```
+        json_pattern = r"```(?:json)?\s*(.*?)\s*```"
         matches = re.findall(json_pattern, ai_response, re.DOTALL)
 
         if not matches:
-            raise ValueError("No JSON code block found in response")
+            # Fallback: try to find JSON object without code blocks
+            # Look for content between outermost { and }
+            json_obj_pattern = r"(\{.*\})"
+            obj_matches = re.findall(json_obj_pattern, ai_response, re.DOTALL)
+            if obj_matches:
+                matches = obj_matches
+            else:
+                raise ValueError("No JSON code block found in response")
 
         # Try first match (usually the only one)
         json_text = matches[0].strip()
+
+        # Validate it's actually JSON before parsing
+        if not json_text.startswith(("{", "[")):
+            raise ValueError(f"Extracted text doesn't look like JSON: {json_text[:100]}")
+
         data = json.loads(json_text)
         return response_model.model_validate(data)
 

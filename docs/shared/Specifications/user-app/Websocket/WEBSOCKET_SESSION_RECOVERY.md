@@ -50,7 +50,7 @@
 
 ### What's Missing
 - ❌ WebSocket implementation (only SSE)
-- ❌ Support for action, KPI, issue events
+- ❌ Support for action, Measure, issue events
 - ❌ Global real-time state management
 - ❌ Connection status UI
 - ❌ Comprehensive event handlers
@@ -93,7 +93,7 @@ Create WebSocket connection manager:
 **Event Types:**
 - Goal: `goal.created`, `goal.activated`, `goal.completed`, `goal.cancelled`, `goal.activity.created`
 - Action: `action.created`, `action.status_changed`, `action.completed`, `action.priority_changed`, `action.reassigned`, `action.progress_updated`
-- KPI: `kpi.reading.created`
+- Measure: `measure.reading.created`
 - Issue: `issue.created`, `issue.status_changed`
 - Decision: `decision.created`
 - Attachment: `attachment.created`

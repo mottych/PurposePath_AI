@@ -51,33 +51,33 @@ This specification documents **ALL** Traction API endpoints currently called by 
 11. `DELETE /goals/{goalId}/strategies/{id}` - Delete strategy
 12. `PUT /goals/{goalId}/strategies:reorder` - Reorder strategies
 
-### KPI Management (7 endpoints)
-13. `POST /kpis` - Create KPI instance
-14. `GET /kpis/{id}` - Get KPI details
-15. `PUT /kpis/{id}` - Update KPI instance
-16. `DELETE /kpis/{id}` - Delete KPI instance
-17. `GET /kpis` - List KPIs
-18. `GET /goals/{goalId}/kpis` - List KPIs for goal
-19. `PUT /goals/{goalId}/kpis/{kpiId}:setPrimary` - Set KPI as primary
+### Measure Management (7 endpoints)
+13. `POST /measures` - Create Measure instance
+14. `GET /measures/{id}` - Get Measure details
+15. `PUT /measures/{id}` - Update Measure instance
+16. `DELETE /measures/{id}` - Delete Measure instance
+17. `GET /measures` - List Measures
+18. `GET /goals/{goalId}/measures` - List Measures for goal
+19. `PUT /goals/{goalId}/measures/{kpiId}:setPrimary` - Set Measure as primary
 
-### KPI Linking (5 endpoints)
-20. `POST /goals/{goalId}/kpis:link` - Link KPI to goal
-21. `POST /goals/{goalId}/kpis:unlink` - Unlink KPI from goal
-22. `POST /goals/{goalId}/kpis/{kpiId}:setThreshold` - Set KPI threshold
-23. `GET /goals/{goalId}/kpis/{kpiId}:link` - Get KPI linkage details
-24. `GET /goals/{goalId}/available-kpis` - Get available KPIs for goal
+### Measure Linking (5 endpoints)
+20. `POST /goals/{goalId}/measures:link` - Link Measure to goal
+21. `POST /goals/{goalId}/measures:unlink` - Unlink Measure from goal
+22. `POST /goals/{goalId}/measures/{kpiId}:setThreshold` - Set Measure threshold
+23. `GET /goals/{goalId}/measures/{kpiId}:link` - Get Measure linkage details
+24. `GET /goals/{goalId}/available-measures` - Get available Measures for goal
 
-### KPI Planning (10 endpoints)
-25. `GET /kpi-planning/kpis/{id}/milestones` - Get KPI milestones
-26. `PUT /kpi-planning/kpis/{id}/milestones` - Set KPI milestones
-27. `GET /kpi-planning/kpis/{id}/plan` - Get KPI planning data
-28. `GET /kpi-planning/goals/{goalId}/kpi-planning` - Get goal KPI planning overview
-29. `GET /kpi-planning/kpis/{id}/actuals` - Get KPI actuals (historical measurements)
-30. `POST /kpi-planning/kpis/{id}/actuals` - Record KPI actual value
-31. `POST /kpi-planning/kpis/{id}/adjust` - Adjust KPI plan
-32. `GET /kpi-planning/kpis/{kpiId}/cross-goal-impact` - Get cross-goal impact
-33. `GET /kpi-planning/kpis/{id}/replan-rule` - Get replan rule
-34. `PUT /kpi-planning/kpis/{id}/replan-rule` - Update replan rule
+### Measure Planning (10 endpoints)
+25. `GET /measure-planning/measures/{id}/milestones` - Get Measure milestones
+26. `PUT /measure-planning/measures/{id}/milestones` - Set Measure milestones
+27. `GET /measure-planning/measures/{id}/plan` - Get Measure planning data
+28. `GET /measure-planning/goals/{goalId}/measure-planning` - Get goal Measure planning overview
+29. `GET /measure-planning/measures/{id}/actuals` - Get Measure actuals (historical measurements)
+30. `POST /measure-planning/measures/{id}/actuals` - Record Measure actual value
+31. `POST /measure-planning/measures/{id}/adjust` - Adjust Measure plan
+32. `GET /measure-planning/measures/{kpiId}/cross-goal-impact` - Get cross-goal impact
+33. `GET /measure-planning/measures/{id}/replan-rule` - Get replan rule
+34. `PUT /measure-planning/measures/{id}/replan-rule` - Update replan rule
 
 ### Actions (7 endpoints)
 35. `GET /operations/actions` - List actions
@@ -116,10 +116,10 @@ This specification documents **ALL** Traction API endpoints currently called by 
 60. `POST /issues/{id}/close` - Close issue
 
 ### Operations Integration (4 endpoints)
-61. `POST /operations/kpi-updates` - Sync KPI update
+61. `POST /operations/measure-updates` - Sync Measure update
 62. `POST /operations/actions/goals` - Get goals for actions
 63. `POST /operations/actions/strategies` - Get strategies for actions
-64. `POST /operations/goals/kpis` - Get KPIs for goals
+64. `POST /operations/goals/measures` - Get Measures for goals
 
 ### Activity (2 endpoints)
 65. `GET /goals/{goalId}/activity` - Get goal activity
@@ -155,29 +155,29 @@ type IssueImpact = 'low' | 'medium' | 'high' | 'critical';
 type IssuePriority = 'low' | 'medium' | 'high' | 'critical';
 type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
 
-// KPI direction
-type KPIDirection = 'up' | 'down'; // up = higher is better, down = lower is better
+// Measure direction
+type MeasureDirection = 'up' | 'down'; // up = higher is better, down = lower is better
 
-// KPI types
-type KPIType = 'quantitative' | 'qualitative' | 'binary';
+// Measure types
+type MeasureType = 'quantitative' | 'qualitative' | 'binary';
 
-// KPI aggregation types
+// Measure aggregation types
 type AggregationType = 'sum' | 'average' | 'min' | 'max' | 'latest' | 'count' | 'pointInTime';
 
-// KPI aggregation periods
+// Measure aggregation periods
 type AggregationPeriod = 'none' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
-// KPI data nature
+// Measure data nature
 type DataNature = 'snapshot' | 'aggregate' | 'other';
 
-// KPI interpolation methods
+// Measure interpolation methods
 type InterpolationMethod = 'linear' | 'exponential' | 'step';
 
-// KPI adjustment strategies
+// Measure adjustment strategies
 type AdjustmentStrategy = 'maintain_final_goal' | 'proportional_shift' | 'custom';
 
-// KPI data sources
-type KPIDataSource = 'manual' | 'action' | 'integration';
+// Measure data sources
+type MeasureDataSource = 'manual' | 'action' | 'integration';
 
 // Cross-goal alert decisions
 type AlertDecision = 'accepted' | 'rejected' | 'modified';
@@ -222,7 +222,7 @@ Create a new goal.
     "alignmentExplanation": "",
     "alignmentSuggestions": [],
     "strategies": [],
-    "kpis": [],
+    "measures": [],
     "createdAt": "2025-01-15T10:30:00Z",
     "updatedAt": "2025-01-15T10:30:00Z"
   }
@@ -233,7 +233,7 @@ Create a new goal.
 - `status`: defaults to `"draft"`
 - `alignmentScore`: number, 0-100
 - `strategies`: array, initially empty
-- `kpis`: array, initially empty
+- `measures`: array, initially empty
 - Dates are ISO 8601 strings
 
 ---
@@ -275,11 +275,11 @@ List goals with optional filtering.
             "updatedAt": "2025-01-15T11:00:00Z"
           }
         ],
-        "kpis": [
+        "measures": [
           {
-            "id": "goalkpi_101",
+            "id": "goalmeasure_101",
             "goalId": "goal_456",
-            "kpiId": "kpi_202",
+            "kpiId": "measure_202",
             "order": 1,
             "createdAt": "2025-01-15T11:30:00Z",
             "updatedAt": "2025-01-15T11:30:00Z"
@@ -327,7 +327,7 @@ Get detailed goal information.
     "alignmentExplanation": "Goal aligns well with vision and purpose",
     "alignmentSuggestions": [
       "Consider adding specific customer retention metrics",
-      "Link to customer satisfaction KPIs"
+      "Link to customer satisfaction Measures"
     ],
     "strategies": [
       {
@@ -343,11 +343,11 @@ Get detailed goal information.
         "updatedAt": "2025-01-16T09:00:00Z"
       }
     ],
-    "kpis": [
+    "measures": [
       {
-        "id": "goalkpi_101",
+        "id": "goalmeasure_101",
         "goalId": "goal_456",
-        "kpiId": "kpi_202",
+        "kpiId": "measure_202",
         "order": 1,
         "createdAt": "2025-01-15T11:30:00Z",
         "updatedAt": "2025-01-15T11:30:00Z"
@@ -672,16 +672,16 @@ Reorder strategies within a goal.
 
 ---
 
-## KPI Management
+## Measure Management
 
-### 13. POST /kpis
+### 13. POST /measures
 
-Create a new KPI instance (catalog-based or custom).
+Create a new Measure instance (catalog-based or custom).
 
 **Request Body:**
 ```json
 {
-  "catalogId": "catalog_kpi_1",
+  "catalogId": "catalog_measure_1",
   "name": "Monthly Recurring Revenue",
   "description": "Total predictable revenue per month from subscriptions",
   "unit": "USD",
@@ -701,19 +701,19 @@ Create a new KPI instance (catalog-based or custom).
 
 **Request Constraints:**
 
-**If `catalogId` provided** (catalog-based KPI):
+**If `catalogId` provided** (catalog-based Measure):
 - `name`, `description`, `unit`, `direction`, `type`, `category`: OPTIONAL (inherited from catalog, can be overridden)
 - `aggregationType`, `aggregationPeriod`, `valueType`: OPTIONAL (inherited from catalog, can be overridden)
 
-**If `catalogId` is null/omitted** (custom KPI):
+**If `catalogId` is null/omitted** (custom Measure):
 - `name`: REQUIRED, max 200 characters
 - `description`: REQUIRED, max 2000 characters
 - `unit`: REQUIRED, max 50 characters
-- `direction`: REQUIRED, KPIDirection enum
+- `direction`: REQUIRED, MeasureDirection enum
   - Valid values: `"up"` | `"down"`
   - `"up"` = higher values are better (e.g., revenue, customer satisfaction)
   - `"down"` = lower values are better (e.g., costs, churn rate)
-- `type`: REQUIRED, KPIType enum
+- `type`: REQUIRED, MeasureType enum
   - Valid values: `"quantitative"` | `"qualitative"` | `"binary"`
   - `"quantitative"` = numeric measurements (e.g., revenue, units sold)
   - `"qualitative"` = descriptive/categorical (e.g., customer sentiment: excellent/good/poor)
@@ -742,7 +742,7 @@ Create a new KPI instance (catalog-based or custom).
   - `"other"` = neither snapshot nor aggregate
 - `category`: OPTIONAL, max 100 characters
 
-**Optional fields (all KPI types):**
+**Optional fields (all Measure types):**
 - `currentValue`: number, optional (defaults to null if omitted)
 - `currentValueDate`: ISO date string, optional (defaults to null if omitted)
 - `calculationMethod`: string, max 1000 characters
@@ -754,8 +754,8 @@ Create a new KPI instance (catalog-based or custom).
 {
   "success": true,
   "data": {
-    "id": "kpi_456",
-    "catalogId": "catalog_kpi_1",
+    "id": "measure_456",
+    "catalogId": "catalog_measure_1",
     "name": "Monthly Recurring Revenue",
     "description": "Total predictable revenue per month from subscriptions",
     "unit": "USD",
@@ -781,30 +781,30 @@ Create a new KPI instance (catalog-based or custom).
 ```
 
 **Response Fields:**
-- `isShared`: boolean, always `false` for newly created KPIs (no goal linkages yet)
-- `linkedGoalCount`: number, always `0` for newly created KPIs
+- `isShared`: boolean, always `false` for newly created Measures (no goal linkages yet)
+- `linkedGoalCount`: number, always `0` for newly created Measures
 
 **Status Codes:**
-- `201` - KPI created successfully
+- `201` - Measure created successfully
 - `400` - Validation error (missing required fields, invalid enum values)
-- `404` - Catalog KPI not found (if catalogId provided)
+- `404` - Catalog Measure not found (if catalogId provided)
 
 ---
 
-### 14. GET /kpis/{id}
+### 14. GET /measures/{id}
 
-Get complete details for a single KPI instance.
+Get complete details for a single Measure instance.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "kpi_456",
-    "catalogId": "catalog_kpi_1",
+    "id": "measure_456",
+    "catalogId": "catalog_measure_1",
     "name": "Monthly Recurring Revenue",
     "description": "Total predictable revenue per month from subscriptions",
     "unit": "USD",
@@ -845,26 +845,26 @@ Get complete details for a single KPI instance.
 
 **Response Constraints:**
 - `isShared`: boolean, true if linked to multiple goals
-- `linkedGoalCount`: number, count of goals this KPI is linked to
+- `linkedGoalCount`: number, count of goals this Measure is linked to
 - `linkedGoals`: array of goal link details with `isPrimary` indicator
 
 **Status Codes:**
 - `200` - Success
-- `404` - KPI not found
+- `404` - Measure not found
 
 ---
 
-### 15. PUT /kpis/{id}
+### 15. PUT /measures/{id}
 
-Update properties of an existing KPI instance. Changes affect all goals linked to this KPI.
+Update properties of an existing Measure instance. Changes affect all goals linked to this Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body (all fields optional for partial update):**
 ```json
 {
-  "name": "Updated KPI Name",
+  "name": "Updated Measure Name",
   "description": "Updated description",
   "unit": "USD",
   "direction": "up",
@@ -878,18 +878,18 @@ Update properties of an existing KPI instance. Changes affect all goals linked t
 **Request Constraints:**
 - All fields optional (partial update)
 - **CANNOT update**: `catalogId`, `currentValue`, `currentValueDate`, `aggregationType`, `aggregationPeriod`, `valueType`
-- If KPI is linked to catalog (`catalogId` not null):
+- If Measure is linked to catalog (`catalogId` not null):
   - Updating `name`, `description`, `unit`, `direction` creates instance-specific override
   - Original catalog values remain unchanged
-- Field constraints same as POST /kpis
+- Field constraints same as POST /measures
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "kpi_456",
-    "name": "Updated KPI Name",
+    "id": "measure_456",
+    "name": "Updated Measure Name",
     "description": "Updated description",
     "unit": "USD",
     "direction": "up",
@@ -905,65 +905,65 @@ Update properties of an existing KPI instance. Changes affect all goals linked t
 **Status Codes:**
 - `200` - Success
 - `400` - Validation error
-- `404` - KPI not found
+- `404` - Measure not found
 
 ---
 
-### 16. DELETE /kpis/{id}
+### 16. DELETE /measures/{id}
 
-Soft-delete a KPI instance. Only allowed if KPI is not linked to any goals.
+Soft-delete a Measure instance. Only allowed if Measure is not linked to any goals.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "kpi_456",
+    "id": "measure_456",
     "deletedAt": "2025-01-20T10:00:00Z",
-    "message": "KPI soft-deleted successfully"
+    "message": "Measure soft-deleted successfully"
   }
 }
 ```
 
 **Business Rules:**
-- Returns `400` if KPI is linked to any goals
+- Returns `400` if Measure is linked to any goals
 - Must unlink from all goals before deletion
 - **Soft-delete behavior**:
-  - KPI marked as `isDeleted: true`, `deletedAt` timestamp set
-  - KPI record preserved in database (not physically deleted)
+  - Measure marked as `isDeleted: true`, `deletedAt` timestamp set
+  - Measure record preserved in database (not physically deleted)
   - All associated data retained:
-    - ✅ Milestones preserved (linked via KpiId)
-    - ✅ Actuals preserved (linked via KpiId)
-    - ✅ Plan adjustments preserved (linked via KpiId)
-    - ✅ Replan rules preserved (linked via KpiId)
-  - Soft-deleted KPIs excluded from list/search queries by default
+    - ✅ Milestones preserved (linked via MeasureId)
+    - ✅ Actuals preserved (linked via MeasureId)
+    - ✅ Plan adjustments preserved (linked via MeasureId)
+    - ✅ Replan rules preserved (linked via MeasureId)
+  - Soft-deleted Measures excluded from list/search queries by default
   - Can be permanently deleted or restored by admin operations (future feature)
   - Historical data remains queryable for reporting/audit purposes
 
 **Data Retention Rationale:**
 - Milestones and actuals represent historical business data that should not be lost
 - Enables audit trails and historical reporting
-- Allows potential KPI restoration without data loss
-- Maintains referential integrity for cross-goal KPI analysis
+- Allows potential Measure restoration without data loss
+- Maintains referential integrity for cross-goal Measure analysis
 
 **Status Codes:**
 - `200` - Success
-- `400` - KPI is linked to goals (cannot delete)
-- `404` - KPI not found
+- `400` - Measure is linked to goals (cannot delete)
+- `404` - Measure not found
 
 ---
 
-### 17. GET /kpis
+### 17. GET /measures
 
-List all KPIs for the tenant.
+List all Measures for the tenant.
 
 **Query Parameters:**
-- `catalogOnly`: boolean, optional - Only show catalog-based KPIs
-- `customOnly`: boolean, optional - Only show custom KPIs
-- `includeShared`: boolean, optional, default true - Include KPIs shared across goals
+- `catalogOnly`: boolean, optional - Only show catalog-based Measures
+- `customOnly`: boolean, optional - Only show custom Measures
+- `includeShared`: boolean, optional, default true - Include Measures shared across goals
 - `category`: string, optional - Filter by category
 - `page`: number, optional, default 1
 - `pageSize`: number, optional, default 20, max 100
@@ -973,15 +973,15 @@ List all KPIs for the tenant.
 {
   "success": true,
   "data": {
-    "kpis": [
+    "measures": [
       {
-        "id": "kpi_456",
+        "id": "measure_456",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
         "direction": "up",
         "type": "quantitative",
         "category": "Financial",
-        "catalogId": "catalog_kpi_1",
+        "catalogId": "catalog_measure_1",
         "isShared": true,
         "linkedGoalCount": 3,
         "currentValue": 42000,
@@ -1005,9 +1005,9 @@ List all KPIs for the tenant.
 
 ---
 
-### 18. GET /goals/{goalId}/kpis
+### 18. GET /goals/{goalId}/measures
 
-List all KPIs linked to a specific goal with primary indicator.
+List all Measures linked to a specific goal with primary indicator.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1019,10 +1019,10 @@ List all KPIs linked to a specific goal with primary indicator.
   "data": {
     "goalId": "goal_456",
     "goalName": "Increase Revenue",
-    "kpis": [
+    "measures": [
       {
-        "linkId": "goalkpi_101",
-        "kpiId": "kpi_456",
+        "linkId": "goalmeasure_101",
+        "kpiId": "measure_456",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
         "direction": "up",
@@ -1037,8 +1037,8 @@ List all KPIs linked to a specific goal with primary indicator.
         "linkedAt": "2025-01-15T11:30:00Z"
       },
       {
-        "linkId": "goalkpi_102",
-        "kpiId": "kpi_457",
+        "linkId": "goalmeasure_102",
+        "kpiId": "measure_457",
         "name": "Customer Retention Rate",
         "unit": "%",
         "direction": "up",
@@ -1053,10 +1053,10 @@ List all KPIs linked to a specific goal with primary indicator.
         "linkedAt": "2025-01-16T10:00:00Z"
       }
     ],
-    "totalKpis": 2,
+    "totalMeasures": 2,
     "hasPrimary": true,
-    "primaryKpi": {
-      "kpiId": "kpi_456",
+    "primaryMeasure": {
+      "kpiId": "measure_456",
       "name": "Monthly Recurring Revenue"
     }
   }
@@ -1064,10 +1064,10 @@ List all KPIs linked to a specific goal with primary indicator.
 ```
 
 **Response Constraints:**
-- `isPrimary`: boolean, indicates if this KPI is the primary KPI for this goal
-- `isShared`: boolean, true if KPI is linked to multiple goals
-- `sharedGoalCount`: number, total count of goals this KPI is linked to
-- `primaryKpi`: object with details of the primary KPI (null if no KPIs linked)
+- `isPrimary`: boolean, indicates if this Measure is the primary Measure for this goal
+- `isShared`: boolean, true if Measure is linked to multiple goals
+- `sharedGoalCount`: number, total count of goals this Measure is linked to
+- `primaryMeasure`: object with details of the primary Measure (null if no Measures linked)
 
 **Status Codes:**
 - `200` - Success
@@ -1075,13 +1075,13 @@ List all KPIs linked to a specific goal with primary indicator.
 
 ---
 
-### 19. PUT /goals/{goalId}/kpis/{kpiId}:setPrimary
+### 19. PUT /goals/{goalId}/measures/{kpiId}:setPrimary
 
-Set a specific KPI as the primary KPI for this goal.
+Set a specific Measure as the primary Measure for this goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID to set as primary
+- `kpiId`: string, required - Measure ID to set as primary
 
 **Request Body:**
 ```json
@@ -1094,30 +1094,30 @@ Set a specific KPI as the primary KPI for this goal.
   "success": true,
   "data": {
     "goalId": "goal_456",
-    "previousPrimaryKpiId": "kpi_old_123",
-    "newPrimaryKpiId": "kpi_789",
+    "previousPrimaryMeasureId": "measure_old_123",
+    "newPrimaryMeasureId": "measure_789",
     "updatedAt": "2025-01-15T12:00:00Z"
   }
 }
 ```
 
 **Business Rules:**
-- KPI must already be linked to the goal
-- Previous primary KPI (if any) automatically demoted to `isPrimary: false`
-- Only one KPI can be primary per goal
+- Measure must already be linked to the goal
+- Previous primary Measure (if any) automatically demoted to `isPrimary: false`
+- Only one Measure can be primary per goal
 
 **Status Codes:**
 - `200` - Success
-- `400` - KPI is not linked to this goal
-- `404` - Goal or KPI not found
+- `400` - Measure is not linked to this goal
+- `404` - Goal or Measure not found
 
 ---
 
-## KPI Linking
+## Measure Linking
 
-### 20. POST /goals/{goalId}/kpis:link
+### 20. POST /goals/{goalId}/measures:link
 
-Link a KPI to a goal.
+Link a Measure to a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1125,28 +1125,28 @@ Link a KPI to a goal.
 **Request Body:**
 ```json
 {
-  "kpiId": "kpi_456",
+  "kpiId": "measure_456",
   "thresholdPct": 80,
   "isPrimary": true
 }
 ```
 
 **Request Constraints:**
-- `kpiId`: string, required, valid KPI ID (existing KPI instance)
+- `kpiId`: string, required, valid Measure ID (existing Measure instance)
 - `thresholdPct`: number, optional, 0-100, percentage threshold for goal achievement
 - `isPrimary`: boolean, optional
-  - If `true`: This KPI becomes primary (any existing primary is demoted)
-  - If `false` or omitted and goal has no KPIs: Auto-set to `true` (first KPI is primary by default)
-  - If `false` or omitted and goal has existing KPIs: Defaults to `false`
+  - If `true`: This Measure becomes primary (any existing primary is demoted)
+  - If `false` or omitted and goal has no Measures: Auto-set to `true` (first Measure is primary by default)
+  - If `false` or omitted and goal has existing Measures: Defaults to `false`
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "goalkpi_101",
+    "id": "goalmeasure_101",
     "goalId": "goal_456",
-    "kpiId": "kpi_456",
+    "kpiId": "measure_456",
     "isPrimary": true,
     "thresholdPct": 80,
     "order": 1,
@@ -1156,20 +1156,20 @@ Link a KPI to a goal.
 ```
 
 **Business Rules:**
-- First KPI linked to a goal automatically becomes primary
+- First Measure linked to a goal automatically becomes primary
 - If `isPrimary: true` is set, previous primary (if any) is automatically demoted
-- KPI can be linked to multiple goals simultaneously
+- Measure can be linked to multiple goals simultaneously
 
 **Status Codes:**
-- `201` - KPI linked successfully
-- `400` - KPI already linked to this goal
-- `404` - Goal or KPI not found
+- `201` - Measure linked successfully
+- `400` - Measure already linked to this goal
+- `404` - Goal or Measure not found
 
 ---
 
-### 21. POST /goals/{goalId}/kpis:unlink
+### 21. POST /goals/{goalId}/measures:unlink
 
-Unlink a KPI from a goal.
+Unlink a Measure from a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1177,17 +1177,17 @@ Unlink a KPI from a goal.
 **Request Body:**
 ```json
 {
-  "kpiId": "kpi_456",
-  "newPrimaryKpiId": "kpi_789"
+  "kpiId": "measure_456",
+  "newPrimaryMeasureId": "measure_789"
 }
 ```
 
 **Request Constraints:**
-- `kpiId`: string, required, KPI ID to unlink
-- `newPrimaryKpiId`: string, optional
-  - **REQUIRED** if `kpiId` is the current primary KPI AND goal has other KPIs linked
-  - **FORBIDDEN** if `kpiId` is not the current primary KPI
-  - **FORBIDDEN** if `kpiId` is the only KPI linked to goal
+- `kpiId`: string, required, Measure ID to unlink
+- `newPrimaryMeasureId`: string, optional
+  - **REQUIRED** if `kpiId` is the current primary Measure AND goal has other Measures linked
+  - **FORBIDDEN** if `kpiId` is not the current primary Measure
+  - **FORBIDDEN** if `kpiId` is the only Measure linked to goal
 
 **Response:**
 ```json
@@ -1195,33 +1195,33 @@ Unlink a KPI from a goal.
   "success": true,
   "data": {
     "goalId": "goal_456",
-    "unlinkedKpiId": "kpi_456",
-    "newPrimaryKpiId": "kpi_789",
-    "remainingKpiCount": 2
+    "unlinkedMeasureId": "measure_456",
+    "newPrimaryMeasureId": "measure_789",
+    "remainingMeasureCount": 2
   }
 }
 ```
 
 **Business Rules:**
-- Cannot unlink primary KPI without selecting new primary (if other KPIs exist)
-- If removing last KPI from goal: Allowed, goal will have no primary KPI
-- Unlinking KPI does not delete the KPI instance (still exists for other goals)
+- Cannot unlink primary Measure without selecting new primary (if other Measures exist)
+- If removing last Measure from goal: Allowed, goal will have no primary Measure
+- Unlinking Measure does not delete the Measure instance (still exists for other goals)
 
 **Status Codes:**
 - `200` - Success
-- `400` - Attempting to unlink primary KPI without providing `newPrimaryKpiId` when other KPIs exist
-- `400` - Provided `newPrimaryKpiId` is not linked to this goal
-- `404` - KPI not linked to this goal
+- `400` - Attempting to unlink primary Measure without providing `newPrimaryMeasureId` when other Measures exist
+- `400` - Provided `newPrimaryMeasureId` is not linked to this goal
+- `404` - Measure not linked to this goal
 
 ---
 
-### 22. POST /goals/{goalId}/kpis/{kpiId}:setThreshold
+### 22. POST /goals/{goalId}/measures/{kpiId}:setThreshold
 
-Set threshold percentage for a KPI linked to a goal.
+Set threshold percentage for a Measure linked to a goal.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID
+- `kpiId`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1242,13 +1242,13 @@ Set threshold percentage for a KPI linked to a goal.
 
 ---
 
-### 23. GET /goals/{goalId}/kpis/{kpiId}:link
+### 23. GET /goals/{goalId}/measures/{kpiId}:link
 
-Get KPI linkage information including threshold.
+Get Measure linkage information including threshold.
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
-- `kpiId`: string, required - KPI ID
+- `kpiId`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -1265,9 +1265,9 @@ Get KPI linkage information including threshold.
 
 ---
 
-### 24. GET /goals/{goalId}/available-kpis
+### 24. GET /goals/{goalId}/available-measures
 
-Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
+Get available Measures for a goal (catalog Measures and tenant custom Measures).
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1277,9 +1277,9 @@ Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
 {
   "success": true,
   "data": {
-    "catalogKpis": [
+    "catalogMeasures": [
       {
-        "id": "catalog_kpi_1",
+        "id": "catalog_measure_1",
         "name": "Monthly Recurring Revenue",
         "description": "Total predictable revenue per month from subscriptions",
         "unit": "USD",
@@ -1293,9 +1293,9 @@ Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
         }
       }
     ],
-    "tenantCustomKpis": [
+    "tenantCustomMeasures": [
       {
-        "id": "custom_kpi_1",
+        "id": "custom_measure_1",
         "name": "Customer Satisfaction Score",
         "description": "Average satisfaction rating from customer surveys",
         "unit": "Score (1-10)",
@@ -1313,21 +1313,21 @@ Get available KPIs for a goal (catalog KPIs and tenant custom KPIs).
 ```
 
 **Response Constraints:**
-- `catalogKpis`: array of KPICatalogItem
-- `tenantCustomKpis`: array of KPI
-- `usageInfo.goalCount`: number, count of goals using this KPI
-- `usageInfo.isUsedByThisGoal`: boolean, whether this KPI is already linked to the goal
+- `catalogMeasures`: array of MeasureCatalogItem
+- `tenantCustomMeasures`: array of Measure
+- `usageInfo.goalCount`: number, count of goals using this Measure
+- `usageInfo.isUsedByThisGoal`: boolean, whether this Measure is already linked to the goal
 
 ---
 
-## KPI Planning
+## Measure Planning
 
-### 25. GET /kpi-planning/kpis/{id}/milestones
+### 25. GET /measure-planning/measures/{id}/milestones
 
-Get all milestones for a KPI.
+Get all milestones for a Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -1336,7 +1336,7 @@ Get all milestones for a KPI.
   "data": [
     {
       "id": "milestone_123",
-      "kpiId": "kpi_456",
+      "kpiId": "measure_456",
       "milestoneDate": "2025-03-31",
       "targetValue": 50000,
       "label": "Q1 Target",
@@ -1351,19 +1351,19 @@ Get all milestones for a KPI.
 ```
 
 **Response Constraints:**
-- Returns array of KPIMilestone
+- Returns array of MeasureMilestone
 - `milestoneDate`: ISO date string (YYYY-MM-DD)
 - `targetValue`: number, required
 - `confidenceLevel`: number, optional, 1-5
 
 ---
 
-### 26. PUT /kpi-planning/kpis/{id}/milestones
+### 26. PUT /measure-planning/measures/{id}/milestones
 
-Set milestones for a KPI (replace or merge).
+Set milestones for a Measure (replace or merge).
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1407,7 +1407,7 @@ Set milestones for a KPI (replace or merge).
     "milestones": [
       {
         "id": "milestone_123",
-        "kpiId": "kpi_456",
+        "kpiId": "measure_456",
         "milestoneDate": "2025-03-31",
         "targetValue": 50000,
         "label": "Q1 Target",
@@ -1445,12 +1445,12 @@ Set milestones for a KPI (replace or merge).
 
 ---
 
-### 27. GET /kpi-planning/kpis/{id}/plan
+### 27. GET /measure-planning/measures/{id}/plan
 
-Get complete KPI planning data with trajectory.
+Get complete Measure planning data with trajectory.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Query Parameters:**
 - `granularity`: string, optional, one of: `"daily"`, `"weekly"`, `"monthly"`, `"quarterly"`, `"yearly"` (default: `"monthly"`)
@@ -1460,8 +1460,8 @@ Get complete KPI planning data with trajectory.
 {
   "success": true,
   "data": {
-    "kpi": {
-      "id": "kpi_123",
+    "measure": {
+      "id": "measure_123",
       "name": "Monthly Recurring Revenue",
       "unit": "USD",
       "direction": "up",
@@ -1500,9 +1500,9 @@ Get complete KPI planning data with trajectory.
 
 ---
 
-### 28. GET /kpi-planning/goals/{goalId}/kpi-planning
+### 28. GET /measure-planning/goals/{goalId}/measure-planning
 
-Get complete KPI planning summary for a goal (all KPIs associated with the goal).
+Get complete Measure planning summary for a goal (all Measures associated with the goal).
 
 **Path Parameters:**
 - `goalId`: string, required - Goal ID
@@ -1517,9 +1517,9 @@ Get complete KPI planning summary for a goal (all KPIs associated with the goal)
       "name": "Increase Revenue",
       "intent": "We want to increase revenue by 50%..."
     },
-    "kpis": [
+    "measures": [
       {
-        "kpiId": "kpi_456",
+        "kpiId": "measure_456",
         "name": "Monthly Recurring Revenue",
         "unit": "USD",
         "isPrimary": true,
@@ -1559,12 +1559,12 @@ Get complete KPI planning summary for a goal (all KPIs associated with the goal)
 
 ---
 
-### 30. POST /kpi-planning/kpis/{id}/actuals
+### 30. POST /measure-planning/measures/{id}/actuals
 
-Record a new actual measurement for a KPI.
+Record a new actual measurement for a Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1580,7 +1580,7 @@ Record a new actual measurement for a KPI.
 **Request Constraints:**
 - `measurementDate`: string, required, ISO date (YYYY-MM-DD)
 - `actualValue`: number, required
-- `source`: KPIDataSource enum, required
+- `source`: MeasureDataSource enum, required
 - `sourceId`: string, optional, ID of source (action ID, integration ID, etc.)
 - `adjustmentStrategy`: string, optional, one of: `"auto"`, `"manual"`, `"none"` (default: `"none"`)
 
@@ -1591,7 +1591,7 @@ Record a new actual measurement for a KPI.
   "data": {
     "actual": {
       "id": "actual_123",
-      "kpiId": "kpi_456",
+      "kpiId": "measure_456",
       "measurementDate": "2025-01-31",
       "actualValue": 45000,
       "expectedValue": 44000,
@@ -1617,17 +1617,17 @@ Record a new actual measurement for a KPI.
 - `variance`: `actualValue - expectedValue`
 - `variancePercentage`: `(variance / expectedValue) * 100`
 - `triggersReplan`: boolean, true if variance exceeds replan threshold
-- `adjustment`: KPIPlanAdjustment | null, present if auto-adjustment was applied
-- `suggestions`: array of KPIAdjustmentSuggestion, present if replan is recommended
+- `adjustment`: MeasurePlanAdjustment | null, present if auto-adjustment was applied
+- `suggestions`: array of MeasureAdjustmentSuggestion, present if replan is recommended
 
 ---
 
-### 29. GET /kpi-planning/kpis/{id}/actuals
+### 29. GET /measure-planning/measures/{id}/actuals
 
-Get historical actual measurements for a KPI.
+Get historical actual measurements for a Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Query Parameters:**
 - `startDate`: string, optional, ISO date (YYYY-MM-DD) - Filter actuals from this date onwards
@@ -1640,7 +1640,7 @@ Get historical actual measurements for a KPI.
   "data": [
     {
       "id": "actual_123",
-      "kpiId": "kpi_456",
+      "kpiId": "measure_456",
       "tenantId": "tenant_789",
       "measurementDate": "2025-01-31",
       "actualValue": 45000,
@@ -1664,7 +1664,7 @@ Get historical actual measurements for a KPI.
 ```
 
 **Response Constraints:**
-- Returns array of KPIActual measurements
+- Returns array of MeasureActual measurements
 - `measurementDate`: ISO date string (YYYY-MM-DD)
 - `actualValue`: number, the measured value
 - `expectedValue`: number, calculated from milestones via interpolation
@@ -1676,12 +1676,12 @@ Get historical actual measurements for a KPI.
 
 ---
 
-### 31. POST /kpi-planning/kpis/{id}/adjust
+### 31. POST /measure-planning/measures/{id}/adjust
 
-Apply a KPI plan adjustment (replanning based on actuals).
+Apply a Measure plan adjustment (replanning based on actuals).
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -1706,7 +1706,7 @@ Apply a KPI plan adjustment (replanning based on actuals).
   "data": {
     "adjustment": {
       "id": "adjustment_789",
-      "kpiId": "kpi_456",
+      "kpiId": "measure_456",
       "adjustmentDate": "2025-02-01T15:00:00Z",
       "effectiveDate": "2025-02-01",
       "adjustmentType": "milestone_updated",
@@ -1736,19 +1736,19 @@ Apply a KPI plan adjustment (replanning based on actuals).
 
 ---
 
-### 32. GET /kpi-planning/kpis/{kpiId}/cross-goal-impact
+### 32. GET /measure-planning/measures/{kpiId}/cross-goal-impact
 
-Shows which goals use this KPI and their impact level.
+Shows which goals use this Measure and their impact level.
 
 **Path Parameters:**
-- `kpiId`: string, required - KPI ID
+- `kpiId`: string, required - Measure ID
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "kpiId": "kpi_123",
+    "kpiId": "measure_123",
     "kpiName": "Monthly Recurring Revenue",
     "affectedGoals": [
       {
@@ -1771,12 +1771,12 @@ Shows which goals use this KPI and their impact level.
 
 ---
 
-### 26. GET /kpi-planning/kpis/{id}/replan-rule
+### 26. GET /measure-planning/measures/{id}/replan-rule
 
-Get auto-replan configuration for a KPI.
+Get auto-replan configuration for a Measure.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Response:**
 ```json
@@ -1784,7 +1784,7 @@ Get auto-replan configuration for a KPI.
   "success": true,
   "data": {
     "id": "rule_123",
-    "kpiId": "kpi_456",
+    "kpiId": "measure_456",
     "varianceThresholdPercentage": 10.0,
     "consecutiveMissesRequired": 2,
     "autoAdjustEnabled": true,
@@ -1797,19 +1797,19 @@ Get auto-replan configuration for a KPI.
 ```
 
 **Response Constraints:**
-- Returns `404` if no replan rule exists for the KPI
+- Returns `404` if no replan rule exists for the Measure
 - `varianceThresholdPercentage`: number, 0-100
 - `consecutiveMissesRequired`: number, min 1
 - `adjustmentStrategy`: AdjustmentStrategy enum
 
 ---
 
-### 27. PUT /kpi-planning/kpis/{id}/replan-rule
+### 27. PUT /measure-planning/measures/{id}/replan-rule
 
 Create or update auto-replan configuration.
 
 **Path Parameters:**
-- `id`: string, required - KPI ID
+- `id`: string, required - Measure ID
 
 **Request Body:**
 ```json
@@ -2728,15 +2728,15 @@ None (empty body)
 
 ## Operations Integration
 
-### 53. POST /operations/kpi-updates
+### 53. POST /operations/measure-updates
 
-Sync KPI update from an action.
+Sync Measure update from an action.
 
 **Request Body:**
 ```json
 {
   "actionId": "action_123",
-  "kpiId": "kpi_456",
+  "kpiId": "measure_456",
   "horizonId": "horizon_789",
   "newValue": 1000,
   "updateDate": "2025-02-01",
@@ -2746,8 +2746,8 @@ Sync KPI update from an action.
 
 **Request Constraints:**
 - `actionId`: string, required, valid action ID
-- `kpiId`: string, required, valid KPI ID
-- `kpiId`: string, required, valid KPI ID
+- `kpiId`: string, required, valid Measure ID
+- `kpiId`: string, required, valid Measure ID
 - `horizonId`: string, required, valid time horizon ID
 - `newValue`: number, required
 - `updateDate`: string, required, ISO date (YYYY-MM-DD)
@@ -2830,9 +2830,9 @@ Get strategies for specific actions.
 
 ---
 
-### 56. POST /operations/goals/kpis
+### 56. POST /operations/goals/measures
 
-Get KPIs for specific goals.
+Get Measures for specific goals.
 
 **Request Body:**
 ```json
@@ -2850,18 +2850,18 @@ Get KPIs for specific goals.
   "success": true,
   "data": [
     {
-      "id": "kpi_456",
-      "kpiId": "kpi_catalog_1",
+      "id": "measure_456",
+      "kpiId": "measure_catalog_1",
       "name": "Monthly Recurring Revenue",
       "unit": "USD",
       "direction": "up",
-      // ... other KPI fields
+      // ... other Measure fields
     }
   ]
 }
 ```
 
-**Response:** Array of KPI objects
+**Response:** Array of Measure objects
 
 ---
 
@@ -2967,7 +2967,7 @@ Calculate goal alignment with business context.
     "explanation": "Goal aligns well with customer focus core value and revenue growth vision",
     "suggestions": [
       "Consider adding specific customer retention metrics",
-      "Link to customer satisfaction KPIs"
+      "Link to customer satisfaction Measures"
     ],
     "breakdown": {
       "visionAlignment": 90,
@@ -2994,7 +2994,7 @@ Generate company report (PDF/Excel).
 - `startDate`: string, required, ISO date (YYYY-MM-DD)
 - `endDate`: string, required, ISO date (YYYY-MM-DD)
 - `format`: string, optional, one of: `"PDF"`, `"DOCX"` (default: `"PDF"`)
-- `sections`: string, optional, comma-separated list, e.g., `"Goals,KPIs,Strategies,Issues"`
+- `sections`: string, optional, comma-separated list, e.g., `"Goals,Measures,Strategies,Issues"`
 - `includeAnalytics`: boolean, optional, include analytics (default: `true`)
 - `includeCharts`: boolean, optional, include charts (default: `true`)
 
@@ -3089,8 +3089,8 @@ All error responses follow this consistent format:
 ```json
 {
   "success": false,
-  "error": "Cannot unlink primary KPI without designating a new primary",
-  "code": "PRIMARY_KPI_REQUIRED"
+  "error": "Cannot unlink primary Measure without designating a new primary",
+  "code": "PRIMARY_Measure_REQUIRED"
 }
 ```
 
@@ -3190,8 +3190,8 @@ All error responses follow this consistent format:
 | `RESOURCE_NOT_FOUND` | 404 | Requested resource does not exist |
 | `DUPLICATE_RESOURCE` | 409 | Resource with same identifier already exists |
 | `BUSINESS_RULE_VIOLATION` | 400 | Operation violates business rules |
-| `PRIMARY_KPI_REQUIRED` | 400 | Cannot remove primary KPI without replacement |
-| `KPI_LINKED_TO_GOALS` | 400 | Cannot delete KPI that is linked to goals |
+| `PRIMARY_Measure_REQUIRED` | 400 | Cannot remove primary Measure without replacement |
+| `Measure_LINKED_TO_GOALS` | 400 | Cannot delete Measure that is linked to goals |
 | `INVALID_STATE_TRANSITION` | 400 | Invalid goal state change requested |
 | `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error |
 
@@ -3238,9 +3238,9 @@ Content-Type: application/json
 - Invalidate on: create, update, delete
 - Filter-based caching
 
-### KPIs
+### Measures
 - Invalidate on: milestone updates, actual recordings, plan adjustments
-- Goal-specific KPI cache invalidation
+- Goal-specific Measure cache invalidation
 
 ---
 
@@ -3261,8 +3261,8 @@ REACT_APP_TRACTION_API_URL=http://localhost:8002
 ## Implementation Files Reference
 
 - `src/services/traction.ts` - Axios instance with interceptors
-- `src/services/goal-service.ts` - Goals, Strategies, KPI linking
-- `src/services/kpi-planning-service.ts` - KPI Planning
+- `src/services/goal-service.ts` - Goals, Strategies, Measure linking
+- `src/services/measure-planning-service.ts` - Measure Planning
 - `src/services/operations-traction-service.ts` - Core Operations API
 - `src/services/issue-service.ts` - Issue lifecycle (uses fetch)
 - `src/services/activity.ts` - Goal activity
@@ -3279,11 +3279,11 @@ REACT_APP_TRACTION_API_URL=http://localhost:8002
 - Complete data constraints and validation rules
 - Clear separation of concerns
 - Removed mixed specifications and changes
-- Removed cross-goal-alerts endpoints (25-27) - visual indication via `isShared` and `sharedGoals` in KPI responses is sufficient
-- Updated KPI planning routes: `/shared-kpis/` → `/kpi-planning/kpis/` with `/kpi-planning/` prefix
+- Removed cross-goal-alerts endpoints (25-27) - visual indication via `isShared` and `sharedGoals` in Measure responses is sufficient
+- Updated Measure planning routes: `/shared-measures/` → `/measure-planning/measures/` with `/measure-planning/` prefix
 
 **v4.0 (2025-11-20)**
-- KPI route consolidation from `/shared-kpis/...` to `/kpis/...`
+- Measure route consolidation from `/shared-measures/...` to `/measures/...`
 
 **v3.0 (2025-11-10)**
 - Complete audit of all frontend API calls

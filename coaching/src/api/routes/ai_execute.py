@@ -37,16 +37,22 @@ from coaching.src.core.response_model_registry import (
     list_available_schemas,
 )
 from coaching.src.core.topic_registry import (
-    get_endpoint_by_topic_id,
     get_parameters_for_topic,
     get_required_parameter_names_for_topic,
-    list_all_endpoints,
+    get_topic_by_topic_id,
+    list_all_topics,
 )
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/ai", tags=["AI Execute"])
+
+
+# Backwards compatibility alias for tests
+def get_endpoint_by_topic_id(topic_id: str) -> Any:
+    """Get endpoint definition by topic_id (backwards compatibility alias)."""
+    return get_topic_by_topic_id(topic_id)
 
 
 @router.post(
@@ -371,7 +377,7 @@ async def list_available_topics() -> list[TopicInfo]:
     topics: list[TopicInfo] = []
 
     # Add single-shot topics from ENDPOINT_REGISTRY
-    for endpoint in list_all_endpoints(active_only=True):
+    for endpoint in list_all_topics(active_only=True):
         # Only include single-shot topics
         if endpoint.topic_type != TopicType.SINGLE_SHOT:
             continue
@@ -395,9 +401,11 @@ async def list_available_topics() -> list[TopicInfo]:
         topics.append(
             TopicInfo(
                 topic_id=endpoint.topic_id,
-                name=endpoint.description.split(" - ")[0]
-                if " - " in endpoint.description
-                else endpoint.topic_id.replace("_", " ").title(),
+                name=(
+                    endpoint.description.split(" - ")[0]
+                    if " - " in endpoint.description
+                    else endpoint.topic_id.replace("_", " ").title()
+                ),
                 description=endpoint.description,
                 topic_type="single_shot",
                 response_model=endpoint.response_model,

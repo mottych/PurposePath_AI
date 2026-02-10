@@ -16,17 +16,11 @@ from coaching.src.api.routes import (
     admin,
     ai_execute,
     ai_execute_async,
-    analysis,
     business_data,
-    coaching_ai,
     coaching_sessions,
     health,
     insights,
     multitenant_conversations,
-    operations_ai,
-    suggestions,
-    topics,
-    website,
 )
 from coaching.src.core.config_multitenant import settings
 from fastapi import FastAPI, Request, Response
@@ -145,7 +139,6 @@ _cors_config: dict[str, Any] = {
 app.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
 
 # Include routers
-app.include_router(analysis.router, prefix=f"{settings.api_prefix}")
 app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=["health"])
 app.include_router(admin.router, prefix=f"{settings.api_prefix}")
 app.include_router(insights.router, prefix=f"{settings.api_prefix}/insights", tags=["insights"])
@@ -159,13 +152,6 @@ app.include_router(
     prefix=f"{settings.api_prefix}/multitenant/conversations",
     tags=["business-data", "multitenant"],
 )
-app.include_router(coaching_ai.router, prefix=f"{settings.api_prefix}")
-app.include_router(operations_ai.router, prefix=f"{settings.api_prefix}")
-app.include_router(
-    suggestions.router, prefix=f"{settings.api_prefix}/suggestions", tags=["suggestions"]
-)
-app.include_router(topics.router, prefix=f"{settings.api_prefix}")
-app.include_router(website.router, prefix=f"{settings.api_prefix}/website", tags=["website"])
 app.include_router(ai_execute.router, prefix=f"{settings.api_prefix}")
 app.include_router(coaching_sessions.router, prefix=f"{settings.api_prefix}")
 app.include_router(ai_execute_async.router, prefix=f"{settings.api_prefix}")

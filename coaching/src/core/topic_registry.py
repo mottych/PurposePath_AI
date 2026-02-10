@@ -15,7 +15,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TypedDict
 
-from coaching.src.core.constants import ParameterSource, PromptType, TopicCategory, TopicType
+from coaching.src.core.constants import (
+    ParameterSource,
+    PromptType,
+    TierLevel,
+    TopicCategory,
+    TopicType,
+)
 
 
 class TemplateType(str, Enum):
@@ -94,14 +100,42 @@ def _goals(name: str, path: str = "") -> ParameterRef:
     return ParameterRef(name=name, source=ParameterSource.GOALS, source_path=path)
 
 
-def _kpi(name: str, path: str = "") -> ParameterRef:
-    """Create a KPI source parameter reference."""
-    return ParameterRef(name=name, source=ParameterSource.KPI, source_path=path)
+def _measure(name: str, path: str = "") -> ParameterRef:
+    """Create a MEASURE source parameter reference (from get_measure_by_id)."""
+    return ParameterRef(name=name, source=ParameterSource.MEASURE, source_path=path)
 
 
-def _kpis(name: str, path: str = "") -> ParameterRef:
-    """Create a KPIS source parameter reference."""
-    return ParameterRef(name=name, source=ParameterSource.KPIS, source_path=path)
+def _measures(name: str, path: str = "") -> ParameterRef:
+    """Create a MEASURES source parameter reference (from get_measures_summary)."""
+    return ParameterRef(name=name, source=ParameterSource.MEASURES, source_path=path)
+
+
+def _strategy(name: str, path: str = "") -> ParameterRef:
+    """Create a STRATEGY source parameter reference (from get_strategy_by_id)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.GOAL, source_path=path
+    )  # Reuse GOAL source
+
+
+def _strategies(name: str, path: str = "") -> ParameterRef:
+    """Create a STRATEGIES source parameter reference (from get_all_strategies)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.GOALS, source_path=path
+    )  # Reuse GOALS source
+
+
+def _people(name: str, path: str = "") -> ParameterRef:
+    """Create a PEOPLE source parameter reference (from get_people)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.USER, source_path=path
+    )  # Reuse USER source
+
+
+def _departments(name: str, path: str = "") -> ParameterRef:
+    """Create a DEPARTMENTS source parameter reference (from get_departments)."""
+    return ParameterRef(
+        name=name, source=ParameterSource.USER, source_path=path
+    )  # Reuse USER source
 
 
 def _action(name: str, path: str = "") -> ParameterRef:
@@ -130,20 +164,27 @@ def _comp(name: str, path: str = "") -> ParameterRef:
 
 
 @dataclass(frozen=True)
-class EndpointDefinition:
-    """Definition of an API endpoint and its topic configuration.
+class TopicDefinition:
+    """Definition of a topic and its configuration.
+
+    Topics are routed to endpoints based on TopicType:
+    - SINGLE_SHOT → /ai/execute or /ai/execute-async
+    - CONVERSATION_COACHING → /ai/coaching/*
+
+    endpoint_path and http_method are optional and only used for legacy routes.
 
     Attributes:
         topic_id: Topic identifier in DynamoDB (e.g., "alignment_check")
-        topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
+        topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
         category: Grouping category for organization (enum)
-        description: Human-readable description of endpoint purpose
+        description: Human-readable description of topic purpose
+        tier_level: Subscription tier required to access this topic
         response_model: Response model class name (e.g., "AlignmentAnalysisResponse")
-        endpoint_path: API path (optional for conversation topics)
-        http_method: HTTP method (optional for conversation topics)
-        is_active: Whether endpoint is currently active and routable
-        allowed_prompt_types: List of prompt types this endpoint can use
-        parameter_refs: Parameter references with source info for this endpoint
+        endpoint_path: API path (optional, for legacy routes only)
+        http_method: HTTP method (optional, for legacy routes only)
+        is_active: Whether topic is currently active and routable
+        allowed_prompt_types: List of prompt types this topic can use
+        parameter_refs: Parameter references with source info for this topic
         templates: Template S3 keys by type (for conversation topics)
         result_model: Pydantic model class name for extraction output (for conversation topics)
     """
@@ -152,6 +193,7 @@ class EndpointDefinition:
     topic_type: TopicType
     category: TopicCategory
     description: str
+    tier_level: TierLevel = TierLevel.FREE  # Default to FREE tier
     response_model: str = ""
     endpoint_path: str | None = None  # Optional for conversation topics
     http_method: str | None = None  # Optional for conversation topics
@@ -164,14 +206,14 @@ class EndpointDefinition:
     result_model: str | None = None  # Pydantic model for extraction
 
 
-# Central registry of all endpoints mapped to topics
-# Key format: "{HTTP_METHOD}:{path}"
-ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
+# Central registry of all topics with their configurations
+# Key format: topic_id (e.g., "website_scan", "niche_review", "core_values")
+TOPIC_REGISTRY: dict[str, TopicDefinition] = {
     # ========== Section 1: Onboarding & Business Intelligence (4 endpoints) ==========
-    "POST:/website/scan": EndpointDefinition(
-        endpoint_path="/website/scan",
-        http_method="POST",
+    "website_scan": TopicDefinition(
         topic_id="website_scan",
+        endpoint_path="/website/scan",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="WebsiteScanResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
@@ -184,10 +226,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _web("meta_description"),  # Resolved by get_website_content
         ),
     ),
-    "POST:/suggestions/onboarding": EndpointDefinition(
-        endpoint_path="/suggestions/onboarding",
-        http_method="POST",
+    "onboarding_suggestions": TopicDefinition(
         topic_id="onboarding_suggestions",
+        endpoint_path="/suggestions/onboarding",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="OnboardingSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
@@ -198,10 +240,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("business_context"),
         ),
     ),
-    "POST:/coaching/onboarding": EndpointDefinition(
-        endpoint_path="/coaching/onboarding",
-        http_method="POST",
+    "onboarding_coaching": TopicDefinition(
         topic_id="onboarding_coaching",
+        endpoint_path="/coaching/onboarding",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="OnboardingCoachingResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
@@ -212,10 +254,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _conv("context"),
         ),
     ),
-    "GET:/multitenant/conversations/business-data": EndpointDefinition(
-        endpoint_path="/multitenant/conversations/business-data",
-        http_method="GET",
+    "business_metrics": TopicDefinition(
         topic_id="business_metrics",
+        endpoint_path="/multitenant/conversations/business-data",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="BusinessMetricsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
@@ -229,10 +271,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
     ),
     # Onboarding Review Topics (accessed via /ai/execute unified endpoint)
     # current_value is optional - users can get suggestions without a draft
-    "POST:/ai/execute:niche_review": EndpointDefinition(
-        endpoint_path="/ai/execute:niche_review",
-        http_method="POST",
+    "niche_review": TopicDefinition(
         topic_id="niche_review",
+        endpoint_path=None,  # Uses unified /ai/execute endpoint
+        http_method=None,  # Uses unified /ai/execute endpoint
         response_model="OnboardingReviewResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
@@ -247,17 +289,17 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # current_value is optional - users can get suggestions without a draft
-    "POST:/ai/execute:ica_review": EndpointDefinition(
-        endpoint_path="/ai/execute:ica_review",
-        http_method="POST",
+    "ica_review": TopicDefinition(
         topic_id="ica_review",
-        response_model="OnboardingReviewResponse",
+        endpoint_path=None,  # Uses unified /ai/execute endpoint
+        http_method=None,  # Uses unified /ai/execute endpoint
+        response_model="IcaReviewResponse",  # Uses detailed ICA-specific response model
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
-        description="Review and suggest variations for Ideal Client Avatar (ICA)",
+        description="Review and suggest detailed ICA personas with demographics, goals, pain points, and buying behavior",
         is_active=True,
         parameter_refs=(
-            _opt_req("current_value"),
+            _opt_req("current_value"),  # Optional - can generate suggestions without a draft
             _onb("onboarding_niche"),
             _onb("onboarding_value_proposition"),
             _onb("onboarding_products"),
@@ -265,14 +307,14 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # current_value is optional - users can get suggestions without a draft
-    "POST:/ai/execute:value_proposition_review": EndpointDefinition(
-        endpoint_path="/ai/execute:value_proposition_review",
-        http_method="POST",
+    "value_proposition_review": TopicDefinition(
         topic_id="value_proposition_review",
-        response_model="OnboardingReviewResponse",
+        endpoint_path=None,  # Uses unified /ai/execute endpoint
+        http_method=None,  # Uses unified /ai/execute endpoint
+        response_model="ValuePropositionReviewResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ONBOARDING,
-        description="Review and suggest variations for value proposition",
+        description="Review and suggest detailed value proposition variations with positioning strategy",
         is_active=True,
         parameter_refs=(
             _opt_req("current_value"),
@@ -283,70 +325,150 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # ========== Section 2: Insights Generation (1 endpoint) ==========
-    "POST:/insights/generate": EndpointDefinition(
-        endpoint_path="/insights/generate",
-        http_method="POST",
+    "insights_generation": TopicDefinition(
         topic_id="insights_generation",
-        response_model="InsightsResponse",
+        endpoint_path="/insights/generate",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="InsightsGenerationResponse",  # LLM returns list of insights
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.INSIGHTS,
-        description="Generate business insights from coaching data",
+        description="Generate leadership insights using KISS framework (Keep, Improve, Start, Stop) based on current business state, measures, and purpose alignment",
         is_active=True,
         parameter_refs=(
-            _req("data_sources"),
-            _req("insight_types"),
-            _req("time_range"),
+            # NOTE: page, page_size, category, priority, status are API-level filtering params
+            # They should be handled by the API layer AFTER LLM generates insights, not sent to LLM
+            # Auto-enriched business data for AI analysis
+            _opt_req(
+                "business_foundation"
+            ),  # Complete foundation data (vision, purpose, values, etc.)
+            _opt_req("goals"),  # All tenant goals with progress
+            _opt_req("strategies"),  # All tenant strategies
+            _opt_req("measures"),  # All measures/KPIs with progress
+            _opt_req("actions"),  # All action items
+            _opt_req("issues"),  # All open issues
         ),
     ),
-    # ========== Section 4: Strategic Planning AI (5 endpoints) ==========
-    "POST:/coaching/strategy-suggestions": EndpointDefinition(
-        endpoint_path="/coaching/strategy-suggestions",
-        http_method="POST",
+    # ========== Section 4: Strategic Planning AI (6 endpoints) ==========
+    "goal_intent_review": TopicDefinition(
+        topic_id="goal_intent_review",
+        endpoint_path="/coaching/goal-intent-review",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="GoalIntentReviewResponse",
+        topic_type=TopicType.SINGLE_SHOT,
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description="Review and suggest goal intent statements (WHAT + WHY) that define desired outcomes and business rationale",
+        is_active=True,
+        parameter_refs=(
+            # Optional request parameters:
+            _opt_req("current_intent"),  # Optional: draft goal intent to review
+            _opt_req("goalId"),  # Optional: goal ID for context
+            # Auto-enriched business foundation parameters:
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("core_values"),  # Auto-enriched from business_foundation
+            _onb("target_market"),  # Auto-enriched from business_foundation
+            _onb("value_proposition"),  # Auto-enriched from business_foundation
+            # Goal context (if goalId provided):
+            _goal("goal_title"),  # Auto-enriched from goal (if goalId provided)
+            _goal("goal_description"),  # Auto-enriched from goal (if goalId provided)
+            _strategies(
+                "current_strategies"
+            ),  # Auto-enriched: strategies for goal (if goalId provided)
+            _measures("current_measures"),  # Auto-enriched: measures for goal (if goalId provided)
+            # Other goals for context:
+            _goals("other_goals"),  # Auto-enriched: all other goals for context
+        ),
+    ),
+    "strategy_suggestions": TopicDefinition(
         topic_id="strategy_suggestions",
+        endpoint_path="/coaching/strategy-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="StrategySuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
-        description="Generate strategic planning suggestions",
+        description="Generate strategic planning suggestions for a specific goal, including review of existing strategies",
         is_active=True,
         parameter_refs=(
-            _onb("business_foundation"),
-            _onb("current_strategy"),
-            _req("market_context"),
+            # Enrichment key (required in API request, NOT for templates):
+            _req("goal_id"),  # Used by get_goal_by_id to fetch goal data
+            # Template parameters (auto-enriched, FOR template use):
+            _goal("goal_title"),  # Auto-enriched from goal
+            _goal("goal_description"),  # Auto-enriched from goal
+            _goal("goal_intent"),  # Auto-enriched from goal
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("core_values"),  # Auto-enriched from business_foundation
+            _strategies("existing_strategies_for_goal"),  # Auto-enriched and formatted
+            # Optional request parameters:
+            _opt_req("business_context"),  # Optional: additional business context
+            _opt_req("constraints"),  # Optional: constraints for strategy generation
         ),
     ),
-    "POST:/coaching/kpi-recommendations": EndpointDefinition(
-        endpoint_path="/coaching/kpi-recommendations",
-        http_method="POST",
-        topic_id="kpi_recommendations",
-        response_model="KPIRecommendationsResponse",
+    "measure_recommendations": TopicDefinition(
+        topic_id="measure_recommendations",
+        endpoint_path="/coaching/measure-recommendations",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="MeasureRecommendationsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
-        description="Recommend KPIs based on business goals",
+        description="Recommend catalog measures for a goal or strategy, with suggested owner assignment",
         is_active=True,
         parameter_refs=(
-            _goals("goals"),
-            _onb("business_context"),
-            _kpis("existing_kpis"),
+            _req("goal_id"),  # Required: goal_id or strategy_id
+            _opt_req(
+                "strategy_id"
+            ),  # Optional: if provided, recommend measures for specific strategy
+            _goal("goal"),  # Auto-enriched from goal_id
+            _strategies(
+                "strategies"
+            ),  # Auto-enriched: all strategies (filter by goal_id in template)
+            _onb("business_context"),  # Auto-enriched: business foundation
+            _measures("existing_measures"),  # Auto-enriched: existing measures
+            ParameterRef(
+                name="measure_catalog",
+                source=ParameterSource.MEASURES,
+                source_path="measure_catalog",
+            ),  # Auto-enriched: measure catalog
+            ParameterRef(
+                name="catalog_measures",
+                source=ParameterSource.MEASURES,
+                source_path="catalog_measures",
+            ),  # Auto-enriched: catalog measures list
+            ParameterRef(
+                name="tenant_custom_measures",
+                source=ParameterSource.MEASURES,
+                source_path="tenant_custom_measures",
+            ),  # Auto-enriched: tenant custom measures
+            _people("roles"),  # Auto-enriched: all roles
+            _people("positions"),  # Auto-enriched: all positions
+            _people("people"),  # Auto-enriched: all people
         ),
     ),
-    "POST:/coaching/alignment-check": EndpointDefinition(
-        endpoint_path="/coaching/alignment-check",
-        http_method="POST",
+    "alignment_check": TopicDefinition(
         topic_id="alignment_check",
-        response_model="AlignmentAnalysisResponse",
+        endpoint_path="/coaching/alignment-check",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="AlignmentCheckResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
         description="Calculate alignment score between goal and business foundation",
         is_active=True,
         parameter_refs=(
-            _goal("goal"),
-            _onb("business_foundation"),
+            # Enrichment key (required in API request, NOT for templates):
+            _req("goal_id"),  # Used by get_goal_by_id to fetch goal data
+            # Template parameters (auto-enriched, FOR template use):
+            _goal("goalIntent"),  # Auto-enriched from goal
+            _onb("businessName"),  # Auto-enriched from business_foundation
+            _onb("vision"),  # Auto-enriched from business_foundation
+            _onb("purpose"),  # Auto-enriched from business_foundation
+            _onb("coreValues"),  # Auto-enriched from business_foundation
+            _strategies("strategies_for_goal"),  # Auto-enriched and formatted
         ),
     ),
-    "POST:/coaching/alignment-explanation": EndpointDefinition(
-        endpoint_path="/coaching/alignment-explanation",
-        http_method="POST",
+    "alignment_explanation": TopicDefinition(
         topic_id="alignment_explanation",
+        endpoint_path="/coaching/alignment-explanation",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="AlignmentExplanationResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
@@ -358,10 +480,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("business_foundation"),
         ),
     ),
-    "POST:/coaching/alignment-suggestions": EndpointDefinition(
-        endpoint_path="/coaching/alignment-suggestions",
-        http_method="POST",
+    "alignment_suggestions": TopicDefinition(
         topic_id="alignment_suggestions",
+        endpoint_path="/coaching/alignment-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="AlignmentSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.STRATEGIC_PLANNING,
@@ -374,10 +496,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # ========== Section 5: Operations AI (9 endpoints) ==========
-    "POST:/operations/root-cause-suggestions": EndpointDefinition(
-        endpoint_path="/operations/root-cause-suggestions",
-        http_method="POST",
+    "root_cause_suggestions": TopicDefinition(
         topic_id="root_cause_suggestions",
+        endpoint_path="/operations/root-cause-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="RootCauseSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -388,10 +510,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("context", "business_context"),
         ),
     ),
-    "POST:/operations/swot-analysis": EndpointDefinition(
-        endpoint_path="/operations/swot-analysis",
-        http_method="POST",
+    "swot_analysis": TopicDefinition(
         topic_id="swot_analysis",
+        endpoint_path="/operations/swot-analysis",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="SwotAnalysisResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -402,10 +524,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("context", "business_context"),
         ),
     ),
-    "POST:/operations/five-whys-questions": EndpointDefinition(
-        endpoint_path="/operations/five-whys-questions",
-        http_method="POST",
+    "five_whys_questions": TopicDefinition(
         topic_id="five_whys_questions",
+        endpoint_path="/operations/five-whys-questions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="FiveWhysQuestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -416,25 +538,30 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("depth"),
         ),
     ),
-    "POST:/operations/action-suggestions": EndpointDefinition(
-        endpoint_path="/operations/action-suggestions",
-        http_method="POST",
+    "action_suggestions": TopicDefinition(
         topic_id="action_suggestions",
+        endpoint_path="/operations/action-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="ActionSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
-        category=TopicCategory.OPERATIONS_AI,
-        description="Suggest actions to resolve operational issues",
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description="Suggest actions for a goal or specific strategy",
         is_active=True,
         parameter_refs=(
-            _issue("issue"),
-            _issue("root_causes", "root_causes"),
-            _req("constraints"),
+            _req("goal_id"),  # Required: goal to generate actions for
+            _opt_req(
+                "strategy_id"
+            ),  # Optional: if provided, generate actions for specific strategy only
+            _goal("goal"),  # Auto-enriched from goal_id
+            _strategy("strategy"),  # Auto-enriched from strategy_id (if provided)
+            _strategies("strategies"),  # Auto-enriched: all strategies for goal
+            _onb("business_foundation"),  # Auto-enriched: business foundation
         ),
     ),
-    "POST:/operations/optimize-action-plan": EndpointDefinition(
-        endpoint_path="/operations/optimize-action-plan",
-        http_method="POST",
+    "optimize_action_plan": TopicDefinition(
         topic_id="optimize_action_plan",
+        endpoint_path="/operations/optimize-action-plan",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="OptimizedActionPlanResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -445,10 +572,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("optimization_goals"),
         ),
     ),
-    "POST:/operations/prioritization-suggestions": EndpointDefinition(
-        endpoint_path="/operations/prioritization-suggestions",
-        http_method="POST",
+    "prioritization_suggestions": TopicDefinition(
         topic_id="prioritization_suggestions",
+        endpoint_path="/operations/prioritization-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="PrioritizationSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -459,10 +586,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("criteria"),
         ),
     ),
-    "POST:/operations/scheduling-suggestions": EndpointDefinition(
-        endpoint_path="/operations/scheduling-suggestions",
-        http_method="POST",
+    "scheduling_suggestions": TopicDefinition(
         topic_id="scheduling_suggestions",
+        endpoint_path="/operations/scheduling-suggestions",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="SchedulingSuggestionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -474,10 +601,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("constraints"),
         ),
     ),
-    "POST:/operations/categorize-issue": EndpointDefinition(
-        endpoint_path="/operations/categorize-issue",
-        http_method="POST",
+    "categorize_issue": TopicDefinition(
         topic_id="categorize_issue",
+        endpoint_path="/operations/categorize-issue",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="IssueCategoryResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -485,10 +612,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         is_active=False,
         parameter_refs=(_issue("issue"),),
     ),
-    "POST:/operations/assess-impact": EndpointDefinition(
-        endpoint_path="/operations/assess-impact",
-        http_method="POST",
+    "assess_impact": TopicDefinition(
         topic_id="assess_impact",
+        endpoint_path="/operations/assess-impact",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="ImpactAssessmentResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_AI,
@@ -500,10 +627,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
         ),
     ),
     # ========== Section 6: Operations-Strategic Integration (22 endpoints) ==========
-    "GET:/operations/actions/{action_id}/strategic-context": EndpointDefinition(
-        endpoint_path="/operations/actions/{action_id}/strategic-context",
-        http_method="GET",
+    "action_strategic_context": TopicDefinition(
         topic_id="action_strategic_context",
+        endpoint_path="/operations/actions/{action_id}/strategic-context",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="ActionStrategicContextResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -514,10 +641,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _action("action_details"),
         ),
     ),
-    "POST:/operations/actions/suggest-connections": EndpointDefinition(
-        endpoint_path="/operations/actions/suggest-connections",
-        http_method="POST",
+    "suggest_connections": TopicDefinition(
         topic_id="suggest_connections",
+        endpoint_path="/operations/actions/suggest-connections",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="SuggestedConnectionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -528,10 +655,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("strategic_context"),
         ),
     ),
-    "PUT:/operations/actions/{action_id}/connections": EndpointDefinition(
-        endpoint_path="/operations/actions/{action_id}/connections",
-        http_method="PUT",
+    "update_connections": TopicDefinition(
         topic_id="update_connections",
+        endpoint_path="/operations/actions/{action_id}/connections",  # Legacy route
+        http_method="PUT",  # Legacy route
         response_model="UpdateConnectionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -542,10 +669,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("connections"),
         ),
     ),
-    "POST:/operations/issues/create-from-action": EndpointDefinition(
-        endpoint_path="/operations/issues/create-from-action",
-        http_method="POST",
+    "create_issue_from_action": TopicDefinition(
         topic_id="create_issue_from_action",
+        endpoint_path="/operations/issues/create-from-action",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CreateIssueResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -556,10 +683,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("context", "business_context"),
         ),
     ),
-    "POST:/operations/actions/create-from-issue": EndpointDefinition(
-        endpoint_path="/operations/actions/create-from-issue",
-        http_method="POST",
+    "create_action_from_issue": TopicDefinition(
         topic_id="create_action_from_issue",
+        endpoint_path="/operations/actions/create-from-issue",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CreateActionResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -570,10 +697,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("action_data"),
         ),
     ),
-    "POST:/operations/actions/{action_id}/complete": EndpointDefinition(
-        endpoint_path="/operations/actions/{action_id}/complete",
-        http_method="POST",
+    "complete_action": TopicDefinition(
         topic_id="complete_action",
+        endpoint_path="/operations/actions/{action_id}/complete",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CompleteActionResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -584,10 +711,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("completion_data"),
         ),
     ),
-    "POST:/operations/issues/{issue_id}/close": EndpointDefinition(
-        endpoint_path="/operations/issues/{issue_id}/close",
-        http_method="POST",
+    "close_issue": TopicDefinition(
         topic_id="close_issue",
+        endpoint_path="/operations/issues/{issue_id}/close",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CloseIssueResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -598,10 +725,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("closure_data"),
         ),
     ),
-    "GET:/operations/issues/{issue_id}/status": EndpointDefinition(
-        endpoint_path="/operations/issues/{issue_id}/status",
-        http_method="GET",
+    "issue_status": TopicDefinition(
         topic_id="issue_status",
+        endpoint_path="/operations/issues/{issue_id}/status",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="IssueStatusResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -612,10 +739,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _issue("issue_status", "status"),
         ),
     ),
-    "GET:/operations/issues/{issue_id}/related-actions": EndpointDefinition(
-        endpoint_path="/operations/issues/{issue_id}/related-actions",
-        http_method="GET",
+    "issue_related_actions": TopicDefinition(
         topic_id="issue_related_actions",
+        endpoint_path="/operations/issues/{issue_id}/related-actions",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="RelatedActionsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -626,123 +753,123 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _issue("issue_details"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/update": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/update",
-        http_method="POST",
-        topic_id="update_kpi",
-        response_model="UpdateKPIResponse",
+    "update_measure": TopicDefinition(
+        topic_id="update_measure",
+        endpoint_path="/operations/measures/{measure_id}/update",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="UpdateMeasureResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Update a KPI value with audit trail",
+        description="Update a measure value with audit trail",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("update_data"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/calculate": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/calculate",
-        http_method="POST",
-        topic_id="calculate_kpi",
-        response_model="CalculateKPIResponse",
+    "calculate_measure": TopicDefinition(
+        topic_id="calculate_measure",
+        endpoint_path="/operations/measures/{measure_id}/calculate",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="CalculateMeasureResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Calculate KPI value from linked data",
+        description="Calculate measure value from linked data",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
-            _kpi("kpi_id", "id"),
+            _req("measure_id"),
+            _measure("measure_id", "id"),
         ),
     ),
-    "GET:/operations/kpis/{kpi_id}/history": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/history",
-        http_method="GET",
-        topic_id="kpi_history",
-        response_model="KPIHistoryResponse",
+    "measure_history": TopicDefinition(
+        topic_id="measure_history",
+        endpoint_path="/operations/measures/{measure_id}/history",  # Legacy route
+        http_method="GET",  # Legacy route
+        response_model="MeasureHistoryResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Get historical values for a KPI",
+        description="Get historical values for a measure",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("time_range"),
         ),
     ),
-    "GET:/operations/kpis/{kpi_id}/impact": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/impact",
-        http_method="GET",
-        topic_id="kpi_impact",
-        response_model="KPIImpactResponse",
+    "measure_impact": TopicDefinition(
+        topic_id="measure_impact",
+        endpoint_path="/operations/measures/{measure_id}/impact",  # Legacy route
+        http_method="GET",  # Legacy route
+        response_model="MeasureImpactResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Analyze KPI impact on strategic goals",
+        description="Analyze measure impact on strategic goals",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
-            _kpis("related_kpis"),
+            _req("measure_id"),
+            _measures("related_measures"),
         ),
     ),
-    "POST:/operations/actions/{action_id}/kpi-impact": EndpointDefinition(
-        endpoint_path="/operations/actions/{action_id}/kpi-impact",
-        http_method="POST",
-        topic_id="action_kpi_impact",
-        response_model="ActionKPIImpactResponse",
+    "action_measure_impact": TopicDefinition(
+        topic_id="action_measure_impact",
+        endpoint_path="/operations/actions/{action_id}/measure-impact",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="ActionMeasureImpactResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Calculate impact of action completion on KPIs",
+        description="Calculate impact of action completion on measures",
         is_active=False,
         parameter_refs=(
             _req("action_id"),
             _action("action_details"),
-            _kpis("related_kpis"),
+            _measures("related_measures"),
         ),
     ),
-    "POST:/operations/kpis/sync-to-strategy": EndpointDefinition(
-        endpoint_path="/operations/kpis/sync-to-strategy",
-        http_method="POST",
-        topic_id="sync_kpis_to_strategy",
-        response_model="SyncKPIsResponse",
+    "sync_measures_to_strategy": TopicDefinition(
+        topic_id="sync_measures_to_strategy",
+        endpoint_path="/operations/measures/sync-to-strategy",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="SyncMeasuresResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Sync operational KPIs to strategic planning",
+        description="Sync operational measures to strategic planning",
         is_active=False,
         parameter_refs=(
-            _req("kpi_updates"),
+            _req("measure_updates"),
             _onb("strategy"),
         ),
     ),
-    "GET:/operations/kpis/detect-conflicts": EndpointDefinition(
-        endpoint_path="/operations/kpis/detect-conflicts",
-        http_method="GET",
-        topic_id="detect_kpi_conflicts",
-        response_model="KPIConflictsResponse",
+    "detect_measure_conflicts": TopicDefinition(
+        topic_id="detect_measure_conflicts",
+        endpoint_path="/operations/measures/detect-conflicts",  # Legacy route
+        http_method="GET",  # Legacy route
+        response_model="MeasureConflictsResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Detect conflicts between operational and strategic KPIs",
+        description="Detect conflicts between operational and strategic measures",
         is_active=False,
         parameter_refs=(
-            _kpis("operational_kpis"),
-            _kpis("strategic_kpis"),
+            _measures("operational_measures"),
+            _measures("strategic_measures"),
         ),
     ),
-    "POST:/operations/kpis/resolve-conflict": EndpointDefinition(
-        endpoint_path="/operations/kpis/resolve-conflict",
-        http_method="POST",
-        topic_id="resolve_kpi_conflict",
+    "resolve_measure_conflict": TopicDefinition(
+        topic_id="resolve_measure_conflict",
+        endpoint_path="/operations/measures/resolve-conflict",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="ResolveConflictResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Resolve a detected KPI conflict",
+        description="Resolve a detected measure conflict",
         is_active=False,
         parameter_refs=(
             _req("conflict_id"),
             _req("conflict_details"),
         ),
     ),
-    "GET:/operations/strategic-alignment": EndpointDefinition(
-        endpoint_path="/operations/strategic-alignment",
-        http_method="GET",
+    "operations_strategic_alignment": TopicDefinition(
         topic_id="operations_strategic_alignment",
+        endpoint_path="/operations/strategic-alignment",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="StrategicAlignmentResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -753,10 +880,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("operations"),
         ),
     ),
-    "POST:/operations/actions/cascade-update": EndpointDefinition(
-        endpoint_path="/operations/actions/cascade-update",
-        http_method="POST",
+    "cascade_action_update": TopicDefinition(
         topic_id="cascade_action_update",
+        endpoint_path="/operations/actions/cascade-update",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CascadeUpdateResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -767,10 +894,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("update_data"),
         ),
     ),
-    "POST:/operations/issues/cascade-update": EndpointDefinition(
-        endpoint_path="/operations/issues/cascade-update",
-        http_method="POST",
+    "cascade_issue_update": TopicDefinition(
         topic_id="cascade_issue_update",
+        endpoint_path="/operations/issues/cascade-update",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CascadeUpdateResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
@@ -781,25 +908,25 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("update_data"),
         ),
     ),
-    "POST:/operations/kpis/{kpi_id}/cascade-update": EndpointDefinition(
-        endpoint_path="/operations/kpis/{kpi_id}/cascade-update",
-        http_method="POST",
-        topic_id="cascade_kpi_update",
+    "cascade_measure_update": TopicDefinition(
+        topic_id="cascade_measure_update",
+        endpoint_path="/operations/measures/{measure_id}/cascade-update",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="CascadeUpdateResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.OPERATIONS_STRATEGIC_INTEGRATION,
-        description="Cascade KPI updates to related strategic items",
+        description="Cascade measure updates to related strategic items",
         is_active=False,
         parameter_refs=(
-            _req("kpi_id"),
+            _req("measure_id"),
             _req("update_value"),
         ),
     ),
     # ========== Section 7: Analysis Endpoints (4 endpoints) ==========
-    "GET:/admin/topics/{topic_id}/strategic-context": EndpointDefinition(
-        endpoint_path="/admin/topics/{topic_id}/strategic-context",
-        http_method="GET",
+    "topic_strategic_context": TopicDefinition(
         topic_id="topic_strategic_context",
+        endpoint_path="/admin/topics/{topic_id}/strategic-context",  # Legacy route
+        http_method="GET",  # Legacy route
         response_model="TopicStrategicContextResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ANALYSIS,
@@ -810,10 +937,10 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _req("context_type"),
         ),
     ),
-    "POST:/analysis/goal-alignment": EndpointDefinition(
-        endpoint_path="/analysis/goal-alignment",
-        http_method="POST",
+    "alignment_analysis": TopicDefinition(
         topic_id="alignment_analysis",
+        endpoint_path="/analysis/goal-alignment",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="GoalAlignmentResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ANALYSIS,
@@ -824,24 +951,24 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("business_foundation"),
         ),
     ),
-    "POST:/analysis/kpi-performance": EndpointDefinition(
-        endpoint_path="/analysis/kpi-performance",
-        http_method="POST",
-        topic_id="kpi_analysis",
-        response_model="KPIPerformanceResponse",
+    "measure_analysis": TopicDefinition(
+        topic_id="measure_analysis",
+        endpoint_path="/analysis/measure-performance",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="MeasurePerformanceResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ANALYSIS,
-        description="Analyze KPI performance trends",
+        description="Analyze measure performance trends",
         is_active=True,
         parameter_refs=(
-            _kpis("kpis"),
+            _measures("measures"),
             _req("performance_data"),
         ),
     ),
-    "POST:/analysis/operations": EndpointDefinition(
-        endpoint_path="/analysis/operations",
-        http_method="POST",
+    "operations_analysis": TopicDefinition(
         topic_id="operations_analysis",
+        endpoint_path="/analysis/operations",  # Legacy route
+        http_method="POST",  # Legacy route
         response_model="OperationsAnalysisResponse",
         topic_type=TopicType.SINGLE_SHOT,
         category=TopicCategory.ANALYSIS,
@@ -855,11 +982,12 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
     # ========== Section 8: Coaching Conversations (3 endpoints) ==========
     # Multi-turn coaching conversations with session management.
     # These use the generic coaching engine with conversation_config settings.
-    "COACHING:core_values": EndpointDefinition(
-        endpoint_path="/ai/coaching",
-        http_method="POST",
+    "core_values": TopicDefinition(
         topic_id="core_values",
+        endpoint_path=None,  # Uses unified /ai/coaching endpoint
+        http_method=None,  # Uses unified /ai/coaching endpoint
         response_model="CoreValuesResult",
+        result_model="CoreValuesResult",  # Enable extraction and auto-completion
         topic_type=TopicType.CONVERSATION_COACHING,
         category=TopicCategory.ONBOARDING,
         description="Discover and articulate your organization's authentic core values through guided coaching.",
@@ -868,7 +996,6 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Core values are personal beliefs - minimal context needed
         # user_name from user profile, company_name optional from onboarding
@@ -877,11 +1004,12 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("company_name", "company_name"),
         ),
     ),
-    "COACHING:purpose": EndpointDefinition(
-        endpoint_path="/ai/coaching",
-        http_method="POST",
+    "purpose": TopicDefinition(
         topic_id="purpose",
+        endpoint_path=None,  # Uses unified /ai/coaching endpoint
+        http_method=None,  # Uses unified /ai/coaching endpoint
         response_model="PurposeResult",
+        result_model="PurposeResult",  # Enable extraction and auto-completion
         topic_type=TopicType.CONVERSATION_COACHING,
         category=TopicCategory.ONBOARDING,
         description="Define your organization's deeper purpose and reason for existing through guided coaching.",
@@ -890,7 +1018,6 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Purpose needs business context and core values (if completed)
         parameter_refs=(
@@ -903,11 +1030,12 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             _onb("onboarding_products", "onboarding_products"),
         ),
     ),
-    "COACHING:vision": EndpointDefinition(
-        endpoint_path="/ai/coaching",
-        http_method="POST",
+    "vision": TopicDefinition(
         topic_id="vision",
+        endpoint_path=None,  # Uses unified /ai/coaching endpoint
+        http_method=None,  # Uses unified /ai/coaching endpoint
         response_model="VisionResult",
+        result_model="VisionResult",  # Enable extraction and auto-completion
         topic_type=TopicType.CONVERSATION_COACHING,
         category=TopicCategory.ONBOARDING,
         description="Craft a compelling vision for your organization's future through guided coaching.",
@@ -916,14 +1044,13 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
             PromptType.SYSTEM,
             PromptType.INITIATION,
             PromptType.RESUME,
-            PromptType.EXTRACTION,
         ),
         # Vision builds on values and purpose, needs full foundation context
         parameter_refs=(
             _req("user_name"),
             _onb("company_name", "company_name"),
             _onb("core_values", "core_values"),
-            _onb("mission_statement", "mission_statement"),  # Purpose/mission
+            _onb("purpose", "purpose"),  # Updated from mission_statement
             _onb("onboarding_niche", "onboarding_niche"),
             _onb("onboarding_ica", "onboarding_ica"),
             _onb("onboarding_value_proposition", "onboarding_value_proposition"),
@@ -938,69 +1065,68 @@ ENDPOINT_REGISTRY: dict[str, EndpointDefinition] = {
 # =============================================================================
 
 # Build reverse index: topic_id -> endpoint_key for O(1) lookup
-TOPIC_INDEX: dict[str, str] = {
-    endpoint.topic_id: key for key, endpoint in ENDPOINT_REGISTRY.items()
-}
-
-
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
 
-def get_endpoint_definition(method: str, path: str) -> EndpointDefinition | None:
-    """Get endpoint definition by HTTP method and path.
+def get_endpoint_definition(method: str, path: str) -> TopicDefinition | None:
+    """Get topic definition by endpoint path (for legacy routes only).
+
+    This function only works for topics that have endpoint_path and http_method set.
+    Unified endpoints (/ai/execute, /ai/coaching/*) don't use this.
 
     Args:
         method: HTTP method (GET, POST, PUT, DELETE)
         path: Endpoint path (e.g., "/coaching/alignment-check")
 
     Returns:
-        EndpointDefinition if found, None otherwise
+        TopicDefinition if found, None otherwise
     """
-    key = f"{method.upper()}:{path}"
-    return ENDPOINT_REGISTRY.get(key)
+    method_upper = method.upper()
+    for topic in TOPIC_REGISTRY.values():
+        if topic.endpoint_path == path and topic.http_method == method_upper:
+            return topic
+    return None
 
 
-def list_endpoints_by_category(category: TopicCategory) -> list[EndpointDefinition]:
-    """Get all endpoints in a specific category.
+def list_topics_by_category(category: TopicCategory) -> list[TopicDefinition]:
+    """Get all topics in a specific category.
 
     Args:
         category: TopicCategory enum value
 
     Returns:
-        List of EndpointDefinition objects in the category
+        List of TopicDefinition objects in the category
     """
-    return [endpoint for endpoint in ENDPOINT_REGISTRY.values() if endpoint.category == category]
+    return [topic for topic in TOPIC_REGISTRY.values() if topic.category == category]
 
 
-def list_endpoints_by_topic_type(topic_type: TopicType) -> list[EndpointDefinition]:
-    """Get all endpoints of a specific topic type.
+def list_topics_by_topic_type(topic_type: TopicType) -> list[TopicDefinition]:
+    """Get all topics of a specific topic type.
 
     Args:
         topic_type: TopicType enum value
 
     Returns:
-        List of EndpointDefinition objects of that type
+        List of TopicDefinition objects of that type
     """
-    return [
-        endpoint for endpoint in ENDPOINT_REGISTRY.values() if endpoint.topic_type == topic_type
-    ]
+    return [topic for topic in TOPIC_REGISTRY.values() if topic.topic_type == topic_type]
 
 
-def list_all_endpoints(active_only: bool = True) -> list[EndpointDefinition]:
-    """Get all registered endpoints.
+def list_all_topics(active_only: bool = True) -> list[TopicDefinition]:
+    """Get all registered topics.
 
     Args:
-        active_only: If True, only return active endpoints
+        active_only: If True, only return active topics
 
     Returns:
-        List of all EndpointDefinition objects
+        List of all TopicDefinition objects
     """
-    endpoints = list(ENDPOINT_REGISTRY.values())
+    topics = list(TOPIC_REGISTRY.values())
     if active_only:
-        endpoints = [e for e in endpoints if e.is_active]
-    return endpoints
+        topics = [t for t in topics if t.is_active]
+    return topics
 
 
 def get_response_model_name_for_topic(topic_id: str) -> str | None:
@@ -1012,10 +1138,10 @@ def get_response_model_name_for_topic(topic_id: str) -> str | None:
     Returns:
         Response model name string if found, None otherwise
     """
-    endpoint = get_endpoint_by_topic_id(topic_id)
-    if endpoint is None:
+    topic = get_topic_by_topic_id(topic_id)
+    if topic is None:
         return None
-    return endpoint.response_model
+    return topic.response_model
 
 
 def get_topic_for_endpoint(method: str, path: str) -> str | None:
@@ -1032,21 +1158,16 @@ def get_topic_for_endpoint(method: str, path: str) -> str | None:
     return endpoint.topic_id if endpoint else None
 
 
-def get_endpoint_by_topic_id(topic_id: str) -> EndpointDefinition | None:
-    """Get endpoint definition by topic ID.
-
-    Uses TOPIC_INDEX for O(1) lookup.
+def get_topic_by_topic_id(topic_id: str) -> TopicDefinition | None:
+    """Get topic definition by topic_id (O(1) lookup).
 
     Args:
         topic_id: Topic identifier
 
     Returns:
-        EndpointDefinition if found, None otherwise
+        TopicDefinition if found, None otherwise
     """
-    endpoint_key = TOPIC_INDEX.get(topic_id)
-    if endpoint_key is None:
-        return None
-    return ENDPOINT_REGISTRY.get(endpoint_key)
+    return TOPIC_REGISTRY.get(topic_id)
 
 
 def get_parameter_refs_for_topic(topic_id: str) -> tuple[ParameterRef, ...]:
@@ -1058,10 +1179,10 @@ def get_parameter_refs_for_topic(topic_id: str) -> tuple[ParameterRef, ...]:
     Returns:
         Tuple of ParameterRef objects, empty tuple if topic not found
     """
-    endpoint = get_endpoint_by_topic_id(topic_id)
-    if endpoint is None:
+    topic = get_topic_by_topic_id(topic_id)
+    if topic is None:
         return ()
-    return endpoint.parameter_refs
+    return topic.parameter_refs
 
 
 def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
@@ -1087,14 +1208,21 @@ def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
     return required_names
 
 
-def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
+def get_parameters_for_topic(
+    topic_id: str, *, include_enrichment_keys: bool = False
+) -> list[ParameterInfo]:
     """Get basic parameter info for a topic (for API responses).
 
     Returns parameter definitions with basic info only (name, type, required, description).
     This is used for GET /admin/topics responses where full retrieval details are not needed.
 
+    By default, excludes enrichment keys (REQUEST source params with no retrieval_method)
+    which are required in API payloads but not used in templates.
+
     Args:
         topic_id: Topic identifier
+        include_enrichment_keys: If True, include REQUEST params without retrieval_method.
+            Default False for admin UI (template designers don't need to see enrichment keys).
 
     Returns:
         List of ParameterInfo dicts with name, type, required, description.
@@ -1108,6 +1236,20 @@ def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
     result: list[ParameterInfo] = []
     for ref in param_refs:
         param_def = PARAMETER_REGISTRY.get(ref.name)
+
+        # Filter out enrichment keys unless explicitly requested
+        if not include_enrichment_keys:
+            # Enrichment keys are REQUIRED REQUEST params with no retrieval_method
+            # Optional REQUEST params (business_context, constraints) are for templates
+            is_required = ref.name in required_names
+            if (
+                ref.source == ParameterSource.REQUEST
+                and param_def
+                and not param_def.retrieval_method
+                and is_required
+            ):
+                continue  # Skip enrichment keys like goal_id, url, measure_id
+
         if param_def:
             result.append(
                 ParameterInfo(
@@ -1132,14 +1274,14 @@ def get_parameters_for_topic(topic_id: str) -> list[ParameterInfo]:
 
 
 def get_parameters_by_source_for_endpoint(
-    endpoint: EndpointDefinition,
+    endpoint: TopicDefinition,
 ) -> dict[ParameterSource, list[ParameterRef]]:
     """Group an endpoint's parameters by their source.
 
     This enables efficient batch retrieval - one API call per source.
 
     Args:
-        endpoint: EndpointDefinition to process
+        endpoint: TopicDefinition to process
 
     Returns:
         Dict mapping source to list of ParameterRef objects
@@ -1174,7 +1316,7 @@ def validate_registry() -> dict[str, list[str]]:
     valid_methods = {"GET", "POST", "PUT", "DELETE", "PATCH"}
     topic_usage: dict[str, list[str]] = {}
 
-    for key, endpoint in ENDPOINT_REGISTRY.items():
+    for key, endpoint in TOPIC_REGISTRY.items():
         # Check for duplicate topic usage (conversation topics can be reused)
         if endpoint.topic_type != TopicType.CONVERSATION_COACHING:
             if endpoint.topic_id in topic_usage:
@@ -1215,17 +1357,19 @@ def get_registry_statistics() -> dict[str, int]:
             - inactive_endpoints: Number of inactive endpoints
             - conversation_endpoints: Number of conversation-based endpoints
             - single_shot_endpoints: Number of single-shot endpoints
-            - kpi_system_endpoints: Number of KPI system endpoints
+            - measure_system_endpoints: Number of measure system endpoints
             - endpoints_by_category: Count per category
     """
-    all_endpoints = list_all_endpoints(active_only=False)
+    all_endpoints = list_all_topics(active_only=False)
     active_endpoints = [e for e in all_endpoints if e.is_active]
     inactive_endpoints = [e for e in all_endpoints if not e.is_active]
     conversation_endpoints = [
         e for e in all_endpoints if e.topic_type == TopicType.CONVERSATION_COACHING
     ]
     single_shot_endpoints = [e for e in all_endpoints if e.topic_type == TopicType.SINGLE_SHOT]
-    kpi_system_endpoints = [e for e in all_endpoints if e.topic_type == TopicType.KPI_SYSTEM]
+    measure_system_endpoints = [
+        e for e in all_endpoints if e.topic_type == TopicType.MEASURE_SYSTEM
+    ]
 
     categories: dict[str, int] = {}
     for endpoint in all_endpoints:
@@ -1238,20 +1382,23 @@ def get_registry_statistics() -> dict[str, int]:
         "inactive_endpoints": len(inactive_endpoints),
         "conversation_endpoints": len(conversation_endpoints),
         "single_shot_endpoints": len(single_shot_endpoints),
-        "kpi_system_endpoints": len(kpi_system_endpoints),
+        "measure_system_endpoints": len(measure_system_endpoints),
         **{f"category_{cat}": count for cat, count in categories.items()},
     }
 
 
+# Backwards compatibility alias
+ENDPOINT_REGISTRY = TOPIC_REGISTRY
+
+
 __all__: list[str] = [
-    "ENDPOINT_REGISTRY",
-    "TOPIC_INDEX",
-    "EndpointDefinition",
+    "ENDPOINT_REGISTRY",  # Backwards compatibility
+    "TOPIC_REGISTRY",
     "ParameterInfo",
     "ParameterRef",
     "TemplateType",
+    "TopicDefinition",
     "TopicType",
-    "get_endpoint_by_topic_id",
     "get_endpoint_definition",
     "get_parameter_refs_for_topic",
     "get_parameters_by_source_for_endpoint",
@@ -1259,9 +1406,10 @@ __all__: list[str] = [
     "get_registry_statistics",
     "get_required_parameter_names_for_topic",
     "get_response_model_name_for_topic",
+    "get_topic_by_topic_id",
     "get_topic_for_endpoint",
-    "list_all_endpoints",
-    "list_endpoints_by_category",
-    "list_endpoints_by_topic_type",
+    "list_all_topics",
+    "list_topics_by_category",
+    "list_topics_by_topic_type",
     "validate_registry",
 ]

@@ -6,15 +6,22 @@ into DynamoDB and S3, enabling consistent topic configuration and easy updates.
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
-from coaching.src.core.topic_registry import list_all_endpoints
+from coaching.src.core.topic_registry import list_all_topics
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 
 logger = structlog.get_logger()
+
+
+# Backwards compatibility alias for tests
+def list_all_endpoints(active_only: bool = True) -> list[Any]:
+    """List all endpoints (backwards compatibility alias)."""
+    return list_all_topics(active_only=active_only)
 
 
 @dataclass
@@ -133,7 +140,7 @@ class TopicSeedingService:
         )
 
         # Get all active endpoints
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
 
         # Seed each endpoint's topic
         for endpoint in endpoints:
@@ -275,7 +282,7 @@ class TopicSeedingService:
         all_topics = await self.topic_repo.list_all(include_inactive=False)
 
         # Get all endpoint topic IDs
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
         endpoint_topic_ids = {endpoint.topic_id for endpoint in endpoints}
 
         # Find orphaned topics
@@ -309,7 +316,7 @@ class TopicSeedingService:
         report = ValidationReport()
 
         # Get all endpoints and topics
-        endpoints = list_all_endpoints(active_only=False)
+        endpoints = list_all_topics(active_only=False)
         all_topics = await self.topic_repo.list_all(include_inactive=False)
         endpoint_topic_ids = {endpoint.topic_id for endpoint in endpoints}
 
@@ -334,7 +341,7 @@ class TopicSeedingService:
                 if prompt_content is None:
                     report.missing_prompts.append(f"{topic.topic_id}:{prompt_info.prompt_type}")
 
-        # Note: Parameter validation now uses PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # Note: Parameter validation now uses PARAMETER_REGISTRY and TOPIC_REGISTRY
         # instead of topic.allowed_parameters
 
         logger.info(
@@ -370,7 +377,9 @@ class TopicSeedingService:
             topic_type=seed_data.topic_type,
             category=seed_data.category,
             is_active=True,
-            model_code=seed_data.model_code,
+            tier_level=seed_data.tier_level,
+            basic_model_code=seed_data.basic_model_code,
+            premium_model_code=seed_data.premium_model_code,
             temperature=seed_data.temperature,
             max_tokens=seed_data.max_tokens,
             top_p=seed_data.top_p,
@@ -404,7 +413,7 @@ class TopicSeedingService:
                 )
             )
 
-        # User prompt
+        # User prompt (for single-shot topics)
         if seed_data.default_user_prompt:
             user_key = await self.s3_storage.save_prompt(
                 topic_id=seed_data.topic_id,
@@ -416,6 +425,40 @@ class TopicSeedingService:
                     prompt_type="user",
                     s3_bucket=self.s3_storage.bucket_name,
                     s3_key=user_key,
+                    updated_at=now,
+                    updated_by=self.default_created_by,
+                )
+            )
+
+        # Initiation prompt (for conversation coaching topics)
+        if seed_data.default_initiation_prompt:
+            initiation_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="initiation",
+                content=seed_data.default_initiation_prompt,
+            )
+            prompts.append(
+                PromptInfo(
+                    prompt_type="initiation",
+                    s3_bucket=self.s3_storage.bucket_name,
+                    s3_key=initiation_key,
+                    updated_at=now,
+                    updated_by=self.default_created_by,
+                )
+            )
+
+        # Resume prompt (for conversation coaching topics)
+        if seed_data.default_resume_prompt:
+            resume_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="resume",
+                content=seed_data.default_resume_prompt,
+            )
+            prompts.append(
+                PromptInfo(
+                    prompt_type="resume",
+                    s3_bucket=self.s3_storage.bucket_name,
+                    s3_key=resume_key,
                     updated_at=now,
                     updated_by=self.default_created_by,
                 )
@@ -450,7 +493,9 @@ class TopicSeedingService:
         existing_topic.topic_type = seed_data.topic_type
         existing_topic.category = seed_data.category
         existing_topic.description = seed_data.description
-        existing_topic.model_code = seed_data.model_code
+        existing_topic.tier_level = seed_data.tier_level
+        existing_topic.basic_model_code = seed_data.basic_model_code
+        existing_topic.premium_model_code = seed_data.premium_model_code
         existing_topic.temperature = seed_data.temperature
         existing_topic.max_tokens = seed_data.max_tokens
         existing_topic.top_p = seed_data.top_p
@@ -459,7 +504,7 @@ class TopicSeedingService:
         existing_topic.display_order = seed_data.display_order
         existing_topic.updated_at = now
 
-        # Note: Parameters are now managed in PARAMETER_REGISTRY and ENDPOINT_REGISTRY
+        # Note: Parameters are now managed in PARAMETER_REGISTRY and TOPIC_REGISTRY
         # No need to update allowed_parameters on the topic entity
 
         # Update prompts in S3 (if they have content)
@@ -488,7 +533,7 @@ class TopicSeedingService:
                     )
                 )
 
-        # Update user prompt
+        # Update user prompt (for single-shot topics)
         if seed_data.default_user_prompt:
             user_key = await self.s3_storage.save_prompt(
                 topic_id=seed_data.topic_id,
@@ -506,6 +551,52 @@ class TopicSeedingService:
                         prompt_type="user",
                         s3_bucket=self.s3_storage.bucket_name,
                         s3_key=user_key,
+                        updated_at=now,
+                        updated_by=self.default_created_by,
+                    )
+                )
+
+        # Update initiation prompt (for conversation coaching topics)
+        if seed_data.default_initiation_prompt:
+            initiation_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="initiation",
+                content=seed_data.default_initiation_prompt,
+            )
+            # Update or add initiation prompt info
+            initiation_prompt = existing_topic.get_prompt(prompt_type="initiation")
+            if initiation_prompt:
+                initiation_prompt.updated_at = now
+                initiation_prompt.updated_by = self.default_created_by
+            else:
+                prompts.append(
+                    PromptInfo(
+                        prompt_type="initiation",
+                        s3_bucket=self.s3_storage.bucket_name,
+                        s3_key=initiation_key,
+                        updated_at=now,
+                        updated_by=self.default_created_by,
+                    )
+                )
+
+        # Update resume prompt (for conversation coaching topics)
+        if seed_data.default_resume_prompt:
+            resume_key = await self.s3_storage.save_prompt(
+                topic_id=seed_data.topic_id,
+                prompt_type="resume",
+                content=seed_data.default_resume_prompt,
+            )
+            # Update or add resume prompt info
+            resume_prompt = existing_topic.get_prompt(prompt_type="resume")
+            if resume_prompt:
+                resume_prompt.updated_at = now
+                resume_prompt.updated_by = self.default_created_by
+            else:
+                prompts.append(
+                    PromptInfo(
+                        prompt_type="resume",
+                        s3_bucket=self.s3_storage.bucket_name,
+                        s3_key=resume_key,
                         updated_at=now,
                         updated_by=self.default_created_by,
                     )

@@ -126,13 +126,13 @@ INTERACTION_REGISTRY: dict[str, LLMInteraction] = {
         optional_parameters=["industry", "business_type", "goals"],
         handler_class="StrategyAnalysisService",
     ),
-    "KPI_ANALYSIS": LLMInteraction(
-        code="KPI_ANALYSIS",
-        description="Analyze KPI effectiveness and recommend improvements",
+    "MEASURE_ANALYSIS": LLMInteraction(
+        code="MEASURE_ANALYSIS",
+        description="Analyze measure effectiveness and recommend improvements",
         category=InteractionCategory.ANALYSIS,
-        required_parameters=["current_kpis"],
+        required_parameters=["current_measures"],
         optional_parameters=["goals", "strategies"],
-        handler_class="KPIAnalysisService",
+        handler_class="MeasureAnalysisService",
     ),
     "COACHING_RESPONSE": LLMInteraction(
         code="COACHING_RESPONSE",

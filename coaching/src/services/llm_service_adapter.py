@@ -88,14 +88,26 @@ class LLMServiceAdapter:
             "provider": provider_name,
             "temperature": kwargs.get("temperature", 0.7),
             "max_tokens": kwargs.get("max_tokens", 1000),
+            "max_turns": kwargs.get("max_turns", 0),  # Pass max_turns config
         }
 
         try:
+            # Create workflow config with max_turns
+            from coaching.src.workflows.base import WorkflowConfig
+
+            config = WorkflowConfig(
+                workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
+                temperature=kwargs.get("temperature", 0.7),
+                max_tokens=kwargs.get("max_tokens", 1000),
+                custom_config={"max_turns": kwargs.get("max_turns", 0)},
+            )
+
             # Use workflow orchestrator for response generation
             workflow_state = await self.workflow_orchestrator.start_workflow(
                 workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
                 user_id=kwargs.get("user_id", "anonymous"),
                 initial_input=workflow_input,
+                config=config,
                 session_id=conversation_id,
             )
 

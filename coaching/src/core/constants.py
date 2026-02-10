@@ -17,12 +17,12 @@ class TopicType(str, Enum):
 
     - conversation_coaching: Multi-turn coaching conversations with phases
     - single_shot: One-time analysis or generation requests
-    - kpi_system: KPI-specific operations with scoring thresholds
+    - measure_system: Measure-specific operations with scoring thresholds
     """
 
     CONVERSATION_COACHING = "conversation_coaching"
     SINGLE_SHOT = "single_shot"
-    KPI_SYSTEM = "kpi_system"
+    MEASURE_SYSTEM = "measure_system"
 
 
 class TopicCategory(str, Enum):
@@ -94,11 +94,11 @@ class ParameterSource(str, Enum):
     # All goals list from Traction Service
     GOALS = "goals"
 
-    # Single KPI from Traction Service
-    KPI = "kpi"
+    # Single Measure from Traction Service
+    MEASURE = "measure"
 
-    # All KPIs list from Traction Service
-    KPIS = "kpis"
+    # All Measures list from Traction Service
+    MEASURES = "measures"
 
     # Action item from Traction Service
     ACTION = "action"
@@ -150,11 +150,58 @@ class AnalysisType(str, Enum):
 
     ALIGNMENT = "alignment"
     STRATEGY = "strategy"
-    KPI = "kpi"
+    MEASURE = "measure"
     SWOT = "swot"
     ROOT_CAUSE = "root_cause"
     ACTION_PLAN = "action_plan"
     GOAL_BREAKDOWN = "goal_breakdown"
+
+
+class TierLevel(str, Enum):
+    """Subscription tier levels for topic and LLM access control.
+
+    Determines:
+    1. Which topics are accessible (topics have a tier_level)
+    2. Which LLM model to use (topics have basic_model_code and premium_model_code)
+
+    Access Rules:
+    - FREE: Can access only Free topics, uses basic_model_code
+    - BASIC: Can access Free + Basic topics, uses basic_model_code
+    - PREMIUM: Can access Free + Basic + Premium topics, uses premium_model_code
+    - ULTIMATE: Can access all topics (Free + Basic + Premium + Ultimate), uses premium_model_code
+    """
+
+    FREE = "free"
+    BASIC = "basic"
+    PREMIUM = "premium"
+    ULTIMATE = "ultimate"
+
+    @classmethod
+    def can_access_topic(cls, user_tier: "TierLevel", topic_tier: "TierLevel") -> bool:
+        """Check if a user tier can access a topic tier.
+
+        Args:
+            user_tier: User's subscription tier
+            topic_tier: Topic's tier level requirement
+
+        Returns:
+            bool: True if user can access the topic
+        """
+        tier_hierarchy = {
+            cls.FREE: [cls.FREE],
+            cls.BASIC: [cls.FREE, cls.BASIC],
+            cls.PREMIUM: [cls.FREE, cls.BASIC, cls.PREMIUM],
+            cls.ULTIMATE: [cls.FREE, cls.BASIC, cls.PREMIUM, cls.ULTIMATE],
+        }
+        return topic_tier in tier_hierarchy.get(user_tier, [])
+
+    def uses_premium_model(self) -> bool:
+        """Check if this tier uses premium LLM model.
+
+        Returns:
+            bool: True if tier uses premium_model_code, False if uses basic_model_code
+        """
+        return self in (TierLevel.PREMIUM, TierLevel.ULTIMATE)
 
 
 # Progress weights for each phase

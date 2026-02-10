@@ -26,7 +26,7 @@ class KPIAnalysisService(BaseAnalysisService):
 
     def get_analysis_type(self) -> AnalysisType:
         """Return KPI analysis type."""
-        return AnalysisType.KPI
+        return AnalysisType.MEASURE
 
     def build_prompt(self, context: dict[str, Any]) -> str:
         """

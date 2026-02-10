@@ -1,7 +1,7 @@
 # Unified AI Endpoint Backend Integration Specifications
 
-**Version:** 1.0  
-**Last Updated:** December 9, 2025  
+**Version:** 1.2  
+**Last Updated:** December 15, 2025  
 **Service Base URL:** `{REACT_APP_COACHING_API_URL}`  
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
@@ -299,6 +299,119 @@ interface SuggestionVariation {
 
 ---
 
+### Website & Onboarding Topics
+
+#### Topic: `website_scan`
+
+Scan a website URL and extract business information for onboarding.
+
+**Request:**
+
+```json
+{
+  "topic_id": "website_scan",
+  "parameters": {
+    "website_url": "https://example.com"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `website_url` | string | Yes | URL of website to scan |
+
+**Response Model:** `WebsiteScanResponse` — [Get JSON Schema](/ai/schemas/WebsiteScanResponse)
+
+```json
+{
+  "topic_id": "website_scan",
+  "success": true,
+  "data": {
+    "scan_id": "scan_f3c9ab",
+    "captured_at": "2025-12-24T03:12:54Z",
+    "source_url": "https://example.com",
+    "company_profile": {
+      "company_name": "Example Corp",
+      "legal_name": "Example Corporation, Inc.",
+      "tagline": "Data-driven growth for modern teams",
+      "overview": "Example Corp provides analytics-driven marketing platforms that help mid-market teams launch, test, and scale campaigns."
+    },
+    "target_market": {
+      "primary_audience": "Marketing and revenue leaders at mid-market SaaS companies",
+      "segments": [
+        "B2B SaaS (ARR $5M-$50M)",
+        "Hybrid go-to-market teams",
+        "Demand generation leaders"
+      ],
+      "pain_points": [
+        "Fragmented channel analytics",
+        "Slow experimentation cycles",
+        "Unclear attribution for pipeline"
+      ]
+    },
+    "offers": {
+      "primary_product": "Growth Experimentation Platform",
+      "categories": [
+        "Marketing analytics",
+        "Campaign orchestration"
+      ],
+      "features": [
+        "Channel performance dashboards",
+        "Experiment templates",
+        "Automated reporting"
+      ],
+      "differentiators": [
+        "Playbooks tuned for B2B SaaS",
+        "Fast setup with existing data stack",
+        "Revenue-aware experimentation scoring"
+      ]
+    },
+    "credibility": {
+      "notable_clients": [
+        "Northwind Analytics",
+        "Contoso Labs",
+        "Fabrikam Cloud"
+      ],
+      "testimonials": [
+        {
+          "quote": "We doubled qualified pipeline after standardizing experiments in one place.",
+          "attribution": "VP Growth, Northwind"
+        }
+      ]
+    },
+    "conversion": {
+      "primary_cta_text": "Book a growth audit",
+      "primary_cta_url": "https://example.com/demo",
+      "supporting_assets": [
+        {
+          "label": "2025 SaaS Growth Benchmark Report",
+          "url": "https://example.com/benchmark"
+        }
+      ]
+    }
+  },
+  "schema_ref": "WebsiteScanResponse",
+  "metadata": {
+    "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "tokens_used": 1850,
+    "processing_time_ms": 8500,
+    "finish_reason": "stop"
+  }
+}
+```
+
+**Notes:**
+
+- This topic uses a **retrieval method** (`get_website_content`) to fetch and parse the website
+- The `website_url` parameter is passed from the frontend payload
+- The retrieval method scrapes the website and provides `website_content`, `website_title`, and `meta_description` to the prompt template
+- Results used to pre-fill onboarding form
+- May return partial results if website has anti-scraping measures
+
+**Schema:** Use `GET /ai/schemas/WebsiteScanResponse` to get the full JSON schema with field descriptions. The schema is auto-generated from the Pydantic model.
+
+---
+
 ## Additional Topics (Coming Soon)
 
 The following topics are registered in the system and will be documented as they become active:
@@ -308,7 +421,7 @@ The following topics are registered in the system and will be documented as they
 - `alignment_explanation` - Get detailed alignment explanation
 - `alignment_suggestions` - Get suggestions to improve alignment
 - `strategy_suggestions` - AI suggestions for strategies
-- `kpi_recommendations` - AI recommendations for KPIs
+- `measure_recommendations` - AI recommendations for Measures
 
 ### Operations AI
 - `root_cause_suggestions` - Root cause analysis suggestions
@@ -318,7 +431,7 @@ The following topics are registered in the system and will be documented as they
 - `optimize_action_plan` - Optimize action plans
 
 ### Website & Onboarding
-- `website_scan` - Scan website and extract business info
+- ~~`website_scan` - Scan website and extract business info~~ **→ ACTIVE** (see above)
 - `onboarding_suggestions` - Generate onboarding suggestions
 - `onboarding_coaching` - AI coaching for onboarding
 - `business_metrics` - Retrieve business metrics
@@ -777,12 +890,627 @@ async function checkPendingJobs() {
 
 ---
 
-## Changelog
+## Coaching Conversation Sessions
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.1 | 2025-12-10 | Added async execution endpoints and WebSocket events |
-| 1.0 | 2025-12-09 | Initial version with onboarding review topics |
+The Coaching Conversation endpoints provide multi-turn conversational coaching interactions. Unlike single-shot `/ai/execute` endpoints, coaching sessions maintain state across multiple messages.
+
+### Base URL
+
+All coaching conversation endpoints are prefixed with `/ai/coaching`.
+
+**Full URL Pattern:** `{BASE_URL}/ai/coaching/{endpoint}`
+
+### Available Coaching Topics
+
+The following coaching topics are currently available:
+
+| topic_id | Name | Description |
+|----------|------|-------------|
+| `core_values` | Core Values Discovery | Discover and articulate your organization's authentic core values |
+| `purpose` | Purpose Discovery | Define your organization's deeper purpose and reason for existing |
+| `vision` | Vision Crafting | Craft a compelling vision for your organization's future |
+
+**Important:** When calling `/ai/coaching/start`, use the `topic_id` value (e.g., `"core_values"`, `"purpose"`, `"vision"`) - NOT the registry key format.
+
+### Result Model Schemas
+
+When a coaching session completes (`is_final: true`), the `result` field contains a topic-specific structured result.
+
+#### CoreValuesResult (topic: `core_values`)
+
+```json
+{
+  "values": [
+    {
+      "name": "string (1-100 chars)",
+      "description": "string (10-500 chars) - What this value means",
+      "importance": "string (10-500 chars) - Why this value matters"
+    }
+  ],
+  "summary": "string (50-1000 chars) - Overall summary of the values"
+}
+```
+
+#### PurposeResult (topic: `purpose`)
+
+```json
+{
+  "purpose_statement": "string (20-500 chars) - The organization's purpose statement",
+  "why_it_matters": "string (50-1000 chars) - Why this purpose is meaningful",
+  "how_it_guides": "string (50-1000 chars) - How purpose guides decisions"
+}
+```
+
+#### VisionResult (topic: `vision`)
+
+```json
+{
+  "vision_statement": "string (20-500 chars) - The organization's vision statement",
+  "time_horizon": "string (1-50 chars) - Time frame (e.g., '5 years', '10 years')",
+  "key_aspirations": ["string"] // 1-10 aspirations that comprise the vision
+}
+```
+
+---
+
+### GET /ai/coaching/topics
+
+Get all coaching topics with user's completion status.
+
+**Full URL:** `{BASE_URL}/ai/coaching/topics`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "topics": [
+      {
+        "topic_id": "core_values",
+        "name": "Core Values Discovery",
+        "description": "Discover and articulate your organization's authentic core values",
+        "status": "not_started",
+        "session_id": null,
+        "completed_at": null
+      },
+      {
+        "topic_id": "purpose",
+        "name": "Purpose Discovery",
+        "description": "Define your organization's deeper purpose and reason for existing",
+        "status": "in_progress",
+        "session_id": "sess_abc123",
+        "completed_at": null
+      },
+      {
+        "topic_id": "vision",
+        "name": "Vision Crafting",
+        "description": "Craft a compelling vision for your organization's future",
+        "status": "completed",
+        "session_id": "sess_xyz789",
+        "completed_at": "2025-12-15T10:00:00Z"
+      }
+    ]
+  },
+  "message": "Topics retrieved successfully"
+}
+```
+
+**Topic Statuses:**
+
+| Status | Description |
+|--------|-------------|
+| `not_started` | User has never started this topic |
+| `in_progress` | User has an active session |
+| `paused` | User has a paused session (can be resumed) |
+| `completed` | User has completed this topic |
+
+---
+
+### POST /ai/coaching/start
+
+Start a new coaching session or resume an existing one.
+
+**Full URL:** `{BASE_URL}/ai/coaching/start`
+
+**Request:**
+
+```json
+{
+  "topic_id": "core_values",
+  "context": {
+    "business_name": "Acme Corp",
+    "industry": "Technology"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `topic_id` | string | Yes | ID of the coaching topic (e.g., `core_values`, `purpose`, `vision`) |
+| `context` | object | No | Optional context data for the session |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "tenant_id": "tenant-123",
+    "topic_id": "core_values",
+    "status": "active",
+    "message": "Welcome! Let's begin exploring your core values. What values are most important to you in your business?",
+    "turn": 1,
+    "max_turns": 10,
+    "is_final": false,
+    "resumed": false,
+    "metadata": {
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "processing_time_ms": 1250,
+      "tokens_used": 150
+    }
+  },
+  "message": "Session started successfully"
+}
+```
+
+**Response (Resumed Session):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "tenant_id": "tenant-123",
+    "topic_id": "core_values",
+    "status": "active",
+    "message": "Welcome back! Let's continue where we left off...",
+    "turn": 5,
+    "max_turns": 10,
+    "is_final": false,
+    "resumed": true,
+    "metadata": {
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "processing_time_ms": 980,
+      "tokens_used": 120
+    }
+  },
+  "message": "Session started successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | VALIDATION_ERROR | Request validation failed |
+| 409 | SESSION_CONFLICT | Another user has an active session for this topic |
+| 422 | INVALID_TOPIC | Topic not found or invalid |
+
+---
+
+### POST /ai/coaching/message
+
+Send a message in an active coaching session.
+
+**Full URL:** `{BASE_URL}/ai/coaching/message`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123",
+  "message": "I think integrity and innovation are most important to me"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | ID of the coaching session |
+| `message` | string | Yes | User's message content (min 1 character) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "message": "That's wonderful! Integrity and innovation are powerful values. Can you tell me more about how integrity shows up in your daily business decisions?",
+    "status": "active",
+    "turn": 3,
+    "max_turns": 10,
+    "is_final": false,
+    "message_count": 6,
+    "result": null,
+    "metadata": {
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "processing_time_ms": 1450,
+      "tokens_used": 180
+    }
+  },
+  "message": "Message processed successfully"
+}
+```
+
+**Response (Session Auto-Completed by LLM):**
+
+When the LLM determines the conversation is naturally complete, it sets `is_final: true` and includes extracted results:
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "message": "Thank you for this wonderful conversation! I've captured your core values and created a summary of what we discussed.",
+    "status": "completed",
+    "turn": 8,
+    "max_turns": 10,
+    "is_final": true,
+    "message_count": 16,
+    "result": {
+      "values": [
+        {
+          "name": "Integrity",
+          "description": "Acting with honesty and transparency in all business dealings",
+          "importance": "Builds trust with clients and partners, essential for long-term relationships"
+        },
+        {
+          "name": "Innovation",
+          "description": "Continuously seeking new and better solutions to challenges",
+          "importance": "Keeps the business competitive and responsive to market changes"
+        }
+      ],
+      "summary": "Based on our conversation, your core values center around integrity in all dealings and a commitment to innovation. These values reflect your belief that sustainable business success comes from building trust while continuously improving."
+    },
+    "metadata": {
+      "model": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "processing_time_ms": 2100,
+      "tokens_used": 350
+    }
+  },
+  "message": "Message processed successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | SESSION_NOT_ACTIVE | Session is not in active state |
+| 403 | SESSION_ACCESS_DENIED | User does not own this session |
+| 410 | SESSION_EXPIRED | Session has expired |
+| 410 | SESSION_IDLE_TIMEOUT | Session exceeded idle timeout |
+| 422 | SESSION_NOT_FOUND | Session not found |
+| 422 | MAX_TURNS_REACHED | Maximum conversation turns reached |
+
+---
+
+### POST /ai/coaching/pause
+
+Pause an active coaching session.
+
+**Full URL:** `{BASE_URL}/ai/coaching/pause`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "status": "paused",
+    "topic_id": "core_values",
+    "turn_count": 5,
+    "max_turns": 10,
+    "created_at": "2025-12-15T10:00:00Z",
+    "updated_at": "2025-12-15T10:15:00Z"
+  },
+  "message": "Session paused successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | SESSION_NOT_ACTIVE | Session cannot be paused (not active) |
+| 403 | SESSION_ACCESS_DENIED | User does not own this session |
+| 422 | SESSION_NOT_FOUND | Session not found |
+
+---
+
+### POST /ai/coaching/complete
+
+Complete a coaching session and extract results.
+
+**Full URL:** `{BASE_URL}/ai/coaching/complete`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "status": "completed",
+    "result": {
+      "values": [
+        {
+          "name": "Integrity",
+          "description": "Acting with honesty and transparency in all dealings",
+          "importance": "Foundation of trust with clients, partners, and team members"
+        },
+        {
+          "name": "Innovation",
+          "description": "Continuously seeking new and better solutions",
+          "importance": "Drives competitive advantage and adaptability"
+        },
+        {
+          "name": "Excellence",
+          "description": "Striving for the highest quality in everything",
+          "importance": "Ensures consistent delivery and customer satisfaction"
+        }
+      ],
+      "summary": "Your core values center around building trust through integrity, staying competitive through innovation, and delivering quality through excellence."
+    }
+  },
+  "message": "Session completed successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | SESSION_NOT_ACTIVE | Session cannot be completed (not active/paused) |
+| 403 | SESSION_ACCESS_DENIED | User does not own this session |
+| 422 | SESSION_NOT_FOUND | Session not found |
+| 500 | EXTRACTION_FAILED | Failed to extract results from session |
+
+---
+
+### POST /ai/coaching/cancel
+
+Cancel a coaching session.
+
+**Full URL:** `{BASE_URL}/ai/coaching/cancel`
+
+**Request:**
+
+```json
+{
+  "session_id": "sess_abc123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "status": "cancelled",
+    "topic_id": "core_values",
+    "turn_count": 3,
+    "max_turns": 10,
+    "created_at": "2025-12-15T10:00:00Z",
+    "updated_at": "2025-12-15T10:05:00Z"
+  },
+  "message": "Session cancelled successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | SESSION_NOT_ACTIVE | Session cannot be cancelled (already completed) |
+| 403 | SESSION_ACCESS_DENIED | User does not own this session |
+| 422 | SESSION_NOT_FOUND | Session not found |
+
+---
+
+### GET /ai/coaching/session
+
+Get detailed information about a coaching session.
+
+**Full URL:** `{BASE_URL}/ai/coaching/session?session_id={session_id}`
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | ID of the session to retrieve |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "session_id": "sess_abc123",
+    "tenant_id": "tenant-123",
+    "topic_id": "core_values",
+    "user_id": "user-456",
+    "status": "active",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Welcome! Let's explore your core values...",
+        "timestamp": "2025-12-15T10:00:00Z"
+      },
+      {
+        "role": "user",
+        "content": "I think integrity is important...",
+        "timestamp": "2025-12-15T10:01:00Z"
+      }
+    ],
+    "context": {},
+    "max_turns": 10,
+    "created_at": "2025-12-15T10:00:00Z",
+    "updated_at": "2025-12-15T10:01:00Z",
+    "completed_at": null,
+    "extracted_result": null
+  },
+  "message": "Session retrieved successfully"
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | SESSION_ACCESS_DENIED | User does not own this session |
+| 422 | SESSION_NOT_FOUND | Session not found |
+
+---
+
+### GET /ai/coaching/sessions
+
+List all coaching sessions for the current user.
+
+**Full URL:** `{BASE_URL}/ai/coaching/sessions?include_completed={bool}&limit={int}`
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `include_completed` | boolean | No | false | Include completed/cancelled sessions |
+| `limit` | integer | No | 20 | Maximum sessions to return (1-100) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "session_id": "sess_abc123",
+      "topic_id": "core_values",
+      "status": "active",
+      "turn_count": 5,
+      "created_at": "2025-12-15T10:00:00Z",
+      "updated_at": "2025-12-15T10:15:00Z"
+    },
+    {
+      "session_id": "sess_def456",
+      "topic_id": "purpose",
+      "status": "paused",
+      "turn_count": 3,
+      "created_at": "2025-12-14T09:00:00Z",
+      "updated_at": "2025-12-14T09:10:00Z"
+    }
+  ],
+  "message": "Found 2 sessions"
+}
+```
+
+---
+
+### Error Response Format
+
+All coaching conversation errors follow this format:
+
+```json
+{
+  "detail": {
+    "code": "SESSION_NOT_FOUND",
+    "message": "Session not found: sess_abc123"
+  }
+}
+```
+
+### Complete Error Code Reference
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | SESSION_NOT_ACTIVE | Session is not in an active state for the requested operation |
+| 400 | VALIDATION_ERROR | Request validation failed |
+| 403 | SESSION_ACCESS_DENIED | User does not have access to this session |
+| 409 | SESSION_CONFLICT | Another user has an active session for this topic |
+| 410 | SESSION_EXPIRED | Session has expired |
+| 410 | SESSION_IDLE_TIMEOUT | Session exceeded idle timeout |
+| 422 | SESSION_NOT_FOUND | Session not found |
+| 422 | MAX_TURNS_REACHED | Maximum conversation turns reached |
+| 422 | INVALID_TOPIC | Topic not found or invalid |
+| 500 | EXTRACTION_FAILED | Failed to extract results from session |
+
+---
+
+### Frontend Integration Example
+
+```typescript
+// Start or resume a coaching session
+async function startCoachingSession(topicId: string, context?: Record<string, any>) {
+  try {
+    const response = await coachingClient.post('/ai/coaching/start', {
+      topic_id: topicId,
+      context
+    });
+    return response.data.data;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      // Another user has an active session
+      throw new Error('Session in progress by another user');
+    }
+    throw error;
+  }
+}
+
+// Send a message and get coach response
+async function sendMessage(sessionId: string, message: string) {
+  try {
+    const response = await coachingClient.post('/ai/coaching/message', {
+      session_id: sessionId,
+      message
+    });
+    const { message: coachMessage, status, result, is_final } = response.data.data;
+    
+    if (is_final || status === 'completed') {
+      // Session was auto-completed by the LLM
+      handleCompletion(result);
+    }
+    
+    return response.data.data;
+  } catch (error) {
+    if (error.response?.status === 422) {
+      const code = error.response.data.detail?.code;
+      if (code === 'MAX_TURNS_REACHED') {
+        // Prompt user to complete the session
+        return completeSession(sessionId);
+      }
+    }
+    throw error;
+  }
+}
+
+// Complete session manually
+async function completeSession(sessionId: string) {
+  const response = await coachingClient.post('/ai/coaching/complete', {
+    session_id: sessionId
+  });
+  return response.data.data;
+}
+```
 
 ---
 

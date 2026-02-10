@@ -767,7 +767,7 @@ What pain points do they face? *
 │ [PurposePath Pro is an AI-powered strategic planning       │
 │  platform that helps business leaders create, track,       │
 │  and execute their strategic goals. It includes goal       │
-│  setting, KPI tracking, team alignment tools, and          │
+│  setting, Measure tracking, team alignment tools, and          │
 │  AI-powered recommendations.                              ]│
 │ [✨ AI: Help me write a description]                        │
 │                                                             │
@@ -778,7 +778,7 @@ What pain points do they face? *
 │                                                             │
 │ Key Features                                                │
 │ [Goal setting wizard          ] [+]                         │
-│ [KPI tracking dashboard       ]                             │
+│ [Measure tracking dashboard       ]                             │
 │ [AI strategy recommendations  ]                             │
 │ [Team alignment tools         ]                             │
 │                                                             │
@@ -936,7 +936,7 @@ The enriched foundation powers AI throughout the app:
 - Company-stage-appropriate approaches
 - Aligned with stated value proposition
 
-**KPI Recommendations** (contextual):
+**Measure Recommendations** (contextual):
 - Industry-standard metrics
 - Stage-appropriate targets
 - Aligned with business model

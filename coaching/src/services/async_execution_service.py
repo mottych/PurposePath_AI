@@ -7,6 +7,7 @@ coordinating between the API, domain models, repository, and event publishing.
 from __future__ import annotations
 
 import time
+from decimal import Decimal
 from typing import Any
 
 import structlog
@@ -20,8 +21,8 @@ from coaching.src.core.config import settings
 from coaching.src.core.constants import TopicType
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
-    get_endpoint_by_topic_id,
     get_required_parameter_names_for_topic,
+    get_topic_by_topic_id,
 )
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
@@ -30,6 +31,28 @@ from coaching.src.services.template_parameter_processor import TemplateParameter
 from shared.services.eventbridge_client import EventBridgePublisher, EventBridgePublishError
 
 logger = structlog.get_logger()
+
+
+def convert_floats_to_decimal(obj: Any) -> Any:
+    """Convert float values to Decimal for DynamoDB compatibility.
+
+    DynamoDB does not support float types and requires Decimal instead.
+    This function recursively converts all float values in nested structures.
+
+    Args:
+        obj: Object to convert (can be dict, list, float, or any other type)
+
+    Returns:
+        Object with all floats converted to Decimal
+    """
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    else:
+        return obj
 
 
 class AsyncAIExecutionError(Exception):
@@ -116,7 +139,7 @@ class AsyncAIExecutionService:
             JobValidationError: If topic or parameters are invalid
         """
         # Validate topic exists and is active
-        endpoint = get_endpoint_by_topic_id(topic_id)
+        endpoint = get_topic_by_topic_id(topic_id)
         if endpoint is None:
             raise JobValidationError(f"Topic not found: {topic_id}")
 
@@ -301,7 +324,7 @@ class AsyncAIExecutionService:
                 )
 
             # Get response model
-            endpoint = get_endpoint_by_topic_id(job.topic_id)
+            endpoint = get_topic_by_topic_id(job.topic_id)
             if endpoint is None:
                 raise TopicNotFoundError(job.topic_id)
 
@@ -314,9 +337,20 @@ class AsyncAIExecutionService:
                 )
 
             # Create template processor for parameter enrichment
+            logger.info(
+                "async_job.creating_template_processor",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
+            )
             template_processor = self._create_template_processor(job.jwt_token)
 
             # Execute AI with enrichment
+            logger.info(
+                "async_job.starting_ai_execution",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
+                parameter_count=len(job.parameters),
+            )
             result = await self._engine.execute_single_shot(
                 topic_id=job.topic_id,
                 parameters=job.parameters,
@@ -325,15 +359,24 @@ class AsyncAIExecutionService:
                 tenant_id=job.tenant_id,
                 template_processor=template_processor,
             )
+            logger.info(
+                "async_job.ai_execution_completed",
+                job_id=job.job_id,
+                topic_id=job.topic_id,
+            )
 
             processing_time_ms = int((time.time() - start_time) * 1000)
-            result_dict = result.model_dump()
+            # Use mode='json' to serialize datetime objects to ISO format strings
+            result_dict = result.model_dump(by_alias=True, mode="json")
+
+            # Convert floats to Decimal for DynamoDB compatibility
+            result_dict_dynamodb = convert_floats_to_decimal(result_dict)
 
             # Update job with result
             await self._repository.update_status(
                 job_id=job.job_id,
                 status=AIJobStatus.COMPLETED,
-                result=result_dict,
+                result=result_dict_dynamodb,
                 processing_time_ms=processing_time_ms,
             )
 

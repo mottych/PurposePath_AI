@@ -274,7 +274,7 @@ toast.error('Critical issue reported');
 toast.info('Goal paused');
 
 // Warning for important notifications
-toast.warning('KPI threshold breached');
+toast.warning('Measure threshold breached');
 ```
 
 ### 4. Cleanup

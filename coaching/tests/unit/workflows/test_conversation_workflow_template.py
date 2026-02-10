@@ -139,12 +139,16 @@ class TestConversationWorkflowTemplate:
         assert "Thank you" in result["messages"][-1]["content"]
 
     def test_should_continue_conversation(self, conversation_workflow):
-        # Case 1: Continue (low depth)
+        # Case 1: Continue (low depth, no insights)
         state = {"messages": [{"role": "user"}], "results": {}}
         assert conversation_workflow.should_continue_conversation(state) == "continue"
 
-        # Case 2: Complete (max turns)
-        state = {"messages": [{"role": "user"}] * 8, "results": {}}
+        # Case 2: Complete (max turns configured)
+        state = {
+            "messages": [{"role": "user"}] * 10,
+            "results": {},
+            "model_config": {"max_turns": 10},
+        }
         assert conversation_workflow.should_continue_conversation(state) == "complete"
 
         # Case 3: Complete (sufficient depth & insights)

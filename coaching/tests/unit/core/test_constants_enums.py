@@ -23,10 +23,10 @@ class TestTopicType:
         """Test that TopicType has all expected values."""
         assert TopicType.CONVERSATION_COACHING.value == "conversation_coaching"
         assert TopicType.SINGLE_SHOT.value == "single_shot"
-        assert TopicType.KPI_SYSTEM.value == "kpi_system"
+        assert TopicType.MEASURE_SYSTEM.value == "measure_system"
 
     def test_topic_type_count(self) -> None:
-        """Test that TopicType has exactly 3 values."""
+        """Test that TopicType has 3 values."""
         assert len(TopicType) == 3
 
     def test_topic_type_is_string_enum(self) -> None:
@@ -102,8 +102,8 @@ class TestParameterSource:
         assert ParameterSource.WEBSITE.value == "website"
         assert ParameterSource.GOAL.value == "goal"
         assert ParameterSource.GOALS.value == "goals"
-        assert ParameterSource.KPI.value == "kpi"
-        assert ParameterSource.KPIS.value == "kpis"
+        assert ParameterSource.MEASURE.value == "measure"
+        assert ParameterSource.MEASURES.value == "measures"
         assert ParameterSource.ACTION.value == "action"
         assert ParameterSource.ISSUE.value == "issue"
         assert ParameterSource.USER.value == "user"
@@ -111,7 +111,7 @@ class TestParameterSource:
         assert ParameterSource.COMPUTED.value == "computed"
 
     def test_parameter_source_count(self) -> None:
-        """Test that ParameterSource has exactly 12 values."""
+        """Test that ParameterSource has 12 values."""
         assert len(ParameterSource) == 12
 
 
@@ -144,4 +144,4 @@ class TestExistingEnums:
         """Test AnalysisType enum values are unchanged."""
         assert AnalysisType.ALIGNMENT.value == "alignment"
         assert AnalysisType.STRATEGY.value == "strategy"
-        assert AnalysisType.KPI.value == "kpi"
+        assert AnalysisType.MEASURE.value == "measure"

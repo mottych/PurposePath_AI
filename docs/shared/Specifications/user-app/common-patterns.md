@@ -1,9 +1,17 @@
 # Common Patterns & Data Models
 
-**Version:** 3.0  
+**Version:** 4.0  
+**Last Updated:** December 26, 2025  
 **Purpose:** Shared patterns, authentication, error handling, and data models across all services
 
 [← Back to Index](./index.md)
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|----------|
+| 4.0 | December 26, 2025 | **BREAKING:** Standardized all enum values and type definitions to camelCase (e.g., `'not_started'` → `'notStarted'`, `'in_progress'` → `'inProgress'`). Updated pagination query parameter from `limit` to `pageSize`. Added comprehensive data models section with common camelCase field names. |
+| 3.0 | October 13, 2025 | Multi-service documentation split |
 
 ---
 
@@ -279,7 +287,7 @@ async function apiCallWithRetry(maxRetries = 3) {
 type FeatureName = 
   | 'goals'           // Goals module access
   | 'operations'      // Operations module access
-  | 'kpis'           // KPIs module access
+  | 'measures'           // Measures module access
   | 'strategies'      // Strategic planning module access
   | 'reports'         // Report generation capability
   | 'realtime'        // Real-time updates via SSE
@@ -296,7 +304,7 @@ type FeatureName =
 ```typescript
 type LimitName = 
   | 'goals'           // Maximum number of goals
-  | 'kpis'           // Maximum number of KPIs
+  | 'measures'           // Maximum number of Measures
   | 'actions'        // Maximum number of actions
   | 'strategies'     // Maximum number of strategies
   | 'attachments'    // Maximum number of attachments per goal
@@ -316,7 +324,7 @@ type TimeHorizon = 'year' | 'quarter' | 'month';
 ### Operations Status and Priority
 
 ```typescript
-type ActionStatus = 'not_started' | 'in_progress' | 'completed' | 'blocked' | 'cancelled';
+type ActionStatus = 'notStarted' | 'inProgress' | 'completed' | 'blocked' | 'cancelled';
 type ActionPriority = 'low' | 'medium' | 'high' | 'critical';
 type IssueImpact = 'low' | 'medium' | 'high' | 'critical';
 type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
@@ -325,7 +333,7 @@ type IssueStatusCategory = 'open' | 'active' | 'inactive' | 'closed';
 ### Activity Types
 
 ```typescript
-type ActivityType = 'weekly_review' | 'note' | 'system' | 'decision' | 'attachment';
+type ActivityType = 'weeklyReview' | 'note' | 'system' | 'decision' | 'attachment';
 ```
 
 ### Coaching and Insights
@@ -333,7 +341,7 @@ type ActivityType = 'weekly_review' | 'note' | 'system' | 'decision' | 'attachme
 ```typescript
 type InsightCategory = 'strategy' | 'operations' | 'finance' | 'marketing' | 'leadership';
 type InsightPriority = 'low' | 'medium' | 'high' | 'critical';
-type InsightStatus = 'pending' | 'in_progress' | 'completed';
+type InsightStatus = 'pending' | 'inProgress' | 'completed';
 ```
 
 ### Onboarding
@@ -341,20 +349,20 @@ type InsightStatus = 'pending' | 'in_progress' | 'completed';
 ```typescript
 type OnboardingSuggestionKind = 'niche' | 'ica' | 'valueProposition';
 type OnboardingCoachingTopic = 'coreValues' | 'purpose' | 'vision';
-type OnboardingStatus = 'Not started' | 'In progress' | 'Completed';
+type OnboardingStatus = 'notStarted' | 'inProgress' | 'completed';
 ```
 
-### KPI
+### Measure
 
 ```typescript
-type KPIDirection = 'up' | 'down'; // up = higher is better, down = lower is better
+type MeasureDirection = 'up' | 'down'; // up = higher is better, down = lower is better
 ```
 
 ### Subscription
 
 ```typescript
 type SubscriptionFrequency = 'monthly' | 'yearly';
-type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'past_due', 'cancelled'
+type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'pastDue', 'cancelled'
 
 // Note: Use isActive boolean for access control, not status string
 ```
@@ -377,9 +385,9 @@ interface PromoDiscount {
 
 ```typescript
 type PaymentIntentStatus = 
-  | 'requires_payment_method'
-  | 'requires_confirmation'
-  | 'requires_action'
+  | 'requiresPaymentMethod'
+  | 'requiresConfirmation'
+  | 'requiresAction'
   | 'processing'
   | 'succeeded'
   | 'canceled';
@@ -388,7 +396,7 @@ type PaymentIntentStatus =
 ### Email Confirmation
 
 ```typescript
-type TokenStatus = 'valid' | 'used' | 'expired' | 'not_found';
+type TokenStatus = 'valid' | 'used' | 'expired' | 'notFound';
 ```
 
 ### Reports
@@ -401,10 +409,10 @@ type ReportFormat = 'pdf' | 'docx';
 
 ```typescript
 type RealtimeEventType = 
-  | 'activity.created'
-  | 'decision.created'
-  | 'attachment.created'
-  | 'kpi.reading.created';
+  | 'activityCreated'
+  | 'decisionCreated'
+  | 'attachmentCreated'
+  | 'measureReadingCreated';
 ```
 
 ---
@@ -477,7 +485,7 @@ interface PaginatedResponse<T> {
   data: T[];
   pagination: {
     page: number;
-    limit: number;
+    pageSize: number;
     total: number;
     totalPages: number;
   };
@@ -497,48 +505,41 @@ interface ErrorResponse {
 
 ---
 
-## Frontend-Backend Data Mapping
+## Data Models
 
-The frontend uses camelCase while the backend uses snake_case. Mappings are handled in service layers:
+### Standard Field Naming
 
-### Common Mappings
+All API responses use **camelCase** for JSON property names:
 
-| Backend (snake_case) | Frontend (camelCase) |
-|---------------------|----------------------|
-| `access_token` | `accessToken` |
-| `refresh_token` | `refreshToken` |
-| `user_id` | `userId` |
-| `tenant_id` | `tenantId` |
-| `first_name` | `firstName` |
-| `last_name` | `lastName` |
-| `avatar_url` | `avatarUrl` |
-| `created_at` | `createdAt` |
-| `updated_at` | `updatedAt` |
-| `owner_id` | `ownerId` |
-| `value_tags` | `valueTags` |
-| `shared_kpi_id` | `sharedKpiId` |
-| `threshold_pct` | `threshold` or `thresholdPct` |
-| `business_impact` | `businessImpact` |
-| `assigned_person_id` | `assignedPersonId` |
-| `new_password` | `newPassword` |
+**Common Fields:**
+- `accessToken`, `refreshToken` - Authentication tokens
+- `userId`, `tenantId` - Entity identifiers
+- `firstName`, `lastName` - User name fields
+- `avatarUrl` - User profile picture URL
+- `createdAt`, `updatedAt` - Timestamps
+- `ownerId` - Resource owner identifier
+- `valueTags` - Array of value identifiers
+- `sharedMeasureId` - Shared Measure identifier
+- `thresholdPct` - Percentage threshold value
+- `businessImpact` - Business impact description
+- `assignedPersonId` - Person assignment identifier
+- `newPassword` - New password for updates
 
-### Mapping Functions
+### TypeScript Model Example
 
-**User Profile Mapping** (`api.ts`):
+**User Profile** (`api.ts`):
 ```typescript
-private mapBackendUserProfileToFrontend(backendUser: any): UserProfile {
-  return {
-    userId: backendUser.user_id,
-    email: backendUser.email,
-    firstName: backendUser.first_name,
-    lastName: backendUser.last_name,
-    avatarUrl: backendUser.avatar_url,
-    createdAt: backendUser.created_at,
-    updatedAt: backendUser.updated_at,
-    status: backendUser.status,
-    emailVerified: backendUser.email_verified,
-    preferences: backendUser.preferences || {}
-  };
+interface UserProfile {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  emailVerified: boolean;
+  preferences: Record<string, any>;
 }
 ```
 
@@ -565,7 +566,7 @@ class GoalCache {
 **Alignment Cache** (`alignment-cache-service.ts`):
 ```typescript
 // Caches alignment calculations to reduce API calls
-// Cache key: hash of goal intent + strategies + KPIs
+// Cache key: hash of goal intent + strategies + Measures
 // TTL: 5 minutes
 ```
 
@@ -623,11 +624,11 @@ class RealtimeService {
   
   subscribe(goalId: string, callback: (event) => void) {
     const url = `${SSE_BASE_URL}/realtime/goals/${goalId}/activity?` +
-      `access_token=${token}&tenant=${tenantId}`;
+      `accessToken=${token}&tenantId=${tenantId}`;
     
     const eventSource = new EventSource(url);
     
-    eventSource.addEventListener('activity.created', callback);
+    eventSource.addEventListener('activityCreated', callback);
     eventSource.addEventListener('error', () => {
       // Auto-reconnect with exponential backoff
       this.reconnect(goalId, callback);
@@ -1183,5 +1184,5 @@ spec:
 
 - [← Back to Index](./index.md)
 - [← Account Service](./account-service.md)
-- [← Coaching Service](./coaching-service.md)
+- [← AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)
 - [← Traction Service](./traction-service/README.md)

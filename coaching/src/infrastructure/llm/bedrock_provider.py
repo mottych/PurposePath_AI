@@ -43,7 +43,7 @@ logger = structlog.get_logger()
 INFERENCE_PROFILE_MODELS: set[str] = {
     "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
-    "anthropic.claude-opus-4-5-20250929-v1:0",  # Claude Opus 4.5
+    "anthropic.claude-opus-4-5-20251101-v1:0",  # Claude Opus 4.5
 }
 
 # Models that support prompt caching via cache_control blocks
@@ -60,10 +60,10 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
     "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
     # Claude Opus 4.5
-    "anthropic.claude-opus-4-5-20250929-v1:0",
-    "us.anthropic.claude-opus-4-5-20250929-v1:0",
-    "eu.anthropic.claude-opus-4-5-20250929-v1:0",
-    "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+    "anthropic.claude-opus-4-5-20251101-v1:0",
+    "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+    "apac.anthropic.claude-opus-4-5-20251101-v1:0",
     # Claude 3 Haiku (requires 2048+ tokens)
     "anthropic.claude-3-haiku-20240307-v1:0",
 }
@@ -105,10 +105,10 @@ class BedrockLLMProvider:
         "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
         "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
         # Claude Opus 4.5 (requires inference profile)
-        "anthropic.claude-opus-4-5-20250929-v1:0",
-        "us.anthropic.claude-opus-4-5-20250929-v1:0",
-        "eu.anthropic.claude-opus-4-5-20250929-v1:0",
-        "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+        "anthropic.claude-opus-4-5-20251101-v1:0",
+        "us.anthropic.claude-opus-4-5-20251101-v1:0",
+        "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+        "apac.anthropic.claude-opus-4-5-20251101-v1:0",
         # Legacy Claude models
         "anthropic.claude-v2:1",
         "anthropic.claude-v2",
@@ -261,11 +261,31 @@ class BedrockLLMProvider:
                 cache_enabled=resolved_model in CACHE_SUPPORTED_MODELS,
             )
 
-            # Run synchronous boto3 call in thread pool
+            # Run synchronous boto3 call in thread pool with graceful caching fallback
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, lambda: self.bedrock_client.converse(**request_params)
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None, lambda: self.bedrock_client.converse(**request_params)
+                )
+            except Exception as bedrock_error:
+                # Handle AccessDeniedException for prompt caching
+                error_msg = str(bedrock_error)
+                if "AccessDeniedException" in error_msg and "prompt caching" in error_msg:
+                    logger.warning(
+                        "Prompt caching not available, retrying without cache",
+                        model=resolved_model,
+                        error=error_msg,
+                    )
+                    # Retry without caching - use simple system prompt format
+                    if system_prompt:
+                        request_params["system"] = [{"text": system_prompt}]
+
+                    response = await loop.run_in_executor(
+                        None, lambda: self.bedrock_client.converse(**request_params)
+                    )
+                else:
+                    # Re-raise if not a caching-related error
+                    raise
 
             # Extract content from Converse API response
             output = response.get("output", {})
@@ -387,12 +407,32 @@ class BedrockLLMProvider:
                 resolved_model=resolved_model,
             )
 
-            # Use Converse Stream API
+            # Use Converse Stream API with graceful caching fallback
             # Run in thread pool since boto3 is synchronous
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, lambda: self.bedrock_client.converse_stream(**request_params)
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None, lambda: self.bedrock_client.converse_stream(**request_params)
+                )
+            except Exception as bedrock_error:
+                # Handle AccessDeniedException for prompt caching
+                error_msg = str(bedrock_error)
+                if "AccessDeniedException" in error_msg and "prompt caching" in error_msg:
+                    logger.warning(
+                        "Prompt caching not available for streaming, retrying without cache",
+                        model=resolved_model,
+                        error=error_msg,
+                    )
+                    # Retry without caching - use simple system prompt format
+                    if system_prompt:
+                        request_params["system"] = [{"text": system_prompt}]
+
+                    response = await loop.run_in_executor(
+                        None, lambda: self.bedrock_client.converse_stream(**request_params)
+                    )
+                else:
+                    # Re-raise if not a caching-related error
+                    raise
 
             # Process streaming response
             stream = response.get("stream")
@@ -503,16 +543,15 @@ class BedrockLLMProvider:
             return [{"text": system_prompt}]
 
         # Add cache_control block for caching
+        # Note: cachePoint must be a separate element, not mixed with text
         logger.debug(
             "Adding cache_control to system prompt",
             estimated_tokens=estimated_tokens,
             model=resolved_model,
         )
         return [
-            {
-                "text": system_prompt,
-                "cachePoint": {"type": "default"},
-            }
+            {"text": system_prompt},
+            {"cachePoint": {"type": "default"}},
         ]
 
 

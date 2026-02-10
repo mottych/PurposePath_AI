@@ -12,7 +12,7 @@ from coaching.src.api.dependencies.ai_engine import get_generic_handler
 from coaching.src.api.main import app
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
-    KPIAnalysisResponse,
+    MeasureAnalysisResponse,
     OperationsAnalysisResponse,
     StrategyAnalysisResponse,
 )
@@ -176,7 +176,7 @@ class TestKPIAnalysis:
     def test_kpi_analysis_success(self, client, mock_generic_handler):
         """Test successful KPI analysis."""
         # Setup mock response
-        mock_response = KPIAnalysisResponse(
+        mock_response = MeasureAnalysisResponse(
             analysis_id="test-kpi-id",
             analysis_type=AnalysisType.KPI,
             kpi_effectiveness_score=70.0,

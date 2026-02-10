@@ -171,10 +171,9 @@ class Settings(BaseSettings):
     )
 
     # Google Vertex AI Configuration (optional)
+    # Note: Gemini 3 models require "global" endpoint. Older models (2.5, 2.0, 1.5) support regional endpoints.
     google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
-    google_vertex_location: str = Field(
-        default="us-central1", validation_alias="GOOGLE_VERTEX_LOCATION"
-    )
+    google_vertex_location: str = Field(default="global", validation_alias="GOOGLE_VERTEX_LOCATION")
 
     # Memory Management
     max_conversation_memory: int = 4000
@@ -250,6 +249,10 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     """
     Get Google Vertex AI credentials from AWS Secrets Manager.
 
+    Always retrieves from Secrets Manager to ensure proper OAuth scopes are applied.
+    The GOOGLE_APPLICATION_CREDENTIALS env var is ignored to maintain consistent
+    scope configuration across all environments.
+
     Returns:
         Credentials dict (service account JSON) or None if not configured
     """
@@ -257,14 +260,8 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
 
     settings = get_settings()
 
-    # Check if GOOGLE_APPLICATION_CREDENTIALS env var is set (local dev)
-    import os
-
-    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-        # Let Google SDK handle it
-        return None
-
-    # Retrieve from Secrets Manager if configured
+    # Always retrieve from Secrets Manager (ignore GOOGLE_APPLICATION_CREDENTIALS)
+    # This ensures proper OAuth scopes are applied via service_account.Credentials
     if settings.google_vertex_credentials_secret:
         try:
             import structlog

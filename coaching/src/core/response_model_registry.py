@@ -1,7 +1,7 @@
 """Response Model Registry - Mapping of model names to Pydantic classes.
 
 This module provides a central registry for resolving response model names
-(stored as strings in EndpointDefinition) to actual Pydantic model classes.
+(stored as strings in TopicDefinition) to actual Pydantic model classes.
 
 Used by the generic AI execute endpoint to:
 1. Validate AI responses against expected schemas
@@ -16,7 +16,6 @@ from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
     AlignmentExplanationResponse,
     AlignmentSuggestionsResponse,
-    KPIRecommendationsResponse,
     OperationsAnalysisResponse,
 )
 from coaching.src.api.models.business_data import BusinessMetricsResponse
@@ -25,9 +24,11 @@ from coaching.src.api.models.conversations import (
     MessageResponse,
 )
 from coaching.src.api.models.onboarding import (
+    IcaReviewResponse,
     OnboardingCoachingResponse,
     OnboardingReviewResponse,
     OnboardingSuggestionResponse,
+    ValuePropositionReviewResponse,
     WebsiteScanResponse,
 )
 from coaching.src.api.models.operations import (
@@ -39,15 +40,19 @@ from coaching.src.api.models.operations import (
 from coaching.src.api.models.strategic_planning import (
     ActionSuggestionsResponse,
     AlignmentCheckResponse,
-    KPIRecommendationsResponseV2,
-    StrategySuggestionsResponseV2,
-)
-from coaching.src.api.models.strategy_suggestions import (
+    GoalIntentReviewResponse,
+    MeasureRecommendationsResponse,
     StrategySuggestionsResponse,
 )
+from coaching.src.models.responses import InsightResponse, InsightsGenerationResponse
 from pydantic import BaseModel
+from shared.models.schemas import PaginatedResponse
 
 logger = structlog.get_logger()
+
+
+# Type aliases for generic response types
+PaginatedInsightResponse = PaginatedResponse[InsightResponse]
 
 
 # Central registry mapping response model names to classes
@@ -59,22 +64,25 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     # Note: OnboardingSuggestionsResponse maps to OnboardingSuggestionResponse (singular)
     "OnboardingSuggestionsResponse": OnboardingSuggestionResponse,
     "OnboardingCoachingResponse": OnboardingCoachingResponse,
-    "OnboardingReviewResponse": OnboardingReviewResponse,
+    "OnboardingReviewResponse": OnboardingReviewResponse,  # Used by niche_review
+    "IcaReviewResponse": IcaReviewResponse,  # Used by ica_review (detailed ICA suggestions)
+    "ValuePropositionReviewResponse": ValuePropositionReviewResponse,  # Used by value_proposition_review
     "BusinessMetricsResponse": BusinessMetricsResponse,
     # === Conversations ===
     "ConversationResponse": ConversationResponse,
     "MessageResponse": MessageResponse,
     # === Strategic Planning ===
+    "GoalIntentReviewResponse": GoalIntentReviewResponse,
     "StrategySuggestionsResponse": StrategySuggestionsResponse,
-    "KPIRecommendationsResponse": KPIRecommendationsResponse,
+    "MeasureRecommendationsResponse": MeasureRecommendationsResponse,
     "AlignmentAnalysisResponse": AlignmentAnalysisResponse,
     "AlignmentExplanationResponse": AlignmentExplanationResponse,
     "AlignmentSuggestionsResponse": AlignmentSuggestionsResponse,
-    # Strategic Planning AI Topics (Issue #182)
     "AlignmentCheckResponse": AlignmentCheckResponse,
-    "StrategySuggestionsResponseV2": StrategySuggestionsResponseV2,
-    "KPIRecommendationsResponseV2": KPIRecommendationsResponseV2,
     "ActionSuggestionsResponse": ActionSuggestionsResponse,
+    # === Insights ===
+    "InsightsGenerationResponse": InsightsGenerationResponse,  # LLM generates list of insights
+    "PaginatedInsightResponse": PaginatedInsightResponse,  # For paginated API responses
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,
     "StrategicAlignmentResponse": StrategicAlignmentResponse,
@@ -85,7 +93,6 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "SchedulingSuggestionsResponse": SchedulingResponse,
     # === Placeholder for inactive/future endpoints ===
     # The following models are referenced in endpoint_registry but endpoints are inactive:
-    # - InsightsResponse
     # - RootCauseSuggestionsResponse
     # - SwotAnalysisResponse
     # - FiveWhysQuestionsResponse
@@ -97,11 +104,11 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     # - UpdateConnectionsResponse
     # - CreateIssueResponse, CreateActionResponse, CompleteActionResponse, CloseIssueResponse
     # - IssueStatusResponse, RelatedActionsResponse
-    # - UpdateKPIResponse, CalculateKPIResponse, KPIHistoryResponse
-    # - KPIImpactResponse, ActionKPIImpactResponse, SyncKPIsResponse
-    # - KPIConflictsResponse, ResolveConflictResponse
+    # - UpdateMeasureResponse, CalculateMeasureResponse, MeasureHistoryResponse
+    # - MeasureImpactResponse, ActionMeasureImpactResponse, SyncMeasuresResponse
+    # - MeasureConflictsResponse, ResolveConflictResponse
     # - CascadeUpdateResponse
-    # - TopicStrategicContextResponse, GoalAlignmentResponse, KPIPerformanceResponse
+    # - TopicStrategicContextResponse, GoalAlignmentResponse, MeasurePerformanceResponse
 }
 
 

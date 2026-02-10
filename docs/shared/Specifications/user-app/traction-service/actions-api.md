@@ -1,7 +1,7 @@
 # Actions API Specification
 
-**Version:** 7.0  
-**Last Updated:** December 23, 2025  
+**Version:** 7.2  
+**Last Updated:** February 9, 2026  
 **Base Path:** `/operations/actions`  
 **Controller:** `ActionsController.cs`
 
@@ -48,15 +48,16 @@ Retrieve actions with advanced filtering and pagination.
 | `issueIds` | string (CSV) | No | Comma-separated issue IDs |
 | `startDate` | datetime (ISO 8601) | No | Filter actions starting after this date |
 | `endDate` | datetime (ISO 8601) | No | Filter actions due before this date |
+| `search` | string | No | Case-insensitive search in title, description, and tags |
 | `page` | int | No | Page number (default: 1) |
 | `limit` | int | No | Items per page (default: 50, max: 100) |
-| `sort` | string | No | Sort field: `dueDate`, `priority`, `status`, `createdAt` |
+| `sort` | string | No | Sort field: `dueDate`, `startDate`, `priority`, `status`, `createdAt`, `title` |
 | `order` | string | No | Sort order: `asc` or `desc` (default: `asc`) |
 
 #### Request Example
 
 ```http
-GET /operations/actions?status=in_progress&priority=high&assignedPersonId=person-123&page=1&limit=20&sort=dueDate&order=asc
+GET /operations/actions?status=in_progress&priority=high&assignedPersonId=person-123&search=pricing&page=1&limit=20&sort=startDate&order=asc
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -178,6 +179,8 @@ Create a new action item.
   "startDate": "2025-12-20T00:00:00Z",
   "dueDate": "2025-12-31T00:00:00Z",
   "priority": "high",
+  "status": "in_progress",
+  "progress": 25,
   "assignedPersonId": "person-123",
   "estimatedHours": 40,
   "tags": ["marketing", "website", "Q4"],
@@ -199,6 +202,8 @@ Create a new action item.
 | `startDate` | datetime (ISO 8601) | **Yes** | Start date |
 | `dueDate` | datetime (ISO 8601) | **Yes** | Due date |
 | `priority` | enum | **Yes** | `low`, `medium`, `high`, `critical` |
+| `status` | enum | No | Initial status: `not_started`, `in_progress`, `completed`, `blocked`, `cancelled` (defaults to `not_started`) |
+| `progress` | int | No | Initial progress percentage (0-100, defaults to 0) |
 | `assignedPersonId` | string (GUID) | **Yes** | Person responsible |
 | `estimatedHours` | decimal | No | Estimated effort in hours |
 | `tags` | string[] | No | Tags for categorization |
@@ -220,13 +225,13 @@ Create a new action item.
     "tenantId": "tenant-123",
     "title": "Launch new pricing page",
     "description": "Design and deploy updated pricing page with new tier structure",
-    "status": "not_started",
+    "status": "in_progress",
     "priority": "high",
     "startDate": "2025-12-20T00:00:00Z",
     "dueDate": "2025-12-31T00:00:00Z",
     "assignedPersonId": "person-123",
     "assignedPersonName": "John Doe",
-    "progress": 0,
+    "progress": 25,
     "estimatedHours": 40,
     "actualHours": 0,
     "tags": ["marketing", "website", "Q4"],
@@ -244,7 +249,10 @@ Create a new action item.
 
 #### Business Rules
 
-- **Default status:** New actions start with `not_started` status
+- **Default status:** New actions default to `not_started` status if not provided
+- **Default progress:** New actions default to 0% progress if not provided
+- **Completed actions:** If status is `completed`, progress is automatically set to 100% regardless of provided value
+- **Progress validation:** Progress must be between 0 and 100 (inclusive)
 - **Date validation:** `dueDate` must be after `startDate`
 - **Person validation:** `assignedPersonId` must exist in tenant
 - **Connections:** Goals, strategies, issues are linked after action creation
@@ -577,7 +585,61 @@ Link an action to one or more strategies.
 
 ---
 
-### 9. Remove All Relationships
+### 9. Link Action to Issues
+
+Link an action to one or more issues.
+
+**Endpoint:** `PUT /operations/actions/{actionId}/issues`
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `actionId` | string (GUID) | **Yes** | Action identifier |
+
+#### Request Body
+
+```json
+{
+  "issueIds": ["issue-001", "issue-002"]
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `issueIds` | string[] (GUID) | **Yes** | Issue IDs to link (replaces existing links, empty array clears links) |
+
+#### Response
+
+**Status:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "action-123",
+    "connections": {
+      "goalIds": ["goal-001"],
+      "strategyIds": ["strategy-002"],
+      "issueIds": ["issue-001", "issue-002"]
+    }
+  },
+  "error": null
+}
+```
+
+#### Business Rules
+
+- **Replace behavior:** Replaces existing issue links (not additive)
+- **Multi-issue:** Actions can be linked to multiple issues
+- **Empty array support:** Passing an empty array (`[]`) clears all issue connections
+- **Validation:** All issue IDs must be valid GUIDs
+
+---
+
+### 10. Remove All Relationships
 
 Remove all connections (goals, strategies, issues) from an action.
 
@@ -696,6 +758,16 @@ await traction.put(`/operations/actions/${actionId}/goals`, {
   goalIds: ['goal-001', 'goal-002']
 });
 
+// Link to issues
+await traction.put(`/operations/actions/${actionId}/issues`, {
+  issueIds: ['issue-001', 'issue-002']
+});
+
+// Clear issue links (empty array)
+await traction.put(`/operations/actions/${actionId}/issues`, {
+  issueIds: []
+});
+
 // Delete action
 await traction.delete(`/operations/actions/${actionId}`);
 ```
@@ -712,6 +784,18 @@ await traction.delete(`/operations/actions/${actionId}`);
 ---
 
 ## Changelog
+
+### v7.2 (February 9, 2026)
+- ✅ Added `search` query parameter to List Actions endpoint for searching title, description, and tags
+- ✅ Added `startDate` as a sort option (previously supported in backend but not exposed in API)
+- 📝 Enhanced filtering capabilities with case-insensitive substring search
+- 📝 Note: Search by assignee name not supported; use `assignedPersonId` filter to search by specific assignee
+
+### v7.1 (February 6, 2026)
+- ✅ Added endpoint #9: `PUT /operations/actions/{actionId}/issues` - Link action to issues
+- 📝 Added support for empty array to clear issue connections
+- 📝 Updated endpoint count from 9 to 10 endpoints
+- 📝 Renumbered "Remove All Relationships" from #9 to #10
 
 ### v7.0 (December 23, 2025)
 - ✅ Documented all 9 endpoints with complete examples

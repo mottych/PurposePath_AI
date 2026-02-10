@@ -154,7 +154,8 @@ class TestLLMTopic:
             topic_type="conversation_coaching",
             category="coaching",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,
@@ -189,7 +190,8 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="analysis",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
@@ -206,7 +208,8 @@ class TestLLMTopic:
             topic_type="kpi_system",
             category="kpi",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
@@ -225,7 +228,8 @@ class TestLLMTopic:
                 topic_type="invalid_type",
                 category="test",
                 is_active=True,
-                model_code="claude-3-5-sonnet-20241022",
+                basic_model_code="claude-3-5-sonnet-20241022",
+                premium_model_code="claude-3-5-sonnet-20241022",
                 temperature=0.7,
                 max_tokens=2000,
                 prompts=[],
@@ -246,7 +250,9 @@ class TestLLMTopic:
         assert item["category"] == "coaching"
         assert item["is_active"] is True
         assert len(item["prompts"]) == 1
-        assert item["model_code"] == "claude-3-5-sonnet-20241022"
+        assert item["tier_level"] == "free"
+        assert item["basic_model_code"] == "claude-3-5-sonnet-20241022"
+        assert item["premium_model_code"] == "claude-3-5-sonnet-20241022"
         # DynamoDB requires Decimal for float values
         assert item["temperature"] == Decimal("0.7")
         assert item["max_tokens"] == 2000
@@ -291,7 +297,9 @@ class TestLLMTopic:
         assert topic.is_active is False
         assert len(topic.prompts) == 1
         assert topic.additional_config["key"] == "value"
-        assert topic.model_code == "claude-3-5-sonnet-20241022"
+        # Old config.model_code should migrate to both new fields
+        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
         assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert topic.description == "Test description"
@@ -403,7 +411,8 @@ class TestLLMTopic:
         assert roundtrip.is_active == sample_topic.is_active
         assert len(roundtrip.prompts) == len(sample_topic.prompts)
         assert roundtrip.additional_config == sample_topic.additional_config
-        assert roundtrip.model_code == sample_topic.model_code
+        assert roundtrip.basic_model_code == sample_topic.basic_model_code
+        assert roundtrip.premium_model_code == sample_topic.premium_model_code
         assert roundtrip.temperature == sample_topic.temperature
         assert roundtrip.max_tokens == sample_topic.max_tokens
         assert roundtrip.created_at == sample_topic.created_at
@@ -432,7 +441,8 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="test",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
             prompts=[],
@@ -462,7 +472,8 @@ class TestLLMTopicFactory:
         assert topic.description == "Discover and clarify personal core values"
         assert topic.is_active is False  # Default inactive
         assert topic.display_order == 0  # First enum value
-        assert topic.model_code == "claude-3-5-sonnet-20241022"
+        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
         assert topic.temperature == 0.7
         assert topic.max_tokens == 2000
         assert topic.prompts == []  # No prompts until configured
