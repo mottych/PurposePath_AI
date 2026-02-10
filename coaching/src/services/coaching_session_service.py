@@ -537,7 +537,7 @@ class CoachingSessionService:
         # Scan BOTH templates for parameters (they may have different placeholders)
         if self.template_processor is None:
             raise RuntimeError("template_processor required for session initiation")
-            
+
         required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
         combined_template = system_template + "\n\n" + initiation_template
 
