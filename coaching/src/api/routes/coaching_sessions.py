@@ -46,6 +46,7 @@ from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
 )
 from coaching.src.core.config_multitenant import settings
+from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.ai_job import AIJobStatus
 from coaching.src.domain.exceptions.session_exceptions import (
     ExtractionFailedError,
@@ -550,9 +551,9 @@ async def send_message_async(
     try:
         # Create async job (returns immediately)
         job = await job_service.create_message_job(
-            session_id=request.session_id,
-            tenant_id=context.tenant_id,
-            user_id=context.user_id,
+            session_id=ConversationId(request.session_id),
+            tenant_id=TenantId(context.tenant_id),
+            user_id=UserId(context.user_id),
             topic_id="conversation_coaching",  # Get from session if needed
             user_message=request.message,
         )

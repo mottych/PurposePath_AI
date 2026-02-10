@@ -300,9 +300,7 @@ class CoachingMessageJobService:
             }
 
             if message_response.result:
-                result_dict["result"] = message_response.result.model_dump(
-                    by_alias=True, mode="json"
-                )
+                result_dict["result"] = message_response.result
 
             if message_response.metadata:
                 result_dict["metadata"] = message_response.metadata
