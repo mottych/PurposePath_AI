@@ -46,14 +46,11 @@ from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
 )
 from coaching.src.core.config_multitenant import settings
-from coaching.src.domain.entities.ai_job import AIJob, AIJobStatus
+from coaching.src.domain.entities.ai_job import AIJobStatus
 from coaching.src.domain.exceptions.session_exceptions import (
     ExtractionFailedError,
-    MaxTurnsReachedError,
     SessionAccessDeniedError,
     SessionConflictError,
-    SessionExpiredError,
-    SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
@@ -80,9 +77,6 @@ from coaching.src.services.coaching_session_service import (
     TemplateNotFoundError,
     TopicNotActiveError,
     TopicsWithStatusResponse,
-)
-from coaching.src.services.coaching_session_service import (
-    MessageResponse as ServiceMessageResponse,
 )
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field

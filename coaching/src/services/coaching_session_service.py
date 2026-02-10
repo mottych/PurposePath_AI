@@ -974,7 +974,7 @@ class CoachingSessionService:
         # If final, trigger completion and return result
         # Optimized to complete within API Gateway's 30s timeout:
         # - Conversation: Claude Sonnet ~8-12s
-        # - Extraction: Claude Haiku ~3-5s  
+        # - Extraction: Claude Haiku ~3-5s
         # - Total: ~15-20s (well under 30s limit)
         if is_final:
             logger.info(

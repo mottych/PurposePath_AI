@@ -12,15 +12,15 @@ from typing import Any
 import structlog
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus, AIJobType
-from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository
-from coaching.src.services.coaching_session_service import (
-    CoachingSessionService,
+from coaching.src.domain.exceptions.session_exceptions import (
     MaxTurnsReachedError,
     SessionAccessDeniedError,
     SessionIdleTimeoutError,
     SessionNotActiveError,
     SessionNotFoundError,
 )
+from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository
+from coaching.src.services.coaching_session_service import CoachingSessionService
 from shared.services.eventbridge_client import EventBridgePublisher, EventBridgePublishError
 
 logger = structlog.get_logger()
@@ -350,9 +350,7 @@ class CoachingMessageJobService:
                 start_time=start_time,
             )
 
-        except SessionAccessDenied
-
-Error as e:
+        except SessionAccessDeniedError as e:
             await self._handle_failure(
                 job=job,
                 error=f"Session access denied: {e}",

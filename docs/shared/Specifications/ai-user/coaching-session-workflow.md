@@ -296,18 +296,102 @@ def resume_session(session_id, user_id, tenant_id):
     )
 ```
 
-### Endpoint: POST /message
+### Endpoint: POST /message (ASYNC)
 
-**Purpose:** Send user message in active session.
+**Purpose:** Send user message in active session with async processing.
 
-**Logic:**
+**Returns:** 202 Accepted with job_id immediately (no 30s timeout).
+
+**Async Processing Flow:**
+```
+1. POST /message → Returns 202 Accepted {job_id} (< 500ms)
+2. EventBridge: ai.message.created event published
+3. Worker Lambda: Executes message processing asynchronously
+4. EventBridge: ai.message.completed event published
+5. Frontend: Receives via WebSocket OR polls GET /message/{job_id}
+```
+
+**API Request:**
+```json
+POST /ai/coaching/message
+{
+  "session_id": "uuid",
+  "message": "user's message content"
+}
+```
+
+**Immediate Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "pending",
+    "estimated_duration_ms": 45000
+  },
+  "message": "Message job created, processing asynchronously"
+}
+```
+
+**Polling Endpoint:**
+```json
+GET /ai/coaching/message/{job_id}
+
+Response (while processing):
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "processing",
+    "message": null,
+    "is_final": null
+  }
+}
+
+Response (completed):
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "completed",
+    "message": "coach's complete response",
+    "is_final": false,
+    "result": null,
+    "processing_time_ms": 12500
+  }
+}
+```
+
+**WebSocket Event:**
+```json
+{
+  "eventType": "ai.message.completed",
+  "jobId": "uuid",
+  "sessionId": "uuid",
+  "tenantId": "uuid",
+  "userId": "uuid",
+  "data": {
+    "message": "coach's complete response",
+    "isFinal": false,
+    "result": null
+  }
+}
+```
+
+**Backend Logic (Worker Lambda):**
 ```python
-def send_message(session_id, user_id, tenant_id, user_message):
+async def execute_message_job(job_id, tenant_id):
+    # Load job
+    job = job_repo.get_by_id_for_tenant(job_id, tenant_id)
+    
     # Load session
-    session = repo.get_by_id_for_tenant(session_id, tenant_id)
+    session = session_repo.get_by_id_for_tenant(job.session_id, tenant_id)
     
     # Validate ownership
-    if session.user_id != user_id:
+    if session.user_id != job.user_id:
         raise SessionAccessDeniedError
     
     # Check status (NO idle check - allow messages if window open)
@@ -315,9 +399,9 @@ def send_message(session_id, user_id, tenant_id, user_message):
         raise SessionNotActiveError  # Only blocks if explicitly PAUSED
     
     # Add user message
-    session.add_user_message(user_message)
+    session.add_user_message(job.user_message)
     
-    # Generate response
+    # Generate response (can take 5s to 5 minutes - no timeout!)
     system_template = load_template(session.topic_id, "SYSTEM")
     history = session.get_messages_for_llm(max_messages=30)
     
@@ -333,7 +417,19 @@ def send_message(session_id, user_id, tenant_id, user_message):
         # Extract results
         result = extract_results(session, llm_response)
         session.complete(result)
-        repo.update(session)
+        session_repo.update(session)
+        
+        # Publish completion event
+        event_publisher.publish_ai_message_completed(
+            job_id=job.job_id,
+            session_id=session.session_id,
+            tenant_id=tenant_id,
+            user_id=job.user_id,
+            topic_id=session.topic_id,
+            message=llm_response,
+            is_final=True,
+            result=result
+        )
         
         return MessageResponse(
             message=llm_response,
@@ -343,7 +439,19 @@ def send_message(session_id, user_id, tenant_id, user_message):
         )
     else:
         session.add_assistant_message(llm_response)
-        repo.update(session)
+        session_repo.update(session)
+        
+        # Publish completion event
+        event_publisher.publish_ai_message_completed(
+            job_id=job.job_id,
+            session_id=session.session_id,
+            tenant_id=tenant_id,
+            user_id=job.user_id,
+            topic_id=session.topic_id,
+            message=llm_response,
+            is_final=False,
+            result=None
+        )
         
         return MessageResponse(
             message=llm_response,
