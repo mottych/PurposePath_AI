@@ -24,19 +24,35 @@ Core values coaching session successfully completed but user received 503 error.
 - **RequestId**: `ae220969-d5df-4cdc-a767-70f9fa8624de`
 
 ## Current Fix (Implemented)
-**Use Claude Haiku for extraction instead of Sonnet**
+**Use Claude Haiku for extraction instead of Sonnet (configurable)**
 
 ### Changes Made
-- [coaching/src/services/coaching_session_service.py](../../coaching/src/services/coaching_session_service.py#L1230-1250)
-  - Extraction now uses Claude Haiku (3-5x faster than Sonnet)
-  - Conversation still uses Claude Sonnet (quality maintained)
+- [coaching/src/domain/entities/llm_topic.py](../../coaching/src/domain/entities/llm_topic.py)
+  - Added `extraction_model_code` field to LLMTopic (optional, defaults to Haiku)
+  - Added `get_extraction_model_code()` method for consistent access
+- [coaching/src/services/coaching_session_service.py](../../coaching/src/services/coaching_session_service.py)
+  - Extraction now uses configured extraction model (defaults to Claude Haiku)
+  - Conversation still uses tier-appropriate model (Sonnet for Premium/Ultimate)
   - Total execution time reduced from 30-35s to ~15-20s
+
+### Configuration
+To change the extraction model for a topic, set `extraction_model_code` in DynamoDB:
+```json
+{
+  "topic_id": "core_values",
+  "extraction_model_code": "claude-3-5-haiku-20241022",
+  ...
+}
+```
+
+If `extraction_model_code` is `null` or not set, defaults to `claude-3-5-haiku-20241022`.
 
 ### Performance Impact
 - ✅ **Before**: Conversation (8-12s) + Extraction (15-20s) = **25-32s** (sometimes exceeded 30s)
 - ✅ **After**: Conversation (8-12s) + Extraction (3-5s) = **~15-20s** (safely under 30s)
 - ✅ Cost savings: Haiku is ~90% cheaper than Sonnet for extraction
 - ✅ Quality maintained: Extraction is simple structured parsing, doesn't need Sonnet's power
+- ✅ **Configurable**: Can change extraction model without code deployment
 
 ## Proper Solution Options
 
