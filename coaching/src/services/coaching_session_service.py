@@ -243,7 +243,7 @@ class CoachingSessionService:
         session_repository: CoachingSessionRepositoryPort,
         topic_repository: TopicRepository,
         s3_prompt_storage: S3PromptStorage,
-        template_processor: TemplateParameterProcessor,
+        template_processor: TemplateParameterProcessor | None,
         provider_factory: LLMProviderFactory,
     ) -> None:
         """Initialize the coaching session service.
@@ -252,7 +252,7 @@ class CoachingSessionService:
             session_repository: Repository for session persistence
             topic_repository: Repository for LLMTopic config from DynamoDB
             s3_prompt_storage: Storage for loading templates from S3
-            template_processor: Processor for resolving parameters (required)
+            template_processor: Processor for resolving parameters (None in worker mode)
             provider_factory: Factory for LLM provider/model resolution
         """
         self.session_repository = session_repository
@@ -535,6 +535,9 @@ class CoachingSessionService:
 
         # Resolve parameters using template processor
         # Scan BOTH templates for parameters (they may have different placeholders)
+        if self.template_processor is None:
+            raise RuntimeError("template_processor required for session initiation")
+            
         required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
         combined_template = system_template + "\n\n" + initiation_template
 
