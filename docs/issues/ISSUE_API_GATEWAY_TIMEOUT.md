@@ -24,28 +24,41 @@ Core values coaching session successfully completed but user received 503 error.
 - **RequestId**: `ae220969-d5df-4cdc-a767-70f9fa8624de`
 
 ## Current Fix (Implemented)
-**Use Claude Haiku for extraction instead of Sonnet (configurable)**
+**Use Claude Haiku for extraction (configurable via conversation_config)**
 
 ### Changes Made
+- [coaching/src/models/admin_topics.py](../../coaching/src/models/admin_topics.py)
+  - Added `extraction_model_code` field to `ConversationConfig` model
 - [coaching/src/domain/entities/llm_topic.py](../../coaching/src/domain/entities/llm_topic.py)
-  - Added `extraction_model_code` field to LLMTopic (optional, defaults to Haiku)
-  - Added `get_extraction_model_code()` method for consistent access
+  - Updated `get_extraction_model_code()` to read from `additional_config`
+  - Returns MODEL_REGISTRY code (e.g., "CLAUDE_3_5_HAIKU")
+  - Defaults to "CLAUDE_3_5_HAIKU" if not specified
 - [coaching/src/services/coaching_session_service.py](../../coaching/src/services/coaching_session_service.py)
-  - Extraction now uses configured extraction model (defaults to Claude Haiku)
-  - Conversation still uses tier-appropriate model (Sonnet for Premium/Ultimate)
+  - Extraction uses configured extraction model (defaults to Claude Haiku)
+  - Conversation uses tier-appropriate model (Sonnet for Premium/Ultimate)
+  - Provider factory resolves MODEL_REGISTRY code to provider-specific model
   - Total execution time reduced from 30-35s to ~15-20s
 
 ### Configuration
-To change the extraction model for a topic, set `extraction_model_code` in DynamoDB:
+To change the extraction model for a conversation topic, update via Admin API:
+
 ```json
+PUT /api/v1/admin/topics/{topic_id}
 {
-  "topic_id": "core_values",
-  "extraction_model_code": "claude-3-5-haiku-20241022",
-  ...
+  "conversation_config": {
+    "extraction_model_code": "CLAUDE_3_5_HAIKU"
+  }
 }
 ```
 
-If `extraction_model_code` is `null` or not set, defaults to `claude-3-5-haiku-20241022`.
+Valid MODEL_REGISTRY codes:
+- `CLAUDE_3_5_HAIKU` (default - fastest, cheapest)
+- `CLAUDE_3_5_SONNET_V2` (balanced)
+- `CLAUDE_SONNET_4_5` (premium)
+- See `coaching/src/core/llm_models.py` for full registry
+
+The model code is stored in `additional_config.extraction_model_code` in DynamoDB.
+If not set, defaults to `CLAUDE_3_5_HAIKU`.
 
 ### Performance Impact
 - ✅ **Before**: Conversation (8-12s) + Extraction (15-20s) = **25-32s** (sometimes exceeded 30s)

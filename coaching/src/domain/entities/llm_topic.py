@@ -184,7 +184,6 @@ class LLMTopic:
     # LLM Model Configuration (dual models for tier-based selection)
     basic_model_code: str = "claude-3-5-sonnet-20241022"
     premium_model_code: str = "claude-3-5-sonnet-20241022"
-    extraction_model_code: str | None = None  # Model for extraction (defaults to Haiku if None)
     temperature: float = 0.7
     max_tokens: int = 2000
     top_p: float = 1.0
@@ -617,14 +616,20 @@ class LLMTopic:
     def get_extraction_model_code(self) -> str:
         """Get the model code for result extraction.
 
-        Returns the configured extraction model or defaults to Claude Haiku
-        for optimal speed and cost efficiency. Haiku is 3-5x faster than Sonnet
-        and 90% cheaper, making it ideal for structured data extraction.
+        Returns the configured extraction model from additional_config or defaults
+        to Claude Haiku (MODEL_REGISTRY code) for optimal speed and cost efficiency.
+        Haiku is 3-5x faster than Sonnet and 90% cheaper, making it ideal for
+        structured data extraction.
+
+        This is only applicable for conversation_coaching topics that use extraction.
+        The model code returned is a MODEL_REGISTRY friendly code (e.g., "CLAUDE_3_5_HAIKU")
+        that will be resolved to the actual provider-specific model name via the
+        provider factory.
 
         Returns:
-            str: Model code to use for extraction (defaults to Haiku)
+            str: MODEL_REGISTRY code to use for extraction (defaults to CLAUDE_3_5_HAIKU)
         """
-        return self.extraction_model_code or "claude-3-5-haiku-20241022"
+        return self.additional_config.get("extraction_model_code") or "CLAUDE_3_5_HAIKU"
 
 
 __all__ = ["LLMTopic", "ParameterDefinition", "PromptInfo"]

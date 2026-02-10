@@ -40,6 +40,10 @@ class ConversationConfig(BaseModel):
         le=100,
         description="Maximum conversation turns (0 = unlimited)",
     )
+    extraction_model_code: str | None = Field(
+        default=None,
+        description="MODEL_REGISTRY code for extraction (e.g., CLAUDE_3_5_HAIKU). Defaults to CLAUDE_3_5_HAIKU if not specified.",
+    )
 
 
 # Request Models

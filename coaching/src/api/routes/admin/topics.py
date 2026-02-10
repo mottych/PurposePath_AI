@@ -185,6 +185,7 @@ def _map_topic_to_detail(
             inactivity_timeout_minutes=config_data.get("inactivity_timeout_minutes", 30),
             session_ttl_days=config_data.get("session_ttl_days", 14),
             max_turns=int(max_turns_value),
+            extraction_model_code=config_data.get("extraction_model_code"),
         )
 
     return TopicDetail(
