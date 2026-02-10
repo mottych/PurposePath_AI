@@ -48,7 +48,7 @@ Retrieve actions with advanced filtering and pagination.
 | `issueIds` | string (CSV) | No | Comma-separated issue IDs |
 | `startDate` | datetime (ISO 8601) | No | Filter actions starting after this date |
 | `endDate` | datetime (ISO 8601) | No | Filter actions due before this date |
-| `search` | string | No | Case-insensitive search in title, description, tags, and assignee name |
+| `search` | string | No | Case-insensitive search in title, description, and tags |
 | `page` | int | No | Page number (default: 1) |
 | `limit` | int | No | Items per page (default: 50, max: 100) |
 | `sort` | string | No | Sort field: `dueDate`, `startDate`, `priority`, `status`, `createdAt`, `title` |
@@ -786,9 +786,10 @@ await traction.delete(`/operations/actions/${actionId}`);
 ## Changelog
 
 ### v7.2 (February 9, 2026)
-- ✅ Added `search` query parameter to List Actions endpoint for searching title, description, tags, and assignee name
+- ✅ Added `search` query parameter to List Actions endpoint for searching title, description, and tags
 - ✅ Added `startDate` as a sort option (previously supported in backend but not exposed in API)
 - 📝 Enhanced filtering capabilities with case-insensitive substring search
+- 📝 Note: Search by assignee name not supported; use `assignedPersonId` filter to search by specific assignee
 
 ### v7.1 (February 6, 2026)
 - ✅ Added endpoint #9: `PUT /operations/actions/{actionId}/issues` - Link action to issues
