@@ -1,7 +1,7 @@
 # Actions API Specification
 
-**Version:** 7.1  
-**Last Updated:** February 6, 2026  
+**Version:** 7.2  
+**Last Updated:** February 9, 2026  
 **Base Path:** `/operations/actions`  
 **Controller:** `ActionsController.cs`
 
@@ -48,15 +48,16 @@ Retrieve actions with advanced filtering and pagination.
 | `issueIds` | string (CSV) | No | Comma-separated issue IDs |
 | `startDate` | datetime (ISO 8601) | No | Filter actions starting after this date |
 | `endDate` | datetime (ISO 8601) | No | Filter actions due before this date |
+| `search` | string | No | Case-insensitive search in title, description, tags, and assignee name |
 | `page` | int | No | Page number (default: 1) |
 | `limit` | int | No | Items per page (default: 50, max: 100) |
-| `sort` | string | No | Sort field: `dueDate`, `priority`, `status`, `createdAt` |
+| `sort` | string | No | Sort field: `dueDate`, `startDate`, `priority`, `status`, `createdAt`, `title` |
 | `order` | string | No | Sort order: `asc` or `desc` (default: `asc`) |
 
 #### Request Example
 
 ```http
-GET /operations/actions?status=in_progress&priority=high&assignedPersonId=person-123&page=1&limit=20&sort=dueDate&order=asc
+GET /operations/actions?status=in_progress&priority=high&assignedPersonId=person-123&search=pricing&page=1&limit=20&sort=startDate&order=asc
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -783,6 +784,11 @@ await traction.delete(`/operations/actions/${actionId}`);
 ---
 
 ## Changelog
+
+### v7.2 (February 9, 2026)
+- ✅ Added `search` query parameter to List Actions endpoint for searching title, description, tags, and assignee name
+- ✅ Added `startDate` as a sort option (previously supported in backend but not exposed in API)
+- 📝 Enhanced filtering capabilities with case-insensitive substring search
 
 ### v7.1 (February 6, 2026)
 - ✅ Added endpoint #9: `PUT /operations/actions/{actionId}/issues` - Link action to issues
