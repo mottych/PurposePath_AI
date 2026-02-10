@@ -1,13 +1,14 @@
 """Check Bedrock CloudWatch metrics for throttling and latency issues."""
 
+from datetime import UTC, datetime, timedelta
+
 import boto3
-from datetime import datetime, timedelta, timezone
 
 # Initialize CloudWatch client
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-1")
 
 # Time range: last 2 hours
-end_time = datetime.now(timezone.utc)
+end_time = datetime.now(UTC)
 start_time = end_time - timedelta(hours=2)
 
 print(f"Checking Bedrock metrics from {start_time} to {end_time}")
@@ -25,7 +26,7 @@ metrics = [
 for namespace, metric_name, unit in metrics:
     print(f"\n{metric_name} ({unit}):")
     print("-" * 60)
-    
+
     try:
         response = cloudwatch.get_metric_statistics(
             Namespace=namespace,
@@ -33,17 +34,17 @@ for namespace, metric_name, unit in metrics:
             StartTime=start_time,
             EndTime=end_time,
             Period=300,  # 5-minute intervals
-            Statistics=["Sum", "Average", "Maximum"] if metric_name != "InvocationLatency" else ["Average", "Maximum", "Minimum"],
-            Dimensions=[
-                {"Name": "ModelId", "Value": "anthropic.claude-3-5-sonnet-20241022-v2:0"}
-            ],
+            Statistics=["Sum", "Average", "Maximum"]
+            if metric_name != "InvocationLatency"
+            else ["Average", "Maximum", "Minimum"],
+            Dimensions=[{"Name": "ModelId", "Value": "anthropic.claude-3-5-sonnet-20241022-v2:0"}],
         )
-        
+
         datapoints = sorted(response.get("Datapoints", []), key=lambda x: x["Timestamp"])
-        
+
         if not datapoints:
             print("  No data points found for this model")
-            
+
             # Try without model dimension to see if any Bedrock activity exists
             response_all = cloudwatch.get_metric_statistics(
                 Namespace=namespace,
@@ -51,23 +52,29 @@ for namespace, metric_name, unit in metrics:
                 StartTime=start_time,
                 EndTime=end_time,
                 Period=300,
-                Statistics=["Sum", "Average", "Maximum"] if metric_name != "InvocationLatency" else ["Average", "Maximum", "Minimum"],
+                Statistics=["Sum", "Average", "Maximum"]
+                if metric_name != "InvocationLatency"
+                else ["Average", "Maximum", "Minimum"],
             )
-            
+
             if response_all.get("Datapoints"):
                 print("  (But found data for other models/dimensions)")
         else:
             for dp in datapoints:
                 timestamp = dp["Timestamp"].strftime("%H:%M:%S")
                 if metric_name == "InvocationLatency":
-                    print(f"  {timestamp}: Avg={dp.get('Average', 0):.0f}ms, "
-                          f"Max={dp.get('Maximum', 0):.0f}ms, "
-                          f"Min={dp.get('Minimum', 0):.0f}ms")
+                    print(
+                        f"  {timestamp}: Avg={dp.get('Average', 0):.0f}ms, "
+                        f"Max={dp.get('Maximum', 0):.0f}ms, "
+                        f"Min={dp.get('Minimum', 0):.0f}ms"
+                    )
                 else:
-                    print(f"  {timestamp}: Sum={dp.get('Sum', 0):.0f}, "
-                          f"Avg={dp.get('Average', 0):.2f}, "
-                          f"Max={dp.get('Maximum', 0):.0f}")
-                    
+                    print(
+                        f"  {timestamp}: Sum={dp.get('Sum', 0):.0f}, "
+                        f"Avg={dp.get('Average', 0):.2f}, "
+                        f"Max={dp.get('Maximum', 0):.0f}"
+                    )
+
     except Exception as e:
         print(f"  Error: {e}")
 
@@ -79,7 +86,7 @@ print("=" * 80)
 for namespace, metric_name, unit in metrics:
     print(f"\n{metric_name} ({unit}):")
     print("-" * 60)
-    
+
     try:
         # Check us. inference profile
         response = cloudwatch.get_metric_statistics(
@@ -88,26 +95,31 @@ for namespace, metric_name, unit in metrics:
             StartTime=start_time,
             EndTime=end_time,
             Period=300,
-            Statistics=["Sum", "Average", "Maximum"] if metric_name != "InvocationLatency" else ["Average", "Maximum", "Minimum"],
+            Statistics=["Sum", "Average", "Maximum"]
+            if metric_name != "InvocationLatency"
+            else ["Average", "Maximum", "Minimum"],
             Dimensions=[
                 {"Name": "ModelId", "Value": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"}
             ],
         )
-        
+
         datapoints = sorted(response.get("Datapoints", []), key=lambda x: x["Timestamp"])
-        
+
         if not datapoints:
             print("  No data points found")
         else:
             for dp in datapoints:
                 timestamp = dp["Timestamp"].strftime("%H:%M:%S")
                 if metric_name == "InvocationLatency":
-                    print(f"  {timestamp}: Avg={dp.get('Average', 0):.0f}ms, "
-                          f"Max={dp.get('Maximum', 0):.0f}ms")
+                    print(
+                        f"  {timestamp}: Avg={dp.get('Average', 0):.0f}ms, "
+                        f"Max={dp.get('Maximum', 0):.0f}ms"
+                    )
                 else:
-                    print(f"  {timestamp}: Sum={dp.get('Sum', 0):.0f}, "
-                          f"Max={dp.get('Maximum', 0):.0f}")
-                    
+                    print(
+                        f"  {timestamp}: Sum={dp.get('Sum', 0):.0f}, Max={dp.get('Maximum', 0):.0f}"
+                    )
+
     except Exception as e:
         print(f"  Error: {e}")
 

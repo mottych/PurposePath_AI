@@ -1,12 +1,13 @@
 """Search for actual 503 timeout responses in recent logs."""
 
+from datetime import UTC, datetime, timedelta
+
 import boto3
-from datetime import datetime, timedelta, timezone
 
 logs_client = boto3.client("logs", region_name="us-east-1")
 
 # Time range: last 4 hours
-end_time = datetime.now(timezone.utc)
+end_time = datetime.now(UTC)
 start_time = end_time - timedelta(hours=4)
 
 # Convert to milliseconds
@@ -21,7 +22,7 @@ log_groups = [
 print(f"Searching for 503 errors from {start_time} to {end_time}")
 print("=" * 80)
 
-# Search for 503 responses or timeout errors  
+# Search for 503 responses or timeout errors
 query = """
 fields @timestamp, @message, @requestId
 | filter @message like /503/ or @message like /Task timed out/ or @message like /timeout/ or @message like /gateway/
@@ -33,7 +34,7 @@ found_503s = []
 
 for log_group in log_groups:
     print(f"\nSearching {log_group}...")
-    
+
     try:
         # Start query
         response = logs_client.start_query(
@@ -42,11 +43,12 @@ for log_group in log_groups:
             endTime=end_ms,
             queryString=query,
         )
-        
+
         query_id = response["queryId"]
-        
+
         # Wait for query to complete
         import time
+
         status = "Running"
         retries = 0
         while status == "Running" and retries < 15:
@@ -54,34 +56,32 @@ for log_group in log_groups:
             result = logs_client.get_query_results(queryId=query_id)
             status = result["status"]
             retries += 1
-        
+
         if status != "Complete":
             print(f"  Query failed: {status}")
             continue
-            
+
         results = result.get("results", [])
         print(f"  Found {len(results)} log entries")
-        
+
         if results:
             for entry in results[:10]:  # Show first 10
                 message_field = next((f for f in entry if f["field"] == "@message"), None)
                 timestamp_field = next((f for f in entry if f["field"] == "@timestamp"), None)
                 request_id_field = next((f for f in entry if f["field"] == "@requestId"), None)
-                
+
                 if message_field and timestamp_field:
-                    timestamp = timestamp_field['value']
-                    message = message_field['value']
-                    request_id = request_id_field['value'] if request_id_field else "N/A"
-                    
+                    timestamp = timestamp_field["value"]
+                    message = message_field["value"]
+                    request_id = request_id_field["value"] if request_id_field else "N/A"
+
                     print(f"\n  [{timestamp}] Request: {request_id}")
                     print(f"    {message[:300]}")
-                    
-                    found_503s.append({
-                        "timestamp": timestamp,
-                        "request_id": request_id,
-                        "message": message
-                    })
-                    
+
+                    found_503s.append(
+                        {"timestamp": timestamp, "request_id": request_id, "message": message}
+                    )
+
     except Exception as e:
         print(f"  Error: {e}")
 

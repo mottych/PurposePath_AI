@@ -1,12 +1,13 @@
 """Search for ModelNotFoundError or CLAUDE_3_5_HAIKU errors in logs."""
 
+from datetime import UTC, datetime, timedelta
+
 import boto3
-from datetime import datetime, timedelta, timezone
 
 logs_client = boto3.client("logs", region_name="us-east-1")
 
 # Time range: last 4 hours
-end_time = datetime.now(timezone.utc)
+end_time = datetime.now(UTC)
 start_time = end_time - timedelta(hours=4)
 
 # Convert to milliseconds
@@ -23,30 +24,39 @@ print("=" * 80)
 
 # Search for model-related errors
 queries = [
-    ("ModelNotFoundError", """
+    (
+        "ModelNotFoundError",
+        """
 fields @timestamp, @message
 | filter @message like /ModelNotFoundError|Model not found/
 | sort @timestamp desc
 | limit 20
-"""),
-    ("CLAUDE_3_5_HAIKU errors", """
+""",
+    ),
+    (
+        "CLAUDE_3_5_HAIKU errors",
+        """
 fields @timestamp, @message
 | filter @message like /CLAUDE_3_5_HAIKU|extraction_model_code/
 | sort @timestamp desc
 | limit 20
-"""),
-    ("Provider errors", """
+""",
+    ),
+    (
+        "Provider errors",
+        """
 fields @timestamp, @message
 | filter @message like /ProviderNotConfiguredError|provider.*failed/
 | sort @timestamp desc
 | limit 20
-"""),
+""",
+    ),
 ]
 
 for query_name, query in queries:
     print(f"\n{query_name}:")
     print("-" * 60)
-    
+
     for log_group in log_groups:
         try:
             # Start query
@@ -56,11 +66,12 @@ for query_name, query in queries:
                 endTime=end_ms,
                 queryString=query,
             )
-            
+
             query_id = response["queryId"]
-            
+
             # Wait for query to complete
             import time
+
             status = "Running"
             retries = 0
             while status == "Running" and retries < 10:
@@ -68,16 +79,16 @@ for query_name, query in queries:
                 result = logs_client.get_query_results(queryId=query_id)
                 status = result["status"]
                 retries += 1
-            
+
             if status != "Complete":
                 print(f"  {log_group}: Query timed out or failed")
                 continue
-                
+
             results = result.get("results", [])
-            
+
             if not results:
                 continue
-                
+
             print(f"  {log_group}: Found {len(results)} matches")
             for entry in results[:5]:  # Show first 5
                 message_field = next((f for f in entry if f["field"] == "@message"), None)
@@ -85,7 +96,7 @@ for query_name, query in queries:
                 if message_field and timestamp_field:
                     print(f"    {timestamp_field['value']}")
                     print(f"      {message_field['value'][:200]}")
-                    
+
         except Exception as e:
             print(f"  {log_group}: Error - {e}")
 

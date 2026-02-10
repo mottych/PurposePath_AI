@@ -1,12 +1,13 @@
 """Get raw log samples to see actual log format."""
 
+from datetime import UTC, datetime, timedelta
+
 import boto3
-from datetime import datetime, timedelta, timezone
 
 logs_client = boto3.client("logs", region_name="us-east-1")
 
 # Time range: last 4 hours
-end_time = datetime.now(timezone.utc)
+end_time = datetime.now(UTC)
 start_time = end_time - timedelta(hours=4)
 
 # Convert to milliseconds
@@ -33,11 +34,12 @@ try:
         endTime=end_ms,
         queryString=query,
     )
-    
+
     query_id = response["queryId"]
-    
+
     # Wait for query to complete
     import time
+
     status = "Running"
     retries = 0
     while status == "Running" and retries < 15:
@@ -45,21 +47,21 @@ try:
         result = logs_client.get_query_results(queryId=query_id)
         status = result["status"]
         retries += 1
-    
+
     if status != "Complete":
         print(f"Query failed: {status}")
     else:
         results = result.get("results", [])
         print(f"Found {len(results)} log entries\n")
-        
+
         for i, entry in enumerate(results):
             message_field = next((f for f in entry if f["field"] == "@message"), None)
             timestamp_field = next((f for f in entry if f["field"] == "@timestamp"), None)
-            
+
             if message_field and timestamp_field:
-                print(f"[{i+1}] {timestamp_field['value']}")
-                print(message_field['value'])
+                print(f"[{i + 1}] {timestamp_field['value']}")
+                print(message_field["value"])
                 print("-" * 60)
-                
+
 except Exception as e:
     print(f"Error: {e}")
