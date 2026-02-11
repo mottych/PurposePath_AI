@@ -76,10 +76,10 @@ aws dynamodb list-tables --output table
 
 ## 6) Pulumi Stack Readiness
 
-Production deploy workflow currently targets stack name `prod`.
+Production deploy workflow targets stack name `prod` for both projects.
 
 - [ ] `coaching/pulumi` has stack `prod`
-- [ ] If infrastructure is managed separately, production infra stack is deployed and stable
+- [ ] `infrastructure/pulumi` has stack `prod`
 
 Quick checks:
 
