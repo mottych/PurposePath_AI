@@ -278,15 +278,21 @@ aws.iam.RolePolicy(
     ),
 )
 
-# Create ECR repository
-ecr_repo = aws.ecr.Repository(
-    "coaching-repo",
-    name="purposepath-coaching",
-    image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
-        scan_on_push=True
-    ),
-    force_delete=True,
-)
+# Reuse shared ECR repository when it already exists.
+# This avoids cross-stack repository creation conflicts in production.
+try:
+    existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
+    ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
+except Exception:
+    ecr_repo = aws.ecr.Repository(
+        "coaching-repo",
+        name="purposepath-coaching",
+        image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
+            scan_on_push=True
+        ),
+        force_delete=True,
+    )
+    ecr_repository_url = ecr_repo.repository_url
 
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()
@@ -304,9 +310,9 @@ image = docker.Image(
             "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
         },
     ),
-    image_name=pulumi.Output.concat(ecr_repo.repository_url, ":", stack),
+    image_name=pulumi.Output.concat(ecr_repository_url, ":", stack),
     registry=docker.RegistryArgs(
-        server=ecr_repo.repository_url, username=auth_token.user_name, password=auth_token.password
+        server=ecr_repository_url, username=auth_token.user_name, password=auth_token.password
     ),
     skip_push=False,
 )
