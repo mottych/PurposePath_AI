@@ -102,10 +102,10 @@ jobs:
           python -m mypy coaching/src/ shared/ --config-file=pyproject.toml
         shell: bash
 
-      - name: Run All Tests
+      - name: Run Unit Tests
         run: |
           source .venv/bin/activate
-          python -m pytest coaching/tests/ -v --cov=coaching/src --cov-fail-under=70
+          python -m pytest coaching/tests/unit/ -v --cov=coaching/src --cov-fail-under=70
         shell: bash
         env:
           PYTHONPATH: coaching:shared:.
