@@ -1,13 +1,54 @@
 # Async Coaching Message Events - Frontend Integration Specification
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Date**: February 10, 2026  
 **Related Issue**: #222  
 **Target Audience**: Frontend Developers, .NET Backend Team
 
 ## Overview
 
-This specification defines the async pattern for coaching conversation messages. Messages are processed asynchronously (5s - 5min) to avoid API Gateway 30s timeout, with complete responses delivered via WebSocket.
+This specification defines the complete async pattern for coaching conversation messages, including HTTP APIs, WebSocket events, error handling, and polling fallback. Messages are processed asynchronously (5s - 5min) to avoid API Gateway 30s timeout.
+
+**Single Source of Truth**: This document contains all contracts needed for frontend implementation.
+
+## Field Naming Conventions
+
+### HTTP Responses (FastAPI - snake_case)
+
+All HTTP request/response bodies use **`snake_case`**:
+
+- `job_id`, `session_id`, `is_final`, `max_turns`, `message_count`, `error_code`, `processing_time_ms`, `estimated_duration_ms`
+
+**Example**:
+```json
+{
+  "job_id": "uuid",
+  "is_final": false,
+  "max_turns": 10
+}
+```
+
+### WebSocket Payloads (EventBridge - camelCase)
+
+All WebSocket event payloads use **`camelCase`**:
+
+- `jobId`, `sessionId`, `isFinal`, `maxTurns`, `messageCount`, `errorCode`, `eventType`
+
+**Example**:
+```json
+{
+  "jobId": "uuid",
+  "isFinal": false,
+  "maxTurns": 10
+}
+```
+
+### Summary
+
+| Transport | Casing | Fields |
+|-----------|--------|--------|
+| **HTTP (POST/GET)** | `snake_case` | `job_id`, `is_final`, `error_code` |
+| **WebSocket Events** | `camelCase` | `jobId`, `isFinal`, `errorCode` |
 
 ### Why Async Pattern?
 
@@ -50,25 +91,32 @@ This specification defines the async pattern for coaching conversation messages.
      │                                               │
 ```
 
-## API Changes
+## API Contracts
 
 ### POST /ai/coaching/message
 
-**Request** (unchanged):
+**Endpoint**:
+```
+POST /ai/coaching/message
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request**:
 ```json
 {
-  "session_id": "uuid",
-  "message": "User's message content"
+  "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "message": "I value integrity and transparency"
 }
 ```
 
-**Response** (NEW - now returns 202 Accepted):
+**Success Response - 202 Accepted** (ALWAYS):
 ```json
 {
   "success": true,
   "data": {
-    "job_id": "uuid",
-    "session_id": "uuid",
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "status": "pending",
     "estimated_duration_ms": 45000
   },
@@ -76,53 +124,230 @@ This specification defines the async pattern for coaching conversation messages.
 }
 ```
 
-**Status Code**: `202 Accepted` (was `200 OK`)
+**Important**: This endpoint **ALWAYS returns 202 Accepted**. It never returns 200 with the assistant message.
 
-**Response Fields**:
+**Error Responses**:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `job_id` | string (UUID) | Unique job identifier for tracking this message |
-| `session_id` | string (UUID) | Coaching session ID (echo from request) |
-| `status` | string | Always "pending" on creation |
-| `estimated_duration_ms` | number | Rough estimate: 45000ms (45s average) |
+| HTTP Status | Error Code | Scenario | Retryable |
+|-------------|-----------|----------|-----------|
+| 422 | `JOB_VALIDATION_ERROR` | Empty message | No |
+| 422 | `SESSION_NOT_FOUND` | Session doesn't exist | No |
+| 400 | `SESSION_NOT_ACTIVE` | Session paused/completed/cancelled | No |
+| 403 | `SESSION_ACCESS_DENIED` | User doesn't own session | No |
+| 422 | `MAX_TURNS_REACHED` | Hit conversation limit | No |
+| 410 | `SESSION_IDLE_TIMEOUT` | Session expired from inactivity | No |
+| 500 | `INTERNAL_ERROR` | Server error | Yes (after 30s) |
+
+**Example Error**:
+```json
+{
+  "detail": {
+    "code": "SESSION_NOT_ACTIVE",
+    "message": "Session is not active (status: completed)"
+  }
+}
+```
+
+#### One Message In-Flight Policy
+
+⚠️ **CRITICAL**: Backend does NOT enforce "one message per session in-flight".
+
+**Frontend MUST implement client-side**:
+1. Track pending `job_id` per session (localStorage)
+2. Disable send button while job pending
+3. Only enable after `ai.message.completed` or `ai.message.failed`
+4. On page reload: check localStorage for pending job → start polling
+
+**Future**: Backend may add `SESSION_BUSY` (409 Conflict) validation.
 
 ### GET /ai/coaching/message/{job_id}
 
-**NEW** polling endpoint for systems without WebSocket support.
+**Endpoint** (polling fallback):
+```
+GET /ai/coaching/message/{job_id}
+Authorization: Bearer <jwt_token>
+```
 
-**Response** (while processing):
+**Use Case**: Fallback when WebSocket unavailable or for debugging.
+
+#### State: pending
+
 ```json
 {
   "success": true,
   "data": {
-    "job_id": "uuid",
-    "session_id": "uuid",
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "status": "pending",
+    "message": null,
+    "is_final": null,
+    "result": null,
+    "error": null,
+    "processing_time_ms": null
+  },
+  "message": "Job status: pending"
+}
+```
+
+#### State: processing
+
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "status": "processing",
     "message": null,
-    "isFinal": null,
-    "result": null
-  }
+    "is_final": null,
+    "result": null,
+    "error": null,
+    "processing_time_ms": null
+  },
+  "message": "Job status: processing"
 }
 ```
 
-**Response** (completed):
+#### State: completed (non-final turn)
+
 ```json
 {
   "success": true,
   "data": {
-    "job_id": "uuid",
-    "session_id": "uuid",
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "status": "completed",
-    "message": "Complete AI coach response here...",
-    "isFinal": false,
+    "message": "That's wonderful! Integrity shows up in how you communicate transparently with your team...",
+    "is_final": false,
     "result": null,
-    "processing_time_ms": 12500
+    "error": null,
+    "processing_time_ms": 12450
+  },
+  "message": "Job status: completed"
+}
+```
+
+⚠️ **Note**: `turn`, `max_turns`, and `message_count` are **NOT included** in polling response (WebSocket only).
+
+#### State: completed (final turn with extraction)
+
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "status": "completed",
+    "message": "Thank you for this wonderful conversation! Here are your three core values...",
+    "is_final": true,
+    "result": {
+      "identified_values": [
+        "Integrity: Transparent communication",
+        "Growth: Continuous learning",
+        "Innovation: Creative problem-solving"
+      ],
+      "extraction_type": "core_values",
+      "confidence_score": 0.95,
+      "metadata": {
+        "model_used": "claude-3-5-haiku",
+        "extraction_success": true
+      }
+    },
+    "error": null,
+    "processing_time_ms": 18720
+  },
+  "message": "Job status: completed"
+}
+```
+
+#### State: failed
+
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "status": "failed",
+    "message": null,
+    "is_final": null,
+    "result": null,
+    "error": "Session not found: f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "processing_time_ms": 2100
+  },
+  "message": "Job status: failed"
+}
+```
+
+#### Job Not Found (after 24hr TTL)
+
+**Status**: `404 Not Found`
+
+```json
+{
+  "detail": {
+    "code": "JOB_NOT_FOUND",
+    "message": "Message job not found: {job_id}"
   }
 }
 ```
 
-**Status Values**: `pending`, `processing`, `completed`, `failed`
+---
+
+## Completion & Extraction Semantics
+
+### When is_final = true with result = null?
+
+**Possible**: `is_final` can be `true` with `result` being `null` or containing error fields.
+
+#### Scenario 1: Extraction Parsing Failed
+
+Event still sends as `ai.message.completed` (NOT `ai.message.failed`):
+
+```json
+{
+  "eventType": "ai.message.completed",
+  "jobId": "uuid",
+  "data": {
+    "message": "Thank you for sharing your values...",
+    "isFinal": true,
+    "result": {
+      "parse_error": "Expecting value: line 1 column 1 (char 0)",
+      "raw_response": "Here are the values:\n- Integrity\n- Growth\n- Innovation"
+    }
+  }
+}
+```
+
+**Frontend Action**:
+- Check if `result.parse_error` or `result.validation_error` exists
+- Show completion UI with warning: "We had trouble extracting your responses. Please review manually."
+
+#### Scenario 2: Extraction Model Not Configured
+
+```json
+{
+  "isFinal": true,
+  "result": {}  // Empty object
+}
+```
+
+**Frontend Action**: Show completion message without extraction results.
+
+### When does ai.message.failed occur?
+
+Only for **execution failures before message generation**:
+
+- `SESSION_NOT_FOUND`
+- `SESSION_ACCESS_DENIED`
+- `SESSION_NOT_ACTIVE`
+- `SESSION_IDLE_TIMEOUT`
+- `MAX_TURNS_REACHED`
+- `LLM_TIMEOUT`
+- `LLM_ERROR`
+- `INTERNAL_ERROR`
+
+**NOT for extraction failures** - those still return `ai.message.completed` with error fields in `result`.
 
 ## WebSocket Events
 
@@ -237,19 +462,57 @@ This specification defines the async pattern for coaching conversation messages.
 
 ## Error Codes
 
-Frontend should handle these error codes for user-friendly messaging:
+Complete error catalog with user messaging and retryability:
 
-| Error Code | User Message | Action |
-|-----------|--------------|--------|
-| `SESSION_NOT_FOUND` | "Session not found. Please start a new conversation." | Clear session, show start button |
-| `SESSION_ACCESS_DENIED` | "You don't have access to this session." | Redirect to home |
-| `SESSION_NOT_ACTIVE` | "This session is no longer active." | Show resume or restart options |
-| `SESSION_IDLE_TIMEOUT` | "Session expired due to inactivity." | Show restart button |
-| `MAX_TURNS_REACHED` | "Conversation limit reached." | Show completion message |
-| `LLM_TIMEOUT` | "AI response took too long. Please try again." | Show retry button |
-| `LLM_ERROR` | "AI service error. Please try again." | Show retry button |
-| `EXTRACTION_FAILED` | "Unable to process final results." | Show manual completion option |
-| `INTERNAL_ERROR` | "Something went wrong. Please try again." | Show retry button |
+| Error Code | User Message | Retryable | Action |
+|-----------|--------------|-----------|--------|
+| `SESSION_NOT_FOUND` | "Session not found. Please start a new conversation." | No | Clear session, show start button |
+| `SESSION_ACCESS_DENIED` | "You don't have access to this session." | No | Redirect to home |
+| `SESSION_NOT_ACTIVE` | "This session is no longer active." | No | Show resume or restart options |
+| `SESSION_IDLE_TIMEOUT` | "Session expired due to inactivity." | No | Show restart button |
+| `MAX_TURNS_REACHED` | "Conversation limit reached." | No | Show completion message |
+| `JOB_VALIDATION_ERROR` | "Invalid request. Please try again." | No | Log error, show generic message |
+| `PARAMETER_VALIDATION` | "Invalid parameters. Please try again." | No | Log error, show generic message |
+| `LLM_TIMEOUT` | "AI response took too long. Please try again." | Yes | Show retry button (immediate) |
+| `LLM_ERROR` | "AI service error. Please try again." | Yes | Show retry button (wait 10s) |
+| `INTERNAL_ERROR` | "Something went wrong. Please try again." | Yes | Show retry button (wait 30s) |
+
+**Note**: `EXTRACTION_FAILED` does NOT appear in `ai.message.failed` events. Extraction failures return `ai.message.completed` with error fields in `result`.
+
+### Retry Strategy
+
+```typescript
+const getRetryDelay = (errorCode: string): number => {
+  switch (errorCode) {
+    case 'LLM_TIMEOUT':
+      return 0;  // Retry immediately
+    case 'LLM_ERROR':
+      return 10000;  // Wait 10 seconds
+    case 'INTERNAL_ERROR':
+      return 30000;  // Wait 30 seconds
+    default:
+      return -1;  // Not retryable
+  }
+};
+
+const handleError = (event: MessageFailedEvent, retryAttempt: number) => {
+  const delay = getRetryDelay(event.data.errorCode);
+  
+  if (delay < 0 || retryAttempt >= 3) {
+    // Show non-retryable error or max retries reached
+    showError(getUserMessage(event.data.errorCode));
+    return;
+  }
+  
+  // Show retryable error with countdown
+  showRetryableError(getUserMessage(event.data.errorCode), delay / 1000);
+  
+  setTimeout(() => {
+    // Retry sending the message
+    retryMessage(sessionId, originalMessage, retryAttempt + 1);
+  }, delay);
+};
+```
 
 ## Frontend Implementation
 
@@ -643,6 +906,128 @@ User          Frontend        API Gateway     Lambda          EventBridge     We
  |<-- Error UI ---|               |              |                 |              |
 ```
 
+---
+
+## Implementation Guidelines
+
+### Event Ordering & Deduplication
+
+**Ordering Guarantees**:
+- Events for the **same `jobId`** are delivered in order
+- Events across different jobs have no ordering guarantee
+- Sequence: `ai.message.created` (internal) → `ai.message.completed` OR `ai.message.failed` (never both)
+
+**Deduplication**:
+- EventBridge may deliver duplicate events (rare, but possible)
+- **Frontend must handle idempotently**: Check if `jobId` already processed before updating UI
+- **One terminal event per job**: Either `completed` OR `failed`, never both
+
+**Routing**:
+- Route by `jobId` ONLY (not sessionId)
+- Multiple pending jobs per session are possible (since backend doesn't enforce one-in-flight)
+
+```typescript
+const processedJobs = new Set<string>();
+
+const handleWebSocketEvent = (event: MessageCompletedEvent | MessageFailedEvent) => {
+  // Deduplication check
+  if (processedJobs.has(event.jobId)) {
+    console.warn('Duplicate event for job:', event.jobId);
+    return;
+  }
+  
+  processedJobs.add(event.jobId);
+  
+  // Process event...
+};
+```
+
+### Retention & TTL
+
+**Job Retention**: 24 hours from creation
+
+After 24 hours:
+- `GET /message/{job_id}` returns `404 JOB_NOT_FOUND`
+- Jobs automatically deleted from DynamoDB
+- Frontend should not store `job_id` beyond 24 hours
+
+**Session Retention**: No automatic expiration
+
+- Paused sessions never expire automatically
+- Idle timeout only marks session inactive (doesn't delete)
+- Sessions persist until explicitly completed or cancelled
+
+**Recommendation**: Clear `job_id` from localStorage after receiving terminal event.
+
+### Polling Strategy
+
+**When to use**:
+- Primary: WebSocket event delivery
+- Fallback: Polling when WebSocket disconnected or safety timeout exceeded
+
+**Recommended polling**:
+
+```typescript
+const pollMessageStatus = async (jobId: string) => {
+  const POLL_INTERVAL = 5000;  // 5 seconds
+  const MAX_DURATION = 300000;  // 5 minutes
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < MAX_DURATION) {
+    try {
+      const response = await fetch(`/ai/coaching/message/${jobId}`);
+      const data = await response.json();
+      
+      if (data.data.status === 'completed') {
+        handleCompleted(data.data);
+        return;
+      }
+      
+      if (data.data.status === 'failed') {
+        handleFailed(data.data);
+        return;
+      }
+      
+      // Still processing, wait before next poll
+      await sleep(POLL_INTERVAL);
+      
+    } catch (error) {
+      console.error('Polling error:', error);
+      await sleep(POLL_INTERVAL);
+    }
+  }
+  
+  // Timeout after 5 minutes
+  showError('Request timed out. Please try again.');
+};
+```
+
+**Safety timeout for WebSocket**:
+
+```typescript
+// Start polling if no WebSocket event received after 90s
+const safetyTimeout = setTimeout(() => {
+  if (jobStillPending) {
+    console.warn('No WebSocket event after 90s, starting polling...');
+    startPolling(jobId);
+  }
+}, 90000);
+
+// Cancel timeout when WebSocket event arrives
+websocket.addEventListener('message', (event) => {
+  clearTimeout(safetyTimeout);
+  // process event...
+});
+```
+
+**Key Points**:
+- Interval: 5 seconds (balance between latency and server load)
+- Max duration: 5 minutes (matches Lambda timeout)
+- Always prefer WebSocket over polling
+- Use polling as fallback only
+
+---
+
 ## Frequently Asked Questions
 
 ### Q: What if WebSocket connection is lost?
@@ -739,7 +1124,46 @@ if (estimated_duration_ms > 30000) {
 
 ---
 
+## Quick Reference Checklist
+
+✅ HTTP responses use `snake_case` (job_id, is_final, max_turns)  
+✅ WebSocket payloads use `camelCase` (jobId, isFinal, maxTurns)  
+✅ POST /message **always** returns `202` (never `200`)  
+✅ Frontend enforces one message in-flight (backend doesn't validate)  
+✅ Route WebSocket events by `jobId` only (not sessionId)  
+✅ Handle duplicate events idempotently (check processedJobs Set)  
+✅ Extraction failures return `ai.message.completed` with error fields (NOT `ai.message.failed`)  
+✅ Poll only as fallback (5s interval, 5min max, prefer WebSocket)  
+✅ Job TTL is 24 hours  
+✅ Paused sessions don't expire automatically  
+✅ Retry failed jobs with delays: LLM_TIMEOUT (0s), LLM_ERROR (10s), INTERNAL_ERROR (30s)  
+✅ Use 90s WebSocket safety timeout before starting polling
+
+---
+
 ## Changelog
+
+### Version 1.3.0 (2026-02-10)
+
+- **Single Source of Truth Consolidation**
+- Consolidated `FRONTEND_API_CONTRACT.md` into this specification
+- Added **Field Naming Conventions** section (HTTP=snake_case, WebSocket=camelCase)
+- **Complete API Contracts** with error scenarios:
+  - POST `/message`: All 7 error types with HTTP status codes
+  - GET `/message/{job_id}`: All 4 job states with JSON examples
+  - Added ⚠️ one-message-in-flight policy clarification (backend doesn't enforce)
+- **Enhanced Completion Semantics** section:
+  - Extraction failures documented (return `completed` with error fields, NOT `failed`)
+  - Added JSON examples for success vs. extraction failure
+- **Error Catalog** with retryability details:
+  - Added `Retryable` column to error table
+  - Added retry strategy with TypeScript implementation example
+  - Specified retry delays: LLM_TIMEOUT (0s), LLM_ERROR (10s), INTERNAL_ERROR (30s)
+- **Implementation Guidelines** section:
+  - Event ordering & deduplication (idempotent handling)
+  - Retention & TTL (24hr jobs, paused sessions never expire)
+  - Polling strategy (5s interval, 5min max, WebSocket-first with safety timeout)
+- Removed duplicate documentation to maintain clarity
 
 ### Version 1.2.0 (2026-02-10)
 
