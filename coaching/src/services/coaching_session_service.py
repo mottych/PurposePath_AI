@@ -243,7 +243,7 @@ class CoachingSessionService:
         session_repository: CoachingSessionRepositoryPort,
         topic_repository: TopicRepository,
         s3_prompt_storage: S3PromptStorage,
-        template_processor: TemplateParameterProcessor,
+        template_processor: TemplateParameterProcessor | None,
         provider_factory: LLMProviderFactory,
     ) -> None:
         """Initialize the coaching session service.
@@ -252,7 +252,7 @@ class CoachingSessionService:
             session_repository: Repository for session persistence
             topic_repository: Repository for LLMTopic config from DynamoDB
             s3_prompt_storage: Storage for loading templates from S3
-            template_processor: Processor for resolving parameters (required)
+            template_processor: Processor for resolving parameters (None in worker mode)
             provider_factory: Factory for LLM provider/model resolution
         """
         self.session_repository = session_repository
@@ -535,6 +535,9 @@ class CoachingSessionService:
 
         # Resolve parameters using template processor
         # Scan BOTH templates for parameters (they may have different placeholders)
+        if self.template_processor is None:
+            raise RuntimeError("template_processor required for session initiation")
+
         required_params = {ref.name for ref in endpoint_def.parameter_refs if ref.required}
         combined_template = system_template + "\n\n" + initiation_template
 
@@ -972,6 +975,10 @@ class CoachingSessionService:
         await self.session_repository.update(session)
 
         # If final, trigger completion and return result
+        # Optimized to complete within API Gateway's 30s timeout:
+        # - Conversation: Claude Sonnet ~8-12s
+        # - Extraction: Claude Haiku ~3-5s
+        # - Total: ~15-20s (well under 30s limit)
         if is_final:
             logger.info(
                 "coaching_service.auto_completion_triggered",
@@ -1226,6 +1233,16 @@ class CoachingSessionService:
         full_prompt = f"{extraction_prompt}\n\n## Conversation\n{conversation_text}"
 
         # Execute extraction LLM call (lower temperature)
+        # Use extraction_model_code (defaults to Haiku) - it's 3-5x faster than Sonnet
+        # This optimization reduces extraction time from 15-20s to 3-5s, keeping total time under API Gateway's 30s limit
+        from copy import copy
+
+        extraction_topic = copy(llm_topic)
+        # Use configured extraction model (defaults to Haiku for speed/cost optimization)
+        extraction_model = llm_topic.get_extraction_model_code()
+        extraction_topic.basic_model_code = extraction_model
+        extraction_topic.premium_model_code = extraction_model
+
         messages = [
             {
                 "role": "system",
@@ -1237,7 +1254,7 @@ class CoachingSessionService:
 
         llm_response, _ = await self._execute_llm_call(
             messages=messages,
-            llm_topic=llm_topic,
+            llm_topic=extraction_topic,
             temperature_override=0.3,
         )
 

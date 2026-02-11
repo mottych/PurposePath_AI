@@ -1,11 +1,11 @@
 name: CI/CD Pipeline
 
 on:
-  # Only trigger on push to dev/main (after PR merge)
+  # Only trigger on push to dev/master (after PR merge)
   push:
     branches:
       - dev
-      - main
+      - master
     paths:
       - 'coaching/**/*.py'
       - 'shared/**/*.py'

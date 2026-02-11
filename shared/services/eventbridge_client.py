@@ -294,6 +294,137 @@ class EventBridgePublisher:
         )
         return self.publish(event)
 
+    # Coaching Message Events (async conversation)
+
+    def publish_ai_message_created(
+        self,
+        job_id: str,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+        topic_id: str,
+        user_message: str,
+    ) -> str:
+        """Publish ai.message.created event to trigger async message processing.
+
+        This event is consumed by the worker Lambda to process the coaching
+        message asynchronously, avoiding API Gateway 30s timeout.
+
+        Args:
+            job_id: Unique job identifier
+            session_id: Coaching session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            topic_id: AI topic (coaching configuration)
+            user_message: The user's message content
+
+        Returns:
+            EventBridge event ID
+        """
+        event = DomainEvent(
+            event_type="ai.message.created",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            data={
+                "jobId": job_id,
+                "sessionId": session_id,
+                "topicId": topic_id,
+                "userMessage": user_message,
+            },
+        )
+        return self.publish(event)
+
+    def publish_ai_message_completed(
+        self,
+        job_id: str,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+        topic_id: str,
+        message: str,
+        is_final: bool,
+        turn: int,
+        max_turns: int,
+        message_count: int,
+        result: dict[str, Any] | None = None,
+    ) -> str:
+        """Publish ai.message.completed event with the complete AI response.
+
+        Sends the complete response (no token streaming) to avoid DB lookup
+        overhead on WebSocket service. Frontend receives full message at once.
+
+        Args:
+            job_id: Unique job identifier
+            session_id: Coaching session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            topic_id: AI topic that was executed
+            message: The complete AI response message
+            is_final: Whether this is the final message in conversation
+            turn: Current turn number (1-indexed)
+            max_turns: Maximum turns allowed (0 = unlimited)
+            message_count: Total messages in conversation
+            result: Extraction result if is_final is True
+
+        Returns:
+            EventBridge event ID
+        """
+        event = DomainEvent(
+            event_type="ai.message.completed",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            data={
+                "jobId": job_id,
+                "sessionId": session_id,
+                "topicId": topic_id,
+                "message": message,
+                "isFinal": is_final,
+                "turn": turn,
+                "maxTurns": max_turns,
+                "messageCount": message_count,
+                "result": result,
+            },
+        )
+        return self.publish(event)
+
+    def publish_ai_message_failed(
+        self,
+        job_id: str,
+        session_id: str,
+        tenant_id: str,
+        user_id: str,
+        topic_id: str,
+        error: str,
+        error_code: str,
+    ) -> str:
+        """Publish ai.message.failed event.
+
+        Args:
+            job_id: Unique job identifier
+            session_id: Coaching session identifier
+            tenant_id: Tenant identifier
+            user_id: User identifier
+            topic_id: AI topic that failed
+            error: Error message
+            error_code: Error code for categorization
+
+        Returns:
+            EventBridge event ID
+        """
+        event = DomainEvent(
+            event_type="ai.message.failed",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            data={
+                "jobId": job_id,
+                "sessionId": session_id,
+                "topicId": topic_id,
+                "error": error,
+                "errorCode": error_code,
+            },
+        )
+        return self.publish(event)
+
 
 class EventBridgePublishError(Exception):
     """Exception raised when EventBridge publishing fails."""

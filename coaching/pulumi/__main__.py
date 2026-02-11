@@ -375,18 +375,21 @@ aws.lambda_.Permission(
     source_arn=api.execution_arn.apply(lambda arn: f"{arn}/*/*"),
 )
 
-# EventBridge rule to trigger job execution on ai.job.created events
+# EventBridge rule to trigger async job execution
 # This enables reliable async execution by triggering a new Lambda invocation
 # instead of using in-process asyncio.create_task() which doesn't survive handler completion
+# Handles:
+# - ai.job.created: Single-shot AI jobs (purpose discovery, goal setting, etc.)
+# - ai.message.created: Coaching conversation messages (async to avoid 30s timeout)
 ai_job_executor_rule = aws.cloudwatch.EventRule(
     "ai-job-executor-rule",
     name=f"ai-job-executor-{stack}",
-    description="Triggers AI job execution when ai.job.created events are published",
+    description="Triggers async job execution for AI jobs and coaching messages",
     event_bus_name="default",
     event_pattern=json.dumps(
         {
             "source": ["purposepath.ai"],
-            "detail-type": ["ai.job.created"],
+            "detail-type": ["ai.job.created", "ai.message.created"],
             "detail": {
                 "stage": [stack]  # Filter by environment to prevent cross-stage execution
             },
@@ -395,7 +398,7 @@ ai_job_executor_rule = aws.cloudwatch.EventRule(
     tags={"Environment": stack, "Service": "coaching-ai"},
 )
 
-# Target: invoke the coaching Lambda when ai.job.created event is received
+# Target: invoke the coaching Lambda when async job events are received
 aws.cloudwatch.EventTarget(
     "ai-job-executor-target",
     rule=ai_job_executor_rule.name,

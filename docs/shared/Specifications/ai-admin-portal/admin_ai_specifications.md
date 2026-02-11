@@ -244,7 +244,8 @@ GET /api/v1/admin/topics/{topic_id}
     "max_messages_to_llm": 30,
     "inactivity_timeout_minutes": 30,
     "session_ttl_days": 14,
-    "estimated_messages": 20
+    "estimated_messages": 20,
+    "extraction_model_code": "CLAUDE_3_5_HAIKU"
   },
   "response_schema": null,
   "created_at": "2024-11-01T10:00:00Z",
@@ -313,6 +314,7 @@ For topics with `topic_type: "conversation_coaching"`, the response includes `co
 | `inactivity_timeout_minutes` | integer | 5-1440 | 30 | Minutes of inactivity before session auto-pauses |
 | `session_ttl_days` | integer | 1-90 | 14 | Days to keep paused/completed sessions before deletion |
 | `estimated_messages` | integer | 5-100 | 20 | Estimated messages for a typical session (for progress calculation) |
+| `extraction_model_code` | string | - | CLAUDE_3_5_HAIKU | MODEL_REGISTRY code for extraction (e.g., CLAUDE_3_5_HAIKU, CLAUDE_3_5_SONNET_V2) |
 
 **Template Status:**
 
@@ -523,7 +525,8 @@ PUT /api/v1/admin/topics/{topic_id}
     "max_messages_to_llm": 30,
     "inactivity_timeout_minutes": 45,
     "session_ttl_days": 14,
-    "estimated_messages": 25
+    "estimated_messages": 25,
+    "extraction_model_code": "CLAUDE_3_5_SONNET_V2"
   },
   "allowed_parameters": [
     {
