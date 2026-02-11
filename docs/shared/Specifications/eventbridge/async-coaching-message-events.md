@@ -1,536 +1,750 @@
-# Async Coaching Message Events - EventBridge Specification
+# Async Coaching Message Events - Frontend Integration Specification
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Date**: February 10, 2026  
-**Related Issue**: #222
+**Related Issue**: #222  
+**Target Audience**: Frontend Developers, .NET Backend Team
 
 ## Overview
 
-This specification defines three new EventBridge events for asynchronous coaching message processing. These events enable the coaching service to avoid API Gateway 30s timeout by processing messages asynchronously and delivering complete responses via WebSocket.
+This specification defines the async pattern for coaching conversation messages. Messages are processed asynchronously (5s - 5min) to avoid API Gateway 30s timeout, with complete responses delivered via WebSocket.
 
-**Event Flow**:
+### Why Async Pattern?
+
+**Problem**: Coaching AI responses can take 20-90 seconds due to:
+- Complex conversation context processing
+- Prompt cache writes (20-30s first response)
+- Final message extraction with structured output
+
+**Solution**: Return 202 Accepted immediately, process async, deliver via WebSocket
+
+### Message Flow
+
 ```
-1. Frontend: POST /ai/coaching/message → 202 Accepted {job_id}
-2. Backend: Publishes ai.message.created event
-3. Worker Lambda: Processes message (5s - 5min)
-4. Backend: Publishes ai.message.completed or ai.message.failed
-5. .NET WebSocket Service: Receives event → Forwards to frontend
+┌──────────┐                                    ┌──────────┐
+│ Frontend │                                    │  Backend │
+└────┬─────┘                                    └────┬─────┘
+     │                                               │
+     │ POST /ai/coaching/message                     │
+     │ { session_id, message }                       │
+     ├──────────────────────────────────────────────>│
+     │                                               │
+     │ 202 Accepted                                  │
+     │ { job_id, session_id, status: "pending" }     │
+     │<──────────────────────────────────────────────┤
+     │                                               │
+     │ [Show "AI is thinking..." UI]                 │
+     │                                               │
+     │                                               │ [Processing 5s-5min]
+     │                                               │ [LLM generates response]
+     │                                               │
+     │                        ┌──────────────┐       │
+     │ WebSocket Event        │   EventBridge │       │
+     │ ai.message.completed   │      ↓        │       │
+     │<───────────────────────┤  WebSocket    │<──────┤
+     │                        │   Service     │       │
+     │ { message, isFinal }   └──────────────┘       │
+     │                                               │
+     │ [Display complete response]                   │
+     │ [If isFinal: show results]                    │
+     │                                               │
 ```
 
-## Event Source
+## API Changes
 
-- **Source**: `purposepath.ai`
-- **Event Bus**: `default`
-- **Region**: `us-east-1`
+### POST /ai/coaching/message
 
-## Event Types
-
-### 1. `ai.message.created`
-
-**Purpose**: Triggers async message processing by worker Lambda
-
-**When Published**: Immediately after POST /ai/coaching/message returns 202 Accepted
-
-**Event Structure**:
+**Request** (unchanged):
 ```json
 {
-  "version": "0",
-  "id": "uuid",
-  "detail-type": "ai.message.created",
-  "source": "purposepath.ai",
-  "time": "2026-02-10T23:00:00Z",
-  "region": "us-east-1",
-  "resources": [],
-  "detail": {
-    "jobId": "uuid",
-    "tenantId": "uuid",
-    "userId": "uuid",
-    "topicId": "conversation_coaching",
-    "eventType": "ai.message.created",
-    "stage": "dev",
-    "data": {
-      "jobId": "uuid",
-      "sessionId": "uuid",
-      "topicId": "conversation_coaching",
-      "userMessage": "User's message content here"
-    }
+  "session_id": "uuid",
+  "message": "User's message content"
+}
+```
+
+**Response** (NEW - now returns 202 Accepted):
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "pending",
+    "estimated_duration_ms": 45000
+  },
+  "message": "Message job created, processing asynchronously"
+}
+```
+
+**Status Code**: `202 Accepted` (was `200 OK`)
+
+**Response Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | string (UUID) | Unique job identifier for tracking this message |
+| `session_id` | string (UUID) | Coaching session ID (echo from request) |
+| `status` | string | Always "pending" on creation |
+| `estimated_duration_ms` | number | Rough estimate: 45000ms (45s average) |
+
+### GET /ai/coaching/message/{job_id}
+
+**NEW** polling endpoint for systems without WebSocket support.
+
+**Response** (while processing):
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "processing",
+    "message": null,
+    "isFinal": null,
+    "result": null
   }
 }
 ```
 
-**Field Descriptions**:
+**Response** (completed):
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "completed",
+    "message": "Complete AI coach response here...",
+    "isFinal": false,
+    "result": null,
+    "processing_time_ms": 12500
+  }
+}
+```
+
+**Status Values**: `pending`, `processing`, `completed`, `failed`
+
+## WebSocket Events
+
+### Event: `ai.message.completed`
+
+### Event: `ai.message.completed`
+
+**When Received**: After AI successfully generates a response (5s - 5min after POST)
+
+**Payload**:
+```json
+{
+  "eventType": "ai.message.completed",
+  "jobId": "uuid",
+  "sessionId": "uuid",
+  "tenantId": "uuid",
+  "userId": "uuid",
+  "data": {
+    "message": "Complete AI coach response. This is the full response with no token streaming.",
+    "isFinal": false,
+    "result": null
+  }
+}
+```
+
+**Fields**:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `detail.jobId` | string (UUID) | Yes | Unique job identifier for tracking |
-| `detail.tenantId` | string (UUID) | Yes | Tenant identifier for routing |
-| `detail.userId` | string (UUID) | Yes | User identifier for routing |
-| `detail.topicId` | string | Yes | Coaching topic ID (e.g., "conversation_coaching") |
-| `detail.eventType` | string | Yes | Always "ai.message.created" |
-| `detail.stage` | string | Yes | Environment: "dev", "staging", or "production" |
-| `detail.data.sessionId` | string (UUID) | Yes | Coaching session identifier |
-| `detail.data.userMessage` | string | Yes | The user's message content |
+| `eventType` | string | Yes | Always `"ai.message.completed"` |
+| `jobId` | string (UUID) | Yes | Job identifier from 202 response |
+| `sessionId` | string (UUID) | Yes | Coaching session identifier |
+| `tenantId` | string (UUID) | Yes | Tenant identifier (for routing) |
+| `userId` | string (UUID) | Yes | User identifier (for routing) |
+| `data.message` | string | Yes | **Complete AI response** (full text, no streaming) |
+| `data.isFinal` | boolean | Yes | `true` if conversation is ending |
+| `data.result` | object \| null | Yes | Extraction result when `isFinal` is `true` |
 
-**⚠️ .NET Backend Action**: This event is consumed by Python worker Lambda only. .NET service should **NOT** handle this event.
+**When `isFinal` is `true`** (conversation complete):
 
----
-
-### 2. `ai.message.completed`
-
-**Purpose**: Delivers the complete AI response to frontend via WebSocket
-
-**When Published**: After successful message processing by worker Lambda
-
-**Event Structure**:
 ```json
 {
-  "version": "0",
-  "id": "uuid",
-  "detail-type": "ai.message.completed",
-  "source": "purposepath.ai",
-  "time": "2026-02-10T23:00:15Z",
-  "region": "us-east-1",
-  "resources": [],
-  "detail": {
-    "jobId": "uuid",
-    "tenantId": "uuid",
-    "userId": "uuid",
-    "topicId": "conversation_coaching",
-    "eventType": "ai.message.completed",
-    "stage": "dev",
-    "data": {
-      "jobId": "uuid",
-      "sessionId": "uuid",
-      "topicId": "conversation_coaching",
-      "message": "Complete AI coach response here. This is the full response with no streaming.",
-      "isFinal": false,
-      "result": null
-    }
-  }
-}
-```
-
-**Field Descriptions**:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `detail.jobId` | string (UUID) | Yes | Unique job identifier |
-| `detail.tenantId` | string (UUID) | Yes | Tenant identifier for routing |
-| `detail.userId` | string (UUID) | Yes | User identifier for routing |
-| `detail.topicId` | string | Yes | Coaching topic ID |
-| `detail.eventType` | string | Yes | Always "ai.message.completed" |
-| `detail.stage` | string | Yes | Environment filter |
-| `detail.data.sessionId` | string (UUID) | Yes | Coaching session identifier |
-| `detail.data.message` | string | Yes | **Complete AI response** (no streaming) |
-| `detail.data.isFinal` | boolean | Yes | Whether this is the final message in conversation |
-| `detail.data.result` | object \| null | Yes | Extraction result (only when `isFinal` is true) |
-
-**Result Object Structure** (when `isFinal` is true):
-```json
-{
-  "result": {
-    "extraction_type": "conversation_result",
-    "identified_values": ["value1", "value2", "value3"],
-    "progress": 1.0,
-    "metadata": {
-      "model_used": "claude-3-5-haiku",
-      "extraction_success": true
-    }
-  }
-}
-```
-
-**✅ .NET Backend Action**: 
-1. Subscribe to EventBridge for events where `detail-type` = "ai.message.completed"
-2. Filter by `detail.stage` matching your environment
-3. Forward to WebSocket clients matching `tenantId` and `userId`
-4. Send **complete message** (no token streaming needed)
-
-**WebSocket Payload to Frontend**:
-```typescript
-{
-  eventType: "ai.message.completed",
-  jobId: string,
-  sessionId: string,
-  tenantId: string,
-  userId: string,
-  data: {
-    message: string,        // Complete AI response
-    isFinal: boolean,       // Whether conversation is ending
-    result: object | null   // Extraction result if final
-  }
-}
-```
-
----
-
-### 3. `ai.message.failed`
-
-**Purpose**: Notifies frontend of message processing failure
-
-**When Published**: When worker Lambda encounters an error
-
-**Event Structure**:
-```json
-{
-  "version": "0",
-  "id": "uuid",
-  "detail-type": "ai.message.failed",
-  "source": "purposepath.ai",
-  "time": "2026-02-10T23:00:15Z",
-  "region": "us-east-1",
-  "resources": [],
-  "detail": {
-    "jobId": "uuid",
-    "tenantId": "uuid",
-    "userId": "uuid",
-    "topicId": "conversation_coaching",
-    "eventType": "ai.message.failed",
-    "stage": "dev",
-    "data": {
-      "jobId": "uuid",
-      "sessionId": "uuid",
-      "topicId": "conversation_coaching",
-      "error": "Session not found",
-      "errorCode": "SESSION_NOT_FOUND"
-    }
-  }
-}
-```
-
-**Field Descriptions**:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `detail.jobId` | string (UUID) | Yes | Unique job identifier |
-| `detail.tenantId` | string (UUID) | Yes | Tenant identifier for routing |
-| `detail.userId` | string (UUID) | Yes | User identifier for routing |
-| `detail.topicId` | string | Yes | Coaching topic ID |
-| `detail.eventType` | string | Yes | Always "ai.message.failed" |
-| `detail.stage` | string | Yes | Environment filter |
-| `detail.data.sessionId` | string (UUID) | Yes | Coaching session identifier |
-| `detail.data.error` | string | Yes | Human-readable error message |
-| `detail.data.errorCode` | string | Yes | Machine-readable error code |
-
-**Error Codes**:
-
-| Code | Description |
-|------|-------------|
-| `SESSION_NOT_FOUND` | Session doesn't exist |
-| `SESSION_ACCESS_DENIED` | User doesn't own session |
-| `SESSION_NOT_ACTIVE` | Session is paused or completed |
-| `SESSION_IDLE_TIMEOUT` | Session expired due to inactivity |
-| `MAX_TURNS_REACHED` | Conversation exceeded max turns |
-| `LLM_TIMEOUT` | LLM request timed out |
-| `LLM_ERROR` | LLM returned an error |
-| `EXTRACTION_FAILED` | Failed to extract result |
-| `INTERNAL_ERROR` | Unexpected system error |
-
-**✅ .NET Backend Action**: 
-1. Subscribe to EventBridge for events where `detail-type` = "ai.message.failed"
-2. Filter by `detail.stage` matching your environment
-3. Forward to WebSocket clients matching `tenantId` and `userId`
-
-**WebSocket Payload to Frontend**:
-```typescript
-{
-  eventType: "ai.message.failed",
-  jobId: string,
-  sessionId: string,
-  tenantId: string,
-  userId: string,
-  data: {
-    error: string,
-    errorCode: string
-  }
-}
-```
-
----
-
-## .NET Implementation Guide
-
-### EventBridge Subscription Setup
-
-```csharp
-// AWS SDK for .NET - EventBridge Rule
-var rule = new Amazon.EventBridge.Model.PutRuleRequest
-{
-    Name = "coaching-message-events-websocket",
-    EventBusName = "default",
-    State = RuleState.ENABLED,
-    EventPattern = JsonSerializer.Serialize(new
-    {
-        source = new[] { "purposepath.ai" },
-        detail_type = new[] { "ai.message.completed", "ai.message.failed" },
-        detail = new
-        {
-            stage = new[] { Environment.GetEnvironmentVariable("STAGE") ?? "dev" }
-        }
-    })
-};
-
-// Target: Lambda function that forwards to WebSocket API
-var target = new Amazon.EventBridge.Model.Target
-{
-    Arn = lambdaArn,
-    Id = "websocket-forwarder"
-};
-```
-
-### Event Handler Example
-
-```csharp
-public class CoachingMessageEventHandler
-{
-    private readonly IWebSocketService _webSocketService;
-    private readonly ILogger<CoachingMessageEventHandler> _logger;
-
-    public async Task<APIGatewayProxyResponse> HandleEventBridgeEvent(
-        EventBridgeEvent<CoachingMessageEventDetail> eventBridgeEvent)
-    {
-        var detail = eventBridgeEvent.Detail;
-        
-        // Validate event
-        if (string.IsNullOrEmpty(detail.TenantId) || string.IsNullOrEmpty(detail.UserId))
-        {
-            _logger.LogWarning("Invalid event: missing tenantId or userId");
-            return new APIGatewayProxyResponse { StatusCode = 400 };
-        }
-
-        // Route based on event type
-        switch (eventBridgeEvent.DetailType)
-        {
-            case "ai.message.completed":
-                await HandleMessageCompleted(detail);
-                break;
-                
-            case "ai.message.failed":
-                await HandleMessageFailed(detail);
-                break;
-                
-            default:
-                _logger.LogWarning($"Unknown event type: {eventBridgeEvent.DetailType}");
-                return new APIGatewayProxyResponse { StatusCode = 400 };
-        }
-
-        return new APIGatewayProxyResponse { StatusCode = 200 };
-    }
-
-    private async Task HandleMessageCompleted(CoachingMessageEventDetail detail)
-    {
-        var payload = new
-        {
-            eventType = "ai.message.completed",
-            jobId = detail.JobId,
-            sessionId = detail.Data.SessionId,
-            tenantId = detail.TenantId,
-            userId = detail.UserId,
-            data = new
-            {
-                message = detail.Data.Message,
-                isFinal = detail.Data.IsFinal,
-                result = detail.Data.Result
-            }
-        };
-
-        // Forward to WebSocket clients
-        await _webSocketService.SendToUser(
-            tenantId: detail.TenantId,
-            userId: detail.UserId,
-            message: JsonSerializer.Serialize(payload)
-        );
-
-        _logger.LogInformation(
-            "Forwarded ai.message.completed to user {UserId} in tenant {TenantId}",
-            detail.UserId, detail.TenantId);
-    }
-
-    private async Task HandleMessageFailed(CoachingMessageEventDetail detail)
-    {
-        var payload = new
-        {
-            eventType = "ai.message.failed",
-            jobId = detail.JobId,
-            sessionId = detail.Data.SessionId,
-            tenantId = detail.TenantId,
-            userId = detail.UserId,
-            data = new
-            {
-                error = detail.Data.Error,
-                errorCode = detail.Data.ErrorCode
-            }
-        };
-
-        await _webSocketService.SendToUser(
-            tenantId: detail.TenantId,
-            userId: detail.UserId,
-            message: JsonSerializer.Serialize(payload)
-        );
-
-        _logger.LogWarning(
-            "Forwarded ai.message.failed to user {UserId}: {ErrorCode}",
-            detail.UserId, detail.Data.ErrorCode);
-    }
-}
-
-// Model Classes
-public class CoachingMessageEventDetail
-{
-    public string JobId { get; set; }
-    public string TenantId { get; set; }
-    public string UserId { get; set; }
-    public string TopicId { get; set; }
-    public string EventType { get; set; }
-    public string Stage { get; set; }
-    public CoachingMessageData Data { get; set; }
-}
-
-public class CoachingMessageData
-{
-    public string JobId { get; set; }
-    public string SessionId { get; set; }
-    public string TopicId { get; set; }
-    
-    // For ai.message.completed
-    public string Message { get; set; }
-    public bool IsFinal { get; set; }
-    public object Result { get; set; }
-    
-    // For ai.message.failed
-    public string Error { get; set; }
-    public string ErrorCode { get; set; }
-}
-```
-
-### User Routing Logic
-
-```csharp
-public interface IWebSocketService
-{
-    Task SendToUser(string tenantId, string userId, string message);
-}
-
-public class WebSocketService : IWebSocketService
-{
-    private readonly IAmazonApiGatewayManagementApi _apiGatewayClient;
-    private readonly IConnectionStore _connectionStore;
-
-    public async Task SendToUser(string tenantId, string userId, string message)
-    {
-        // Get all active connections for this user in this tenant
-        var connections = await _connectionStore.GetConnectionsForUser(tenantId, userId);
-        
-        foreach (var connectionId in connections)
-        {
-            try
-            {
-                await _apiGatewayClient.PostToConnectionAsync(new PostToConnectionRequest
-                {
-                    ConnectionId = connectionId,
-                    Data = new MemoryStream(Encoding.UTF8.GetBytes(message))
-                });
-            }
-            catch (GoneException)
-            {
-                // Connection closed, remove from store
-                await _connectionStore.RemoveConnection(connectionId);
-            }
-        }
-    }
-}
-```
-
----
-
-## Frontend Integration Notes
-
-**No Frontend Changes Required** if WebSocket already handles events by `eventType`.
-
-The frontend will receive these events through the existing WebSocket connection:
-
-```typescript
-// Existing WebSocket handler should work
-websocket.onmessage = (event) => {
-  const payload = JSON.parse(event.data);
-  
-  switch (payload.eventType) {
-    case 'ai.message.completed':
-      // Handle complete message
-      updateChat(payload.data.message);
-      if (payload.data.isFinal) {
-        handleConversationComplete(payload.data.result);
+  "eventType": "ai.message.completed",
+  "jobId": "uuid",
+  "sessionId": "uuid",
+  "tenantId": "uuid",
+  "userId": "uuid",
+  "data": {
+    "message": "Final coach message summarizing the conversation...",
+    "isFinal": true,
+    "result": {
+      "identified_values": ["value1", "value2", "value3"],
+      "extraction_type": "conversation_result",
+      "progress": 1.0,
+      "metadata": {
+        "model_used": "claude-3-5-haiku",
+        "extraction_success": true
       }
+    }
+  }
+}
+```
+
+**Result Object Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `identified_values` | string[] | Key values/insights identified in conversation |
+| `extraction_type` | string | Always `"conversation_result"` |
+| `progress` | number | Always `1.0` when final |
+| `metadata` | object | Extraction metadata (model used, success flag) |
+
+### Event: `ai.message.failed`
+
+**When Received**: When message processing fails
+
+**Payload**:
+```json
+{
+  "eventType": "ai.message.failed",
+  "jobId": "uuid",
+  "sessionId": "uuid",
+  "tenantId": "uuid",
+  "userId": "uuid",
+  "data": {
+    "error": "Session not found",
+    "errorCode": "SESSION_NOT_FOUND"
+  }
+}
+```
+
+**Fields**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `eventType` | string | Yes | Always `"ai.message.failed"` |
+| `jobId` | string (UUID) | Yes | Job identifier from 202 response |
+| `sessionId` | string (UUID) | Yes | Coaching session identifier |
+| `tenantId` | string (UUID) | Yes | Tenant identifier (for routing) |
+| `userId` | string (UUID) | Yes | User identifier (for routing) |
+| `data.error` | string | Yes | Human-readable error message |
+| `data.errorCode` | string | Yes | Machine-readable error code |
+
+## Error Codes
+
+Frontend should handle these error codes for user-friendly messaging:
+
+| Error Code | User Message | Action |
+|-----------|--------------|--------|
+| `SESSION_NOT_FOUND` | "Session not found. Please start a new conversation." | Clear session, show start button |
+| `SESSION_ACCESS_DENIED` | "You don't have access to this session." | Redirect to home |
+| `SESSION_NOT_ACTIVE` | "This session is no longer active." | Show resume or restart options |
+| `SESSION_IDLE_TIMEOUT` | "Session expired due to inactivity." | Show restart button |
+| `MAX_TURNS_REACHED` | "Conversation limit reached." | Show completion message |
+| `LLM_TIMEOUT` | "AI response took too long. Please try again." | Show retry button |
+| `LLM_ERROR` | "AI service error. Please try again." | Show retry button |
+| `EXTRACTION_FAILED` | "Unable to process final results." | Show manual completion option |
+| `INTERNAL_ERROR` | "Something went wrong. Please try again." | Show retry button |
+
+## Frontend Implementation
+
+### React/TypeScript Example
+
+```typescript
+interface CoachingMessageAPI {
+  sendMessage(sessionId: string, message: string): Promise<MessageJobResponse>;
+}
+
+interface MessageJobResponse {
+  job_id: string;
+  session_id: string;
+  status: 'pending';
+  estimated_duration_ms: number;
+}
+
+interface MessageCompletedEvent {
+  eventType: 'ai.message.completed';
+  jobId: string;
+  sessionId: string;
+  tenantId: string;
+  userId: string;
+  data: {
+    message: string;
+    isFinal: boolean;
+    result: ConversationResult | null;
+  };
+}
+
+interface MessageFailedEvent {
+  eventType: 'ai.message.failed';
+  jobId: string;
+  sessionId: string;
+  tenantId: string;
+  userId: string;
+  data: {
+    error: string;
+    errorCode: string;
+  };
+}
+
+// Sending a message
+const handleSendMessage = async (message: string) => {
+  try {
+    // POST returns immediately with job_id
+    const response = await coachingAPI.sendMessage(sessionId, message);
+    
+    // Show "AI is thinking..." UI
+    setProcessingJobId(response.job_id);
+    setIsProcessing(true);
+    
+    // Wait for WebSocket event (handled in useEffect)
+  } catch (error) {
+    showError('Failed to send message');
+  }
+};
+
+// WebSocket event handler
+useEffect(() => {
+  if (!websocket) return;
+  
+  const handleMessage = (event: MessageEvent) => {
+    const payload = JSON.parse(event.data);
+    
+    switch (payload.eventType) {
+      case 'ai.message.completed':
+        handleMessageCompleted(payload as MessageCompletedEvent);
+        break;
+        
+      case 'ai.message.failed':
+        handleMessageFailed(payload as MessageFailedEvent);
+        break;
+    }
+  };
+  
+  websocket.addEventListener('message', handleMessage);
+  return () => websocket.removeEventListener('message', handleMessage);
+}, [websocket]);
+
+const handleMessageCompleted = (event: MessageCompletedEvent) => {
+  // Only process if job ID matches current processing
+  if (event.jobId !== processingJobId) return;
+  
+  setIsProcessing(false);
+  
+  // Add AI message to chat
+  addMessage({
+    role: 'assistant',
+    content: event.data.message
+  });
+  
+  // Handle conversation completion
+  if (event.data.isFinal) {
+    setConversationStatus('completed');
+    setConversationResult(event.data.result);
+    showCompletionDialog(event.data.result);
+  }
+};
+
+const handleMessageFailed = (event: MessageFailedEvent) => {
+  if (event.jobId !== processingJobId) return;
+  
+  setIsProcessing(false);
+  
+  // Show user-friendly error message
+  const userMessage = getErrorMessage(event.data.errorCode);
+  showError(userMessage, event.data.errorCode);
+  
+  // Handle specific error types
+  if (event.data.errorCode === 'SESSION_NOT_FOUND') {
+    clearSession();
+  }
+};
+
+const getErrorMessage = (code: string): string => {
+  const messages = {
+    'SESSION_NOT_FOUND': 'Session not found. Please start a new conversation.',
+    'SESSION_ACCESS_DENIED': "You don't have access to this session.",
+    'LLM_TIMEOUT': 'AI response took too long. Please try again.',
+    // ... other codes
+  };
+  return messages[code] || 'Something went wrong. Please try again.';
+};
+```
+
+### UI State Management
+
+```typescript
+// Processing state
+const [isProcessing, setIsProcessing] = useState(false);
+const [processingJobId, setProcessingJobId] = useState<string | null>(null);
+
+// When sending message
+<button 
+  onClick={() => handleSendMessage(userInput)}
+  disabled={isProcessing}
+>
+  {isProcessing ? 'AI is thinking...' : 'Send'}
+</button>
+
+// Show processing indicator
+{isProcessing && (
+  <div className="processing-indicator">
+    <Spinner />
+    <span>AI is thinking...</span>
+    <span className="text-muted">This may take up to 90 seconds</span>
+  </div>
+)}
+```
+
+### Polling Fallback (No WebSocket)
+
+```typescript
+// For systems without WebSocket support
+const pollMessageStatus = async (jobId: string) => {
+  const maxAttempts = 60; // 5 minutes with 5s intervals
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    try {
+      const response = await fetch(`/ai/coaching/message/${jobId}`);
+      const data = await response.json();
+      
+      if (data.data.status === 'completed') {
+        handleMessageCompleted({
+          eventType: 'ai.message.completed',
+          jobId: jobId,
+          sessionId: data.data.session_id,
+          data: {
+            message: data.data.message,
+            isFinal: data.data.isFinal,
+            result: data.data.result
+          }
+        });
+        return;
+      }
+      
+      if (data.data.status === 'failed') {
+        throw new Error(data.data.error);
+      }
+      
+      // Still processing, wait 5s
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      attempts++;
+      
+    } catch (error) {
+      showError('Failed to check message status');
+      return;
+    }
+  }
+  
+  // Timeout after 5 minutes
+  showError('Message processing timed out');
+};
+```
+
+## Event Type Naming
+
+**⚠️ Important**: Async coaching messages use `eventType` field in WebSocket payload.
+
+**Comparison with single-shot jobs**:
+
+| Pattern | WebSocket Field | Value |
+|---------|----------------|-------|
+| **Async Messages** (Conversations) | `eventType` | `"ai.message.completed"` |
+| **Single-shot Jobs** (Analysis) | `Type` | `"ai.job.completed"` |
+
+This inconsistency exists for historical reasons. When implementing WebSocket handlers:
+- Check for **both** `eventType` and `Type` fields
+- Route based on which field is present
+- Future: may standardize to `eventType` only
+
+```typescript
+// Handle both patterns
+const handleWebSocketMessage = (payload: any) => {
+  const type = payload.eventType || payload.Type;
+  
+  switch (type) {
+    case 'ai.message.completed':    // Async messages
+    case 'ai.message.failed':       // Async messages
+      handleCoachingMessage(payload);
       break;
       
-    case 'ai.message.failed':
-      // Handle error
-      showError(payload.data.error, payload.data.errorCode);
+    case 'ai.job.completed':        // Single-shot jobs
+    case 'ai.job.failed':           // Single-shot jobs
+      handleJobCompletion(payload);
       break;
   }
 };
 ```
-
----
 
 ## Testing
 
-### Manual Testing with AWS CLI
+### Manual Testing (Frontend Dev)
 
-```bash
-# Publish test completed event
-aws events put-events --entries '[
-  {
-    "Source": "purposepath.ai",
-    "DetailType": "ai.message.completed",
-    "Detail": "{\"jobId\":\"test-job-123\",\"tenantId\":\"test-tenant\",\"userId\":\"test-user\",\"topicId\":\"conversation_coaching\",\"eventType\":\"ai.message.completed\",\"stage\":\"dev\",\"data\":{\"jobId\":\"test-job-123\",\"sessionId\":\"test-session\",\"topicId\":\"conversation_coaching\",\"message\":\"Test response from coach\",\"isFinal\":false,\"result\":null}}"
-  }
-]'
+1. **Send Message**:
+   ```bash
+   curl -X POST https://api.dev.purposepath.ai/ai/coaching/message \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"session_id":"your-session-id","message":"Tell me about values"}'
+   ```
 
-# Publish test failed event
-aws events put-events --entries '[
-  {
-    "Source": "purposepath.ai",
-    "DetailType": "ai.message.failed",
-    "Detail": "{\"jobId\":\"test-job-456\",\"tenantId\":\"test-tenant\",\"userId\":\"test-user\",\"topicId\":\"conversation_coaching\",\"eventType\":\"ai.message.failed\",\"stage\":\"dev\",\"data\":{\"jobId\":\"test-job-456\",\"sessionId\":\"test-session\",\"topicId\":\"conversation_coaching\",\"error\":\"Test error message\",\"errorCode\":\"INTERNAL_ERROR\"}}"
-  }
-]'
+2. **Check Response**:
+   - Verify `202 Accepted` status
+   - Save `job_id` from response
+
+3. **Monitor WebSocket**:
+   - Open browser DevTools → Network → WS
+   - Wait for `ai.message.completed` event
+   - Verify `jobId` matches saved value
+
+4. **Test Error Handling**:
+   ```bash
+   # Invalid session ID
+   curl -X POST ... -d '{"session_id":"invalid","message":"test"}'
+   ```
+   - Verify `ai.message.failed` event received
+   - Check `errorCode` is `"SESSION_NOT_FOUND"`
+
+### Integration Checklist
+
+- [ ] POST /message returns 202 with `job_id`
+- [ ] "Processing" UI shows after POST
+- [ ] WebSocket receives `ai.message.completed` event
+- [ ] Complete message displays correctly
+- [ ] `isFinal` flag triggers completion flow
+- [ ] Error events show user-friendly messages
+- [ ] Session cleared on `SESSION_NOT_FOUND`
+- [ ] Polling fallback works without WebSocket
+
+## .NET Backend Notes
+
+The .NET WebSocket service must forward EventBridge events to frontend clients:
+
+**Subscribe to EventBridge events**:
+- `ai.message.completed` (detail-type)
+- `ai.message.failed` (detail-type)
+- Filter by `detail.stage` matching environment
+
+**Forward to WebSocket clients**:
+- Route by `detail.tenantId` + `detail.userId`
+- Send complete EventBridge `detail` object as WebSocket message
+- Frontend expects this exact structure
+
+**Do NOT forward**:
+- `ai.message.created` events (internal worker trigger only)
+
+## Migration from Synchronous Pattern
+
+### Before (Synchronous)
+
+```typescript
+// POST returned complete response after 20-90s
+const response = await fetch('/ai/coaching/message', {
+  method: 'POST',
+  body: JSON.stringify({ session_id, message })
+});
+
+// HTTP 200 with complete message
+const data = await response.json();
+displayMessage(data.message);  // Full response immediately
 ```
 
-### Verification Checklist
+**Problems**:
+- API Gateway 30s timeout → 503 errors for long responses
+- User waited with blocking UI
+- No progress indication
 
-- [ ] EventBridge rule created with correct pattern
-- [ ] Lambda function subscribed to rule
-- [ ] Events filtered by `stage` environment variable
-- [ ] WebSocket forwards to correct `tenantId` + `userId`
-- [ ] Complete message (no streaming) sent in single payload
-- [ ] Error events display user-friendly messages
-- [ ] Stale connections removed on GoneException
-- [ ] CloudWatch logs show successful event routing
+### After (Asynchronous)
+
+```typescript
+// POST returns immediately
+const response = await fetch('/ai/coaching/message', {
+  method: 'POST',
+  body: JSON.stringify({ session_id, message })
+});
+
+// HTTP 202 with job_id
+const data = await response.json();
+showProcessing(data.job_id);
+
+// Wait for WebSocket event (5s - 5min later)
+websocket.on('message', (event) => {
+  if (event.eventType === 'ai.message.completed') {
+    hideProcessing();
+    displayMessage(event.data.message);
+  }
+});
+```
+
+**Benefits**:
+- No API Gateway timeout (202 returns instantly)
+- Non-blocking UI with progress indicator
+- Lambda can process for up to 5 minutes
+- Better error handling
+
+## Sequence Diagrams
+
+### Normal Flow
+
+```
+User          Frontend        API Gateway     Lambda          EventBridge     WebSocket
+ |                |               |              |                 |              |
+ |-- Type msg --->|               |              |                 |              |
+ |                |-- POST ------>|              |                 |              |
+ |                |               |-- Invoke --->|                 |              |
+ |                |               |              |-- Publish ----->|              |
+ |                |               |              | (ai.message.created)           |
+ |                |<-- 202 -------|<-- Return ---|                 |              |
+ |<-- "Thinking"--|               |              |                 |              |
+ |                |               |              |                 |              |
+ |                |               |        [Worker processes       |              |
+ |                |               |         5s - 5 minutes]        |              |
+ |                |               |              |                 |              |
+ |                |               |              |-- Publish ----->|              |
+ |                |               |              | (ai.message.completed)         |
+ |                |               |              |                 |-- Forward -->|
+ |                |<-- WebSocket event (complete message) <--------|              |
+ |<-- Display ----|               |              |                 |              |
+```
+
+### Error Flow
+
+```
+User          Frontend        API Gateway     Lambda          EventBridge     WebSocket
+ |                |               |              |                 |              |
+ |-- Type msg --->|               |              |                 |              |
+ |                |-- POST ------>|              |                 |              |
+ |                |               |-- Invoke --->|                 |              |
+ |                |               |              |-- Publish ----->|              |
+ |                |<-- 202 -------|<-- Return ---|                 |              |
+ |<-- "Thinking"--|               |              |                 |              |
+ |                |               |              |                 |              |
+ |                |               |        [Worker encounters      |              |
+ |                |               |         error - LLM timeout]   |              |
+ |                |               |              |                 |              |
+ |                |               |              |-- Publish ----->|              |
+ |                |               |              | (ai.message.failed)            |
+ |                |               |              |                 |-- Forward -->|
+ |                |<-- WebSocket event (error) <------------------|              |
+ |<-- Error UI ---|               |              |                 |              |
+```
+
+## Frequently Asked Questions
+
+### Q: What if WebSocket connection is lost?
+
+Use polling fallback with `GET /message/{job_id}`:
+
+```typescript
+// Detect WebSocket disconnect
+websocket.onclose = () => {
+  if (processingJobId) {
+    startPolling(processingJobId);
+  }
+};
+
+const startPolling = async (jobId: string) => {
+  const interval = setInterval(async () => {
+    const response = await fetch(`/ai/coaching/message/${jobId}`);
+    const data = await response.json();
+    
+    if (data.data.status === 'completed' || data.data.status === 'failed') {
+      clearInterval(interval);
+      handleCompletion(data);
+    }
+  }, 5000);  // Poll every 5 seconds
+};
+```
+
+### Q: What if user closes browser during processing?
+
+- Job continues in Lambda (no automatic cancellation)
+- Result saved in DynamoDB
+- Next time user opens app, check for pending jobs:
+  ```typescript
+  useEffect(() => {
+    // On mount, check for pending jobs
+    const pendingJob = localStorage.getItem('pendingJobId');
+    if (pendingJob) {
+      startPolling(pendingJob);
+    }
+  }, []);
+  ```
+
+### Q: How long should "Processing" UI show?
+
+- **Minimum**: 1 second (avoid flash)
+- **Average**: 20-30 seconds
+- **Maximum**: Display "This is taking longer than usual" after 60s
+- **Timeout**: Show error after 5 minutes
+
+```typescript
+useEffect(() => {
+  if (!isProcessing) return;
+  
+  const warningTimer = setTimeout(() => {
+    showWarning('This is taking longer than usual...');
+  }, 60000);  // 1 minute
+  
+  const timeoutTimer = setTimeout(() => {
+    showError('Request timed out. Please try again.');
+    setIsProcessing(false);
+  }, 300000);  // 5 minutes
+  
+  return () => {
+    clearTimeout(warningTimer);
+    clearTimeout(timeoutTimer);
+  };
+}, [isProcessing]);
+```
+
+### Q: Can user send another message while processing?
+
+Recommended: **No** - Disable send button while `isProcessing === true`
+
+```typescript
+<button 
+  onClick={handleSend}
+  disabled={isProcessing || !userInput.trim()}
+>
+  {isProcessing ? 'AI is thinking...' : 'Send'}
+</button>
+```
+
+### Q: What's `estimated_duration_ms` for?
+
+Optional: Show user estimated wait time from 202 response
+
+```typescript
+const { estimated_duration_ms } = response;  // e.g., 25000 (25s)
+
+if (estimated_duration_ms > 30000) {
+  showNotice('This may take up to 90 seconds');
+}
+```
 
 ---
 
-## Migration Notes
+## Changelog
 
-### Backward Compatibility
+### Version 1.1.0 (2026-02-10)
 
-- Existing `ai.job.completed` events remain unchanged
-- This is a **new pattern** for conversation coaching only
-- Single-shot AI operations (e.g., business analysis) still use `ai.job.completed`
+- **Rewritten for frontend integration focus**
+- Removed C# implementation code (moved to backend docs)
+- Removed deprecated fields: `maxTurns`, `messageCount`, `turn`
+- Added comprehensive frontend code examples
+- Added error handling reference
+- Added sequence diagrams
+- Added FAQ section
+- Documented `eventType` naming inconsistency
 
-### Rollout Plan
+### Version 1.0.0 (2026-01-15)
 
-1. **Phase 1**: Deploy .NET EventBridge handlers (this spec) ✅
-2. **Phase 2**: Deploy Python worker Lambda (already deployed) ✅
-3. **Phase 3**: Monitor CloudWatch for successful event routing
-4. **Phase 4**: Verify WebSocket delivery in dev environment
-5. **Phase 5**: Deploy to staging, then production
+- Initial EventBridge specification
+- Event schemas for ai.message.* events
+- C# implementation examples
 
 ---
 
-## Support
+## Related Documentation
 
-**Questions?** Contact the coaching service team or refer to:
 - [Coaching Session Workflow](../ai-user/coaching-session-workflow.md)
-- [Issue #222](https://github.com/mottych/PurposePath_AI/issues/222)
+- [Issue #222: Async WebSocket Pattern](https://github.com/mottych/PurposePath_AI/issues/222)
 - [EventBridge Client Source](../../../../shared/services/eventbridge_client.py)
