@@ -9,7 +9,7 @@ from typing import Any
 
 import structlog
 from boto3.dynamodb.conditions import Key
-from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
+from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus, AIJobType
 
 logger = structlog.get_logger()
 
@@ -270,6 +270,7 @@ class DynamoDBJobRepository:
         """
         item: dict[str, Any] = {
             "job_id": job.job_id,
+            "job_type": job.job_type.value,
             "tenant_id": job.tenant_id,
             "user_id": job.user_id,
             "topic_id": job.topic_id,
@@ -278,6 +279,13 @@ class DynamoDBJobRepository:
             "created_at": job.created_at.isoformat(),
             "estimated_duration_ms": job.estimated_duration_ms,
         }
+
+        # Optional fields for conversation_message jobs
+        if job.session_id is not None:
+            item["session_id"] = job.session_id
+
+        if job.user_message is not None:
+            item["user_message"] = job.user_message
 
         # Store JWT token for parameter enrichment during execution
         # Note: DynamoDB has encryption at rest, but token should be short-lived
@@ -318,9 +326,12 @@ class DynamoDBJobRepository:
         """
         return AIJob(
             job_id=item["job_id"],
+            job_type=AIJobType(item.get("job_type", "single_shot")),
             tenant_id=item["tenant_id"],
             user_id=item["user_id"],
             topic_id=item["topic_id"],
+            session_id=item.get("session_id"),
+            user_message=item.get("user_message"),
             parameters=item.get("parameters", {}),
             jwt_token=item.get("jwt_token"),  # Retrieve token for enrichment
             status=AIJobStatus(item["status"]),
