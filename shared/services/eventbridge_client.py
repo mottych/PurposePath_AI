@@ -343,6 +343,9 @@ class EventBridgePublisher:
         topic_id: str,
         message: str,
         is_final: bool,
+        turn: int,
+        max_turns: int,
+        message_count: int,
         result: dict[str, Any] | None = None,
     ) -> str:
         """Publish ai.message.completed event with the complete AI response.
@@ -358,6 +361,9 @@ class EventBridgePublisher:
             topic_id: AI topic that was executed
             message: The complete AI response message
             is_final: Whether this is the final message in conversation
+            turn: Current turn number (1-indexed)
+            max_turns: Maximum turns allowed (0 = unlimited)
+            message_count: Total messages in conversation
             result: Extraction result if is_final is True
 
         Returns:
@@ -373,6 +379,9 @@ class EventBridgePublisher:
                 "topicId": topic_id,
                 "message": message,
                 "isFinal": is_final,
+                "turn": turn,
+                "maxTurns": max_turns,
+                "messageCount": message_count,
                 "result": result,
             },
         )

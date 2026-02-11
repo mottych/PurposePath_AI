@@ -1,6 +1,6 @@
 # Async Coaching Message Events - Frontend Integration Specification
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Date**: February 10, 2026  
 **Related Issue**: #222  
 **Target Audience**: Frontend Developers, .NET Backend Team
@@ -143,6 +143,9 @@ This specification defines the async pattern for coaching conversation messages.
   "data": {
     "message": "Complete AI coach response. This is the full response with no token streaming.",
     "isFinal": false,
+    "turn": 3,
+    "maxTurns": 10,
+    "messageCount": 6,
     "result": null
   }
 }
@@ -159,6 +162,9 @@ This specification defines the async pattern for coaching conversation messages.
 | `userId` | string (UUID) | Yes | User identifier (for routing) |
 | `data.message` | string | Yes | **Complete AI response** (full text, no streaming) |
 | `data.isFinal` | boolean | Yes | `true` if conversation is ending |
+| `data.turn` | number | Yes | Current turn number (1-indexed, coach responses only) |
+| `data.maxTurns` | number | Yes | Maximum turns allowed (0 = unlimited) |
+| `data.messageCount` | number | Yes | Total messages in conversation (user + AI) |
 | `data.result` | object \| null | Yes | Extraction result when `isFinal` is `true` |
 
 **When `isFinal` is `true`** (conversation complete):
@@ -173,6 +179,9 @@ This specification defines the async pattern for coaching conversation messages.
   "data": {
     "message": "Final coach message summarizing the conversation...",
     "isFinal": true,
+    "turn": 10,
+    "maxTurns": 10,
+    "messageCount": 20,
     "result": {
       "identified_values": ["value1", "value2", "value3"],
       "extraction_type": "conversation_result",
@@ -267,6 +276,9 @@ interface MessageCompletedEvent {
   data: {
     message: string;
     isFinal: boolean;
+    turn: number;
+    maxTurns: number;
+    messageCount: number;
     result: ConversationResult | null;
   };
 }
@@ -332,6 +344,12 @@ const handleMessageCompleted = (event: MessageCompletedEvent) => {
     role: 'assistant',
     content: event.data.message
   });
+  
+  // Update progress indicators
+  if (event.data.maxTurns > 0) {
+    setProgress(event.data.turn / event.data.maxTurns);
+    setProgressText(`Question ${event.data.turn} of ${event.data.maxTurns}`);
+  }
   
   // Handle conversation completion
   if (event.data.isFinal) {
@@ -438,37 +456,36 @@ const pollMessageStatus = async (jobId: string) => {
 };
 ```
 
-## Event Type Naming
+## Event Type Field
 
-**⚠️ Important**: Async coaching messages use `eventType` field in WebSocket payload.
+**All WebSocket events use the `eventType` field** to identify the event type.
 
-**Comparison with single-shot jobs**:
+**Event types**:
 
-| Pattern | WebSocket Field | Value |
-|---------|----------------|-------|
-| **Async Messages** (Conversations) | `eventType` | `"ai.message.completed"` |
-| **Single-shot Jobs** (Analysis) | `Type` | `"ai.job.completed"` |
+| Pattern | Event Type | Description |
+|---------|-----------|-------------|
+| **Async Messages** (Conversations) | `ai.message.completed` | Coach response ready |
+| **Async Messages** (Conversations) | `ai.message.failed` | Message processing failed |
+| **Single-shot Jobs** (Analysis) | `ai.job.completed` | Analysis job completed |
+| **Single-shot Jobs** (Analysis) | `ai.job.failed` | Analysis job failed |
 
-This inconsistency exists for historical reasons. When implementing WebSocket handlers:
-- Check for **both** `eventType` and `Type` fields
-- Route based on which field is present
-- Future: may standardize to `eventType` only
+**WebSocket handler example**:
 
 ```typescript
-// Handle both patterns
 const handleWebSocketMessage = (payload: any) => {
-  const type = payload.eventType || payload.Type;
-  
-  switch (type) {
-    case 'ai.message.completed':    // Async messages
-    case 'ai.message.failed':       // Async messages
+  switch (payload.eventType) {
+    case 'ai.message.completed':
+    case 'ai.message.failed':
       handleCoachingMessage(payload);
       break;
       
-    case 'ai.job.completed':        // Single-shot jobs
-    case 'ai.job.failed':           // Single-shot jobs
+    case 'ai.job.completed':
+    case 'ai.job.failed':
       handleJobCompletion(payload);
       break;
+      
+    default:
+      console.warn('Unknown event type:', payload.eventType);
   }
 };
 ```
@@ -724,16 +741,25 @@ if (estimated_duration_ms > 30000) {
 
 ## Changelog
 
+### Version 1.2.0 (2026-02-10)
+
+- **Added progress tracking fields for frontend UX**
+- Added `turn`, `maxTurns`, `messageCount` to `ai.message.completed` event
+- Frontend can now show "Question 3 of 10" progress indicators
+- Frontend can show "You have 7 questions remaining"
+- **Fixed event type naming documentation**
+- All events use `eventType` field consistently (not `Type` vs `eventType`)
+- Removed incorrect documentation about Type/eventType inconsistency
+- Updated TypeScript examples with progress handling code
+
 ### Version 1.1.0 (2026-02-10)
 
 - **Rewritten for frontend integration focus**
 - Removed C# implementation code (moved to backend docs)
-- Removed deprecated fields: `maxTurns`, `messageCount`, `turn`
 - Added comprehensive frontend code examples
 - Added error handling reference
 - Added sequence diagrams
 - Added FAQ section
-- Documented `eventType` naming inconsistency
 
 ### Version 1.0.0 (2026-01-15)
 

@@ -323,6 +323,9 @@ class CoachingMessageJobService:
                     topic_id=job.topic_id,
                     message=message_response.message,
                     is_final=message_response.is_final,
+                    turn=message_response.turn,
+                    max_turns=message_response.max_turns,
+                    message_count=message_response.message_count,
                     result=result_dict.get("result"),
                 )
             except EventBridgePublishError as e:
