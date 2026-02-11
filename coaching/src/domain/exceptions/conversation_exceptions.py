@@ -60,7 +60,7 @@ class InvalidPhaseTransition(DomainException):
             target_phase: Phase that was attempted
             reason: Optional specific reason why transition is invalid
         """
-        message = f"Cannot transition from {current_phase.value} to {target_phase.value}" + (
+        message = f"Cannot transition from {current_phase} to {target_phase}" + (
             f": {reason}" if reason else ""
         )
 
@@ -69,8 +69,8 @@ class InvalidPhaseTransition(DomainException):
             code="INVALID_PHASE_TRANSITION",
             context={
                 "conversation_id": conversation_id,
-                "current_phase": current_phase.value,
-                "target_phase": target_phase.value,
+                "current_phase": current_phase,
+                "target_phase": target_phase,
                 "reason": reason,
             },
         )

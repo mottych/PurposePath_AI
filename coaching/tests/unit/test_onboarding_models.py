@@ -6,8 +6,13 @@ from coaching.src.api.models.onboarding import (
     OnboardingCoachingResponse,
     OnboardingSuggestionRequest,
     OnboardingSuggestionResponse,
+    WebsiteScanBusinessProfile,
+    WebsiteScanCoreIdentity,
+    WebsiteScanProduct,
     WebsiteScanRequest,
     WebsiteScanResponse,
+    WebsiteScanTargetMarket,
+    WebsiteScanValueProposition,
 )
 from pydantic import ValidationError
 
@@ -194,6 +199,46 @@ class TestWebsiteScanRequest:
 
 
 @pytest.mark.unit
+class TestWebsiteScanProduct:
+    """Test WebsiteScanProduct model."""
+
+    def test_valid_product(self):
+        """Test valid WebsiteScanProduct creation."""
+        # Arrange & Act
+        product = WebsiteScanProduct(
+            name="CRM Software",
+            description="Customer relationship management platform",
+            problem_solved="Helps manage customer relationships effectively",
+            key_features=["Contact management", "Sales pipeline", "Reporting"],
+        )
+
+        # Assert
+        assert product.name == "CRM Software"
+        assert product.description == "Customer relationship management platform"
+        assert product.problem_solved == "Helps manage customer relationships effectively"
+        assert len(product.key_features) == 3
+
+    def test_product_with_minimal_fields(self):
+        """Test WebsiteScanProduct with only required fields."""
+        # Arrange & Act
+        product = WebsiteScanProduct(
+            name="Basic Service",
+            problem_solved="Solves a specific problem",
+        )
+
+        # Assert
+        assert product.name == "Basic Service"
+        assert product.description is None
+        assert product.key_features == []
+
+    def test_missing_required_field(self):
+        """Test WebsiteScanProduct requires name and problem_solved."""
+        # Arrange & Act & Assert
+        with pytest.raises(ValidationError):
+            WebsiteScanProduct(name="Test")  # Missing problem_solved
+
+
+@pytest.mark.unit
 class TestWebsiteScanResponse:
     """Test WebsiteScanResponse model."""
 
@@ -201,87 +246,175 @@ class TestWebsiteScanResponse:
         """Test valid response with all fields."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="TechCorp",
-            industry="Software",
-            description="A leading software company",
-            products=["CRM", "Analytics"],
-            targetMarket="Enterprise businesses",
-            suggestedNiche="B2B SaaS for mid-market",
+            scan_id="scan-123",
+            captured_at="2024-12-25T00:00:00Z",
+            source_url="https://example.com",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Acme Corp",
+                business_description="A company that makes innovative software solutions",
+                industry="Technology",
+                year_founded=2015,
+                headquarters_location="San Francisco, CA",
+                website="https://example.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To be the leading platform in our industry",
+                purpose_hint="We empower businesses to succeed",
+                inferred_values=["Innovation", "Integrity", "Customer Focus"],
+            ),
+            target_market=WebsiteScanTargetMarket(
+                niche_statement="Mid-market B2B SaaS companies",
+                segments=["B2B", "SaaS", "Enterprise"],
+                pain_points=["Complex workflows", "Manual processes"],
+            ),
+            products=[
+                WebsiteScanProduct(
+                    name="CRM Software",
+                    description="Customer relationship management platform",
+                    problem_solved="Helps manage customer relationships effectively",
+                    key_features=["Contact management", "Pipeline tracking", "Reporting"],
+                )
+            ],
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="The only AI-powered CRM built for growing businesses",
+                key_differentiators=["AI-powered", "Easy to use", "Affordable"],
+                proof_points=["500+ customers", "4.8/5 rating", "99.9% uptime"],
+            ),
         )
 
         # Assert
-        assert response.business_name == "TechCorp"
-        assert response.industry == "Software"
-        assert len(response.products) == 2
+        assert response.scan_id == "scan-123"
+        assert response.business_profile.business_name == "Acme Corp"
+        assert "Mid-market" in response.target_market.niche_statement
+        assert len(response.products) == 1
+        assert response.products[0].name == "CRM Software"
 
-    def test_camel_case_aliases(self):
-        """Test that camelCase aliases work."""
-        # Arrange - Using camelCase
+    def test_products_as_dicts(self):
+        """Test that nested objects can be provided as dicts."""
+        # Arrange - Using dicts for nested objects
         data = {
-            "businessName": "TestCorp",
-            "industry": "Tech",
-            "description": "Test description",
-            "products": [],
-            "targetMarket": "Test market",
-            "suggestedNiche": "Test niche",
+            "scan_id": "scan-456",
+            "captured_at": "2024-12-25T00:00:00Z",
+            "source_url": "https://test.com",
+            "business_profile": {
+                "business_name": "Test Co",
+                "business_description": "Test company description",
+                "industry": "Software",
+                "year_founded": 2020,
+                "headquarters_location": "New York, NY",
+                "website": "https://test.com",
+            },
+            "core_identity": {
+                "vision_hint": "To transform the industry",
+                "purpose_hint": "We make business easier",
+                "inferred_values": ["Excellence", "Teamwork"],
+            },
+            "target_market": {
+                "niche_statement": "Small businesses in the tech sector",
+                "segments": ["Segment1"],
+                "pain_points": ["Pain1"],
+            },
+            "products": [
+                {
+                    "name": "Product One",
+                    "description": "Main product offering",
+                    "problem_solved": "Solves business challenges",
+                    "key_features": ["Feature1"],
+                }
+            ],
+            "value_proposition": {
+                "unique_selling_proposition": "Best in class solution",
+                "key_differentiators": ["Diff1"],
+                "proof_points": ["100+ customers"],
+            },
         }
 
         # Act
         response = WebsiteScanResponse(**data)
 
         # Assert
-        assert response.business_name == "TestCorp"
-        assert response.target_market == "Test market"
-        assert response.suggested_niche == "Test niche"
-
-    def test_snake_case_field_names(self):
-        """Test that snake_case field names work."""
-        # Arrange - Using snake_case
-        response = WebsiteScanResponse(
-            business_name="TestCorp",
-            industry="Tech",
-            description="Test",
-            products=[],
-            target_market="Market",
-            suggested_niche="Niche",
-        )
-
-        # Assert
-        assert response.business_name == "TestCorp"
-        assert response.target_market == "Market"
+        assert response.scan_id == "scan-456"
+        assert isinstance(response.business_profile, WebsiteScanBusinessProfile)
+        assert response.products[0].name == "Product One"
 
     def test_empty_products_list(self):
-        """Test response with empty products list."""
+        """Test response with empty optional lists."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="TestCorp",
-            industry="Services",
-            description="Service company",
+            scan_id="scan-789",
+            captured_at="2024-12-25T00:00:00Z",
+            source_url="https://empty.com",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Empty Co",
+                business_description="A minimal company",
+                website="https://empty.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint=None,
+                purpose_hint=None,
+                inferred_values=[],
+            ),
+            target_market=WebsiteScanTargetMarket(
+                niche_statement="General market",
+                segments=[],
+                pain_points=[],
+            ),
             products=[],
-            targetMarket="B2B",
-            suggestedNiche="Consulting",
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition=None,
+                key_differentiators=[],
+                proof_points=[],
+            ),
         )
 
         # Assert
         assert response.products == []
+        assert response.core_identity.inferred_values == []
 
     def test_many_products(self):
         """Test response with many products."""
         # Arrange
-        products = [f"Product {i}" for i in range(20)]
+        products = [
+            WebsiteScanProduct(
+                name=f"Product {i}",
+                description=f"Description for product {i}",
+                problem_solved=f"Solves problem {i}",
+                key_features=[f"Feature {i}.1", f"Feature {i}.2"],
+            )
+            for i in range(10)
+        ]
 
         # Act
         response = WebsiteScanResponse(
-            businessName="TestCorp",
-            industry="Manufacturing",
-            description="Makes many products",
+            scan_id="scan-many",
+            captured_at="2024-12-25T00:00:00Z",
+            source_url="https://many.com",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Many Products Co",
+                business_description="We offer many products and services",
+                industry="Manufacturing",
+                website="https://many.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To offer the best products",
+                purpose_hint="We solve many problems",
+                inferred_values=["Quality", "Variety"],
+            ),
+            target_market=WebsiteScanTargetMarket(
+                niche_statement="Everyone who needs solutions",
+                segments=["Industrial buyers", "Retail customers"],
+                pain_points=["Quality concerns", "Limited options"],
+            ),
             products=products,
-            targetMarket="Consumer",
-            suggestedNiche="Consumer goods",
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="Best variety in the market",
+                key_differentiators=["Wide selection", "Quality", "Service"],
+                proof_points=["1000+ products", "50+ years in business"],
+            ),
         )
 
         # Assert
-        assert len(response.products) == 20
+        assert len(response.products) == 10
 
 
 @pytest.mark.unit
@@ -448,17 +581,47 @@ class TestOnboardingModelsEdgeCases:
         """Test WebsiteScanResponse with special characters."""
         # Arrange & Act
         response = WebsiteScanResponse(
-            businessName="Tech & Co.",
-            industry="IT & Services",
-            description="We provide IT services & consulting",
-            products=["Product A & B", "Service C & D"],
-            targetMarket="B2B & B2C",
-            suggestedNiche="Hybrid B2B/B2C",
+            scan_id="scan-special",
+            captured_at="2024-12-25T00:00:00Z",
+            source_url="https://special.com",
+            business_profile=WebsiteScanBusinessProfile(
+                business_name="Company™ & Co®",
+                business_description="B2B SaaS & consulting services™",
+                industry="Technology & Consulting",
+                website="https://special.com",
+            ),
+            core_identity=WebsiteScanCoreIdentity(
+                vision_hint="To deliver <results>",
+                purpose_hint="We serve C-level & VP's",
+                inferred_values=["Excellence™", "Innovation®"],
+            ),
+            target_market=WebsiteScanTargetMarket(
+                niche_statement="C-level & VP's at enterprise companies",
+                segments=["<Enterprise>", "Mid-market"],
+                pain_points=["<Complex> problems"],
+            ),
+            products=[
+                WebsiteScanProduct(
+                    name="Product™ & Service®",
+                    description="SaaS & Consulting platform",
+                    problem_solved="Solves <complex> business challenges",
+                    key_features=["100% uptime", "<90 day ROI"],
+                )
+            ],
+            value_proposition=WebsiteScanValueProposition(
+                unique_selling_proposition="Best-in-class™ solution",
+                key_differentiators=["<90 day ROI", "100% uptime"],
+                proof_points=["Client™ testimonials"],
+            ),
         )
 
         # Assert
-        assert "&" in response.business_name
-        assert "&" in response.industry
+        assert "™" in response.business_profile.business_name
+        assert "&" in response.business_profile.business_name
+        assert "<results>" in response.core_identity.vision_hint
+        assert "&" in response.target_market.niche_statement
+        assert "<Complex>" in response.target_market.pain_points[0]
+        assert "<90" in response.products[0].key_features[1]
 
     def test_coaching_request_with_multiline_message(self):
         """Test CoachingRequest with multiline message."""

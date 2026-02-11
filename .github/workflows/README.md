@@ -3,7 +3,7 @@
 ## Workflow Overview
 
 ### CI/CD Pipeline (`ci.yml`)
-**Trigger**: Automatic on push to `dev` or `main` branches, and on pull requests
+**Trigger**: Automatic on push to `dev` or `master` branches, and on pull requests
 **Purpose**: Run tests, linting, type checking, and security scans
 **Does NOT deploy** - only validates code quality
 
@@ -46,3 +46,13 @@ The GitHub Actions user needs these permissions:
 2. Manually trigger `deploy-dev.yml` workflow when ready to deploy
 3. Workflow builds Docker image and deploys to AWS
 4. Service available at: `https://api.dev.purposepath.app/coaching/api/v1/`
+
+## Production Promotion Flow
+
+`deploy-production.yml` now deploys automatically when a PR from `staging` into `master` is merged.
+
+- Trigger: `pull_request` closed event where:
+  - base branch is `master`
+  - source branch is `staging`
+  - PR was merged
+- Manual override remains available via `workflow_dispatch`.

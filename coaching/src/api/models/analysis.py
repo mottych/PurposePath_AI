@@ -1,7 +1,7 @@
 """API models for analysis endpoints.
 
 This module provides Pydantic models for analysis-related API requests and responses,
-including alignment, strategy, KPI, and operational analysis endpoints.
+including alignment, strategy, Measure, and operational analysis endpoints.
 """
 
 from datetime import datetime
@@ -74,22 +74,22 @@ class StrategyAnalysisRequest(BaseModel):
     )
 
 
-class KPIAnalysisRequest(BaseModel):
-    """Request to analyze KPI effectiveness and recommendations.
+class MeasureAnalysisRequest(BaseModel):
+    """Request to analyze Measure effectiveness and recommendations.
 
-    This model validates KPI analysis requests.
+    This model validates Measure analysis requests.
     Note: user_id and tenant_id are extracted from JWT token.
     """
 
-    current_kpis: list[str] = Field(
+    current_measures: list[str] = Field(
         ...,
         min_length=1,
-        description="List of current KPIs",
+        description="List of current Measures",
         examples=[["Monthly Recurring Revenue", "Customer Acquisition Cost", "Net Promoter Score"]],
     )
     context: dict[str, Any] = Field(
         default_factory=dict,
-        description="Business context for KPI analysis",
+        description="Business context for Measure analysis",
         examples=[
             {
                 "business_goals": ["Increase revenue", "Improve customer satisfaction"],
@@ -98,13 +98,13 @@ class KPIAnalysisRequest(BaseModel):
         ],
     )
 
-    @field_validator("current_kpis")
+    @field_validator("current_measures")
     @classmethod
-    def validate_kpis(cls, v: list[str]) -> list[str]:
-        """Validate KPI list."""
+    def validate_measures(cls, v: list[str]) -> list[str]:
+        """Validate Measure list."""
         if not v:
-            raise ValueError("At least one KPI must be provided")
-        return [kpi.strip() for kpi in v if kpi.strip()]
+            raise ValueError("At least one Measure must be provided")
+        return [measure.strip() for measure in v if measure.strip()]
 
 
 class OperationsAnalysisRequest(BaseModel):
@@ -303,12 +303,12 @@ class StrategyAnalysisResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
-class KPIRecommendation(BaseModel):
-    """KPI recommendation component."""
+class MeasureRecommendation(BaseModel):
+    """Measure recommendation component."""
 
-    kpi_name: str = Field(..., description="Recommended KPI name")
-    description: str = Field(..., description="What this KPI measures")
-    rationale: str = Field(..., description="Why this KPI is important")
+    measure_name: str = Field(..., description="Recommended Measure name")
+    description: str = Field(..., description="What this Measure measures")
+    rationale: str = Field(..., description="Why this Measure is important")
     target_range: str | None = Field(default=None, description="Suggested target range")
     measurement_frequency: str = Field(
         default="monthly",
@@ -316,32 +316,32 @@ class KPIRecommendation(BaseModel):
     )
 
 
-class KPIAnalysisResponse(BaseModel):
-    """Response for KPI analysis.
+class MeasureAnalysisResponse(BaseModel):
+    """Response for Measure analysis.
 
-    This model provides KPI effectiveness analysis and recommendations.
+    This model provides Measure effectiveness analysis and recommendations.
     """
 
     analysis_id: str = Field(..., description="Analysis identifier")
     analysis_type: AnalysisType = Field(..., description="Analysis type")
-    kpi_effectiveness_score: float = Field(
+    measure_effectiveness_score: float = Field(
         ...,
         ge=0.0,
         le=100.0,
-        description="Overall KPI effectiveness score",
+        description="Overall Measure effectiveness score",
     )
     overall_assessment: str = Field(..., description="Summary assessment")
-    current_kpi_analysis: list[dict[str, Any]] = Field(
+    current_measure_analysis: list[dict[str, Any]] = Field(
         ...,
-        description="Analysis of current KPIs",
+        description="Analysis of current Measures",
     )
-    missing_kpis: list[str] = Field(
+    missing_measures: list[str] = Field(
         default_factory=list,
-        description="Important KPIs that are missing",
+        description="Important Measures that are missing",
     )
-    recommended_kpis: list[KPIRecommendation] = Field(
+    recommended_measures: list[MeasureRecommendation] = Field(
         default_factory=list,
-        description="Recommended KPIs to add",
+        description="Recommended Measures to add",
     )
     created_at: datetime = Field(..., description="Analysis timestamp")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
@@ -384,17 +384,112 @@ class OperationsAnalysisResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
+class AlignmentExplanationResponse(BaseModel):
+    """Response for alignment explanation."""
+
+    explanation: str = Field(..., description="Detailed explanation of alignment")
+    key_factors: list[str] = Field(..., description="Key factors influencing the score")
+    improvement_areas: list[str] = Field(..., description="Areas for improvement")
+
+
+class AlignmentSuggestionsResponse(BaseModel):
+    """Response for alignment suggestions."""
+
+    suggestions: list[str] = Field(..., description="List of suggestions to improve alignment")
+    impact_analysis: str = Field(..., description="Analysis of potential impact")
+
+
+class MeasureRecommendationsRequest(BaseModel):
+    """Request for Measure recommendations."""
+
+    business_goals: list[str] = Field(..., description="List of business goals")
+    industry: str = Field(..., description="Industry sector")
+    current_measures: list[str] = Field(default_factory=list, description="Current Measures if any")
+
+
+class MeasureRecommendationsResponse(BaseModel):
+    """Response for Measure recommendations."""
+
+    recommended_measures: list[MeasureRecommendation] = Field(
+        ..., description="List of recommended Measures"
+    )
+    rationale: str = Field(..., description="Overall rationale for recommendations")
+
+
+# AI Content Models (for internal use by GenericAIHandler)
+
+
+class AlignmentAnalysisAIContent(BaseModel):
+    """AI-generated content for alignment analysis."""
+
+    scores: AlignmentScore = Field(..., description="Alignment scores")
+    overall_assessment: str = Field(..., description="Summary assessment")
+    strengths: list[str] = Field(..., description="Identified strengths")
+    misalignments: list[str] = Field(default_factory=list, description="Identified misalignments")
+    recommendations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Recommendations"
+    )
+
+
+class StrategyAnalysisAIContent(BaseModel):
+    """AI-generated content for strategy analysis."""
+
+    effectiveness_score: float = Field(..., description="Strategy effectiveness score")
+    overall_assessment: str = Field(..., description="Summary assessment")
+    strengths: list[str] = Field(..., description="Strategy strengths")
+    weaknesses: list[str] = Field(default_factory=list, description="Strategy weaknesses")
+    opportunities: list[str] = Field(default_factory=list, description="Identified opportunities")
+    recommendations: list[StrategyRecommendation] = Field(
+        default_factory=list, description="Strategic recommendations"
+    )
+
+
+class MeasureAnalysisAIContent(BaseModel):
+    """AI-generated content for Measure analysis."""
+
+    measure_effectiveness_score: float = Field(
+        ..., description="Overall Measure effectiveness score"
+    )
+    overall_assessment: str = Field(..., description="Summary assessment")
+    current_measure_analysis: list[dict[str, Any]] = Field(
+        ..., description="Analysis of current Measures"
+    )
+    missing_measures: list[str] = Field(default_factory=list, description="Missing Measures")
+    recommended_measures: list[MeasureRecommendation] = Field(
+        default_factory=list, description="Recommended Measures"
+    )
+
+
+class OperationsAnalysisAIContent(BaseModel):
+    """AI-generated content for operational analysis."""
+
+    findings: dict[str, Any] = Field(..., description="Analysis findings")
+    recommendations: list[dict[str, Any]] = Field(
+        default_factory=list, description="Recommendations"
+    )
+    priority_actions: list[str] = Field(default_factory=list, description="High-priority actions")
+
+
 __all__ = [
+    # AI Content Models
+    "AlignmentAnalysisAIContent",
     # Requests
     "AlignmentAnalysisRequest",
     "AlignmentAnalysisResponse",
+    "AlignmentExplanationResponse",
     # Responses
     "AlignmentScore",
-    "KPIAnalysisRequest",
-    "KPIAnalysisResponse",
-    "KPIRecommendation",
+    "AlignmentSuggestionsResponse",
+    "MeasureAnalysisAIContent",
+    "MeasureAnalysisRequest",
+    "MeasureAnalysisResponse",
+    "MeasureRecommendation",
+    "MeasureRecommendationsRequest",
+    "MeasureRecommendationsResponse",
+    "OperationsAnalysisAIContent",
     "OperationsAnalysisRequest",
     "OperationsAnalysisResponse",
+    "StrategyAnalysisAIContent",
     "StrategyAnalysisRequest",
     "StrategyAnalysisResponse",
     "StrategyRecommendation",

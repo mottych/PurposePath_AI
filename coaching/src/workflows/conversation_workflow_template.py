@@ -10,14 +10,15 @@ Implements a LangGraph-based conversational flow with:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
 import structlog
-from coaching.src.llm.providers.manager import provider_manager
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
-from .base import BaseWorkflow, WorkflowState, WorkflowType
+from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
 
 logger = structlog.get_logger(__name__)
 
@@ -42,7 +43,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph for conversational coaching."""
         # Create StateGraph with our enhanced state type
         # LangGraph prefers TypedDict but supports dict at runtime
@@ -152,7 +153,13 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Generate thoughtful follow-up questions."""
         logger.info("Executing question generation", workflow_id=state.get("workflow_id"))
 
-        provider = provider_manager.get_provider(state.get("provider_id"))
+        if self.provider_manager is None:
+            raise ValueError("No providers registered")
+
+        provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
+            "provider_id"
+        )
+        provider = self.provider_manager.get_provider(provider_id)
 
         # Analyze conversation context to generate appropriate questions
         conversation_context = self._get_conversation_context(state)
@@ -172,21 +179,37 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            response = await provider.generate_response(  # type: ignore[attr-defined]
-                messages=state.get("messages", []),
-                system_prompt=system_prompt,
-                **state.get("model_config", {}),
-            )
+            # Build LangChain messages for invoke()
+            lc_messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=system_prompt)]
+
+            # Add existing user messages from conversation history
+            user_messages_added = False
+            for msg in state.get("messages", []):
+                if msg.get("role") == "user":
+                    lc_messages.append(HumanMessage(content=msg.get("content", "")))
+                    user_messages_added = True
+
+            # At session start, no user messages exist yet - add a starter prompt
+            # Bedrock requires at least one HumanMessage in the conversation
+            if not user_messages_added:
+                lc_messages.append(
+                    HumanMessage(
+                        content="Please introduce yourself and start the coaching session."
+                    )
+                )
+
+            # Use invoke() which returns a string directly
+            response_content = await provider.invoke(lc_messages)  # type: ignore[arg-type]
 
             question_message = {
                 "role": "assistant",
-                "content": response.content,
+                "content": response_content,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
             state["messages"].append(question_message)
             state["current_step"] = "question_generation"
-            state["step_data"]["last_question"] = response.content
+            state["step_data"]["last_question"] = response_content
 
         except Exception as e:
             logger.error("Question generation failed", error=str(e))
@@ -198,6 +221,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             }
             state["messages"].append(fallback_message)
 
+        state["current_step"] = "question_generation"
         state["updated_at"] = datetime.utcnow().isoformat()
         return state
 
@@ -205,7 +229,13 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """Analyze user responses for insights and themes."""
         logger.info("Executing response analysis", workflow_id=state.get("workflow_id"))
 
-        provider = provider_manager.get_provider(state.get("provider_id"))
+        if self.provider_manager is None:
+            raise ValueError("No providers registered")
+
+        provider_id = state.get("provider_id") or state.get("workflow_context", {}).get(
+            "provider_id"
+        )
+        provider = self.provider_manager.get_provider(provider_id)
 
         # Get the latest user response
         user_messages = [msg for msg in state.get("messages", []) if msg.get("role") == "user"]
@@ -227,11 +257,33 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         """
 
         try:
-            analysis_result = await provider.analyze_text(  # type: ignore[attr-defined]
-                text=latest_response,
-                analysis_prompt=analysis_prompt,
-                **state.get("model_config", {}),
-            )
+            # Build LangChain messages for invoke()
+            lc_messages = [
+                SystemMessage(
+                    content="You are an expert analyst. Provide structured analysis in JSON format."
+                ),
+                HumanMessage(content=analysis_prompt),
+            ]
+
+            # Use invoke() which returns a string directly
+            analysis_response = await provider.invoke(lc_messages)
+
+            # Try to parse as JSON
+            try:
+                # Extract JSON from response if wrapped in markdown
+                json_text = analysis_response
+                if "```json" in json_text:
+                    json_start = json_text.find("```json") + 7
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+                elif "```" in json_text:
+                    json_start = json_text.find("```") + 3
+                    json_end = json_text.find("```", json_start)
+                    json_text = json_text[json_start:json_end].strip()
+
+                analysis_result = json.loads(json_text)
+            except json.JSONDecodeError:
+                analysis_result = {"raw_analysis": analysis_response}
 
             # Store analysis results
             if "step_data" not in state:
@@ -239,11 +291,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
             state["step_data"]["analysis"] = {
                 "user_response": latest_response,
-                "analysis_result": (
-                    analysis_result.model_dump()
-                    if hasattr(analysis_result, "model_dump")
-                    else str(analysis_result)
-                ),
+                "analysis_result": analysis_result,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
@@ -303,13 +351,20 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         )
         insights_count = len(state.get("results", {}).get("accumulated_insights", []))
 
+        # Get max_turns from state's model_config, or fallback to config, default to 0 (unlimited)
+        max_turns = state.get("model_config", {}).get("max_turns", 0)
+        if max_turns == 0:
+            max_turns = self.config.custom_config.get("max_turns", 0)
+        # If unlimited (0), use a high number for comparison
+        effective_max_turns = max_turns if max_turns > 0 else 999
+
         state["step_data"]["conversation_metrics"] = {
             "user_messages": conversation_count,
             "insights_collected": insights_count,
             "decision_factors": {
                 "sufficient_depth": conversation_count >= 3,
                 "meaningful_insights": insights_count >= 2,
-                "max_turns_reached": conversation_count >= 8,
+                "max_turns_reached": conversation_count >= effective_max_turns,
             },
         }
 
@@ -335,11 +390,18 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         state["messages"].append(completion_message)
         state["current_step"] = "completion"
-        state["status"] = "completed"
+        state["status"] = WorkflowStatus.COMPLETED
         state["completed_at"] = datetime.utcnow().isoformat()
         state["updated_at"] = datetime.utcnow().isoformat()
 
-        # Final results
+        # Get the last assistant message for the response
+        assistant_messages = [
+            msg for msg in state.get("messages", []) if msg.get("role") == "assistant"
+        ]
+        last_response = assistant_messages[-1]["content"] if assistant_messages else ""
+
+        # Final results - include response for adapter compatibility
+        state["results"]["response"] = last_response
         state["results"]["conversation_complete"] = True
         state["results"]["total_insights"] = len(insights)
         state["results"]["conversation_turns"] = len(
@@ -356,6 +418,15 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         )
         insights_count = len(state.get("results", {}).get("accumulated_insights", []))
 
+        # Get max_turns from state's model_config, or fallback to config, default to 0 (unlimited)
+        max_turns = state.get("model_config", {}).get("max_turns", 0)
+        if max_turns == 0:
+            max_turns = self.config.custom_config.get("max_turns", 0)
+
+        # Complete if max turns reached (only if max_turns is configured)
+        if max_turns > 0 and conversation_count >= max_turns:
+            return "complete"
+
         # Complete if we have at least one turn and any insights (for testing/demo)
         # This prevents infinite loops when there's no new user input
         if conversation_count >= 1 and insights_count >= 1:
@@ -367,10 +438,6 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         # Complete if we have sufficient insights and depth
         if conversation_count >= 3 and insights_count >= 2:
-            return "complete"
-
-        # Complete if max turns reached
-        if conversation_count >= 8:
             return "complete"
 
         return "continue"

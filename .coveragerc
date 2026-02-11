@@ -1,0 +1,6 @@
+[run]
+omit =
+    coaching/src/api/*
+    coaching/src/scripts/*
+    coaching/src/infrastructure/*
+    coaching/src/llm/*

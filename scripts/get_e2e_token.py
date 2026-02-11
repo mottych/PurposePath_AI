@@ -7,7 +7,9 @@ import httpx
 
 def get_auth_token() -> str:
     """Get JWT token from auth endpoint."""
-    url = "https://api.dev.purposepath.app/account/api/v1/auth/login"
+    # Use direct API Gateway URL to bypass custom domain SSL issues
+    # Dev account API: wc99xync24
+    url = "https://wc99xync24.execute-api.us-east-1.amazonaws.com/api/v1/auth/login"
     payload = {"email": "motty@purposepath.ai", "password": "Abcd1234"}
 
     try:
@@ -15,8 +17,12 @@ def get_auth_token() -> str:
         response.raise_for_status()
 
         data = response.json()
-        token = data.get("access_token") or data.get("token") or data.get("data", {}).get(
-            "access_token"
+        # Handle different response formats
+        token = (
+            data.get("access_token")
+            or data.get("token")
+            or data.get("data", {}).get("accessToken")  # .NET API format
+            or data.get("data", {}).get("access_token")
         )
 
         if not token:

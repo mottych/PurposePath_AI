@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb import DynamoDBServiceResource
     from mypy_boto3_dynamodb.service_resource import Table
 
+from coaching.src.core.topic_registry import TOPIC_REGISTRY
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
@@ -106,6 +107,90 @@ class TopicRepository:
             logger.error("Failed to list topics", error=str(e))
             raise
 
+    async def list_all_with_enum_defaults(
+        self, *, include_inactive: bool = False
+    ) -> list[LLMTopic]:
+        """List all topics, merging enum defaults with database records.
+
+        Returns topics from the database first, then adds any enum values
+        that are not yet configured in the database. This ensures all
+        defined topics are always visible to admins, even if not yet
+        configured in DynamoDB.
+
+        Args:
+            include_inactive: Whether to include inactive topics in results
+
+        Returns:
+            List of topics with endpoint registry defaults merged with DB records
+        """
+        try:
+            import sys
+
+            print(
+                f"[DEBUG] list_all_with_enum_defaults - include_inactive={include_inactive}",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(
+                f"[DEBUG] TOPIC_REGISTRY count: {len(TOPIC_REGISTRY)}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+            logger.info("list_all_with_enum_defaults called", include_inactive=include_inactive)
+            logger.info("TOPIC_REGISTRY count", count=len(TOPIC_REGISTRY))
+
+            # Get existing topics from database
+            db_topics = await self.list_all(include_inactive=include_inactive)
+            logger.info(
+                "db_topics retrieved", count=len(db_topics), ids=[t.topic_id for t in db_topics]
+            )
+            logger.error(
+                "DEBUG: db_topics count",
+                count=len(db_topics),
+                ids=[t.topic_id for t in db_topics],
+            )
+
+            # Build set of topic IDs already in database
+            existing_ids = {topic.topic_id for topic in db_topics}
+            logger.info("existing_ids", ids=list(existing_ids))
+
+            # Create default topics from endpoint registry for any not in database
+            default_topics = [
+                LLMTopic.create_default_from_endpoint(endpoint_def)
+                for endpoint_def in TOPIC_REGISTRY.values()
+                if endpoint_def.topic_id not in existing_ids
+            ]
+            logger.info(
+                "default_topics created from registry",
+                count=len(default_topics),
+                ids=[t.topic_id for t in default_topics],
+            )
+
+            # Filter defaults by is_active if requested
+            if not include_inactive:
+                before_filter = len(default_topics)
+                default_topics = [t for t in default_topics if t.is_active]
+                logger.info("filtered_defaults", before=before_filter, after=len(default_topics))
+
+            # Merge and sort by display_order
+            all_topics = db_topics + default_topics
+            all_topics.sort(key=lambda t: t.display_order)
+
+            logger.info(
+                "Topics listed with enum defaults",
+                db_count=len(db_topics),
+                default_count=len(default_topics),
+                total_count=len(all_topics),
+                include_inactive=include_inactive,
+            )
+
+            return all_topics
+
+        except Exception as e:
+            logger.error("Failed to list topics with enum defaults", error=str(e))
+            raise
+
     async def list_by_type(
         self, *, topic_type: str, include_inactive: bool = False
     ) -> list[LLMTopic]:
@@ -169,7 +254,7 @@ class TopicRepository:
 
         try:
             item = topic.to_dynamodb_item()
-            self.table.put_item(Item=cast(dict[str, Any], item))
+            self.table.put_item(Item=item)
 
             logger.info(
                 "Topic created",
@@ -208,7 +293,7 @@ class TopicRepository:
             topic.updated_at = datetime.now(UTC)
 
             item = topic.to_dynamodb_item()
-            self.table.put_item(Item=cast(dict[str, Any], item))
+            self.table.put_item(Item=item)
 
             logger.info(
                 "Topic updated",

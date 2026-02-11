@@ -2,6 +2,7 @@
 
 import structlog
 from coaching.src.services.llm_service import LLMService
+from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 
 logger = structlog.get_logger()
 
@@ -12,13 +13,21 @@ class OnboardingService:
     Provides intelligent suggestions and coaching during the onboarding process.
     """
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(
+        self,
+        llm_service: LLMService,
+        website_analysis_service: WebsiteAnalysisService | None = None,
+    ):
         """Initialize onboarding service.
 
         Args:
             llm_service: LLM service for AI generation
+            website_analysis_service: Optional service for website analysis
         """
         self.llm_service = llm_service
+        self.website_analysis_service = website_analysis_service or WebsiteAnalysisService(
+            llm_service=llm_service
+        )
         logger.info("Onboarding service initialized")
 
     async def get_suggestions(
@@ -100,29 +109,56 @@ Each should be concise and customer-focused.""",
         }
 
     async def scan_website(self, url: str) -> dict[str, str | list[str]]:
-        """Scan website to extract business information.
+        """Scan website to extract business information using AI analysis.
 
         Args:
             url: Website URL to scan
 
         Returns:
-            Dictionary with extracted business information
+            Dictionary with extracted business information:
+            - businessName: Extracted business name
+            - industry: Identified industry
+            - description: Business description
+            - products: List of product/service names
+            - targetMarket: Target market description
+            - suggestedNiche: Suggested niche positioning
 
-        Note:
-            This is a stub implementation. Real implementation would:
-            1. Use web scraping (BeautifulSoup, Playwright)
-            2. Extract text from homepage, about, products pages
-            3. Use AI to analyze and categorize content
-            4. Handle anti-scraping measures
+        Raises:
+            ValueError: If URL is invalid or website cannot be accessed
+            RuntimeError: If analysis fails
         """
-        logger.info("Scanning website (stub implementation)", url=url)
+        logger.info("Scanning website", url=url)
 
-        # TODO: Implement real website scraping
-        # For now, return a structured response indicating the feature is not implemented
-        raise NotImplementedError(
-            "Website scanning feature is not yet implemented. "
-            "Please manually enter your business information."
-        )
+        try:
+            # Use website analysis service to extract information
+            analysis = await self.website_analysis_service.analyze_website(url)
+
+            # Map analysis results to onboarding format
+            products_list = [
+                product.get("name", "Product/Service") for product in analysis.get("products", [])
+            ]
+
+            # Extract business name from URL or products
+            from urllib.parse import urlparse
+
+            parsed_url = urlparse(url)
+            business_name = parsed_url.netloc.replace("www.", "").split(".")[0].title()
+
+            result = {
+                "businessName": business_name,
+                "industry": "Professional Services",  # Could be enhanced with industry detection
+                "description": analysis.get("value_proposition", ""),
+                "products": products_list,
+                "targetMarket": analysis.get("ica", ""),
+                "suggestedNiche": analysis.get("niche", ""),
+            }
+
+            logger.info("Website scanned successfully", url=url, products_count=len(products_list))
+            return result
+
+        except (ValueError, RuntimeError) as e:
+            logger.error("Website scan failed", url=url, error=str(e))
+            raise
 
     async def get_coaching(
         self,

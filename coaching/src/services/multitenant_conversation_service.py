@@ -30,6 +30,16 @@ from coaching.src.services.cache_service import CacheService
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.prompt_service import PromptService
 
+# Import typed models for proper type safety
+from shared.domain_types.coaching_models import (
+    BusinessDataSummary,
+    CompletionSummary,
+    SessionCreateData,
+    SessionData,
+    SessionUpdateData,
+)
+from shared.domain_types.coaching_models import CoachingSession as CoachingSessionDict
+from shared.domain_types.coaching_models import UserPreferences as UserPreferencesDict
 from shared.models.multitenant import CoachingTopic as SharedCoachingTopic
 from shared.models.multitenant import RequestContext
 
@@ -39,17 +49,6 @@ from shared.services.data_access import (
     CoachingSessionRepository,
     UserPreferencesRepository,
 )
-
-# Import typed models for proper type safety
-from shared.types.coaching_models import (
-    BusinessDataSummary,
-    CompletionSummary,
-    SessionCreateData,
-    SessionData,
-    SessionUpdateData,
-)
-from shared.types.coaching_models import CoachingSession as CoachingSessionDict
-from shared.types.coaching_models import UserPreferences as UserPreferencesDict
 
 logger = structlog.get_logger()  # Third-party logging boundary
 
@@ -90,6 +89,7 @@ class MultitenantConversationService:
         topic: SharedCoachingTopic,
         context_data: dict[str, str] | None = None,
         language: str = "en",
+        max_turns: int = 0,
     ) -> ConversationResponse:
         """Initiate a new coaching conversation.
 
@@ -97,6 +97,7 @@ class MultitenantConversationService:
             topic: Coaching topic
             context_data: Optional context data
             language: Language code
+            max_turns: Maximum number of conversation turns (0 = unlimited)
 
         Returns:
             Conversation response
@@ -137,7 +138,6 @@ class MultitenantConversationService:
 
         session_context = SessionContextData(
             conversation_id=None,  # Will be updated after conversation creation
-            phase="introduction",
             context=context_data or {},
             business_context=business_context_model,
             user_preferences=user_preferences_data,
@@ -181,18 +181,21 @@ class MultitenantConversationService:
             "language": language,
         }
 
+        # Add max_turns to llm_config
+        llm_config_dict = template.llm_config.model_dump()
+        llm_config_dict["max_turns"] = max_turns
+
         conversation = await self.conversation_repo.create(
             user_id=self.context.user_id,
             topic=topic.value,
             initial_message=template.initial_message,
-            llm_config=template.llm_config.model_dump(),  # Pydantic already returns dict[str, Any]
+            llm_config=llm_config_dict,  # Pydantic already returns dict[str, Any]
             context=conversation_context_dict,  # Service context boundary
         )
 
         # Update session with conversation ID
         updated_session_context = SessionContextData(
             conversation_id=conversation.conversation_id,
-            phase=session_context.phase,
             context=session_context.context,
             business_context=session_context.business_context,
             user_preferences=session_context.user_preferences,
@@ -213,7 +216,6 @@ class MultitenantConversationService:
 
         # Initialize typed session cache
         cache_session_data = CacheSessionData(
-            phase="introduction",
             context=context_data or {},
             message_count=1,
             template_version=template.version,
@@ -230,7 +232,7 @@ class MultitenantConversationService:
             status=conversation.status,
             current_question=template.initial_message,
             progress=conversation.calculate_progress(),
-            phase=conversation.context.phase,
+            phase=conversation.context.get("current_phase"),
             session_data={"session_id": session["session_id"]},
         )
 
@@ -271,7 +273,6 @@ class MultitenantConversationService:
                 else BusinessContext()
             )
             session_data = CacheSessionData(
-                phase=session_data_raw.get("phase", "introduction"),
                 context=session_data_raw.get("context", {}),
                 message_count=session_data_raw.get("message_count", 0),
                 template_version=session_data_raw.get("template_version", "1.0"),
@@ -290,6 +291,9 @@ class MultitenantConversationService:
             business_data_dict, SharedCoachingTopic(conversation.topic)
         )
 
+        # Get max_turns from conversation's llm_config or use default of 0 (unlimited)
+        max_turns = conversation.llm_config.get("max_turns", 0)
+
         # Generate AI response with business context (pass dict)
         ai_response_raw = await self.llm_service.generate_coaching_response(
             conversation_id=conversation_id,
@@ -297,6 +301,7 @@ class MultitenantConversationService:
             user_message=user_message,
             conversation_history=conversation.get_conversation_history(),
             business_context=current_business_context_dict,
+            max_turns=max_turns,
         )
 
         ai_response = AIResponseData(
@@ -375,8 +380,8 @@ class MultitenantConversationService:
             follow_up_question=ai_response_raw.follow_up_question,
             insights=ai_response_raw.insights,
             progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
             is_complete=is_complete,
-            phase=conversation.context.phase,
         )
 
     async def complete_conversation(
@@ -670,3 +675,36 @@ class MultitenantConversationService:
         }
 
         return summary
+
+    async def get_conversation(self, conversation_id: str) -> ConversationResponse:
+        """Get conversation details with tenant isolation.
+
+        Args:
+            conversation_id: Conversation identifier
+
+        Returns:
+            Conversation response
+        """
+        conversation = await self.conversation_repo.get(conversation_id)
+        if not conversation:
+            raise ConversationNotFoundCompatError(conversation_id)
+
+        # Verify tenant isolation
+        if conversation.context.get("tenant_id") != self.context.tenant_id:
+            raise PermissionError("Access denied to this conversation")
+
+        # Get session data
+        session_data = await self.cache_service.get_session_data(conversation_id)
+
+        return ConversationResponse(
+            conversation_id=conversation.conversation_id,
+            status=conversation.status,
+            current_question=(
+                conversation.messages[-1].content
+                if conversation.messages and conversation.messages[-1].role == "assistant"
+                else ""
+            ),
+            progress=conversation.calculate_progress(),
+            phase=conversation.context.get("current_phase"),
+            session_data={"session_id": session_data.get("session_id")} if session_data else None,
+        )

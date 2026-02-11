@@ -304,6 +304,7 @@ performance-reports/
 # Generated documentation
 docs/_build/
 docs/site/
+docs/Archive/
 site/
 _book/
 

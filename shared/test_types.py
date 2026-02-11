@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from shared.types import (
+from shared.domain_types import (
     GoogleUserInfo,
     StripeCustomer,
     UserCreateResult,

@@ -1,5 +1,13 @@
 """Analysis API routes for business coaching (Phase 7).
 
+================================================================================
+DEPRECATED - This entire file is dead code.
+================================================================================
+Migration: Analysis endpoints were designed but never integrated with frontend.
+Usage: No frontend callers exist.
+Status: Safe to remove.
+================================================================================
+
 This module provides REST API endpoints for various analysis types:
 - Alignment analysis (goals vs purpose/values)
 - Strategy analysis (effectiveness and recommendations)
@@ -7,36 +15,28 @@ This module provides REST API endpoints for various analysis types:
 - Operational analysis (SWOT, root cause, action plans)
 """
 
-from datetime import datetime
-from typing import Any
+from typing import cast
 
 import structlog
 from coaching.src.api.auth import get_current_user
-from coaching.src.api.dependencies import (
-    get_alignment_service,
-    get_kpi_service,
-    get_strategy_service,
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
 )
+from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisRequest,
     AlignmentAnalysisResponse,
-    AlignmentScore,
-    KPIAnalysisRequest,
-    KPIAnalysisResponse,
-    KPIRecommendation,
+    MeasureAnalysisRequest,
+    MeasureAnalysisResponse,
     OperationsAnalysisRequest,
     OperationsAnalysisResponse,
     StrategyAnalysisRequest,
     StrategyAnalysisResponse,
-    StrategyRecommendation,
 )
 from coaching.src.api.models.auth import UserContext
-from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
-from coaching.src.application.analysis.kpi_service import KPIAnalysisService
-from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
-from coaching.src.core.constants import AnalysisType
-from coaching.src.core.types import AnalysisRequestId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -45,13 +45,12 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 # Alignment Analysis Routes
 
 
-@router.post(
-    "/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/alignment", response_model=AlignmentAnalysisResponse, status_code=status.HTTP_200_OK)
 async def analyze_alignment(
     request: AlignmentAnalysisRequest,
     user: UserContext = Depends(get_current_user),
-    alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> AlignmentAnalysisResponse:
     """Analyze alignment between goals/actions and purpose/values.
 
@@ -63,95 +62,42 @@ async def analyze_alignment(
     Args:
         request: Alignment analysis request with text and context
         user: Authenticated user context
-        alignment_service: Alignment analysis service
+        handler: Generic AI handler
 
     Returns:
         AlignmentAnalysisResponse with scores and recommendations
-
-    Raises:
-        HTTPException 400: If request is invalid
-        HTTPException 500: If analysis fails
     """
-    try:
-        logger.info(
-            "Starting alignment analysis",
-            user_id=user.user_id,
-            tenant_id=user.tenant_id,
-            text_length=len(request.text_to_analyze),
-        )
+    logger.info(
+        "Starting alignment analysis",
+        user_id=user.user_id,
+        tenant_id=user.tenant_id,
+        text_length=len(request.text_to_analyze),
+    )
 
-        # Prepare analysis context
-        analysis_context = {
-            "user_id": user.user_id,
-            "tenant_id": user.tenant_id,
-            "current_actions": request.text_to_analyze,
-            **request.context,
-        }
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        # Perform analysis
-        result = await alignment_service.analyze(analysis_context)
-
-        logger.info(
-            "Alignment analysis completed",
-            user_id=user.user_id,
-            overall_score=result.get("alignment_score", 0),
-        )
-
-        # Build response
-        return AlignmentAnalysisResponse(
-            analysis_id=AnalysisRequestId(f"anls_{datetime.utcnow().timestamp()}"),
-            analysis_type=AnalysisType.ALIGNMENT,
-            scores=AlignmentScore(
-                overall_score=result.get("alignment_score", 0.0),
-                purpose_alignment=result.get("purpose_alignment", 0.0),
-                values_alignment=result.get("values_alignment", 0.0),
-                goal_clarity=result.get("goal_clarity", 0.0),
-            ),
-            overall_assessment=result.get("overall_assessment", "Analysis complete"),
-            strengths=result.get("strengths", []),
-            misalignments=result.get("misalignments", []),
-            recommendations=result.get("recommendations", []),
-            created_at=datetime.utcnow(),
-            metadata={
-                "user_id": user.user_id,
-                "tenant_id": user.tenant_id,
-                "analysis_version": "1.0",
-            },
-        )
-
-    except ValueError as e:
-        logger.warning(
-            "Invalid alignment analysis request",
-            user_id=user.user_id,
-            error=str(e),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error(
-            "Alignment analysis failed",
-            user_id=user.user_id,
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to perform alignment analysis",
-        ) from e
+    return cast(
+        AlignmentAnalysisResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/analysis/alignment",
+            request_body=request,
+            user_context=user,
+            response_model=AlignmentAnalysisResponse,
+            template_processor=template_processor,
+        ),
+    )
 
 
 # Strategy Analysis Routes
 
 
-@router.post(
-    "/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/strategy", response_model=StrategyAnalysisResponse, status_code=status.HTTP_200_OK)
 async def analyze_strategy(
     request: StrategyAnalysisRequest,
     user: UserContext = Depends(get_current_user),
-    strategy_service: StrategyAnalysisService = Depends(get_strategy_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> StrategyAnalysisResponse:
     """Analyze business strategy effectiveness.
 
@@ -163,104 +109,44 @@ async def analyze_strategy(
     Args:
         request: Strategy analysis request
         user: Authenticated user context
-        strategy_service: Strategy analysis service
+        handler: Generic AI handler
 
     Returns:
         StrategyAnalysisResponse with assessment and recommendations
-
-    Raises:
-        HTTPException 400: If request is invalid
-        HTTPException 500: If analysis fails
     """
-    try:
-        logger.info(
-            "Starting strategy analysis",
-            user_id=user.user_id,
-            tenant_id=user.tenant_id,
-            strategy_length=len(request.current_strategy),
-        )
+    logger.info(
+        "Starting strategy analysis",
+        user_id=user.user_id,
+        tenant_id=user.tenant_id,
+        strategy_length=len(request.current_strategy),
+    )
 
-        # Prepare analysis context
-        analysis_context = {
-            "user_id": user.user_id,
-            "tenant_id": user.tenant_id,
-            "current_strategy": request.current_strategy,
-            **request.context,
-        }
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        # Perform analysis
-        result = await strategy_service.analyze(analysis_context)
-
-        logger.info(
-            "Strategy analysis completed",
-            user_id=user.user_id,
-            effectiveness_score=result.get("effectiveness_score", 0),
-        )
-
-        # Build recommendations
-        recommendations = []
-        for rec in result.get("recommendations", []):
-            recommendations.append(
-                StrategyRecommendation(
-                    category=rec.get("category", "General"),
-                    recommendation=rec.get("recommendation", ""),
-                    priority=rec.get("priority", "medium"),
-                    rationale=rec.get("rationale", ""),
-                    estimated_impact=rec.get("estimated_impact", "To be determined"),
-                )
-            )
-
-        # Build response
-        return StrategyAnalysisResponse(
-            analysis_id=AnalysisRequestId(f"anls_{datetime.utcnow().timestamp()}"),
-            analysis_type=AnalysisType.STRATEGY,
-            effectiveness_score=result.get("effectiveness_score", 0.0),
-            overall_assessment=result.get("overall_assessment", "Analysis complete"),
-            strengths=result.get("strengths", []),
-            weaknesses=result.get("weaknesses", []),
-            opportunities=result.get("opportunities", []),
-            recommendations=recommendations,
-            created_at=datetime.utcnow(),
-            metadata={
-                "user_id": user.user_id,
-                "tenant_id": user.tenant_id,
-                "analysis_version": "1.0",
-            },
-        )
-
-    except ValueError as e:
-        logger.warning(
-            "Invalid strategy analysis request",
-            user_id=user.user_id,
-            error=str(e),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error(
-            "Strategy analysis failed",
-            user_id=user.user_id,
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to perform strategy analysis",
-        ) from e
+    return cast(
+        StrategyAnalysisResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/analysis/strategy",
+            request_body=request,
+            user_context=user,
+            response_model=StrategyAnalysisResponse,
+            template_processor=template_processor,
+        ),
+    )
 
 
 # KPI Analysis Routes
 
 
-@router.post("/kpi", response_model=KPIAnalysisResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/kpi", response_model=MeasureAnalysisResponse, status_code=status.HTTP_200_OK)
 async def analyze_kpis(
-    request: KPIAnalysisRequest,
+    request: MeasureAnalysisRequest,
     user: UserContext = Depends(get_current_user),
-    kpi_service: KPIAnalysisService = Depends(get_kpi_service),
-) -> KPIAnalysisResponse:
-    """Analyze KPI effectiveness and provide recommendations.
+    handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
+) -> MeasureAnalysisResponse:
+    """Analyze Measure effectiveness and provide recommendations.
 
     This endpoint evaluates the user's current KPIs and suggests improvements
     or additional metrics based on business goals and industry best practices.
@@ -270,104 +156,44 @@ async def analyze_kpis(
     Args:
         request: KPI analysis request
         user: Authenticated user context
-        kpi_service: KPI analysis service
+        handler: Generic AI handler
 
     Returns:
-        KPIAnalysisResponse with analysis and recommendations
-
-    Raises:
-        HTTPException 400: If request is invalid
-        HTTPException 500: If analysis fails
+        MeasureAnalysisResponse with analysis and recommendations
     """
-    try:
-        logger.info(
-            "Starting KPI analysis",
-            user_id=user.user_id,
-            tenant_id=user.tenant_id,
-            kpi_count=len(request.current_kpis),
-        )
+    logger.info(
+        "Starting Measure analysis",
+        user_id=user.user_id,
+        tenant_id=user.tenant_id,
+        measure_count=len(request.current_measures),
+    )
 
-        # Prepare analysis context
-        analysis_context = {
-            "user_id": user.user_id,
-            "tenant_id": user.tenant_id,
-            "current_kpis": request.current_kpis,
-            **request.context,
-        }
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        # Perform analysis
-        result = await kpi_service.analyze(analysis_context)
-
-        logger.info(
-            "KPI analysis completed",
-            user_id=user.user_id,
-            effectiveness_score=result.get("kpi_effectiveness_score", 0),
-        )
-
-        # Build recommended KPIs
-        recommended_kpis = []
-        for kpi in result.get("recommended_kpis", []):
-            recommended_kpis.append(
-                KPIRecommendation(
-                    kpi_name=kpi.get("kpi_name", ""),
-                    description=kpi.get("description", ""),
-                    rationale=kpi.get("rationale", ""),
-                    target_range=kpi.get("target_range"),
-                    measurement_frequency=kpi.get("measurement_frequency", "monthly"),
-                )
-            )
-
-        # Build response
-        return KPIAnalysisResponse(
-            analysis_id=AnalysisRequestId(f"anls_{datetime.utcnow().timestamp()}"),
-            analysis_type=AnalysisType.KPI,
-            kpi_effectiveness_score=result.get("kpi_effectiveness_score", 0.0),
-            overall_assessment=result.get("overall_assessment", "Analysis complete"),
-            current_kpi_analysis=result.get("current_kpi_analysis", []),
-            missing_kpis=result.get("missing_kpis", []),
-            recommended_kpis=recommended_kpis,
-            created_at=datetime.utcnow(),
-            metadata={
-                "user_id": user.user_id,
-                "tenant_id": user.tenant_id,
-                "analysis_version": "1.0",
-            },
-        )
-
-    except ValueError as e:
-        logger.warning(
-            "Invalid KPI analysis request",
-            user_id=user.user_id,
-            error=str(e),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error(
-            "KPI analysis failed",
-            user_id=user.user_id,
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to perform KPI analysis",
-        ) from e
+    return cast(
+        MeasureAnalysisResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/analysis/kpi",
+            request_body=request,
+            user_context=user,
+            response_model=MeasureAnalysisResponse,
+            template_processor=template_processor,
+        ),
+    )
 
 
 # Operational Analysis Routes
 
 
 @router.post(
-    "/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_201_CREATED
+    "/operations", response_model=OperationsAnalysisResponse, status_code=status.HTTP_200_OK
 )
 async def analyze_operations(
     request: OperationsAnalysisRequest,
     user: UserContext = Depends(get_current_user),
-    # Note: Operations analysis might use different services based on type
-    _alignment_service: AlignmentAnalysisService = Depends(get_alignment_service),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> OperationsAnalysisResponse:
     """Perform operational analysis (SWOT, root cause, action plan).
 
@@ -384,115 +210,31 @@ async def analyze_operations(
     Args:
         request: Operations analysis request
         user: Authenticated user context
-        alignment_service: Analysis service (placeholder, would use appropriate service)
+        handler: Generic AI handler
 
     Returns:
         OperationsAnalysisResponse with findings and recommendations
-
-    Raises:
-        HTTPException 400: If request is invalid or analysis type not supported
-        HTTPException 500: If analysis fails
     """
-    try:
-        logger.info(
-            "Starting operations analysis",
-            user_id=user.user_id,
-            tenant_id=user.tenant_id,
-            analysis_type=request.analysis_type,
-        )
+    logger.info(
+        "Starting operations analysis",
+        user_id=user.user_id,
+        tenant_id=user.tenant_id,
+        analysis_type=request.analysis_type,
+    )
 
-        # Prepare analysis context
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        # TODO: Route to appropriate service based on analysis_type
-        # For now, using a placeholder implementation
-
-        # Simulate SWOT analysis
-        findings: dict[str, Any]
-        if request.analysis_type == "swot":
-            findings = {
-                "strengths": ["Clear vision", "Dedicated team"],
-                "weaknesses": ["Limited budget", "Market competition"],
-                "opportunities": ["Growing market segment", "Strategic partnerships"],
-                "threats": ["Economic uncertainty", "Regulatory changes"],
-            }
-        elif request.analysis_type == "root_cause":
-            findings = {
-                "problem": request.description,
-                "root_causes": ["Insufficient process documentation", "Communication gaps"],
-                "contributing_factors": ["High workload", "Tool limitations"],
-            }
-        elif request.analysis_type == "action_plan":
-            findings = {
-                "goal": request.description,
-                "action_items": [
-                    {
-                        "action": "Define clear objectives",
-                        "timeline": "Week 1",
-                        "owner": "Leadership",
-                    },
-                    {"action": "Gather stakeholder input", "timeline": "Week 2", "owner": "Team"},
-                ],
-            }
-        else:
-            raise ValueError(f"Unsupported analysis type: {request.analysis_type}")
-
-        logger.info(
-            "Operations analysis completed",
-            user_id=user.user_id,
-            analysis_type=request.analysis_type,
-        )
-
-        # Map request type to AnalysisType enum
-        type_mapping = {
-            "swot": AnalysisType.SWOT,
-            "root_cause": AnalysisType.ROOT_CAUSE,
-            "action_plan": AnalysisType.ACTION_PLAN,
-        }
-        analysis_enum = type_mapping.get(request.analysis_type, AnalysisType.SWOT)
-
-        # Build response
-        return OperationsAnalysisResponse(
-            analysis_id=AnalysisRequestId(f"anls_{datetime.utcnow().timestamp()}"),
-            analysis_type=analysis_enum,
-            specific_analysis_type=request.analysis_type,
-            findings=findings,
-            recommendations=[
-                {
-                    "action": "Review findings with team",
-                    "priority": "high",
-                    "timeline": "Within 1 week",
-                },
-            ],
-            priority_actions=["Address critical gaps first", "Build on existing strengths"],
-            created_at=datetime.utcnow(),
-            metadata={
-                "user_id": user.user_id,
-                "tenant_id": user.tenant_id,
-                "analysis_version": "1.0",
-            },
-        )
-
-    except ValueError as e:
-        logger.warning(
-            "Invalid operations analysis request",
-            user_id=user.user_id,
-            error=str(e),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error(
-            "Operations analysis failed",
-            user_id=user.user_id,
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to perform operations analysis",
-        ) from e
+    return cast(
+        OperationsAnalysisResponse,
+        await handler.handle_single_shot(
+            http_method="POST",
+            endpoint_path="/analysis/operations",
+            request_body=request,
+            user_context=user,
+            response_model=OperationsAnalysisResponse,
+            template_processor=template_processor,
+        ),
+    )
 
 
 __all__ = ["router"]

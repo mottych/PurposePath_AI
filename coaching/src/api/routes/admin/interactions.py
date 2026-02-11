@@ -1,4 +1,9 @@
-"""Admin API routes for LLM interactions management."""
+"""Admin API routes for LLM interactions management.
+
+Endpoint Usage Status:
+- GET /interactions: USED BY Admin - InteractionsPage (useLLMInteractions)
+- GET /interactions/{code}: USED BY Admin - InteractionDetailsModal (useLLMInteraction)
+"""
 
 import structlog
 from coaching.src.api.auth import get_current_context
@@ -15,7 +20,6 @@ from coaching.src.models.admin_responses import (
     LLMInteractionsResponse,
 )
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

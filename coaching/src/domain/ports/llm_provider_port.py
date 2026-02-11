@@ -73,6 +73,7 @@ class LLMProviderPort(Protocol):
         temperature: float = 0.7,
         max_tokens: int | None = None,
         system_prompt: str | None = None,
+        response_schema: dict[str, object] | None = None,
     ) -> LLMResponse:
         """
         Generate a completion from the LLM.
@@ -83,6 +84,7 @@ class LLMProviderPort(Protocol):
             temperature: Sampling temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate (None = provider default)
             system_prompt: Optional system prompt
+            response_schema: Optional JSON schema for structured output (provider-specific)
 
         Returns:
             LLMResponse with generated content and metadata

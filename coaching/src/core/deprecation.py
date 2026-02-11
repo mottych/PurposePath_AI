@@ -44,7 +44,7 @@ def deprecated(
 
         # For classes
         if isinstance(obj, type):
-            original_init = obj.__init__
+            original_init = obj.__init__  # type: ignore[misc]
 
             @functools.wraps(original_init)
             def new_init(self: Any, *args: Any, **kwargs: Any) -> None:
@@ -55,10 +55,10 @@ def deprecated(
                 )
                 original_init(self, *args, **kwargs)
 
-            obj.__init__ = new_init  # type: ignore[method-assign]
+            obj.__init__ = new_init  # type: ignore[misc]
             obj.__deprecated__ = True  # type: ignore[attr-defined]
             obj.__deprecation_message__ = deprecation_message  # type: ignore[attr-defined]
-            return obj
+            return obj  # type: ignore[return-value, unused-ignore]
 
         # For functions/methods
         @functools.wraps(obj)

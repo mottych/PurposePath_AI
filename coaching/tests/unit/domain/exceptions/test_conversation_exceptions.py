@@ -11,6 +11,8 @@ from coaching.src.domain.exceptions.conversation_exceptions import (
     InvalidPhaseTransition,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestConversationNotFound:
     """Tests for ConversationNotFound exception."""

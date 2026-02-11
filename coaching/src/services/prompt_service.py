@@ -100,6 +100,54 @@ class PromptService:
 
         return template
 
+    async def get_prompt(
+        self, topic_id: str, prompt_type: str, parameters: dict[str, Any] | None = None
+    ) -> str:
+        """Get a specific prompt content with parameter substitution.
+
+        Args:
+            topic_id: Topic identifier
+            prompt_type: Type of prompt (system, user, etc.)
+            parameters: Optional parameters for substitution
+
+        Returns:
+            Formatted prompt string
+
+        Raises:
+            TopicNotFoundError: If topic not found
+            ValueError: If prompt content not found
+        """
+        cache_key = f"prompt:{topic_id}:{prompt_type}"
+
+        # Try cache first
+        cached_content = await self.cache_service.get(cache_key)
+        content: str | None
+        if cached_content:
+            content = str(cached_content)
+        else:
+            # Get topic to validate existence
+            topic = await self.topic_repo.get(topic_id=topic_id)
+            if not topic or not topic.is_active:
+                raise TopicNotFoundError(topic_id=topic_id)
+
+            # Load from S3
+            content = await self._load_prompt_content(topic_id, prompt_type)
+            if not content:
+                raise ValueError(f"Prompt {prompt_type} not found for topic {topic_id}")
+
+            # Cache raw content
+            await self.cache_service.set(
+                cache_key,
+                content,
+                ttl=timedelta(seconds=3600),  # 1 hour
+            )
+
+        # Substitute parameters
+        if parameters:
+            return content.format(**parameters)
+
+        return content
+
     async def list_templates(
         self, topic_type: str | None = None, include_inactive: bool = False
     ) -> list[dict[str, Any]]:
@@ -180,8 +228,9 @@ class PromptService:
             PromptTemplate in legacy format
         """
         # Build LLMConfig from explicit LLMTopic fields
+        # For backward compatibility, use premium_model_code (most capable model)
         llm_config = LLMConfig(
-            model=topic.model_code,
+            model=topic.premium_model_code,
             temperature=topic.temperature,
             max_tokens=topic.max_tokens,
             top_p=topic.top_p,

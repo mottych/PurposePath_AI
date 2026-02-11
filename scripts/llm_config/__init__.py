@@ -1,4 +1,4 @@
-I """LLM Configuration seeding and management scripts.
+"""LLM Configuration seeding and management scripts.
 
 This package contains scripts for managing LLM configurations, templates,
 and migrations for the PurposePath AI Coaching Service.

@@ -29,12 +29,10 @@ class TestConversationModels:
     def test_conversation_context_creation(self) -> None:
         """Test ConversationContext model creation."""
         context = ConversationContext(
-            phase=ConversationPhase.EXPLORATION,
             identified_values=["growth", "autonomy"],
             key_insights=["Values-driven", "Seeks independence"],
         )
 
-        assert context.phase == ConversationPhase.EXPLORATION
         assert context.identified_values == ["growth", "autonomy"]
         assert context.key_insights == ["Values-driven", "Seeks independence"]
         assert context.response_count == 0
@@ -74,14 +72,14 @@ class TestConversationModels:
         )
 
         # Initial progress
-        assert conversation.calculate_progress() == 0.1  # INTRODUCTION phase
+        assert conversation.calculate_progress() == 0.0
 
-        # Change to exploration phase
-        conversation.context.phase = ConversationPhase.EXPLORATION
-        assert conversation.calculate_progress() == 0.3
+        # Add some messages
+        for _ in range(6):
+            conversation.add_message(MessageRole.USER, "test")
+            conversation.add_message(MessageRole.ASSISTANT, "response")
 
-        # Change to completion phase
-        conversation.context.phase = ConversationPhase.COMPLETION
+        # 12 messages total -> 1.0 progress
         assert conversation.calculate_progress() == 1.0
 
     def test_conversation_status_changes(self) -> None:

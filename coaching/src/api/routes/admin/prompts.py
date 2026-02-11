@@ -1,4 +1,15 @@
-"""Admin API endpoints for topic and prompt management."""
+"""Admin API endpoints for topic and prompt management.
+
+================================================================================
+DEPRECATED - This entire file is dead code (legacy prompt template system).
+================================================================================
+Migration: Superseded by admin/topics.py which provides:
+- GET/PUT /topics/{topic_id} for topic management
+- GET/POST/PUT/DELETE /topics/{topic_id}/prompts/{prompt_type} for prompt management
+Usage: Admin portal uses endpoints in admin/topics.py
+Status: No admin portal callers. Safe to remove.
+================================================================================
+"""
 
 import re
 from datetime import UTC, datetime
@@ -7,6 +18,7 @@ from typing import Annotated
 import structlog
 from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.core.topic_registry import get_parameters_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     DuplicateTopicError,
@@ -26,7 +38,6 @@ from coaching.src.models.prompt_responses import (
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 
@@ -51,6 +62,17 @@ def parameter_to_response(param: ParameterDefinition) -> ParameterDefinitionResp
 
 def topic_to_response(topic: LLMTopic) -> TopicResponse:
     """Convert domain topic to response model."""
+    # Reconstruct config for backward compatibility (use premium model for legacy compatibility)
+    config = {
+        "model_code": topic.premium_model_code,
+        "temperature": topic.temperature,
+        "max_tokens": topic.max_tokens,
+        "top_p": topic.top_p,
+        "frequency_penalty": topic.frequency_penalty,
+        "presence_penalty": topic.presence_penalty,
+        **topic.additional_config,
+    }
+
     return TopicResponse(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
@@ -60,8 +82,17 @@ def topic_to_response(topic: LLMTopic) -> TopicResponse:
         display_order=topic.display_order,
         is_active=topic.is_active,
         available_prompts=[p.prompt_type for p in topic.prompts],
-        allowed_parameters=[parameter_to_response(p) for p in topic.allowed_parameters],
-        config=topic.config,
+        allowed_parameters=[
+            ParameterDefinitionResponse(
+                name=p["name"],
+                type=p["type"],
+                required=p["required"],
+                description=p.get("description"),
+                default=None,
+            )
+            for p in get_parameters_for_topic(topic.topic_id)
+        ],
+        config=config,
         created_at=topic.created_at.isoformat(),
         created_by=topic.created_by,
         updated_at=topic.updated_at.isoformat(),
@@ -70,23 +101,42 @@ def topic_to_response(topic: LLMTopic) -> TopicResponse:
 
 def validate_prompt_parameters(
     content: str,
-    allowed_parameters: list[ParameterDefinition],
+    topic_id: str,
 ) -> None:
     """
-    Validate that all parameters used in content are in allowed_parameters.
+    Validate that all parameters used in content are in the endpoint registry.
+
+    For topics not in the registry (custom topics), parameter validation is skipped
+    since they can define any parameters they need.
 
     Args:
         content: Prompt content with {{parameter}} placeholders
-        allowed_parameters: List of allowed parameter definitions
+        topic_id: Topic ID to look up parameters from registry
 
     Raises:
-        HTTPException: 400 if validation fails with invalid parameters
+        HTTPException: 400 if validation fails with invalid parameters (only for registry topics)
     """
     # Extract parameters from content: {{parameter_name}}
     pattern = r"\{\{(\w+)\}\}"
     used_params = set(re.findall(pattern, content))
 
-    allowed_param_names = {p.name for p in allowed_parameters}
+    if not used_params:
+        return  # No parameters to validate
+
+    # Get allowed parameters from registry
+    registry_params = get_parameters_for_topic(topic_id)
+
+    # For topics not in registry (custom topics), skip validation
+    # as they can define any parameters they need
+    if not registry_params:
+        logger.debug(
+            "Skipping parameter validation for custom topic",
+            topic_id=topic_id,
+            used_params=list(used_params),
+        )
+        return
+
+    allowed_param_names = {p["name"] for p in registry_params}
 
     invalid_params = used_params - allowed_param_names
     if invalid_params:
@@ -177,6 +227,32 @@ async def create_topic(
     try:
         # Create topic entity
         now = datetime.now(UTC)
+
+        # Extract model config
+        config_dict = request.config.model_dump()
+
+        # Map default_model to model_code
+        model_code = config_dict.pop("default_model", "claude-3-5-sonnet-20241022")
+        # Also check for model_code just in case
+        if "model_code" in config_dict:
+            model_code = config_dict.pop("model_code")
+
+        # Handle optional fields that might be None
+        temp_val = config_dict.pop("temperature", None)
+        temperature = temp_val if temp_val is not None else 0.7
+
+        max_tokens_val = config_dict.pop("max_tokens", None)
+        max_tokens = max_tokens_val if max_tokens_val is not None else 2000
+
+        top_p_val = config_dict.pop("top_p", None)
+        top_p = top_p_val if top_p_val is not None else 1.0
+
+        freq_pen_val = config_dict.pop("frequency_penalty", None)
+        frequency_penalty = freq_pen_val if freq_pen_val is not None else 0.0
+
+        pres_pen_val = config_dict.pop("presence_penalty", None)
+        presence_penalty = pres_pen_val if pres_pen_val is not None else 0.0
+
         topic = LLMTopic(
             topic_id=request.topic_id,
             topic_name=request.topic_name,
@@ -184,18 +260,15 @@ async def create_topic(
             category=request.category,
             description=request.description,
             is_active=request.is_active,
-            allowed_parameters=[
-                ParameterDefinition(
-                    name=p.name,
-                    type=p.type,
-                    required=p.required,
-                    description=p.description,
-                    default=p.default,
-                )
-                for p in request.allowed_parameters
-            ],
             prompts=[],  # Prompts added separately
-            config=request.config.model_dump(),
+            basic_model_code=model_code,
+            premium_model_code=model_code,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
+            additional_config=config_dict,
             display_order=request.display_order,
             created_at=now,
             updated_at=now,
@@ -310,19 +383,49 @@ async def update_topic(
             topic.topic_name = request.topic_name
         if request.description is not None:
             topic.description = request.description
-        if request.allowed_parameters is not None:
-            topic.allowed_parameters = [
-                ParameterDefinition(
-                    name=p.name,
-                    type=p.type,
-                    required=p.required,
-                    description=p.description,
-                    default=p.default,
-                )
-                for p in request.allowed_parameters
-            ]
+        # Note: allowed_parameters is now managed via registry, not updatable here
         if request.config is not None:
-            topic.config = request.config.model_dump()
+            config_dict = request.config.model_dump()
+
+            # Map default_model (set both for backward compatibility)
+            if "default_model" in config_dict:
+                model_value = config_dict.pop("default_model")
+                topic.basic_model_code = model_value
+                topic.premium_model_code = model_value
+
+            if "model_code" in config_dict:
+                model_value = config_dict.pop("model_code")
+                topic.basic_model_code = model_value
+                topic.premium_model_code = model_value
+
+            if config_dict.get("temperature") is not None:
+                topic.temperature = config_dict.pop("temperature")
+            elif "temperature" in config_dict:
+                config_dict.pop("temperature")
+
+            if config_dict.get("max_tokens") is not None:
+                topic.max_tokens = config_dict.pop("max_tokens")
+            elif "max_tokens" in config_dict:
+                config_dict.pop("max_tokens")
+
+            if config_dict.get("top_p") is not None:
+                topic.top_p = config_dict.pop("top_p")
+            elif "top_p" in config_dict:
+                config_dict.pop("top_p")
+
+            if config_dict.get("frequency_penalty") is not None:
+                topic.frequency_penalty = config_dict.pop("frequency_penalty")
+            elif "frequency_penalty" in config_dict:
+                config_dict.pop("frequency_penalty")
+
+            if config_dict.get("presence_penalty") is not None:
+                topic.presence_penalty = config_dict.pop("presence_penalty")
+            elif "presence_penalty" in config_dict:
+                config_dict.pop("presence_penalty")
+
+            # Update additional config with remaining items
+            topic.additional_config.update(config_dict)
+
         if request.display_order is not None:
             topic.display_order = request.display_order
         if request.is_active is not None:
@@ -411,7 +514,16 @@ async def get_prompt_content(
             topic_id=topic_id,
             prompt_type=prompt_type,
             content=content,
-            allowed_parameters=[parameter_to_response(p) for p in topic.allowed_parameters],
+            allowed_parameters=[
+                ParameterDefinitionResponse(
+                    name=p["name"],
+                    type=p["type"],
+                    required=p["required"],
+                    description=p.get("description"),
+                    default=None,
+                )
+                for p in get_parameters_for_topic(topic_id)
+            ],
             s3_location={
                 "bucket": storage.bucket_name,
                 "key": f"prompts/{topic_id}/{prompt_type}.md",
@@ -475,7 +587,7 @@ async def create_prompt(
             )
 
         # Validate parameters in content
-        validate_prompt_parameters(request.content, topic.allowed_parameters)
+        validate_prompt_parameters(request.content, topic_id)
 
         # Save to S3
         s3_key = await storage.save_prompt(
@@ -573,7 +685,7 @@ async def update_prompt(
             )
 
         # Validate parameters in content
-        validate_prompt_parameters(request.content, topic.allowed_parameters)
+        validate_prompt_parameters(request.content, topic_id)
 
         # Save to S3 (overwrites existing)
         s3_key = await storage.save_prompt(

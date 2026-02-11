@@ -6,10 +6,10 @@ LangGraph-based workflow system, ensuring backward compatibility while enabling
 multi-provider support and advanced workflow capabilities.
 """
 
-from typing import Any
+from typing import Any, cast
 
 import structlog
-from coaching.src.core.constants import DEFAULT_LLM_MODELS, CoachingTopic
+from coaching.src.core.llm_models import DEFAULT_MODEL_ID
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.workflows.base import WorkflowState, WorkflowType
 from coaching.src.workflows.orchestrator import WorkflowOrchestrator
@@ -88,14 +88,26 @@ class LLMServiceAdapter:
             "provider": provider_name,
             "temperature": kwargs.get("temperature", 0.7),
             "max_tokens": kwargs.get("max_tokens", 1000),
+            "max_turns": kwargs.get("max_turns", 0),  # Pass max_turns config
         }
 
         try:
+            # Create workflow config with max_turns
+            from coaching.src.workflows.base import WorkflowConfig
+
+            config = WorkflowConfig(
+                workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
+                temperature=kwargs.get("temperature", 0.7),
+                max_tokens=kwargs.get("max_tokens", 1000),
+                custom_config={"max_turns": kwargs.get("max_turns", 0)},
+            )
+
             # Use workflow orchestrator for response generation
             workflow_state = await self.workflow_orchestrator.start_workflow(
                 workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
                 user_id=kwargs.get("user_id", "anonymous"),
                 initial_input=workflow_input,
+                config=config,
                 session_id=conversation_id,
             )
 
@@ -166,12 +178,12 @@ class LLMServiceAdapter:
             return {"error": str(e), "insights": [], "confidence": 0.0}
 
     async def _resolve_provider_and_model(
-        self, topic: str, model_id: str | None = None, **kwargs: Any
+        self, _topic: str, model_id: str | None = None, **kwargs: Any
     ) -> tuple[str, str]:
         """Resolve the provider and model to use.
 
         Args:
-            topic: Coaching topic
+            _topic: Coaching topic (reserved for future use with topic-specific configs)
             model_id: Optional explicit model ID
             **kwargs: Additional parameters (may include provider override)
 
@@ -180,19 +192,16 @@ class LLMServiceAdapter:
         """
         # Check for explicit provider override
         provider_override = kwargs.get("provider")
-        if provider_override and await self.provider_manager.is_provider_available(  # type: ignore[attr-defined]
+        if provider_override and await cast(Any, self.provider_manager).is_provider_available(
             provider_override
         ):
             provider_name = provider_override
         else:
             provider_name = self.default_provider
 
-        # Resolve model ID
+        # Resolve model ID - use DEFAULT_MODEL_ID as fallback
         if model_id is None:
-            # Get default model for topic
-            model_id = DEFAULT_LLM_MODELS.get(
-                CoachingTopic(topic), "anthropic.claude-3-sonnet-20240229-v1:0"
-            )
+            model_id = DEFAULT_MODEL_ID
 
         # Validate provider can handle this model
         if not await self._can_provider_handle_model(provider_name, model_id):
@@ -203,10 +212,9 @@ class LLMServiceAdapter:
             )
             # Try fallback providers
             for fallback in self.fallback_providers:
-                if (
-                    await self.provider_manager.is_provider_available(fallback)  # type: ignore[attr-defined]
-                    and await self._can_provider_handle_model(fallback, model_id)
-                ):
+                if await self.provider_manager.is_provider_available(
+                    fallback
+                ) and await self._can_provider_handle_model(fallback, model_id):
                     provider_name = fallback
                     break
 
@@ -256,7 +264,8 @@ class LLMServiceAdapter:
 
         # Try each fallback provider
         for fallback_provider in self.fallback_providers:
-            if not await self.provider_manager.is_provider_available(fallback_provider):  # type: ignore[attr-defined]
+            if not await cast(Any, self.provider_manager).is_provider_available(fallback_provider):
+                logger.warning("Fallback provider not available", provider=fallback_provider)
                 errors.append(f"{fallback_provider}: not available")
                 continue
 
@@ -382,8 +391,10 @@ class LLMServiceAdapter:
         all_providers = [self.default_provider, *self.fallback_providers]
         for provider_name in all_providers:
             try:
-                is_available = await self.provider_manager.is_provider_available(provider_name)  # type: ignore[attr-defined]
-                provider = await self.provider_manager.get_provider(provider_name)  # type: ignore[misc]
+                is_available = await cast(Any, self.provider_manager).is_provider_available(
+                    provider_name
+                )
+                provider = self.provider_manager.get_provider(provider_name)  # Not async
 
                 status["providers"][provider_name] = {
                     "available": is_available,

@@ -1,10 +1,19 @@
 """Response models for API endpoints."""
 
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from coaching.src.core.constants import ConversationStatus
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, Field
+
+
+def _default_notification_preferences() -> dict[str, bool]:
+    return {}
+
+
+def _default_metadata() -> dict[str, str]:
+    return {}
 
 
 class ConversationResponse(BaseModel):
@@ -14,6 +23,7 @@ class ConversationResponse(BaseModel):
     status: ConversationStatus
     current_question: str
     progress: float = Field(ge=0.0, le=1.0)
+    phase: ConversationPhase | None = None
     session_data: dict[str, Any] | None = None
 
 
@@ -24,6 +34,7 @@ class MessageResponse(BaseModel):
     follow_up_question: str | None = None
     insights: list[str] | None = None
     progress: float = Field(ge=0.0, le=1.0)
+    phase: ConversationPhase | None = None
     is_complete: bool = False
     next_steps: list[str] | None = None
     identified_values: list[str] | None = None
@@ -69,7 +80,7 @@ class UserPreferences(BaseModel):
     coaching_frequency: str | None = Field(default=None, description="Preferred coaching frequency")
     focus_areas: list[str] | None = Field(default=None, description="Areas of focus")
     notification_preferences: dict[str, bool] | None = Field(
-        default_factory=dict, description="Notification settings"
+        default_factory=_default_notification_preferences, description="Notification settings"
     )
 
 
@@ -113,7 +124,9 @@ class AIResponseData(BaseModel):
 
     response: str = Field(description="AI response text")
     confidence: float | None = Field(default=None, description="Response confidence")
-    metadata: dict[str, str] | None = Field(default_factory=dict, description="Response metadata")
+    metadata: dict[str, str] | None = Field(
+        default_factory=_default_metadata, description="Response metadata"
+    )
     suggested_actions: list[str] | None = Field(default=None, description="Suggested next actions")
 
 
@@ -156,15 +169,61 @@ class InsightMetadata(BaseModel):
 class InsightResponse(BaseModel):
     """Response model for coaching insights."""
 
-    id: str = Field(description="Unique insight identifier")
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()), description="Unique insight identifier"
+    )
     title: str = Field(description="Insight title")
     description: str = Field(description="Detailed insight description")
     category: str = Field(description="Insight category")
     priority: str = Field(description="Priority level")
-    status: str = Field(description="Current status")
-    created_at: datetime = Field(description="Creation timestamp")
-    updated_at: datetime = Field(description="Last update timestamp")
+    kiss_category: str | None = Field(
+        default=None, description="KISS framework category (keep, improve, start, stop)"
+    )
+    alignment_impact: str | None = Field(
+        default=None, description="How this affects purpose/values alignment and business outcomes"
+    )
+    status: str = Field(default="active", description="Current status")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
+    )
     metadata: InsightMetadata = Field(description="Additional insight metadata")
+
+
+class InsightLLMResponse(BaseModel):
+    """LLM-generated insight data (ephemeral, not persisted).
+
+    The Python AI service generates insights and returns them to the frontend.
+    The .NET backend handles persistence and adds system fields (id, timestamps, status).
+    """
+
+    title: str = Field(description="Insight title")
+    description: str = Field(description="Detailed insight description")
+    category: str = Field(
+        description="Insight category: strategy, operations, finance, marketing, leadership, technology"
+    )
+    priority: str = Field(description="Priority level: critical, high, medium, low")
+    kiss_category: str = Field(description="KISS framework category: keep, improve, start, stop")
+    alignment_impact: str = Field(
+        description="How this affects purpose/values alignment and business outcomes"
+    )
+    business_impact: str = Field(description="Business impact level: low, medium, high")
+    effort_required: str = Field(description="Effort required to implement: low, medium, high")
+
+
+class InsightsGenerationResponse(BaseModel):
+    """Response for insights generation - LLM returns a list of insights.
+
+    Used by the insights_generation topic where the LLM generates multiple insights
+    in a single response. System fields (id, status, timestamps) are added by backend.
+    """
+
+    insights: list[InsightLLMResponse] = Field(
+        description="List of generated insights (typically 5-10)",
+        min_length=1,
+    )
 
 
 class InsightActionResponse(BaseModel):

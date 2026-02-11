@@ -7,6 +7,8 @@ from coaching.src.domain.value_objects.conversation_context import (
 )
 from pydantic import ValidationError
 
+pytestmark = pytest.mark.unit
+
 
 class TestConversationContextCreation:
     """Test suite for ConversationContext creation."""

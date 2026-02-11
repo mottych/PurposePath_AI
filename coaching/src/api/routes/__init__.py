@@ -2,30 +2,20 @@
 
 from coaching.src.api.routes import (
     admin,
-    analysis,
+    ai_execute,
     business_data,
-    coaching_ai,
-    conversations,
+    coaching_sessions,
     health,
     insights,
     multitenant_conversations,
-    onboarding,
-    operations_ai,
-    topics,
-    website,
 )
 
 __all__ = [
     "admin",
-    "analysis",
+    "ai_execute",
     "business_data",
-    "coaching_ai",
-    "conversations",
+    "coaching_sessions",
     "health",
     "insights",
     "multitenant_conversations",
-    "onboarding",
-    "operations_ai",
-    "topics",
-    "website",
 ]

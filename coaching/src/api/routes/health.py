@@ -1,4 +1,10 @@
-"""Health check routes with ApiResponse envelope."""
+"""Health check routes with ApiResponse envelope.
+
+Endpoints:
+- GET /health/: Basic health check
+    USED BY: Admin - LLMDashboardPage (useLLMSystemHealth)
+- GET /health/ready: Readiness check with service dependencies
+"""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -7,7 +13,6 @@ from coaching.src.api.multitenant_dependencies import get_redis_client
 from coaching.src.core.config_multitenant import settings
 from coaching.src.models.responses import HealthCheckResponse, ReadinessCheckResponse, ServiceStatus
 from fastapi import APIRouter, Depends
-
 from shared.models.schemas import ApiResponse
 from shared.services.aws_helpers import get_bedrock_client, get_s3_client
 

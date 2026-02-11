@@ -14,6 +14,8 @@ from coaching.src.core.types import (
 )
 from coaching.src.domain.entities.conversation import Conversation
 
+pytestmark = pytest.mark.unit
+
 
 class TestConversationCreation:
     """Test suite for Conversation creation."""

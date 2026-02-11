@@ -78,7 +78,7 @@ class CoachingWorkflow(BaseWorkflow):
             "completion",
         ]
 
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph."""
         from langgraph.graph import END, START, StateGraph
 

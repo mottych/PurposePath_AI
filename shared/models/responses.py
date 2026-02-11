@@ -208,27 +208,27 @@ class StrategyListResponse(BaseResponseModel):
     total: int = Field(..., description="Total number of strategies matching filters")
 
 
-# KPI Response Models
-class KPIResponse(BaseResponseModel):
-    """Response model for a single KPI."""
+# Measure Response Models
+class MeasureResponse(BaseResponseModel):
+    """Response model for a single Measure."""
 
-    id: str = Field(..., description="Unique KPI identifier")
+    id: str = Field(..., description="Unique Measure identifier")
     tenant_id: str = Field(..., description="Tenant identifier")
-    name: str = Field(..., description="KPI name")
-    description: str | None = Field(None, description="KPI description")
+    name: str = Field(..., description="Measure name")
+    description: str | None = Field(None, description="Measure description")
 
     # Measurement
-    current_value: float = Field(..., description="Current KPI value")
-    target_value: float | None = Field(None, description="Target KPI value")
+    current_value: float = Field(..., description="Current Measure value")
+    target_value: float | None = Field(None, description="Target Measure value")
     unit: str = Field(..., description="Unit of measurement")
 
     # Relationships
     goal_id: str | None = Field(None, description="Associated goal ID")
-    owner_id: str | None = Field(None, description="KPI owner user ID")
+    owner_id: str | None = Field(None, description="Measure owner user ID")
 
     # Configuration
     measurement_frequency: str = Field(..., description="Measurement frequency")
-    data_source: str | None = Field(None, description="Source of KPI data")
+    data_source: str | None = Field(None, description="Source of Measure data")
     calculation_method: str | None = Field(None, description="Calculation method")
 
     # Tracking
@@ -247,11 +247,11 @@ class KPIResponse(BaseResponseModel):
         return min(100.0, max(0.0, (self.current_value / self.target_value) * 100))
 
 
-class KPIListResponse(BaseResponseModel):
-    """Response model for listing KPIs."""
+class MeasureListResponse(BaseResponseModel):
+    """Response model for listing Measures."""
 
-    kpis: list[KPIResponse] = Field(..., description="List of KPIs")
-    total: int = Field(..., description="Total number of KPIs matching filters")
+    measures: list[MeasureResponse] = Field(..., description="List of Measures")
+    total: int = Field(..., description="Total number of Measures matching filters")
 
 
 # Review Response Models
@@ -563,8 +563,8 @@ class ProposalResponse(BaseResponseModel):
     created_by: str = Field(..., description="User who created the proposal")
 
 
-class KPIReadingResponse(BaseResponseModel):
-    """Response model for KPI reading operations."""
+class MeasureReadingResponse(BaseResponseModel):
+    """Response model for Measure reading operations."""
 
     period: str = Field(..., description="Reading period")
     adjusted_value: float = Field(..., description="Adjusted value")
@@ -573,11 +573,11 @@ class KPIReadingResponse(BaseResponseModel):
     created_by: str | None = Field(None, description="User who created the reading")
 
 
-class KPILinkResponse(BaseResponseModel):
-    """Response model for KPI-Goal link operations."""
+class MeasureLinkResponse(BaseResponseModel):
+    """Response model for Measure-Goal link operations."""
 
     goal_id: str = Field(..., description="Goal identifier")
-    kpi_id: str = Field(..., description="KPI identifier")
+    measure_id: str = Field(..., description="Measure identifier")
     threshold_pct: float | None = Field(None, description="Threshold percentage")
     created_at: datetime = Field(..., description="Link creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
@@ -587,7 +587,9 @@ class KPILinkResponse(BaseResponseModel):
 class AlignmentDriversResponse(BaseResponseModel):
     """Response model for alignment drivers."""
 
-    kpi_performance: float = Field(..., alias="kpiPerformance", description="KPI performance score")
+    measure_performance: float = Field(
+        ..., alias="measurePerformance", description="Measure performance score"
+    )
     plan_health: float = Field(..., alias="planHealth", description="Plan health score")
     cadence_adherence: float = Field(
         ..., alias="cadenceAdherence", description="Cadence adherence score"
@@ -641,7 +643,7 @@ class IntegrityAlertResponse(BaseResponseModel):
 IssuesPaginatedResponse = PaginatedResponse[IssueSummary]
 GoalsPaginatedResponse = PaginatedResponse[GoalSummary]
 StrategiesPaginatedResponse = PaginatedResponse[StrategyResponse]
-KPIsPaginatedResponse = PaginatedResponse[KPIResponse]
+MeasuresPaginatedResponse = PaginatedResponse[MeasureResponse]
 ReviewsPaginatedResponse = PaginatedResponse[ReviewResponse]
 DecisionsPaginatedResponse = PaginatedResponse[DecisionResponse]
 ActivitiesPaginatedResponse = PaginatedResponse[ActivityResponse]

@@ -26,7 +26,7 @@ class KPIAnalysisService(BaseAnalysisService):
 
     def get_analysis_type(self) -> AnalysisType:
         """Return KPI analysis type."""
-        return AnalysisType.KPI
+        return AnalysisType.MEASURE
 
     def build_prompt(self, context: dict[str, Any]) -> str:
         """
@@ -108,7 +108,7 @@ Recommend 5-8 specific, measurable KPIs."""
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
 
-            result = json.loads(response_text.strip())
+            result: dict[str, Any] = json.loads(response_text.strip())
 
             # Validate required fields
             required_fields = [
@@ -126,7 +126,7 @@ Recommend 5-8 specific, measurable KPIs."""
                 kpis_count=len(result["recommended_kpis"]),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse KPI JSON response", error=str(e))

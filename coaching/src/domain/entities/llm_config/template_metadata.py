@@ -5,7 +5,6 @@ Template content is stored externally, this entity tracks location and metadata.
 """
 
 from datetime import datetime
-from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -48,12 +47,6 @@ class TemplateMetadata(BaseModel):
     )
     created_by: str = Field(..., description="User ID who created the template")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
-        # Not frozen - entity can be updated
-
     def get_parameters(self) -> dict[str, list[str]]:
         """
         Get parameters dynamically from interaction registry.
@@ -67,7 +60,7 @@ class TemplateMetadata(BaseModel):
         Raises:
             ValueError: If interaction_code not found in registry
         """
-        from src.core.llm_interactions import get_interaction
+        from coaching.src.core.llm_interactions import get_interaction
 
         interaction = get_interaction(self.interaction_code)
         return interaction.get_parameter_schema()
@@ -86,10 +79,10 @@ class TemplateMetadata(BaseModel):
             ValueError: If interaction not in registry
             ParameterValidationError: If template parameters invalid
         """
-        from src.core.llm_interactions import get_interaction
+        from coaching.src.core.llm_interactions import get_interaction
 
         # Import parameter extraction utility
-        from src.infrastructure.repositories.llm_config.parameter_utils import (
+        from coaching.src.infrastructure.repositories.llm_config.parameter_utils import (
             extract_template_parameters,
         )
 

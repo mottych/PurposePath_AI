@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
 
 # Import shared types for enhanced type safety
-from shared.types import (
+from shared.domain_types import (
     BusinessDataGetResult,
     UserCreateResult,
     UserGetResult,
@@ -23,10 +23,10 @@ from shared.types import (
 )
 
 # Import coaching models for proper typing
-from shared.types.coaching_models import CoachingSession as CoachingSessionDict
-from shared.types.coaching_models import SessionCreateData, SessionUpdateData
-from shared.types.coaching_models import UserPreferences as UserPreferencesDict
-from shared.types.common import JSONDict
+from shared.domain_types.coaching_models import CoachingSession as CoachingSessionDict
+from shared.domain_types.coaching_models import SessionCreateData, SessionUpdateData
+from shared.domain_types.coaching_models import UserPreferences as UserPreferencesDict
+from shared.domain_types.common import JSONDict
 
 from ..models.multitenant import (
     BusinessData,

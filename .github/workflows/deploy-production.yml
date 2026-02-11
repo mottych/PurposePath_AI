@@ -1,8 +1,9 @@
 name: Deploy Production
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    branches: [master]
+    types: [closed]
   workflow_dispatch:
     inputs:
       skip_tests:
@@ -14,11 +15,54 @@ on:
           - 'true'
           - 'false'
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
+  validate-promotion:
+    name: Validate Promotion Event
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.promotion-check.outputs.should_deploy }}
+      trigger_reason: ${{ steps.promotion-check.outputs.trigger_reason }}
+
+    steps:
+      - name: Evaluate deployment trigger
+        id: promotion-check
+        shell: bash
+        run: |
+          SHOULD_DEPLOY="false"
+          TRIGGER_REASON="not-eligible"
+
+          if [ "${{ github.event_name }}" == "pull_request" ] && \
+             [ "${{ github.event.pull_request.merged }}" == "true" ] && \
+             [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
+             [ "${{ github.event.pull_request.head.ref }}" == "staging" ]; then
+            SHOULD_DEPLOY="true"
+            TRIGGER_REASON="merged-staging-to-master-pr"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            SHOULD_DEPLOY="true"
+            TRIGGER_REASON="manual-dispatch"
+          fi
+
+          echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
+          echo "trigger_reason=$TRIGGER_REASON" >> "$GITHUB_OUTPUT"
+
+          echo "Promotion check result: $SHOULD_DEPLOY"
+          echo "Reason: $TRIGGER_REASON"
+
+      - name: Skip notice
+        if: steps.promotion-check.outputs.should_deploy != 'true'
+        run: |
+          echo "No production deployment triggered."
+          echo "This workflow only deploys on merged PRs from staging -> master, or manual dispatch."
+
   pre-deployment-checks:
     name: Pre-Deployment Validation
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    needs: [validate-promotion]
+    if: ${{ needs.validate-promotion.outputs.should_deploy == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.skip_tests != 'true') }}
     
     steps:
       - name: Checkout code
@@ -66,18 +110,15 @@ jobs:
         env:
           PYTHONPATH: coaching:shared:.
 
-  build-and-deploy:
-    name: Build and Deploy to Production
+  deploy-infrastructure:
+    name: Deploy Infrastructure
     runs-on: ubuntu-latest
-    needs: [pre-deployment-checks]
-    if: always() && (needs.pre-deployment-checks.result == 'success' || github.event.inputs.skip_tests == 'true')
+    needs: [validate-promotion, pre-deployment-checks]
+    if: ${{ needs.validate-promotion.outputs.should_deploy == 'true' && (needs.pre-deployment-checks.result == 'success' || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_tests == 'true')) }}
     permissions:
       id-token: write
       contents: read
-    environment:
-      name: production
-      url: ${{ steps.api-url.outputs.url }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,47 +128,77 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
+      - name: Install Pulumi Python dependencies
+        working-directory: infrastructure/pulumi
+        run: pip install -r requirements.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
-          role-session-name: purposepath-prod-deploy
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Build SAM Applications
-        run: |
-          sam build --template coaching/template-standalone.yaml --parallel --cached
+      - name: Deploy Infrastructure
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: prod
+          work-dir: infrastructure/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
-      - name: Resolve Production JWT Secret ARN
-        id: secret
-        run: |
-          ARN=$(aws secretsmanager list-secrets --query "SecretList[?Name=='purposepath/jwt-secret/prod'].ARN | [0]" --output text)
-          echo "arn=$ARN" >> $GITHUB_OUTPUT
+  deploy-coaching:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate-promotion, deploy-infrastructure]
+    if: ${{ needs.validate-promotion.outputs.should_deploy == 'true' && needs.deploy-infrastructure.result == 'success' }}
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy Coaching Service (production)
-        run: |
-          sam deploy \
-            --template-file coaching/template-standalone.yaml \
-            --stack-name purposepath-coaching-api-prod \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides Stage=prod LogLevel=WARNING JwtSecretArn=${{ steps.secret.outputs.arn }} NameSuffix=-v2 \
-            --region us-east-1 \
-            --resolve-s3 \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --tags Environment=production Project=PurposePath Service=Coaching
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Pulumi Python dependencies
+        working-directory: coaching/pulumi
+        run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Deploy Coaching Service
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: prod
+          work-dir: coaching/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
       - name: Get API Gateway URL
         id: api-url
+        working-directory: coaching/pulumi
         run: |
-          URL=$(aws cloudformation describe-stacks \
-            --stack-name purposepath-coaching-api-prod \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
+          URL=$(pulumi stack output customDomainUrl --stack prod)
           echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -141,10 +212,10 @@ jobs:
             
             **Deployment Details:**
             - Environment: Production
-            - Stack: purposepath-coaching-api-prod
+            - Stack: prod
             - API URL: ${{ steps.api-url.outputs.url }}
-            - Deployed at: ${{ github.event.head_commit.timestamp }}
-            - Commit: ${{ github.sha }}
+            - Deployed at: ${{ github.event.pull_request.merged_at || github.event.repository.updated_at }}
+            - Commit: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           draft: false
           prerelease: false
         continue-on-error: true
@@ -156,7 +227,7 @@ jobs:
           echo "✅ Deployment successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
-          echo "**Stack:** purposepath-coaching-api-prod" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** prod" >> $GITHUB_STEP_SUMMARY
           echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
           echo "**Release:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
@@ -165,27 +236,33 @@ jobs:
   smoke-tests:
     name: Post-Deployment Smoke Tests
     runs-on: ubuntu-latest
-    needs: [build-and-deploy]
+    needs: [validate-promotion, deploy-coaching]
+    if: ${{ needs.validate-promotion.outputs.should_deploy == 'true' && needs.deploy-coaching.result == 'success' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
+        with:
+          pulumi-version: 'latest'
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
-          role-session-name: purposepath-prod-tests
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Get API Gateway URL
         id: api-url
+        working-directory: coaching/pulumi
         run: |
-          URL=$(aws cloudformation describe-stacks \
-            --stack-name purposepath-coaching-api-prod \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
+          URL=$(pulumi stack output customDomainUrl --stack prod)
           echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Health Check
         run: |
@@ -209,13 +286,13 @@ jobs:
   notify-deployment:
     name: Notify Team
     runs-on: ubuntu-latest
-    needs: [build-and-deploy, smoke-tests]
-    if: always()
+    needs: [validate-promotion, deploy-coaching, smoke-tests]
+    if: ${{ always() && needs.validate-promotion.outputs.should_deploy == 'true' }}
     
     steps:
       - name: Deployment Status
         run: |
-          if [ "${{ needs.build-and-deploy.result }}" == "success" ] && [ "${{ needs.smoke-tests.result }}" == "success" ]; then
+          if [ "${{ needs.deploy-coaching.result }}" == "success" ] && [ "${{ needs.smoke-tests.result }}" == "success" ]; then
             echo "✅ Production deployment completed successfully"
           else
             echo "❌ Production deployment encountered issues"

@@ -1,21 +1,46 @@
-"""Insights API routes for coaching recommendations and analytics."""
+"""Insights API routes - partially migrated to topic-driven architecture (Issue #113).
+
+Migration Status:
+- generate: Migrated to topic-driven (insights_generation topic)
+    USED BY: FE - Dashboard.tsx (generateCoachingInsights)
+- categories, priorities, dismiss, acknowledge, summary: DEPRECATED - Not called by FE
+"""
+
+from typing import cast
 
 import structlog
-from coaching.src.api.auth import get_current_context
+from coaching.src.api.auth import get_current_context, get_current_user
 from coaching.src.api.dependencies import get_insights_service
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_generic_handler,
+    get_jwt_token,
+)
+from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
+from coaching.src.api.models.auth import UserContext
 from coaching.src.models.responses import (
     InsightActionResponse,
     InsightResponse,
     InsightsSummaryResponse,
 )
 from coaching.src.services.insights_service import InsightsService
-from fastapi import APIRouter, Depends, HTTPException, Query
-
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse, PaginatedResponse
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+class InsightsGenerationRequest(BaseModel):
+    """Request model for insights generation."""
+
+    page: int = 1
+    page_size: int = 20
+    category: str | None = None
+    priority: str | None = None
+    status: str | None = None
 
 
 @router.post("/generate", response_model=PaginatedResponse[InsightResponse])
@@ -25,19 +50,20 @@ async def generate_coaching_insights(
     category: str | None = Query(None, description="Filter by category"),
     priority: str | None = Query(None, description="Filter by priority"),
     status: str | None = Query(None, description="Filter by status"),
-    context: RequestContext = Depends(get_current_context),
-    service: InsightsService = Depends(get_insights_service),
+    user: UserContext = Depends(get_current_user),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+    jwt_token: str | None = Depends(get_jwt_token),
 ) -> PaginatedResponse[InsightResponse]:
-    """Generate fresh coaching insights using AI/LLM.
+    """Generate fresh coaching insights using topic-driven architecture.
+
+    Migrated to unified topic-driven architecture (Issue #113).
+    Uses 'insights_generation' topic for consistent prompt management.
 
     This endpoint generates NEW insights from real-time business data.
-    The frontend should persist results via .NET backend.
-    For viewing persisted insights, call .NET API directly.
     """
     logger.info(
         "Generating coaching insights",
-        user_id=context.user_id,
-        tenant_id=context.tenant_id,
+        user_id=user.user_id,
         page=page,
         page_size=page_size,
         category=category,
@@ -45,23 +71,22 @@ async def generate_coaching_insights(
         status=status,
     )
 
-    try:
-        # All active users can generate insights
-        # (Permission checks removed - authenticated users have access)
+    # Create request model from query parameters
+    request = InsightsGenerationRequest(
+        page=page, page_size=page_size, category=category, priority=priority, status=status
+    )
 
-        response = await service.generate_insights(
-            page=page,
-            page_size=page_size,
-            category=category,
-            priority=priority,
-            status=status,
-        )
+    template_processor = create_template_processor(jwt_token) if jwt_token else None
 
-        return response
-
-    except Exception as e:
-        logger.error("Error retrieving insights", user_id=context.user_id, error=str(e))
-        raise HTTPException(status_code=500, detail="Failed to retrieve insights") from e
+    result = await handler.handle_single_shot(
+        http_method="POST",
+        endpoint_path="/insights/generate",
+        request_body=request,
+        user_context=user,
+        response_model=PaginatedResponse[InsightResponse],
+        template_processor=template_processor,
+    )
+    return cast(PaginatedResponse[InsightResponse], result)
 
 
 @router.get("/categories", response_model=ApiResponse[list[str]])

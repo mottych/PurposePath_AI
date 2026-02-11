@@ -111,10 +111,10 @@ class RedisCache:
         """
         try:
             full_key = f"{self.key_prefix}{key}"
-            result = self.redis.delete(full_key)
+            result: int = int(self.redis.delete(full_key))
 
             logger.debug("Cache delete", key=key, deleted=result > 0)
-            return result > 0  # type: ignore[no-any-return]
+            return result > 0
 
         except Exception as e:
             logger.error("Cache delete failed", key=key, error=str(e))
@@ -155,9 +155,9 @@ class RedisCache:
             if not keys:
                 return 0
 
-            deleted = self.redis.delete(*keys)
+            deleted: int = int(self.redis.delete(*keys))
             logger.info("Cache pattern cleared", pattern=pattern, count=deleted)
-            return deleted  # type: ignore[no-any-return]
+            return deleted
 
         except Exception as e:
             logger.error("Cache pattern clear failed", pattern=pattern, error=str(e))

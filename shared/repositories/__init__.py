@@ -8,7 +8,7 @@ from .enhanced_repositories import (
     BaseRepository,
     GoalRepository,
     IssueRepository,
-    KPIRepository,
+    MeasureRepository,
     UserRepository,
 )
 
@@ -16,6 +16,6 @@ __all__ = [
     "BaseRepository",
     "GoalRepository",
     "IssueRepository",
-    "KPIRepository",
+    "MeasureRepository",
     "UserRepository",
 ]

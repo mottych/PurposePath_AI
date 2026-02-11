@@ -1,0 +1,278 @@
+# Instructions for PurposePath AI (Python)
+
+These notes help AI coding agents work effectively in this repo by describing real conventions, workflows, and patterns used here.
+
+## General
+
+***IMPORTANT*** Use non-interactive terminal commands to avoid prompts that block automation. Use MCP tools if available.
+
+**Quality & Discipline**
+
+* Quality first — never trade it for speed or simplicity.
+* No temporary hacks or shortcuts.
+* Remove temporary code, mock data, and files after use.
+* Any infrastructure changes must be done through Pulumi as IaC.
+* dev branch is the main integration branch; keep it stable. Only merge fully tested, complete features, with no warnings or errors on build or tests for the whole solution, even if not related to the changes.
+* **When in doubt - ask me**
+
+**Workflow & GitHub**
+
+* Use GitHub MCP service to create issues and track progress.
+* Always work under a GitHub issue; request one if missing.
+* When starting to work on an issue - mark the issue in-progress using a label.
+* Do not create status documents, only update issues.
+* Always work in a feature branch off the dev branch.
+* Use issue ID in commits (e.g., `feat(#123): add API endpoint`).
+* Use GitHub Issues: add `in-progress`, post updates, close after completion.
+* Use the issues in GitHub to find your next step. Always update progress (in-progress and completed). Add progress to the issue as comments.
+
+**Testing & Validation**
+
+* Create unit and integration tests for all new or modified logic.
+* All tests must pass before marking complete regardless if they are related to our changes.
+* Resolve all build warnings and errors regardless if they are related to our changes.
+* Make sure there are no errors or warnings (ruff, mypy), and all tests pass.
+* The task is not complete until everything passes, regardless if failures are related to the issue being worked.
+
+**Completion & Merge**
+
+1. Make sure there are no warnings or errors on build or tests. If there are - fix them.
+2. Commit with descriptive message referencing the issue.
+3. Merge the feature branch into 'dev' and sync. Then delete the feature branch.
+4. Clean temporary code and artifacts.
+5. Update labels (remove in-progress) and **close** the issue on GitHub.
+
+**Collaboration**
+
+* Ask for clarification when unsure.
+* Communicate progress and blockers promptly.
+
+## Architecture Overview
+
+PurposePath is a serverless AI coaching platform using **Clean Architecture with DDD**. The coaching service (`coaching/src/`) orchestrates multi-turn conversations with Amazon Bedrock (Claude).
+
+```
+coaching/src/
+├── domain/          # Business logic, NO external dependencies
+│   ├── entities/    # Aggregate roots (Conversation)
+│   ├── value_objects/  # Immutable (Message, AlignmentScore)
+│   ├── ports/       # Repository interfaces (Protocol classes)
+│   └── exceptions/  # Domain-specific exceptions
+├── application/     # Use case orchestration
+│   ├── conversation/  # ConversationApplicationService
+│   └── ai_engine/   # LLM orchestration
+├── infrastructure/  # External concerns
+│   ├── repositories/  # DynamoDB implementations
+│   └── llm/providers/ # Bedrock, Anthropic, OpenAI adapters
+├── api/             # FastAPI routes, middleware, auth
+│   ├── routes/      # Endpoint definitions
+│   └── dependencies/ # Dependency injection
+└── core/            # Types, constants, config
+```
+
+**Dependency Rule**: API → Application → Domain ← Infrastructure (domain has NO outward dependencies)
+
+## Key Commands
+
+```powershell
+# Quality checks (run before every commit)
+.\scripts\pre-commit-check.ps1        # Full check with tests
+.\scripts\pre-commit-check.ps1 -Quick # Skip tests
+
+# Auto-fix formatting issues
+.\scripts\quick-fix.ps1
+
+# Manual validation
+python -m ruff check coaching/ shared/ --fix
+python -m ruff format coaching/ shared/
+python -m mypy coaching/src shared/ --explicit-package-bases
+
+# Tests
+cd coaching && uv run pytest                    # All tests
+cd coaching && uv run pytest -k "test_name"     # Specific test
+cd coaching && uv run pytest --cov=src          # With coverage
+
+# Local development server
+cd coaching && uv run uvicorn src.api.main:app --reload
+
+# Deploy (Pulumi)
+cd infrastructure/pulumi && pulumi up   # Infrastructure
+cd coaching/pulumi && pulumi up         # Lambda + API Gateway
+```
+
+## Critical Development Rules
+
+### Type Safety (MANDATORY)
+- **ZERO `dict[str, Any]` in domain layer** - use Pydantic models
+- **Use NewType IDs** from `coaching/src/core/types.py`:
+  ```python
+  from coaching.src.core.types import ConversationId, UserId, TenantId
+  ```
+- **Transform DynamoDB responses immediately** to domain entities
+
+### Multi-Tenancy (MANDATORY)
+All queries MUST enforce tenant isolation. Two patterns exist:
+
+```python
+# Pattern 1: Composite key (shared tables) - see shared/repositories/
+Key={"pk": f"TENANT#{tenant_id}", "sk": f"ENTITY#{entity_id}"}
+
+# Pattern 2: Simple key + filter (coaching conversations)
+response = table.get_item(Key={"conversation_id": conversation_id})
+if item.get("tenant_id") != tenant_id:
+    return None  # Enforce isolation
+```
+
+### Test Coverage (MANDATORY)
+- **Domain layer**: 85%+ unit test coverage
+- **Service layer**: 75%+ coverage
+- **Overall project**: 75%+ combined coverage
+
+## Code Patterns
+
+### Domain Entity (Aggregate Root)
+```python
+# coaching/src/domain/entities/conversation.py
+class Conversation(BaseModel):
+    conversation_id: ConversationId
+    user_id: UserId
+    tenant_id: TenantId
+    status: ConversationStatus = ConversationStatus.ACTIVE
+    
+    def add_message(self, role: MessageRole, content: str) -> None:
+        if not self.is_active():
+            raise ConversationNotActive(self.conversation_id)
+```
+
+### Application Service
+```python
+# coaching/src/application/conversation/conversation_service.py
+class ConversationApplicationService:
+    def __init__(self, conversation_repository: ConversationRepositoryPort):
+        self.repository = conversation_repository  # Inject port, not implementation
+```
+
+### Repository (Port/Adapter)
+```python
+# Port (domain layer)
+class ConversationRepositoryPort(Protocol):
+    async def get_by_id(self, id: ConversationId) -> Conversation | None: ...
+
+# Adapter (infrastructure layer)
+class DynamoDBConversationRepository:
+    async def get_by_id(self, id: ConversationId) -> Conversation | None:
+        response = self.table.get_item(Key={"conversation_id": id})
+        return Conversation.model_validate(response["Item"]) if "Item" in response else None
+```
+
+### API Route with Dependency Injection
+```python
+# coaching/src/api/routes/conversations.py
+@router.post("/initiate", response_model=ConversationResponse)
+async def initiate_conversation(
+    request: InitiateConversationRequest,
+    user: UserContext = Depends(get_current_user),
+    handler: GenericAIHandler = Depends(get_generic_handler),
+) -> ConversationResponse:
+```
+
+### AI Workflows (LangGraph)
+For complex AI orchestration, use LangGraph workflows in `coaching/src/workflows/`:
+- Keep workflow logic separate from business logic
+- Use typed state objects for workflow data
+- Implement as composable, testable graph nodes
+
+## Tech Stack Quick Reference
+
+| Component | Technology |
+|-----------|------------|
+| API Framework | FastAPI + Mangum (Lambda adapter) |
+| LLM | Amazon Bedrock (Claude), LangChain, LangGraph |
+| Database | DynamoDB (single-table design) |
+| IaC | Pulumi (TypeScript for Lambda, Python for infra) |
+| Auth | JWT with tenant/user context |
+| Observability | structlog for structured logging |
+| Package Manager | uv (for dependency management) |
+| Linting | ruff (linting + formatting) |
+| Type Checking | mypy |
+| Testing | pytest + pytest-cov |
+
+## Structure & Conventions
+
+### Key Paths
+- `coaching/src/` — Main coaching service source code
+- `coaching/src/api/` — FastAPI routes and dependencies
+- `coaching/src/domain/` — Domain entities, value objects, ports
+- `coaching/src/application/` — Application services and use cases
+- `coaching/src/infrastructure/` — External adapters (DynamoDB, LLM providers)
+- `coaching/src/core/` — Types, constants, configuration
+- `coaching/tests/` — Test suites (unit, integration)
+- `shared/` — Shared utilities across services
+- `scripts/` — PowerShell helpers (pre-commit-check.ps1, quick-fix.ps1)
+- `docs/` — Requirements, design specs, and guides
+
+### Naming Conventions
+- Files: `snake_case.py`
+- Classes: `PascalCase`
+- Functions/variables: `snake_case`
+- Constants: `UPPER_SNAKE_CASE`
+- Type aliases: `PascalCase`
+
+### Code Cleanup (Before Completion)
+- [ ] Remove all commented-out code
+- [ ] Delete unused imports, variables, functions
+- [ ] Remove debug print statements (use structlog instead)
+- [ ] Delete temporary test files
+- [ ] Clean up experimental files
+- [ ] Run `ruff check --fix` and `ruff format`
+
+## Python Best Practices
+
+**Type Hints:**
+- Always use type hints for function parameters and return types
+- Use `|` for union types (Python 3.10+): `str | None`
+- Use `Annotated` for complex dependency injection
+- Prefer Pydantic models over TypedDict
+
+**Async/Await:**
+- Use `async def` for I/O-bound operations
+- Never block the event loop with synchronous I/O
+- Use `asyncio.gather()` for concurrent operations
+
+**Patterns to Avoid:**
+- `dict[str, Any]` in domain layer (use Pydantic models)
+- Mutable default arguments
+- Catching broad exceptions (`except Exception`)
+- Direct database access from API routes (use services)
+- Business logic in API routes (move to services)
+
+**Error Handling:**
+- Use domain-specific exceptions from `coaching/src/domain/exceptions/`
+- Log errors with structlog before raising
+- Return proper HTTP status codes from API routes
+- Validate input at API boundary with Pydantic
+
+## Git Workflow
+
+**Commit messages:**
+- `feat(coaching): Add conversation resumption`
+- `fix(api): Correct tenant validation in auth middleware`
+- `refactor(domain): Extract message validation to value object`
+- `test(unit): Add tests for conversation service`
+- `docs: Update API integration guide`
+
+**Before Push/Completion:**
+- [ ] Run linting: `python -m ruff check coaching/ shared/`
+- [ ] Run formatting: `python -m ruff format coaching/ shared/`
+- [ ] Run type checking: `python -m mypy coaching/src shared/`
+- [ ] Run tests: `cd coaching && uv run pytest`
+- [ ] No console errors
+- [ ] All tests pass
+- [ ] Code cleanup completed
+
+## Documentation References
+
+- Architecture: `docs/Plans/AI_COACHING_ARCHITECTURE_DESIGN.md`
+- Clean Architecture Guide: `docs/Guides/clean-architecture-ddd-guidelines.md`
+- API Specs: `docs/Specifications/`
+- Backend Integration: `docs/shared/Specifications/`

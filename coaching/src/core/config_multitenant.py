@@ -25,29 +25,56 @@ class Settings(BaseSettings):
     application_name: str = Field(default="PurposePath")
 
     # JWT Authentication (for token validation)
-    jwt_secret_arn: str | None = Field(default=None, validation_alias="JWT_SECRET_ARN")
+    jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
+    jwt_secret_name: str | None = Field(default=None, validation_alias="JWT_SECRET_NAME")
     jwt_algorithm: str = "HS256"
-    jwt_issuer: str = "purposepath"
+    jwt_issuer: str = Field(
+        default="https://api.dev.purposepath.app", validation_alias="JWT_ISSUER"
+    )
+    jwt_audience: str = Field(
+        default="https://dev.purposepath.app", validation_alias="JWT_AUDIENCE"
+    )
 
-    # DynamoDB Tables (Multitenant)
-    conversations_table: str = Field(
-        default="purposepath-conversations-dev", validation_alias="CONVERSATIONS_TABLE"
-    )
-    coaching_sessions_table: str = Field(
-        default="purposepath-coaching-sessions-dev", validation_alias="COACHING_SESSIONS_TABLE"
-    )
-    business_data_table: str = Field(
-        default="purposepath-business-data-dev", validation_alias="BUSINESS_DATA_TABLE"
-    )
-    user_preferences_table: str = Field(
-        default="purposepath-user-preferences-dev", validation_alias="USER_PREFERENCES_TABLE"
-    )
+    def get_jwt_secret_name(self) -> str:
+        """Get JWT secret name with environment suffix."""
+        if self.jwt_secret_name:
+            return self.jwt_secret_name
+        return f"purposepath-jwt-secret-{self.stage}"
+
+    # DynamoDB Table Names - computed from stage
+    # Pattern: purposepath-{table}-{stage}
+    @property
+    def conversations_table(self) -> str:
+        """Get conversations table name."""
+        return f"purposepath-coaching-conversations-{self.stage}"
+
+    @property
+    def coaching_sessions_table(self) -> str:
+        """Get coaching sessions table name."""
+        return f"purposepath-coaching-sessions-{self.stage}"
+
+    @property
+    def business_data_table(self) -> str:
+        """Get business data table name."""
+        return f"purposepath-business-data-{self.stage}"
+
+    @property
+    def user_preferences_table(self) -> str:
+        """Get user preferences table name."""
+        return f"purposepath-user-preferences-{self.stage}"
+
+    @property
+    def topics_table(self) -> str:
+        """Get topics table name."""
+        return f"purposepath-topics-{self.stage}"
+
+    @property
+    def ai_jobs_table(self) -> str:
+        """Get AI jobs table name."""
+        return f"purposepath-ai-jobs-{self.stage}"
+
+    # Optional: Allow override via env var for local development
     dynamodb_endpoint: str | None = None
-
-    # DynamoDB Tables (Unified LLM Prompts)
-    llm_prompts_table: str = Field(
-        default="purposepath-llm-prompts-dev", validation_alias="LLM_PROMPTS_TABLE"
-    )
 
     # S3
     prompts_bucket: str = Field(
@@ -100,11 +127,15 @@ class Settings(BaseSettings):
         """Parse CORS origins from JSON string or return as-is if already a list."""
         if isinstance(v, str):
             try:
-                return json.loads(v)
+                from typing import cast
+
+                return cast(list[str], json.loads(v))
             except json.JSONDecodeError:
                 # If not valid JSON, try splitting by comma
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+        from typing import cast
+
+        return cast(list[str], v)
 
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -140,10 +171,9 @@ class Settings(BaseSettings):
     )
 
     # Google Vertex AI Configuration (optional)
+    # Note: Gemini 3 models require "global" endpoint. Older models (2.5, 2.0, 1.5) support regional endpoints.
     google_project_id: str | None = Field(default=None, validation_alias="GOOGLE_PROJECT_ID")
-    google_vertex_location: str = Field(
-        default="us-central1", validation_alias="GOOGLE_VERTEX_LOCATION"
-    )
+    google_vertex_location: str = Field(default="global", validation_alias="GOOGLE_VERTEX_LOCATION")
 
     # Memory Management
     max_conversation_memory: int = 4000
@@ -219,6 +249,10 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     """
     Get Google Vertex AI credentials from AWS Secrets Manager.
 
+    Always retrieves from Secrets Manager to ensure proper OAuth scopes are applied.
+    The GOOGLE_APPLICATION_CREDENTIALS env var is ignored to maintain consistent
+    scope configuration across all environments.
+
     Returns:
         Credentials dict (service account JSON) or None if not configured
     """
@@ -226,17 +260,14 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
 
     settings = get_settings()
 
-    # Check if GOOGLE_APPLICATION_CREDENTIALS env var is set (local dev)
-    import os
-
-    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-        # Let Google SDK handle it
-        return None
-
-    # Retrieve from Secrets Manager if configured
+    # Always retrieve from Secrets Manager (ignore GOOGLE_APPLICATION_CREDENTIALS)
+    # This ensures proper OAuth scopes are applied via service_account.Credentials
     if settings.google_vertex_credentials_secret:
         try:
+            import structlog
             from shared.services.aws_helpers import get_secretsmanager_client
+
+            log = structlog.get_logger()
 
             client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
             response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
@@ -244,12 +275,24 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
 
             if secret_value:
                 # Parse JSON credentials
-                credentials_dict = json.loads(secret_value)
+                credentials_dict: dict[str, Any] = json.loads(secret_value)
+                log.info(
+                    "google_vertex_credentials.loaded",
+                    project_id=credentials_dict.get("project_id"),
+                    client_email=credentials_dict.get("client_email"),
+                )
                 return credentials_dict
 
+            log.warning(
+                "google_vertex_credentials.empty_secret",
+                secret_id=settings.google_vertex_credentials_secret,
+            )
             return None
-        except Exception:
-            # Log error but don't fail - allow None to be returned
+        except Exception as e:
+            import structlog
+
+            log = structlog.get_logger()
+            log.error("google_vertex_credentials.error", error=str(e), error_type=type(e).__name__)
             return None
 
     return None

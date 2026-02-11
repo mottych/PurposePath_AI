@@ -52,14 +52,14 @@ class ActionContext(BaseModel):
     goal_id: str | None = Field(None, description="Associated goal ID")
 
 
-class KpiContext(BaseModel):
-    """KPI information for coaching context."""
+class MeasureContext(BaseModel):
+    """Measure information for coaching context."""
 
-    id: str = Field(..., description="KPI ID")
-    name: str = Field(..., description="KPI name")
-    current_value: float | None = Field(None, description="Current KPI value")
-    target_value: float | None = Field(None, description="Target KPI value")
-    unit: str | None = Field(None, description="KPI unit (%, $, etc.)")
+    id: str = Field(..., description="Measure ID")
+    name: str = Field(..., description="Measure name")
+    current_value: float | None = Field(None, description="Current Measure value")
+    target_value: float | None = Field(None, description="Target Measure value")
+    unit: str | None = Field(None, description="Measure unit (%, $, etc.)")
 
 
 class BusinessContext(BaseModel):
@@ -78,7 +78,7 @@ class BusinessContext(BaseModel):
     recent_actions: list[ActionContext] = Field(
         default_factory=list, description="Recent actions/tasks"
     )
-    kpis: list[KpiContext] = Field(default_factory=list, description="Key performance indicators")
+    measures: list[MeasureContext] = Field(default_factory=list, description="Measures")
 
     # Metadata
     data_scope: str | None = Field(

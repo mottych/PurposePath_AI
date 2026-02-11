@@ -1,14 +1,18 @@
 name: CI/CD Pipeline
 
 on:
+  # Only trigger on push to dev/master (after PR merge)
   push:
     branches:
       - dev
-      - main
-  pull_request:
-    branches:
-      - dev
-      - main
+      - master
+    paths:
+      - 'coaching/**/*.py'
+      - 'shared/**/*.py'
+      - 'pyproject.toml'
+      - 'pytest.ini'
+  # Allow manual trigger
+  workflow_dispatch: {}
 
 jobs:
   lint-and-test:
@@ -124,47 +128,3 @@ jobs:
           safety check --json
         continue-on-error: true
 
-  deploy-dev:
-    name: Deploy to Dev
-    runs-on: ubuntu-latest
-    needs: [lint-and-test, security-scan]
-    if: github.ref == 'refs/heads/dev'
-    permissions:
-      id-token: write
-      contents: read
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Install AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: us-east-1
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-      
-      - name: Build Coaching Service
-        working-directory: coaching
-        run: sam build --template template.yaml --parallel --cached
-      
-      - name: Deploy Coaching Service
-        working-directory: coaching
-        run: |
-          sam deploy \
-            --template-file .aws-sam/build/template.yaml \
-            --stack-name purposepath-coaching-api-dev \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app JwtSecretArn=arn:aws:secretsmanager:us-east-1:265429842111:secret:purposepath-jwt-secret-dev-FilBbY \
-            --region us-east-1 --resolve-s3 --resolve-image-repos --no-confirm-changeset

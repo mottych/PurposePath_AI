@@ -154,20 +154,13 @@ class TestLLMTopic:
             topic_type="conversation_coaching",
             category="coaching",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            allowed_parameters=[
-                ParameterDefinition(
-                    name="user_name",
-                    type="string",
-                    required=True,
-                    description="User's display name",
-                )
-            ],
             prompts=[
                 PromptInfo(
                     prompt_type="system",
@@ -197,10 +190,10 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="analysis",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -215,10 +208,10 @@ class TestLLMTopic:
             topic_type="kpi_system",
             category="kpi",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -235,10 +228,10 @@ class TestLLMTopic:
                 topic_type="invalid_type",
                 category="test",
                 is_active=True,
-                model_code="claude-3-5-sonnet-20241022",
+                basic_model_code="claude-3-5-sonnet-20241022",
+                premium_model_code="claude-3-5-sonnet-20241022",
                 temperature=0.7,
                 max_tokens=2000,
-                allowed_parameters=[],
                 prompts=[],
                 additional_config={},
                 created_at=datetime.now(tz=UTC),
@@ -247,6 +240,8 @@ class TestLLMTopic:
 
     def test_to_dynamodb_item(self, sample_topic: LLMTopic) -> None:
         """Test conversion to DynamoDB item."""
+        from decimal import Decimal
+
         item = sample_topic.to_dynamodb_item()
 
         assert item["topic_id"] == "core_values"
@@ -254,10 +249,12 @@ class TestLLMTopic:
         assert item["topic_type"] == "conversation_coaching"
         assert item["category"] == "coaching"
         assert item["is_active"] is True
-        assert len(item["allowed_parameters"]) == 1
         assert len(item["prompts"]) == 1
-        assert item["model_code"] == "claude-3-5-sonnet-20241022"
-        assert item["temperature"] == 0.7
+        assert item["tier_level"] == "free"
+        assert item["basic_model_code"] == "claude-3-5-sonnet-20241022"
+        assert item["premium_model_code"] == "claude-3-5-sonnet-20241022"
+        # DynamoDB requires Decimal for float values
+        assert item["temperature"] == Decimal("0.7")
         assert item["max_tokens"] == 2000
         assert item["additional_config"]["default_model"] == "claude-3-sonnet"
         assert item["created_at"] == "2025-01-15T10:00:00+00:00"
@@ -274,7 +271,6 @@ class TestLLMTopic:
             "topic_type": "single_shot",
             "category": "analysis",
             "is_active": False,
-            "allowed_parameters": [{"name": "param1", "type": "string", "required": True}],
             "prompts": [
                 {
                     "prompt_type": "user",
@@ -299,15 +295,109 @@ class TestLLMTopic:
         assert topic.topic_type == "single_shot"
         assert topic.category == "analysis"
         assert topic.is_active is False
-        assert len(topic.allowed_parameters) == 1
         assert len(topic.prompts) == 1
         assert topic.additional_config["key"] == "value"
-        assert topic.model_code == "claude-3-5-sonnet-20241022"
+        # Old config.model_code should migrate to both new fields
+        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
         assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert topic.description == "Test description"
         assert topic.display_order == 50
         assert topic.created_by == "tester"
+
+    def test_from_dynamodb_item_converts_decimal_types(self) -> None:
+        """Test that Decimal values from DynamoDB are converted to proper Python types.
+
+        DynamoDB stores numbers as Decimal, but we need float/int for JSON serialization
+        when calling LLM APIs. This test ensures the conversion happens correctly.
+
+        Regression test for issue #139: OpenAI API fails with
+        'Object of type Decimal is not JSON serializable'
+        """
+        from decimal import Decimal
+
+        # Simulate DynamoDB response with Decimal values (new format)
+        item = {
+            "topic_id": "test_decimal",
+            "topic_name": "Test Decimal Conversion",
+            "topic_type": "single_shot",
+            "category": "analysis",
+            "is_active": True,
+            "model_code": "gpt-5-mini",
+            # DynamoDB returns these as Decimal
+            "temperature": Decimal("0.8"),
+            "max_tokens": Decimal("2000"),
+            "top_p": Decimal("0.95"),
+            "frequency_penalty": Decimal("0.1"),
+            "presence_penalty": Decimal("-0.1"),
+            "display_order": Decimal("10"),
+            "prompts": [],
+            "additional_config": {},
+            "created_at": "2025-01-15T10:00:00+00:00",
+            "updated_at": "2025-01-20T12:00:00+00:00",
+        }
+
+        topic = LLMTopic.from_dynamodb_item(item)
+
+        # Verify types are converted properly
+        assert isinstance(topic.temperature, float), "temperature should be float"
+        assert isinstance(topic.max_tokens, int), "max_tokens should be int"
+        assert isinstance(topic.top_p, float), "top_p should be float"
+        assert isinstance(topic.frequency_penalty, float), "frequency_penalty should be float"
+        assert isinstance(topic.presence_penalty, float), "presence_penalty should be float"
+
+        # Verify values are correct
+        assert topic.temperature == 0.8
+        assert topic.max_tokens == 2000
+        assert topic.top_p == 0.95
+        assert topic.frequency_penalty == 0.1
+        assert topic.presence_penalty == -0.1
+
+        # Ensure values are JSON serializable (the actual bug this prevents)
+        import json
+
+        json_safe = {
+            "temperature": topic.temperature,
+            "max_tokens": topic.max_tokens,
+            "top_p": topic.top_p,
+        }
+        # This would raise TypeError if Decimal wasn't converted
+        json.dumps(json_safe)
+
+    def test_from_dynamodb_item_old_config_format_converts_decimal(self) -> None:
+        """Test Decimal conversion in old config format for backward compatibility."""
+        from decimal import Decimal
+
+        item = {
+            "topic_id": "test_old_format",
+            "topic_name": "Test Old Format",
+            "topic_type": "single_shot",
+            "category": "analysis",
+            "is_active": True,
+            "prompts": [],
+            # Old format with config dict containing Decimals
+            "config": {
+                "model_code": "claude-3-5-sonnet-20241022",
+                "temperature": Decimal("0.7"),
+                "max_tokens": Decimal("4000"),
+                "top_p": Decimal("1.0"),
+                "frequency_penalty": Decimal("0"),
+                "presence_penalty": Decimal("0"),
+            },
+            "created_at": "2025-01-15T10:00:00+00:00",
+            "updated_at": "2025-01-20T12:00:00+00:00",
+        }
+
+        topic = LLMTopic.from_dynamodb_item(item)
+
+        # Verify types are converted properly
+        assert isinstance(topic.temperature, float), "temperature should be float"
+        assert isinstance(topic.max_tokens, int), "max_tokens should be int"
+        assert isinstance(topic.top_p, float), "top_p should be float"
+
+        # Verify values
+        assert topic.max_tokens == 4000
 
     def test_roundtrip_serialization(self, sample_topic: LLMTopic) -> None:
         """Test that to_dynamodb_item and from_dynamodb_item are inverse operations."""
@@ -319,10 +409,10 @@ class TestLLMTopic:
         assert roundtrip.topic_type == sample_topic.topic_type
         assert roundtrip.category == sample_topic.category
         assert roundtrip.is_active == sample_topic.is_active
-        assert len(roundtrip.allowed_parameters) == len(sample_topic.allowed_parameters)
         assert len(roundtrip.prompts) == len(sample_topic.prompts)
         assert roundtrip.additional_config == sample_topic.additional_config
-        assert roundtrip.model_code == sample_topic.model_code
+        assert roundtrip.basic_model_code == sample_topic.basic_model_code
+        assert roundtrip.premium_model_code == sample_topic.premium_model_code
         assert roundtrip.temperature == sample_topic.temperature
         assert roundtrip.max_tokens == sample_topic.max_tokens
         assert roundtrip.created_at == sample_topic.created_at
@@ -343,21 +433,6 @@ class TestLLMTopic:
         assert sample_topic.has_prompt(prompt_type="system") is True
         assert sample_topic.has_prompt(prompt_type="user") is False
 
-    def test_get_parameter(self, sample_topic: LLMTopic) -> None:
-        """Test getting parameter by name."""
-        param = sample_topic.get_parameter(name="user_name")
-
-        assert param is not None
-        assert param.name == "user_name"
-
-        # Non-existent parameter
-        assert sample_topic.get_parameter(name="nonexistent") is None
-
-    def test_has_parameter(self, sample_topic: LLMTopic) -> None:
-        """Test checking if parameter exists."""
-        assert sample_topic.has_parameter(name="user_name") is True
-        assert sample_topic.has_parameter(name="nonexistent") is False
-
     def test_minimal_topic(self) -> None:
         """Test creating topic with minimal required fields."""
         topic = LLMTopic(
@@ -366,10 +441,10 @@ class TestLLMTopic:
             topic_type="single_shot",
             category="test",
             is_active=True,
-            model_code="claude-3-5-sonnet-20241022",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
             temperature=0.7,
             max_tokens=2000,
-            allowed_parameters=[],
             prompts=[],
             additional_config={},
             created_at=datetime.now(tz=UTC),
@@ -379,3 +454,83 @@ class TestLLMTopic:
         assert topic.description is None
         assert topic.display_order == 100  # default value
         assert topic.created_by is None
+
+
+class TestLLMTopicFactory:
+    """Tests for LLMTopic factory methods."""
+
+    def test_create_default_from_enum_core_values(self) -> None:
+        """Test creating default topic from CORE_VALUES enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.CORE_VALUES)
+
+        assert topic.topic_id == "core_values"
+        assert topic.topic_name == "Core Values"
+        assert topic.category == "core_values"
+        assert topic.topic_type == "conversation_coaching"
+        assert topic.description == "Discover and clarify personal core values"
+        assert topic.is_active is False  # Default inactive
+        assert topic.display_order == 0  # First enum value
+        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.temperature == 0.7
+        assert topic.max_tokens == 2000
+        assert topic.prompts == []  # No prompts until configured
+        assert topic.created_by == "system"
+
+    def test_create_default_from_enum_purpose(self) -> None:
+        """Test creating default topic from PURPOSE enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.PURPOSE)
+
+        assert topic.topic_id == "purpose"
+        assert topic.topic_name == "Purpose"
+        assert topic.category == "purpose"
+        assert topic.description == "Define life and business purpose"
+        assert topic.display_order == 10  # Second enum value
+
+    def test_create_default_from_enum_vision(self) -> None:
+        """Test creating default topic from VISION enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.VISION)
+
+        assert topic.topic_id == "vision"
+        assert topic.topic_name == "Vision"
+        assert topic.category == "vision"
+        assert topic.description == "Articulate vision for the future"
+        assert topic.display_order == 20  # Third enum value
+
+    def test_create_default_from_enum_goals(self) -> None:
+        """Test creating default topic from GOALS enum."""
+        from shared.models.multitenant import CoachingTopic
+
+        topic = LLMTopic.create_default_from_enum(CoachingTopic.GOALS)
+
+        assert topic.topic_id == "goals"
+        assert topic.topic_name == "Goals"
+        assert topic.category == "goals"
+        assert topic.description == "Set aligned and achievable goals"
+        assert topic.display_order == 30  # Fourth enum value
+
+    def test_create_default_all_enums_have_unique_ids(self) -> None:
+        """Test that all enum defaults have unique IDs."""
+        from shared.models.multitenant import CoachingTopic
+
+        topics = [LLMTopic.create_default_from_enum(enum_val) for enum_val in CoachingTopic]
+
+        topic_ids = [t.topic_id for t in topics]
+        assert len(topic_ids) == len(set(topic_ids))  # All unique
+
+    def test_create_default_all_enums_ordered_correctly(self) -> None:
+        """Test that enum defaults have correct display order."""
+        from shared.models.multitenant import CoachingTopic
+
+        topics = [LLMTopic.create_default_from_enum(enum_val) for enum_val in CoachingTopic]
+
+        # Should be ordered 0, 10, 20, 30
+        display_orders = [t.display_order for t in topics]
+        assert display_orders == sorted(display_orders)
+        assert len(set(display_orders)) == len(display_orders)  # All unique

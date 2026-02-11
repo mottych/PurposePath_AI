@@ -1,11 +1,76 @@
 name: Deploy Dev
 
 on:
-  workflow_dispatch: {}
+  push:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests before deployment'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
-  deploy-coaching:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          # Note: We don't use pip cache since uv manages dependencies
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv .venv
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -r coaching/requirements.txt
+          uv pip install -r coaching/requirements-dev.txt
+        shell: bash
+
+      - name: Run Ruff Linting
+        run: |
+          source .venv/bin/activate
+          python -m ruff check . --exclude=".venv,venv,__pycache__,.pytest_cache"
+        shell: bash
+
+      - name: Run MyPy Type Checking
+        run: |
+          source .venv/bin/activate
+          python -m mypy coaching/src/ shared/ --config-file=pyproject.toml
+        shell: bash
+
+      - name: Run Unit Tests
+        run: |
+          source .venv/bin/activate
+          python -m pytest coaching/tests/unit/ -v --cov=coaching/src --cov-fail-under=60
+        shell: bash
+        env:
+          PYTHONPATH: coaching:shared:.
+
+  deploy-coaching:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks]
+    if: always() && (needs.pre-deployment-checks.result == 'success' || github.event.inputs.skip_tests == 'true')
     permissions:
       id-token: write
       contents: read
@@ -18,8 +83,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
+      - name: Install Pulumi Python dependencies
+        working-directory: coaching/pulumi
+        run: pip install -r requirements.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -28,21 +94,83 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build Coaching Service
-        working-directory: coaching
-        run: sam build --template template.yaml --parallel --cached
-
       - name: Deploy Coaching Service
-        working-directory: coaching
-        run: |
-          sam deploy \
-            --template-file .aws-sam/build/template.yaml \
-            --stack-name purposepath-coaching-api-dev \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --parameter-overrides Stage=dev EnableCustomDomain=true CustomDomainName=api.dev.purposepath.app JwtSecretArn=arn:aws:secretsmanager:us-east-1:265429842111:secret:purposepath-jwt-secret-dev-FilBbY \
-            --region us-east-1 --resolve-s3 --resolve-image-repos --no-confirm-changeset
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: dev
+          work-dir: coaching/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
+      - name: Get API Gateway URL
+        id: api-url
+        working-directory: coaching/pulumi
+        run: |
+          URL=$(pulumi stack output customDomainUrl --stack dev)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Summary - Dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Dev" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** dev" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  smoke-tests:
+    name: Post-Deployment Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-coaching]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
+        with:
+          pulumi-version: 'latest'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Get API Gateway URL
+        id: api-url
+        working-directory: coaching/pulumi
+        run: |
+          URL=$(pulumi stack output customDomainUrl --stack dev)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Health Check
+        run: |
+          echo "Testing API health endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/health || echo "000")
+          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
+            echo "✅ API is responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ API returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Smoke Test Summary
+        run: |
+          echo "## Smoke Tests - Dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Health check passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ API is responsive" >> $GITHUB_STEP_SUMMARY

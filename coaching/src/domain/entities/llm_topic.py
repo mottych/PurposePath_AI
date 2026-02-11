@@ -1,13 +1,15 @@
 """LLM Topic domain entity.
 
 This module defines the unified topic entity for all LLM prompts across
-conversation coaching, single-shot analysis, and KPI system templates.
+conversation coaching, single-shot analysis, and Measure system templates.
 """
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, ClassVar
 
+from coaching.src.core.constants import TierLevel
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
     InvalidTopicTypeError,
@@ -131,32 +133,35 @@ class LLMTopic:
 
     Represents a complete topic configuration including metadata, prompts,
     parameters, and configuration. Supports conversation coaching, single-shot
-    analysis, and KPI system use cases.
+    analysis, and Measure system use cases.
 
     Business Rules:
         - topic_id must be unique across all topics
         - topic_type must be: conversation_coaching, single_shot, or kpi_system
         - At least one prompt must be defined
         - Parameter names must be unique within a topic
-        - model_code must be a valid LLM model identifier
+        - basic_model_code and premium_model_code must be valid LLM model identifiers
         - temperature must be between 0.0 and 2.0
         - max_tokens must be positive
         - top_p must be between 0.0 and 1.0
         - frequency_penalty and presence_penalty must be between -2.0 and 2.0
+        - tier_level determines topic accessibility and model selection
 
     Attributes:
         topic_id: Unique identifier (snake_case)
         topic_name: Human-readable display name
-        topic_type: Type of topic (conversation_coaching, single_shot, kpi_system)
-        category: Grouping category (coaching, analysis, strategy, kpi)
+        topic_type: Type of topic (conversation_coaching, single_shot, measure_system)
+        category: Grouping category (coaching, analysis, strategy, measure)
         is_active: Whether topic is active and available
-        model_code: LLM model identifier (e.g., 'claude-3-5-sonnet-20241022')
+        tier_level: Subscription tier required to access this topic (free, basic, premium, ultimate)
+        basic_model_code: LLM model for Free/Basic tiers (e.g., 'claude-3-5-sonnet-20241022')
+        premium_model_code: LLM model for Premium/Ultimate tiers (e.g., 'claude-3-5-sonnet-20241022')
+        extraction_model_code: Optional model for result extraction (defaults to Haiku for speed/cost)
         temperature: LLM temperature parameter (0.0-2.0)
         max_tokens: Maximum tokens for LLM response (must be positive)
         top_p: Nucleus sampling parameter (0.0-1.0)
         frequency_penalty: Frequency penalty parameter (-2.0 to 2.0)
         presence_penalty: Presence penalty parameter (-2.0 to 2.0)
-        allowed_parameters: List of parameter definitions
         prompts: List of prompt information entries
         created_at: When topic was created
         updated_at: When topic was last updated
@@ -173,16 +178,19 @@ class LLMTopic:
     category: str
     is_active: bool
 
-    # LLM Model Configuration (owned by topic)
-    model_code: str
-    temperature: float
-    max_tokens: int
+    # Tier Level (determines accessibility and model selection)
+    tier_level: TierLevel = TierLevel.FREE
+
+    # LLM Model Configuration (dual models for tier-based selection)
+    basic_model_code: str = "claude-3-5-sonnet-20241022"
+    premium_model_code: str = "claude-3-5-sonnet-20241022"
+    temperature: float = 0.7
+    max_tokens: int = 2000
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
 
-    # Prompts and Parameters
-    allowed_parameters: list[ParameterDefinition] = field(default_factory=list)
+    # Prompts
     prompts: list[PromptInfo] = field(default_factory=list)
 
     # Metadata
@@ -223,9 +231,13 @@ class LLMTopic:
         """
         errors: list[str] = []
 
-        # Validate model_code
-        if not self.model_code or not self.model_code.strip():
-            errors.append("model_code must not be empty")
+        # Validate basic_model_code
+        if not self.basic_model_code or not self.basic_model_code.strip():
+            errors.append("basic_model_code must not be empty")
+
+        # Validate premium_model_code
+        if not self.premium_model_code or not self.premium_model_code.strip():
+            errors.append("premium_model_code must not be empty")
 
         # Validate temperature
         if not (0.0 <= self.temperature <= 2.0):
@@ -258,6 +270,7 @@ class LLMTopic:
         """Convert to DynamoDB item format.
 
         Serializes all nested objects and converts datetimes to ISO 8601 strings.
+        Float values are converted to Decimal for DynamoDB compatibility.
 
         Returns:
             dict: Complete DynamoDB item ready for storage
@@ -268,13 +281,15 @@ class LLMTopic:
             "topic_type": self.topic_type,
             "category": self.category,
             "is_active": self.is_active,
-            "model_code": self.model_code,
-            "temperature": self.temperature,
+            "tier_level": self.tier_level.value,
+            "basic_model_code": self.basic_model_code,
+            "premium_model_code": self.premium_model_code,
+            # Convert floats to Decimal for DynamoDB
+            "temperature": Decimal(str(self.temperature)),
             "max_tokens": self.max_tokens,
-            "top_p": self.top_p,
-            "frequency_penalty": self.frequency_penalty,
-            "presence_penalty": self.presence_penalty,
-            "allowed_parameters": [param.to_dict() for param in self.allowed_parameters],
+            "top_p": Decimal(str(self.top_p)),
+            "frequency_penalty": Decimal(str(self.frequency_penalty)),
+            "presence_penalty": Decimal(str(self.presence_penalty)),
             "prompts": [prompt.to_dict() for prompt in self.prompts],
             "additional_config": self.additional_config,
             "created_at": self.created_at.isoformat(),
@@ -295,7 +310,7 @@ class LLMTopic:
         """Create from DynamoDB item.
 
         Deserializes nested objects and parses ISO 8601 datetime strings.
-        Supports backward compatibility with old 'config' field.
+        Supports backward compatibility with old 'model_code' field and 'config' dict.
 
         Args:
             item: DynamoDB item dictionary
@@ -303,37 +318,60 @@ class LLMTopic:
         Returns:
             LLMTopic: Instance created from DynamoDB item
         """
-        # Handle backward compatibility: extract model config from old 'config' dict if present
-        model_code = item.get("model_code")
-        if model_code is None and "config" in item:
-            # Old format: extract from config dict
-            config = item["config"]
-            model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
-            temperature = config.get("temperature", 0.7)
-            max_tokens = config.get("max_tokens", 2000)
-            top_p = config.get("top_p", 1.0)
-            frequency_penalty = config.get("frequency_penalty", 0.0)
-            presence_penalty = config.get("presence_penalty", 0.0)
-            additional_config = {
-                k: v
-                for k, v in config.items()
-                if k
-                not in {
-                    "model_code",
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
+        # Handle tier_level (default to FREE if not present)
+        tier_level_value = item.get("tier_level", "free")
+        tier_level = TierLevel(tier_level_value)
+
+        # Handle backward compatibility: migrate from old model_code to dual models
+        basic_model_code = item.get("basic_model_code")
+        premium_model_code = item.get("premium_model_code")
+
+        # If new fields not present, check for old model_code
+        if basic_model_code is None or premium_model_code is None:
+            # Try to get model_code from item directly or from old 'config' dict
+            old_model_code = item.get("model_code")
+            if old_model_code is None and "config" in item:
+                # Very old format: extract from config dict
+                config = item["config"]
+                old_model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
+                temperature = float(config.get("temperature", 0.7))
+                max_tokens = int(config.get("max_tokens", 2000))
+                top_p = float(config.get("top_p", 1.0))
+                frequency_penalty = float(config.get("frequency_penalty", 0.0))
+                presence_penalty = float(config.get("presence_penalty", 0.0))
+                additional_config = {
+                    k: v
+                    for k, v in config.items()
+                    if k
+                    not in {
+                        "model_code",
+                        "temperature",
+                        "max_tokens",
+                        "top_p",
+                        "frequency_penalty",
+                        "presence_penalty",
+                    }
                 }
-            }
+            else:
+                # Newer format with explicit fields but old model_code
+                temperature = float(item.get("temperature", 0.7))
+                max_tokens = int(item.get("max_tokens", 2000))
+                top_p = float(item.get("top_p", 1.0))
+                frequency_penalty = float(item.get("frequency_penalty", 0.0))
+                presence_penalty = float(item.get("presence_penalty", 0.0))
+                additional_config = item.get("additional_config", {})
+
+            # Set both models to the old model_code value
+            default_model = old_model_code or "claude-3-5-sonnet-20241022"
+            basic_model_code = basic_model_code or default_model
+            premium_model_code = premium_model_code or default_model
         else:
-            # New format: explicit fields
-            temperature = item.get("temperature", 0.7)
-            max_tokens = item.get("max_tokens", 2000)
-            top_p = item.get("top_p", 1.0)
-            frequency_penalty = item.get("frequency_penalty", 0.0)
-            presence_penalty = item.get("presence_penalty", 0.0)
+            # Latest format: dual models present
+            temperature = float(item.get("temperature", 0.7))
+            max_tokens = int(item.get("max_tokens", 2000))
+            top_p = float(item.get("top_p", 1.0))
+            frequency_penalty = float(item.get("frequency_penalty", 0.0))
+            presence_penalty = float(item.get("presence_penalty", 0.0))
             additional_config = item.get("additional_config", {})
 
         return cls(
@@ -342,15 +380,14 @@ class LLMTopic:
             topic_type=item["topic_type"],
             category=item["category"],
             is_active=item["is_active"],
-            model_code=model_code or "claude-3-5-sonnet-20241022",
+            tier_level=tier_level,
+            basic_model_code=basic_model_code,
+            premium_model_code=premium_model_code,
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
-            allowed_parameters=[
-                ParameterDefinition.from_dict(param) for param in item.get("allowed_parameters", [])
-            ],
             prompts=[PromptInfo.from_dict(prompt) for prompt in item.get("prompts", [])],
             additional_config=additional_config,
             created_at=datetime.fromisoformat(item["created_at"]),
@@ -385,30 +422,214 @@ class LLMTopic:
         """
         return self.get_prompt(prompt_type=prompt_type) is not None
 
-    def get_parameter(self, *, name: str) -> ParameterDefinition | None:
-        """Get parameter definition by name.
+    @classmethod
+    def create_default_from_enum(cls, topic_enum: Any) -> "LLMTopic":
+        """Create a default LLMTopic from CoachingTopic enum.
+
+        DEPRECATED: Use create_default_from_endpoint() for registry-based topics.
+        This method is maintained for backwards compatibility only.
+
+        Creates an inactive topic with default configuration that can be
+        activated and configured by admins. This ensures all enum topics
+        are visible in the admin UI even if not yet configured in the database.
 
         Args:
-            name: Parameter name to retrieve
+            topic_enum: CoachingTopic enum value
 
         Returns:
-            ParameterDefinition if found, None otherwise
+            LLMTopic: Default topic instance (inactive, no prompts)
         """
-        for param in self.allowed_parameters:
-            if param.name == name:
-                return param
-        return None
+        from datetime import UTC, datetime
 
-    def has_parameter(self, *, name: str) -> bool:
-        """Check if topic has a specific parameter.
+        # Import here to avoid circular dependency
+        from shared.models.multitenant import CoachingTopic
+
+        # Map enum values to friendly names and descriptions
+        display_names = {
+            CoachingTopic.CORE_VALUES: "Core Values",
+            CoachingTopic.PURPOSE: "Purpose",
+            CoachingTopic.VISION: "Vision",
+            CoachingTopic.GOALS: "Goals",
+        }
+
+        descriptions = {
+            CoachingTopic.CORE_VALUES: "Discover and clarify personal core values",
+            CoachingTopic.PURPOSE: "Define life and business purpose",
+            CoachingTopic.VISION: "Articulate vision for the future",
+            CoachingTopic.GOALS: "Set aligned and achievable goals",
+        }
+
+        categories = {
+            CoachingTopic.CORE_VALUES: "core_values",
+            CoachingTopic.PURPOSE: "purpose",
+            CoachingTopic.VISION: "vision",
+            CoachingTopic.GOALS: "goals",
+        }
+
+        # Get display order based on enum position
+        try:
+            display_order = list(CoachingTopic).index(topic_enum) * 10
+        except ValueError:
+            display_order = 100
+
+        return cls(
+            topic_id=topic_enum.value,
+            topic_name=display_names.get(topic_enum, topic_enum.value.replace("_", " ").title()),
+            category=categories.get(topic_enum, topic_enum.value),
+            topic_type="conversation_coaching",
+            description=descriptions.get(
+                topic_enum, f"Coaching session for {topic_enum.value.replace('_', ' ')}"
+            ),
+            display_order=display_order,
+            is_active=False,  # Inactive until configured by admin
+            tier_level=TierLevel.FREE,  # Default to FREE tier
+            basic_model_code="claude-3-5-sonnet-20241022",  # Default basic model
+            premium_model_code="claude-3-5-sonnet-20241022",  # Default premium model
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[],  # No prompts until configured
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="system",
+            additional_config={},
+        )
+
+    @classmethod
+    def create_default_from_endpoint(cls, endpoint_def: Any) -> "LLMTopic":
+        """Create a default LLMTopic from TOPIC_REGISTRY definition.
+
+        This is the preferred method for creating default topics from the
+        centralized endpoint registry. Creates an inactive topic with default
+        configuration that can be activated and configured by admins.
+
+        Default model codes are loaded from AWS Parameter Store with fallback
+        to hardcoded defaults, allowing runtime configuration without code changes.
 
         Args:
-            name: Parameter name to check
+            endpoint_def: TopicDefinition from TOPIC_REGISTRY
 
         Returns:
-            bool: True if parameter exists
+            LLMTopic: Default topic instance with endpoint metadata
         """
-        return self.get_parameter(name=name) is not None
+        from datetime import UTC, datetime
+
+        # Convert endpoint path to display name
+        # e.g., "/coaching/alignment-check" -> "Alignment Check"
+        topic_name = endpoint_def.topic_id.replace("_", " ").title()
+
+        # Get topic type directly from endpoint definition
+        topic_type = endpoint_def.topic_type.value
+
+        # Get category value from enum
+        category = endpoint_def.category.value
+
+        # Generate display order from alphabetical sort (can be customized)
+        # This ensures consistent ordering across environments
+        display_order = hash(endpoint_def.topic_id) % 1000
+
+        # Get tier_level from endpoint_def if available, otherwise default to FREE
+        tier_level = getattr(endpoint_def, "tier_level", TierLevel.FREE)
+
+        # Get default model codes from Parameter Store with fallback
+        try:
+            from coaching.src.services.parameter_store_service import get_parameter_store_service
+
+            param_service = get_parameter_store_service()
+            basic_model, premium_model = param_service.get_default_models()
+        except Exception:
+            # Fallback to hardcoded defaults if Parameter Store unavailable
+            basic_model, premium_model = ("CLAUDE_3_5_SONNET_V2", "CLAUDE_OPUS_4_5")
+
+        return cls(
+            topic_id=endpoint_def.topic_id,
+            topic_name=topic_name,
+            category=category,
+            topic_type=topic_type,
+            description=endpoint_def.description,
+            display_order=display_order,
+            is_active=endpoint_def.is_active,  # Respect endpoint's active status
+            tier_level=tier_level,  # Use endpoint tier or default to FREE
+            basic_model_code=basic_model,  # Loaded from Parameter Store or fallback
+            premium_model_code=premium_model,  # Loaded from Parameter Store or fallback
+            temperature=0.7,
+            max_tokens=2000,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            prompts=[],  # No prompts until configured
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="system",
+            additional_config={
+                "endpoint_path": endpoint_def.endpoint_path,
+                "http_method": endpoint_def.http_method,
+                "response_model": endpoint_def.response_model,
+            },
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Alias for to_dynamodb_item for backward compatibility."""
+        return self.to_dynamodb_item()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "LLMTopic":
+        """Alias for from_dynamodb_item for backward compatibility."""
+        return cls.from_dynamodb_item(data)
+
+    def update(self, **kwargs: Any) -> "LLMTopic":
+        """Create a copy of the topic with updated fields.
+
+        Args:
+            **kwargs: Fields to update
+
+        Returns:
+            LLMTopic: New instance with updated fields
+        """
+        from dataclasses import replace
+
+        return replace(self, **kwargs)
+
+    def validate(self) -> None:
+        """Validate the topic configuration.
+
+        This is called automatically during initialization, but can be called
+        manually if needed.
+        """
+        self.__post_init__()
+
+    def get_model_code_for_tier(self, user_tier: TierLevel) -> str:
+        """Get the appropriate model code based on user's tier level.
+
+        Args:
+            user_tier: User's subscription tier level
+
+        Returns:
+            str: Model code to use (basic_model_code or premium_model_code)
+        """
+        if user_tier.uses_premium_model():
+            return self.premium_model_code
+        return self.basic_model_code
+
+    def get_extraction_model_code(self) -> str:
+        """Get the model code for result extraction.
+
+        Returns the configured extraction model from additional_config or defaults
+        to Claude Haiku (MODEL_REGISTRY code) for optimal speed and cost efficiency.
+        Haiku is 3-5x faster than Sonnet and 90% cheaper, making it ideal for
+        structured data extraction.
+
+        This is only applicable for conversation_coaching topics that use extraction.
+        The model code returned is a MODEL_REGISTRY friendly code (e.g., "CLAUDE_3_5_HAIKU")
+        that will be resolved to the actual provider-specific model name via the
+        provider factory.
+
+        Returns:
+            str: MODEL_REGISTRY code to use for extraction (defaults to CLAUDE_3_5_HAIKU)
+        """
+        return self.additional_config.get("extraction_model_code") or "CLAUDE_3_5_HAIKU"
 
 
 __all__ = ["LLMTopic", "ParameterDefinition", "PromptInfo"]

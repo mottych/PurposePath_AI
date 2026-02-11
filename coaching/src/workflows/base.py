@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from coaching.src.llm.providers.manager import ProviderManager
 
 
 class WorkflowType(str, Enum):
@@ -36,6 +39,8 @@ class WorkflowStatus(str, Enum):
 
 
 class WorkflowState(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     """Base state model for all workflows."""
 
     workflow_id: str = Field(..., description="Unique workflow identifier")
@@ -63,13 +68,10 @@ class WorkflowState(BaseModel):
     updated_at: str | None = Field(default=None, description="Last update timestamp")
     completed_at: str | None = Field(default=None, description="Completion timestamp")
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
-
 
 class WorkflowConfig(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     """Configuration for workflow execution."""
 
     workflow_type: WorkflowType = Field(..., description="Type of workflow to execute")
@@ -89,20 +91,23 @@ class WorkflowConfig(BaseModel):
         default_factory=dict, description="Workflow-specific config"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
-
 
 class BaseWorkflow(ABC):
     """Abstract base class for all workflows."""
 
-    def __init__(self, config: WorkflowConfig):
-        """Initialize workflow with configuration."""
+    def __init__(
+        self, config: WorkflowConfig, provider_manager: ProviderManager | None = None
+    ) -> None:
+        """Initialize workflow with configuration.
+
+        Args:
+            config: Workflow configuration
+            provider_manager: Provider manager for AI integrations (optional)
+        """
         self.config = config
+        self.provider_manager = provider_manager
         # LangGraph prefers TypedDict but supports dict at runtime
-        self._graph: StateGraph[dict[str, Any]] | None = None
+        self._graph: StateGraph | None = None
         self._compiled_graph: Any = None
 
     @property
@@ -118,7 +123,7 @@ class BaseWorkflow(ABC):
         pass
 
     @abstractmethod
-    async def build_graph(self) -> StateGraph[dict[str, Any]]:
+    async def build_graph(self) -> StateGraph:
         """Build the LangGraph workflow graph."""
         pass
 

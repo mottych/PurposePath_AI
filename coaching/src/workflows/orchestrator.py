@@ -78,9 +78,9 @@ class WorkflowOrchestrator:
         # Generate unique workflow ID
         workflow_id = str(uuid.uuid4())
 
-        # Create workflow instance
+        # Create workflow instance with provider manager
         workflow_class = self._workflow_registry[workflow_type]
-        workflow = workflow_class(config)
+        workflow = workflow_class(config, provider_manager=self.provider_manager)
 
         # Store workflow
         self._active_workflows[workflow_id] = workflow
@@ -102,13 +102,14 @@ class WorkflowOrchestrator:
                 workflow_type=workflow_type.value,
                 user_id=user_id,
             )
-            state = await workflow.execute(workflow_input)
+            state: WorkflowState = await workflow.execute(workflow_input)
 
             # Store state
             self._workflow_states[workflow_id] = state
 
-            logger.info("Workflow started", workflow_id=workflow_id, status=state.status.value)
-            return state  # type: ignore[no-any-return]
+            # With use_enum_values=True, status is already the string value
+            logger.info("Workflow started", workflow_id=workflow_id, status=state.status)
+            return state
 
         except Exception as e:
             logger.error("Workflow start failed", workflow_id=workflow_id, error=str(e))
@@ -140,7 +141,11 @@ class WorkflowOrchestrator:
         workflow = self._active_workflows[workflow_id]
         current_state = self._workflow_states[workflow_id]
 
-        if current_state.status not in [WorkflowStatus.WAITING_INPUT, WorkflowStatus.RUNNING]:
+        # With use_enum_values=True, status is a string - compare against .value
+        if current_state.status not in [
+            WorkflowStatus.WAITING_INPUT.value,
+            WorkflowStatus.RUNNING.value,
+        ]:
             raise ValueError(f"Workflow cannot be continued in status: {current_state.status}")
 
         try:
@@ -162,10 +167,11 @@ class WorkflowOrchestrator:
             # Update stored state
             self._workflow_states[workflow_id] = state
 
+            # With use_enum_values=True, status is already the string value
             logger.info(
                 "Workflow continued",
                 workflow_id=workflow_id,
-                status=state.status.value,
+                status=state.status,
                 step=state.current_step,
             )
             return state
@@ -227,12 +233,13 @@ class WorkflowOrchestrator:
 
         workflows_to_remove = []
         for workflow_id, state in self._workflow_states.items():
+            # With use_enum_values=True, status is a string - compare against .value
             if (
                 state.status
                 in [
-                    WorkflowStatus.COMPLETED,
-                    WorkflowStatus.FAILED,
-                    WorkflowStatus.CANCELLED,
+                    WorkflowStatus.COMPLETED.value,
+                    WorkflowStatus.FAILED.value,
+                    WorkflowStatus.CANCELLED.value,
                 ]
                 and state.completed_at
             ):
@@ -281,14 +288,13 @@ class WorkflowOrchestrator:
             "type_counts": {},
         }
 
-        for state in self._workflow_states.values():
-            # Count by status
-            status = state.status.value
-            stats["status_counts"][status] = stats["status_counts"].get(status, 0) + 1  # type: ignore[index,attr-defined]
+        status_counts: dict[str, int] = stats["status_counts"]  # type: ignore[assignment]
+        type_counts: dict[str, int] = stats["type_counts"]  # type: ignore[assignment]
 
-            # Count by type
-            workflow_type = state.workflow_type.value
-            stats["type_counts"][workflow_type] = stats["type_counts"].get(workflow_type, 0) + 1  # type: ignore[index,attr-defined]
+        for state in self._workflow_states.values():
+            # With use_enum_values=True, status/workflow_type are already string values
+            status_counts[state.status] = status_counts.get(state.status, 0) + 1
+            type_counts[state.workflow_type] = type_counts.get(state.workflow_type, 0) + 1
 
         return stats
 

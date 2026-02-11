@@ -115,6 +115,17 @@ class ProviderManager:
             logger.error("Failed to register provider", provider_id=provider_id, error=str(e))
             raise
 
+    async def is_provider_available(self, provider_id: str) -> bool:
+        """Check if a provider is available and initialized.
+
+        Args:
+            provider_id: Provider identifier
+
+        Returns:
+            True if provider exists and is available
+        """
+        return provider_id in self._providers
+
     async def _create_provider(self, config: ProviderConfig) -> BaseProvider:
         """Create a provider instance based on configuration.
 
@@ -188,7 +199,7 @@ class ProviderManager:
         return {
             "provider_id": provider_id or self._default_provider or "unknown",
             "provider_type": provider_type_value,
-            "model_name": provider.config.model_name,
+            "model_name": provider.config.model_name or "default",
             "temperature": str(provider.config.temperature),
             "max_tokens": str(provider.config.max_tokens) if provider.config.max_tokens else "none",
         }

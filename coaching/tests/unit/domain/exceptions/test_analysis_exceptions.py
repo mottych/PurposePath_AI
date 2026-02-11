@@ -41,7 +41,7 @@ class TestInvalidAnalysisRequest:
     def test_create_without_request_id(self) -> None:
         """Test exception without request ID."""
         exc = InvalidAnalysisRequest(
-            analysis_type=AnalysisType.KPI,
+            analysis_type=AnalysisType.MEASURE,
             validation_errors=["Invalid data"],
         )
 
@@ -206,7 +206,7 @@ class TestInsufficientDataForAnalysis:
         """Test that message clearly lists all missing fields."""
         missing = ["field_a", "field_b", "field_c"]
         exc = InsufficientDataForAnalysis(
-            analysis_type=AnalysisType.KPI,
+            analysis_type=AnalysisType.MEASURE,
             missing_fields=missing,
             data_completeness=33.3,
         )

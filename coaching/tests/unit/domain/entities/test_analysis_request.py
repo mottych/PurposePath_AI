@@ -68,7 +68,7 @@ class TestAnalysisRequestImmutability:
 
         # Act & Assert
         with pytest.raises(ValidationError):
-            request.analysis_type = AnalysisType.KPI  # type: ignore
+            request.analysis_type = AnalysisType.MEASURE  # type: ignore
 
 
 class TestAnalysisRequestMethods:

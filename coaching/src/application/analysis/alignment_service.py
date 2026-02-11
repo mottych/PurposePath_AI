@@ -127,7 +127,7 @@ Provide a thorough, actionable analysis."""
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
 
-            result = json.loads(response_text.strip())
+            result: dict[str, Any] = json.loads(response_text.strip())
 
             # Validate required fields
             required_fields = [
@@ -156,7 +156,7 @@ Provide a thorough, actionable analysis."""
                 recommendations_count=len(result["recommendations"]),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse alignment JSON response", error=str(e))

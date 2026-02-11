@@ -1,22 +1,24 @@
-"""Admin API routes for AI model and topic management."""
+"""Admin API routes for AI model and topic management.
+
+Endpoint Usage Status:
+- GET /models: USED BY Admin - AIManagementPage (useAIModels), TopicMetadataEditor (useModels)
+- PUT /models/{model_id}: DEPRECATED - UI doesn't call
+"""
 
 from typing import Any
 
 import structlog
 from coaching.src.api.dependencies import get_model_config_service
 from coaching.src.api.middleware.admin_auth import require_admin_access
-from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.llm_models import LLMProvider, list_models
 from coaching.src.models.admin_requests import UpdateModelConfigRequest
 from coaching.src.models.admin_responses import (
-    CoachingTopicInfo,
     LLMModelInfo,
     LLMModelsResponse,
 )
 from coaching.src.services.audit_log_service import AuditLogService
 from coaching.src.services.model_config_service import ModelConfigService
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
-
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 
@@ -116,69 +118,6 @@ async def list_ai_models(
     except Exception as e:
         logger.error("Error listing LLM models", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to list LLM models") from e
-
-
-@router.get("/topics", response_model=ApiResponse[list[CoachingTopicInfo]])
-async def list_coaching_topics(
-    context: RequestContext = Depends(require_admin_access),
-) -> ApiResponse[list[CoachingTopicInfo]]:
-    """
-    Get all available coaching topics that have prompt templates.
-
-    This endpoint lists all coaching topics configured in the system,
-    along with metadata about their template versions.
-
-    **Permissions Required:** ADMIN_ACCESS
-
-    **Returns:**
-    - List of coaching topics
-    - Version counts and latest version information
-    """
-    logger.info("Fetching coaching topics", admin_user_id=context.user_id)
-
-    try:
-        # Map CoachingTopic enum to response format
-        topics = []
-        for topic in CoachingTopic:
-            # Create topic info with friendly display names
-            display_names = {
-                CoachingTopic.CORE_VALUES: "Core Values",
-                CoachingTopic.PURPOSE: "Purpose",
-                CoachingTopic.VISION: "Vision",
-                CoachingTopic.GOALS: "Goals",
-            }
-
-            descriptions = {
-                CoachingTopic.CORE_VALUES: "Discover and clarify personal core values",
-                CoachingTopic.PURPOSE: "Define life and business purpose",
-                CoachingTopic.VISION: "Articulate vision for the future",
-                CoachingTopic.GOALS: "Set aligned and achievable goals",
-            }
-
-            topic_info = CoachingTopicInfo(
-                topic=topic.value,
-                displayName=display_names.get(topic, topic.value.replace("_", " ").title()),
-                description=descriptions.get(topic, f"Templates for {topic.value}"),
-                versionCount=1,  # Placeholder - would query S3 in real implementation
-                latestVersion="1.0.0",  # Placeholder
-            )
-            topics.append(topic_info)
-
-        logger.info(
-            "Coaching topics retrieved",
-            admin_user_id=context.user_id,
-            topic_count=len(topics),
-        )
-
-        return ApiResponse(success=True, data=topics)
-
-    except Exception as e:
-        logger.error("Failed to fetch coaching topics", error=str(e), admin_user_id=context.user_id)
-        return ApiResponse(
-            success=False,
-            data=[],
-            error="Failed to retrieve coaching topics",
-        )
 
 
 @router.put("/models/{model_id}", response_model=ApiResponse[dict[str, Any]])

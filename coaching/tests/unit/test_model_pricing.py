@@ -14,7 +14,7 @@ from coaching.src.infrastructure.llm.model_pricing import (
 class TestGetModelPricing:
     """Test get_model_pricing function."""
 
-    def test_get_pricing_for_existing_model(self):
+    def test_get_pricing_for_existing_model(self) -> None:
         """Test getting pricing for a known model."""
         # Arrange
         model_id = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -28,7 +28,7 @@ class TestGetModelPricing:
         assert pricing["input"] == 0.00025
         assert pricing["output"] == 0.00125
 
-    def test_get_pricing_for_sonnet_model(self):
+    def test_get_pricing_for_sonnet_model(self) -> None:
         """Test pricing for Claude Sonnet model."""
         # Arrange
         model_id = "anthropic.claude-3-5-sonnet-20241022-v2:0"
@@ -40,7 +40,7 @@ class TestGetModelPricing:
         assert pricing["input"] == 0.003
         assert pricing["output"] == 0.015
 
-    def test_get_pricing_for_unknown_model_returns_zero(self):
+    def test_get_pricing_for_unknown_model_returns_zero(self) -> None:
         """Test that unknown models return zero pricing."""
         # Arrange
         model_id = "unknown-model-id"
@@ -57,7 +57,7 @@ class TestGetModelPricing:
 class TestCalculateCost:
     """Test calculate_cost function."""
 
-    def test_calculate_cost_with_haiku(self):
+    def test_calculate_cost_with_haiku(self) -> None:
         """Test cost calculation for Haiku model."""
         # Arrange
         input_tokens = 1000
@@ -73,7 +73,7 @@ class TestCalculateCost:
         # Total: 0.000875
         assert cost == pytest.approx(0.000875, rel=1e-9)
 
-    def test_calculate_cost_with_sonnet(self):
+    def test_calculate_cost_with_sonnet(self) -> None:
         """Test cost calculation for Sonnet model."""
         # Arrange
         input_tokens = 2000
@@ -89,7 +89,7 @@ class TestCalculateCost:
         # Total: 0.021
         assert cost == pytest.approx(0.021, rel=1e-9)
 
-    def test_calculate_cost_with_opus(self):
+    def test_calculate_cost_with_opus(self) -> None:
         """Test cost calculation for Opus model (most expensive)."""
         # Arrange
         input_tokens = 1000
@@ -105,7 +105,7 @@ class TestCalculateCost:
         # Total: 0.090
         assert cost == pytest.approx(0.090, rel=1e-9)
 
-    def test_calculate_cost_with_zero_tokens(self):
+    def test_calculate_cost_with_zero_tokens(self) -> None:
         """Test cost calculation with zero tokens."""
         # Arrange
         input_tokens = 0
@@ -118,7 +118,7 @@ class TestCalculateCost:
         # Assert
         assert cost == 0.0
 
-    def test_calculate_cost_with_unknown_model_returns_zero(self):
+    def test_calculate_cost_with_unknown_model_returns_zero(self) -> None:
         """Test that cost is zero for unknown models."""
         # Arrange
         input_tokens = 1000
@@ -131,7 +131,7 @@ class TestCalculateCost:
         # Assert
         assert cost == 0.0
 
-    def test_cost_rounding_precision(self):
+    def test_cost_rounding_precision(self) -> None:
         """Test that cost is rounded to 6 decimal places."""
         # Arrange
         input_tokens = 333  # Will create repeating decimal
@@ -151,7 +151,7 @@ class TestCalculateCost:
 class TestGetAvailableModels:
     """Test get_available_models function."""
 
-    def test_get_available_models_returns_list(self):
+    def test_get_available_models_returns_list(self) -> None:
         """Test that available models returns a list."""
         # Act
         models = get_available_models()
@@ -160,7 +160,7 @@ class TestGetAvailableModels:
         assert isinstance(models, list)
         assert len(models) > 0
 
-    def test_get_available_models_contains_expected_models(self):
+    def test_get_available_models_contains_expected_models(self) -> None:
         """Test that available models includes expected model IDs."""
         # Act
         models = get_available_models()
@@ -170,7 +170,7 @@ class TestGetAvailableModels:
         assert "anthropic.claude-3-5-sonnet-20241022-v2:0" in models
         assert "anthropic.claude-3-opus-20240229-v1:0" in models
 
-    def test_available_models_count(self):
+    def test_available_models_count(self) -> None:
         """Test that we have pricing for expected number of models."""
         # Act
         models = get_available_models()
@@ -183,7 +183,7 @@ class TestGetAvailableModels:
 class TestGetModelInfo:
     """Test get_model_info function."""
 
-    def test_get_info_for_existing_model(self):
+    def test_get_info_for_existing_model(self) -> None:
         """Test getting detailed info for existing model."""
         # Arrange
         model_id = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -198,7 +198,7 @@ class TestGetModelInfo:
         assert "pricing_per_1k_tokens" in info
         assert "pricing_per_1m_tokens" in info
 
-    def test_get_info_includes_pricing_formats(self):
+    def test_get_info_includes_pricing_formats(self) -> None:
         """Test that model info includes both 1K and 1M pricing."""
         # Arrange
         model_id = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -215,7 +215,7 @@ class TestGetModelInfo:
         assert info["pricing_per_1m_tokens"]["input"] == 0.25
         assert info["pricing_per_1m_tokens"]["output"] == 1.25
 
-    def test_get_info_for_unknown_model_returns_none(self):
+    def test_get_info_for_unknown_model_returns_none(self) -> None:
         """Test that unknown models return None."""
         # Arrange
         model_id = "unknown-model"
@@ -231,7 +231,7 @@ class TestGetModelInfo:
 class TestModelPricingIntegration:
     """Integration tests for model pricing."""
 
-    def test_cost_calculation_matches_expected_real_world_usage(self):
+    def test_cost_calculation_matches_expected_real_world_usage(self) -> None:
         """Test realistic token usage scenario."""
         # Arrange - Typical coaching conversation
         input_tokens = 1500  # Conversation history + new message
@@ -248,7 +248,7 @@ class TestModelPricingIntegration:
         expected_cost = 0.0165
         assert cost == pytest.approx(expected_cost, rel=1e-9)
 
-    def test_high_volume_cost_calculation(self):
+    def test_high_volume_cost_calculation(self) -> None:
         """Test cost for high-volume usage."""
         # Arrange - Large conversation
         input_tokens = 10000

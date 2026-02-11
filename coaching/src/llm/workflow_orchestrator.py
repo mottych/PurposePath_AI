@@ -152,7 +152,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
             )
 
             # Execute workflow using LangGraph
-            final_state = await workflow.execute(graph_state)
+            final_state: WorkflowState = await workflow.execute(graph_state)
 
             # final_state is already a WorkflowState from workflow.execute()
             workflow_state = final_state
@@ -171,7 +171,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
                     else workflow_state.status
                 ),
             )
-            return workflow_state  # type: ignore[no-any-return]
+            return workflow_state
 
         except Exception as e:
             logger.error("LangGraph workflow start failed", workflow_id=workflow_id, error=str(e))

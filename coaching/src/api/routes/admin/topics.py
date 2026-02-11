@@ -1,79 +1,202 @@
-"""Admin API routes for topic management."""
+"""Admin API routes for topic management (Enhanced for Issue #113).
 
+Endpoint Usage Status:
+- GET /topics: USED BY Admin - TopicList, TopicFilters
+- GET /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
+- PUT /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
+- GET /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog
+- POST /topics/{topic_id}/prompts: USED BY Admin - PromptEditorDialog (create)
+- PUT /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog (update)
+- DELETE /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog (delete)
+
+DEPRECATED (defined but not called by Admin UI):
+- POST /topics: create new topic - UI doesn't call
+- DELETE /topics/{topic_id}: delete topic - UI doesn't call
+- POST /topics/validate: validate topic - UI doesn't call
+- POST /topics/{topic_id}/test: test topic - UI doesn't call
+"""
+
+import time
+from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
-from coaching.src.api.dependencies import get_current_context, get_topic_repository
+import structlog
+from coaching.src.api.auth import get_current_context
+from coaching.src.api.dependencies import (
+    get_s3_prompt_storage,
+    get_topic_repository,
+)
+from coaching.src.api.dependencies.ai_engine import (
+    create_template_processor,
+    get_jwt_token,
+    get_unified_ai_engine,
+)
+from coaching.src.api.models.auth import UserContext
+from coaching.src.application.ai_engine.response_serializer import SerializationError
+from coaching.src.application.ai_engine.unified_ai_engine import (
+    ParameterValidationError,
+    PromptRenderError,
+    TopicNotFoundError,
+    UnifiedAIEngine,
+    UnifiedAIEngineError,
+)
+from coaching.src.core.constants import TopicType
+from coaching.src.core.response_model_registry import get_response_model
+from coaching.src.core.topic_registry import (
+    TOPIC_REGISTRY,
+    get_parameters_for_topic,
+    get_topic_by_topic_id,
+)
 from coaching.src.domain.entities.llm_topic import LLMTopic
-from coaching.src.domain.entities.llm_topic import ParameterDefinition as DomainParameter
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
 )
 from coaching.src.models.admin_topics import (
+    ConversationConfig,
     CreatePromptRequest,
     CreatePromptResponse,
     CreateTopicRequest,
     CreateTopicResponse,
     DeletePromptResponse,
     DeleteTopicResponse,
-    ModelInfo,
-    ModelsListResponse,
     ParameterDefinition,
     PromptContentResponse,
     PromptInfo,
+    TemplateStatus,
+    TemplateSummary,
     TopicDetail,
     TopicListResponse,
     TopicSummary,
     UpdatePromptRequest,
     UpdatePromptResponse,
     UpdateTopicRequest,
-    UpdateTopicResponse,
+    UpsertTopicResponse,
     ValidateTopicRequest,
     ValidationResult,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from structlog import get_logger
+from coaching.src.services.s3_prompt_storage import S3PromptStorage
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from pydantic import BaseModel, Field
 
-from shared.models.user_context import UserContext
+logger = structlog.get_logger()
 
-logger = get_logger(__name__)
-
-router = APIRouter(prefix="/admin/topics", tags=["Admin - Topics"])
+router = APIRouter(prefix="/topics", tags=["Admin - Topics"])
 
 
 # Helper functions
 
 
-def _map_topic_to_summary(topic: LLMTopic) -> TopicSummary:
-    """Map domain LLMTopic to API TopicSummary."""
+def _map_topic_to_summary(
+    topic: LLMTopic, from_database: bool = True, allowed_prompt_types: list[str] | None = None
+) -> TopicSummary:
+    """Map domain LLMTopic to API TopicSummary.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+    """
+    # Get defined prompt types from the topic's prompts
+    defined_prompt_types = {p.prompt_type for p in topic.prompts}
+
+    # Build templates array with is_defined indicator
+    templates = [
+        TemplateSummary(prompt_type=pt, is_defined=(pt in defined_prompt_types))
+        for pt in (allowed_prompt_types or [])
+    ]
+
     return TopicSummary(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
         category=topic.category,
         topic_type=topic.topic_type,
-        model_code=topic.model_code,
+        tier_level=topic.tier_level.value,
+        basic_model_code=topic.basic_model_code,
+        premium_model_code=topic.premium_model_code,
         temperature=topic.temperature,
         max_tokens=topic.max_tokens,
         is_active=topic.is_active,
         description=topic.description,
         display_order=topic.display_order,
+        from_database=from_database,
+        templates=templates,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
     )
 
 
-def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
-    """Map domain LLMTopic to API TopicDetail."""
+def _map_topic_to_detail(
+    topic: LLMTopic,
+    from_database: bool = True,
+    allowed_prompt_types: list[str] | None = None,
+    response_schema: dict[str, Any] | None = None,
+) -> TopicDetail:
+    """Map domain LLMTopic to API TopicDetail.
+
+    Args:
+        topic: The LLMTopic entity
+        from_database: Whether the topic came from DB (True) or registry default (False)
+        allowed_prompt_types: List of allowed prompt types from endpoint registry
+        response_schema: JSON schema for the response model (when include_schema=true)
+    """
+    # Create a lookup of defined prompts by type
+    defined_prompts = {p.prompt_type: p for p in topic.prompts}
+
+    # Build template status for all allowed prompt types
+    template_status_list: list[TemplateStatus] = []
+    for prompt_type in allowed_prompt_types or []:
+        if prompt_type in defined_prompts:
+            p = defined_prompts[prompt_type]
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_defined=True,
+                    s3_bucket=p.s3_bucket,
+                    s3_key=p.s3_key,
+                    updated_at=p.updated_at,
+                    updated_by=p.updated_by,
+                )
+            )
+        else:
+            template_status_list.append(
+                TemplateStatus(
+                    prompt_type=prompt_type,
+                    is_defined=False,
+                    s3_bucket=None,
+                    s3_key=None,
+                    updated_at=None,
+                    updated_by=None,
+                )
+            )
+
+    # Build conversation_config only for conversation_coaching topics
+    conversation_config: ConversationConfig | None = None
+    if topic.topic_type == "conversation_coaching":
+        # Get from additional_config or use defaults
+        config_data = topic.additional_config or {}
+        # Support both 'max_turns' (new) and 'estimated_messages' (legacy) for backward compatibility
+        max_turns_value = config_data.get("max_turns") or config_data.get("estimated_messages") or 0
+        conversation_config = ConversationConfig(
+            max_messages_to_llm=config_data.get("max_messages_to_llm", 30),
+            inactivity_timeout_minutes=config_data.get("inactivity_timeout_minutes", 30),
+            session_ttl_days=config_data.get("session_ttl_days", 14),
+            max_turns=int(max_turns_value),
+            extraction_model_code=config_data.get("extraction_model_code"),
+        )
+
     return TopicDetail(
         topic_id=topic.topic_id,
         topic_name=topic.topic_name,
         category=topic.category,
         topic_type=topic.topic_type,
         description=topic.description,
-        model_code=topic.model_code,
+        tier_level=topic.tier_level.value,
+        basic_model_code=topic.basic_model_code,
+        premium_model_code=topic.premium_model_code,
         temperature=topic.temperature,
         max_tokens=topic.max_tokens,
         top_p=topic.top_p,
@@ -81,6 +204,7 @@ def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
         presence_penalty=topic.presence_penalty,
         is_active=topic.is_active,
         display_order=topic.display_order,
+        from_database=from_database,
         prompts=[
             PromptInfo(
                 prompt_type=p.prompt_type,
@@ -91,15 +215,18 @@ def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
             )
             for p in topic.prompts
         ],
+        template_status=template_status_list,
         allowed_parameters=[
             ParameterDefinition(
-                name=p.name,
-                type=p.type,
-                required=p.required,
-                description=p.description,
+                name=p["name"],
+                type=p["type"],
+                required=p["required"],
+                description=p.get("description"),
             )
-            for p in topic.allowed_parameters
+            for p in get_parameters_for_topic(topic.topic_id)
         ],
+        conversation_config=conversation_config,
+        response_schema=response_schema,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
         created_by=topic.created_by,
@@ -107,6 +234,75 @@ def _map_topic_to_detail(topic: LLMTopic) -> TopicDetail:
 
 
 # Endpoints
+
+
+def _get_allowed_prompt_types(topic_id: str) -> list[str]:
+    """Get allowed prompt types for a topic from the endpoint registry.
+
+    For topics defined in the registry, returns only the prompt types
+    explicitly allowed by the EndpointDefinition.
+
+    For custom topics not in the registry, returns all valid PromptType
+    values to allow full flexibility.
+    """
+    from coaching.src.core.constants import PromptType
+
+    endpoint_def = get_topic_by_topic_id(topic_id)
+    if endpoint_def:
+        # Topic is in registry - use its allowed prompt types
+        return [pt.value for pt in endpoint_def.allowed_prompt_types]
+    # Custom topic not in registry - allow all valid prompt types
+    return [pt.value for pt in PromptType]
+
+
+async def _get_or_create_topic_from_registry(
+    topic_id: str,
+    repository: TopicRepository,
+    user_id: str,
+) -> LLMTopic | None:
+    """Get topic from DB or auto-create from registry if not in DB.
+
+    This implements the auto-upsert pattern: if a topic exists in the endpoint
+    registry but not in the database, create it from registry defaults.
+
+    Args:
+        topic_id: Topic identifier
+        repository: Topic repository
+        user_id: User ID for audit trail
+
+    Returns:
+        LLMTopic if found or created, None if topic doesn't exist anywhere
+    """
+    # First try database
+    topic = await repository.get(topic_id=topic_id)
+    if topic:
+        return topic
+
+    # Not in DB - check if it's in the registry
+    endpoint_def = get_topic_by_topic_id(topic_id)
+    if not endpoint_def:
+        # Topic doesn't exist anywhere
+        return None
+
+    # Create from registry defaults
+    now = datetime.now(UTC)
+    new_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+    # Set audit fields
+    new_topic = replace(
+        new_topic,
+        created_at=now,
+        updated_at=now,
+        created_by=user_id,
+    )
+
+    await repository.create(topic=new_topic)
+    logger.info(
+        "Topic auto-created from registry",
+        topic_id=topic_id,
+        created_by=user_id,
+    )
+
+    return new_topic
 
 
 @router.get("", response_model=TopicListResponse)
@@ -122,11 +318,33 @@ async def list_topics(
 ) -> TopicListResponse:
     """List all topics with optional filtering.
 
+    Returns topics from both database and registry defaults, with from_database
+    field indicating the source.
+
     Requires admin:topics:read permission.
     """
     try:
-        # Get all topics
-        all_topics = await repository.get_all_topics()
+        logger.info("list_topics called", page=page, page_size=page_size, category=category)
+
+        # Get DB topics and registry defaults separately
+        db_topics = await repository.list_all(include_inactive=True)
+        db_topic_ids = {topic.topic_id for topic in db_topics}
+
+        # Create defaults for topics not in DB
+        from coaching.src.domain.entities.llm_topic import LLMTopic
+
+        registry_topics = [
+            LLMTopic.create_default_from_endpoint(endpoint_def)
+            for endpoint_def in TOPIC_REGISTRY.values()
+            if endpoint_def.topic_id not in db_topic_ids
+        ]
+
+        # Combine all topics
+        all_topics = db_topics + registry_topics
+
+        logger.info(
+            "topics_retrieved", count=len(all_topics), topics=[t.topic_id for t in all_topics]
+        )
 
         # Apply filters
         filtered = all_topics
@@ -154,8 +372,18 @@ async def list_topics(
         end = start + page_size
         page_topics = filtered[start:end]
 
+        logger.info("topics_paginated", total=total, page_count=len(page_topics))
+
+        # Map topics with from_database indicator and allowed_prompt_types
         return TopicListResponse(
-            topics=[_map_topic_to_summary(t) for t in page_topics],
+            topics=[
+                _map_topic_to_summary(
+                    t,
+                    from_database=(t.topic_id in db_topic_ids),
+                    allowed_prompt_types=_get_allowed_prompt_types(t.topic_id),
+                )
+                for t in page_topics
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -170,25 +398,253 @@ async def list_topics(
         ) from e
 
 
+@router.get("/stats")
+async def get_topics_stats(
+    start_date: datetime | None = Query(None, description="Start date for filtering (ISO 8601)"),
+    end_date: datetime | None = Query(None, description="End date for filtering (ISO 8601)"),
+    tier: str | None = Query(
+        None, description="Filter by tier (free, basic, professional, enterprise)"
+    ),
+    interaction_code: str | None = Query(None, description="Filter by interaction code"),
+    model_code: str | None = Query(None, description="Filter by model code"),
+    topic_repo: TopicRepository = Depends(get_topic_repository),
+    _user: UserContext = Depends(get_current_context),
+) -> dict[str, Any]:
+    """
+    Get LLM dashboard statistics and metrics.
+
+    This endpoint provides comprehensive statistics for the admin dashboard including:
+    - Interaction metrics (total, by tier, by model, trends)
+    - Template statistics (total, active, inactive)
+    - Model utilization statistics
+    - System health summary
+
+    **Permissions Required:** ADMIN_ACCESS (enforced by middleware)
+
+    **Query Parameters:**
+    - `start_date` (optional): Filter interactions from this date
+    - `end_date` (optional): Filter interactions until this date
+    - `tier` (optional): Filter by subscription tier
+    - `interaction_code` (optional): Filter by specific interaction
+    - `model_code` (optional): Filter by specific model
+
+    **Used by:** Admin Portal - LLM Dashboard Page
+
+    **Returns:**
+    Dashboard metrics including interactions, templates, models, and system health.
+    """
+    from coaching.src.models.admin_topics import (
+        AdminStatsResponse,
+        InteractionStats,
+        ModelStats,
+        TemplateStats,
+    )
+
+    logger.info(
+        "Getting topics stats",
+        start_date=start_date,
+        end_date=end_date,
+        tier=tier,
+        interaction_code=interaction_code,
+        model_code=model_code,
+    )
+
+    try:
+        # Get all topics for template stats
+        all_topics = await topic_repo.list_all(include_inactive=True)
+        active_topics = [t for t in all_topics if t.is_active]
+        inactive_topics = [t for t in all_topics if not t.is_active]
+
+        # Template statistics
+        template_stats = TemplateStats(
+            total=len(all_topics),
+            active=len(active_topics),
+            inactive=len(inactive_topics),
+        )
+
+        # Model statistics - gather from topics
+        model_usage: dict[str, int] = {}
+        active_models: set[str] = set()
+
+        for topic in active_topics:
+            # Count model usage from active topics
+            if topic.basic_model_code:
+                model_usage[topic.basic_model_code] = model_usage.get(topic.basic_model_code, 0) + 1
+                active_models.add(topic.basic_model_code)
+            if topic.premium_model_code:
+                model_usage[topic.premium_model_code] = (
+                    model_usage.get(topic.premium_model_code, 0) + 1
+                )
+                active_models.add(topic.premium_model_code)
+
+        # Get all unique models from MODEL_REGISTRY
+        from coaching.src.core.llm_models import MODEL_REGISTRY
+
+        total_models = len(MODEL_REGISTRY)
+        active_models_count = len(active_models)
+
+        model_stats = ModelStats(
+            total=total_models,
+            active=active_models_count,
+            utilization=model_usage,
+        )
+
+        # Interaction statistics (placeholder - would need conversation repository for real data)
+        # For now, provide mock data structure
+        interaction_stats = InteractionStats(
+            total=0,  # Would query conversation repository
+            by_tier={},  # Would aggregate from conversations
+            by_model={},  # Would aggregate from conversations
+            trend=[],  # Would calculate from conversations over time
+        )
+
+        # Get system health - import and call the health check
+        from coaching.src.api.routes.admin.health import (
+            _check_configurations_health,
+            _check_models_health,
+            _check_templates_health,
+            _perform_validation_checks,
+        )
+
+        configs_health = await _check_configurations_health()
+        templates_health = await _check_templates_health()
+        models_health = await _check_models_health()
+        critical_issues, warnings_list, recommendations = await _perform_validation_checks(
+            topic_repo
+        )
+
+        # Determine overall health status
+        service_statuses_list = [
+            configs_health.status,
+            templates_health.status,
+            models_health.status,
+        ]
+
+        overall_status: Any
+        if any(s == "down" for s in service_statuses_list) or critical_issues:
+            overall_status = "critical"
+        elif any(s == "degraded" for s in service_statuses_list) or warnings_list:
+            overall_status = "warnings"
+        else:
+            overall_status = "healthy"
+
+        validation_status: Any
+        if critical_issues:
+            validation_status = "errors"
+        elif warnings_list:
+            validation_status = "warnings"
+        else:
+            validation_status = "healthy"
+
+        from coaching.src.models.admin_topics import (
+            AdminHealthResponse,
+            ServiceStatuses,
+        )
+
+        system_health = AdminHealthResponse(
+            overall_status=overall_status,
+            validation_status=validation_status,
+            last_validation=datetime.now(UTC).isoformat(),
+            critical_issues=critical_issues,
+            warnings=warnings_list,
+            recommendations=recommendations,
+            service_status=ServiceStatuses(
+                configurations=configs_health,
+                templates=templates_health,
+                models=models_health,
+            ),
+        )
+
+        stats_response = AdminStatsResponse(
+            interactions=interaction_stats,
+            templates=template_stats,
+            models=model_stats,
+            system_health=system_health,
+            last_updated=datetime.now(UTC).isoformat(),
+        )
+
+        logger.info(
+            "Topics stats retrieved",
+            total_topics=len(all_topics),
+            active_topics=len(active_topics),
+            total_models=total_models,
+            active_models=active_models_count,
+        )
+
+        # Return with data wrapper as expected by frontend
+        return {"data": stats_response.model_dump()}
+
+    except Exception as e:
+        logger.error("Failed to get topics stats", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve statistics: {e!s}",
+        ) from e
+
+
 @router.get("/{topic_id}", response_model=TopicDetail)
 async def get_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
+    include_schema: Annotated[
+        bool,
+        Query(description="Include JSON schema of the response model for template design"),
+    ] = False,
     repository: TopicRepository = Depends(get_topic_repository),
     _user: UserContext = Depends(get_current_context),
 ) -> TopicDetail:
     """Get detailed information about a specific topic.
 
+    If the topic exists in the database, returns the database configuration.
+    If not found in database, falls back to endpoint registry defaults.
+
+    When include_schema=true, includes the JSON schema of the expected response
+    model in the response. This is useful for template authors to understand
+    what output fields their prompts should generate.
+
     Requires admin:topics:read permission.
     """
+    from coaching.src.core.response_model_registry import get_response_schema
+
     try:
-        topic = await repository.get_topic_by_id(topic_id)
-        if not topic:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+        # First, try to get from database
+        topic = await repository.get(topic_id=topic_id)
+
+        # Get allowed prompt types from registry (used for both DB and default)
+        allowed_prompt_types = _get_allowed_prompt_types(topic_id)
+
+        # Get response schema if requested
+        response_schema: dict[str, Any] | None = None
+        if include_schema:
+            # Get response model name from endpoint registry
+            endpoint_def = get_topic_by_topic_id(topic_id)
+            if endpoint_def:
+                response_schema = get_response_schema(endpoint_def.response_model)
+
+        if topic:
+            # Topic found in database
+            return _map_topic_to_detail(
+                topic,
+                from_database=True,
+                allowed_prompt_types=allowed_prompt_types,
+                response_schema=response_schema,
             )
 
-        return _map_topic_to_detail(topic)
+        # Topic not in database, try to get from registry
+        endpoint_def = get_topic_by_topic_id(topic_id)
+        if not endpoint_def:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Topic '{topic_id}' not found in database or registry",
+            )
+
+        # Create default topic from registry
+        default_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+        return _map_topic_to_detail(
+            default_topic,
+            from_database=False,
+            allowed_prompt_types=allowed_prompt_types,
+            response_schema=response_schema,
+        )
 
     except HTTPException:
         raise
@@ -212,7 +668,7 @@ async def create_topic(
     """
     try:
         # Check if topic already exists
-        existing = await repository.get_topic_by_id(request.topic_id)
+        existing = await repository.get(topic_id=request.topic_id)
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -227,21 +683,14 @@ async def create_topic(
             topic_type=request.topic_type,
             category=request.category,
             is_active=request.is_active,
-            model_code=request.model_code,
+            tier_level=request.tier_level,
+            basic_model_code=request.basic_model_code,
+            premium_model_code=request.premium_model_code,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
             top_p=request.top_p,
             frequency_penalty=request.frequency_penalty,
             presence_penalty=request.presence_penalty,
-            allowed_parameters=[
-                DomainParameter(
-                    name=p["name"],
-                    type=p["type"],
-                    required=p.get("required", False),
-                    description=p.get("description"),
-                )
-                for p in request.allowed_parameters
-            ],
             prompts=[],
             created_at=now,
             updated_at=now,
@@ -251,10 +700,10 @@ async def create_topic(
         )
 
         # Validate
-        topic.validate()
+        # topic.validate() # Validated in __post_init__
 
         # Save
-        await repository.create_topic(topic)
+        await repository.create(topic=topic)
 
         logger.info(
             "Topic created",
@@ -289,79 +738,211 @@ async def create_topic(
         ) from e
 
 
-@router.put("/{topic_id}", response_model=UpdateTopicResponse)
-async def update_topic(
+@router.put("/{topic_id}", response_model=UpsertTopicResponse)
+async def upsert_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: UpdateTopicRequest,
+    response: Response,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
-) -> UpdateTopicResponse:
-    """Update an existing topic.
+) -> UpsertTopicResponse:
+    """Create or update a topic (UPSERT).
+
+    If the topic exists, it will be updated with the provided fields.
+    If the topic doesn't exist, it will be created using registry defaults
+    (if available) merged with the provided fields.
+
+    Returns:
+        - 201 Created: If the topic was created
+        - 200 OK: If the topic was updated
 
     Requires admin:topics:write permission.
     """
     try:
-        # Get existing topic
-        topic = await repository.get_topic_by_id(topic_id)
-        if not topic:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+        now = datetime.now(UTC)
+
+        # Try to get existing topic
+        existing_topic = await repository.get(topic_id=topic_id)
+
+        if existing_topic:
+            # UPDATE existing topic
+            updates: dict[str, Any] = {}
+            if request.topic_name is not None:
+                updates["topic_name"] = request.topic_name
+            if request.description is not None:
+                updates["description"] = request.description
+            if request.tier_level is not None:
+                updates["tier_level"] = request.tier_level
+            if request.basic_model_code is not None:
+                updates["basic_model_code"] = request.basic_model_code
+            if request.premium_model_code is not None:
+                updates["premium_model_code"] = request.premium_model_code
+            if request.temperature is not None:
+                updates["temperature"] = request.temperature
+            if request.max_tokens is not None:
+                updates["max_tokens"] = request.max_tokens
+            if request.top_p is not None:
+                updates["top_p"] = request.top_p
+            if request.frequency_penalty is not None:
+                updates["frequency_penalty"] = request.frequency_penalty
+            if request.presence_penalty is not None:
+                updates["presence_penalty"] = request.presence_penalty
+            if request.is_active is not None:
+                updates["is_active"] = request.is_active
+            if request.display_order is not None:
+                updates["display_order"] = request.display_order
+
+            # Handle conversation_config for coaching topics
+            if (
+                request.conversation_config is not None
+                and existing_topic.topic_type == "conversation_coaching"
+            ):
+                # Merge with existing additional_config
+                additional_config = dict(existing_topic.additional_config or {})
+                additional_config.update(request.conversation_config.model_dump())
+                updates["additional_config"] = additional_config
+
+            updates["updated_at"] = now
+            updated_topic = replace(existing_topic, **updates)
+            await repository.update(topic=updated_topic)
+
+            logger.info(
+                "Topic updated",
+                topic_id=topic_id,
+                updated_by=user.user_id,
+                updates=list(updates.keys()),
             )
 
-        # Update fields
-        updates = {}
-        if request.topic_name is not None:
-            updates["topic_name"] = request.topic_name
-        if request.description is not None:
-            updates["description"] = request.description
-        if request.model_code is not None:
-            updates["model_code"] = request.model_code
-        if request.temperature is not None:
-            updates["temperature"] = request.temperature
-        if request.max_tokens is not None:
-            updates["max_tokens"] = request.max_tokens
-        if request.top_p is not None:
-            updates["top_p"] = request.top_p
-        if request.frequency_penalty is not None:
-            updates["frequency_penalty"] = request.frequency_penalty
-        if request.presence_penalty is not None:
-            updates["presence_penalty"] = request.presence_penalty
-        if request.is_active is not None:
-            updates["is_active"] = request.is_active
-        if request.display_order is not None:
-            updates["display_order"] = request.display_order
-        if request.allowed_parameters is not None:
-            updates["allowed_parameters"] = [
-                DomainParameter(
-                    name=p["name"],
-                    type=p["type"],
-                    required=p.get("required", False),
-                    description=p.get("description"),
+            response.status_code = status.HTTP_200_OK
+            return UpsertTopicResponse(
+                topic_id=topic_id,
+                created=False,
+                timestamp=now,
+                message="Topic updated successfully",
+            )
+
+        else:
+            # CREATE new topic - try to get defaults from registry
+            endpoint_def = get_topic_by_topic_id(topic_id)
+
+            if endpoint_def:
+                # Use registry defaults as base
+                base_topic = LLMTopic.create_default_from_endpoint(endpoint_def)
+                # Override with request values
+                new_topic = replace(
+                    base_topic,
+                    topic_name=request.topic_name or base_topic.topic_name,
+                    description=(
+                        request.description
+                        if request.description is not None
+                        else base_topic.description
+                    ),
+                    tier_level=(
+                        request.tier_level
+                        if request.tier_level is not None
+                        else base_topic.tier_level
+                    ),
+                    basic_model_code=(request.basic_model_code or base_topic.basic_model_code),
+                    premium_model_code=(
+                        request.premium_model_code or base_topic.premium_model_code
+                    ),
+                    temperature=(
+                        request.temperature
+                        if request.temperature is not None
+                        else base_topic.temperature
+                    ),
+                    max_tokens=(
+                        request.max_tokens
+                        if request.max_tokens is not None
+                        else base_topic.max_tokens
+                    ),
+                    top_p=request.top_p if request.top_p is not None else base_topic.top_p,
+                    frequency_penalty=(
+                        request.frequency_penalty
+                        if request.frequency_penalty is not None
+                        else base_topic.frequency_penalty
+                    ),
+                    presence_penalty=(
+                        request.presence_penalty
+                        if request.presence_penalty is not None
+                        else base_topic.presence_penalty
+                    ),
+                    is_active=(
+                        request.is_active if request.is_active is not None else base_topic.is_active
+                    ),
+                    display_order=(
+                        request.display_order
+                        if request.display_order is not None
+                        else base_topic.display_order
+                    ),
+                    additional_config=(
+                        request.conversation_config.model_dump()
+                        if request.conversation_config is not None
+                        and endpoint_def.topic_type.value == "conversation_coaching"
+                        else base_topic.additional_config
+                    ),
+                    created_at=now,
+                    updated_at=now,
+                    created_by=user.user_id,
                 )
-                for p in request.allowed_parameters
-            ]
+            else:
+                # No registry entry - require topic_name at minimum
+                if not request.topic_name:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Topic '{topic_id}' not found in registry. "
+                        "topic_name is required to create a new topic.",
+                    )
 
-        updates["updated_at"] = datetime.now(UTC)
+                # Create with defaults and provided values
+                from coaching.src.core.constants import TierLevel
 
-        # Update topic
-        updated_topic = topic.update(**updates)
-        updated_topic.validate()
+                new_topic = LLMTopic(
+                    topic_id=topic_id,
+                    topic_name=request.topic_name,
+                    category="custom",
+                    topic_type="single_shot",
+                    description=request.description,
+                    display_order=(
+                        request.display_order if request.display_order is not None else 100
+                    ),
+                    is_active=request.is_active if request.is_active is not None else False,
+                    tier_level=request.tier_level
+                    if request.tier_level is not None
+                    else TierLevel.FREE,
+                    basic_model_code=request.basic_model_code or "claude-3-5-sonnet-20241022",
+                    premium_model_code=request.premium_model_code or "claude-3-5-sonnet-20241022",
+                    temperature=request.temperature if request.temperature is not None else 0.7,
+                    max_tokens=request.max_tokens if request.max_tokens is not None else 2000,
+                    top_p=request.top_p if request.top_p is not None else 1.0,
+                    frequency_penalty=(
+                        request.frequency_penalty if request.frequency_penalty is not None else 0.0
+                    ),
+                    presence_penalty=(
+                        request.presence_penalty if request.presence_penalty is not None else 0.0
+                    ),
+                    prompts=[],
+                    created_at=now,
+                    updated_at=now,
+                    created_by=user.user_id,
+                )
 
-        await repository.update_topic(updated_topic)
+            await repository.create(topic=new_topic)
 
-        logger.info(
-            "Topic updated",
-            topic_id=topic_id,
-            updated_by=user.user_id,
-            updates=list(updates.keys()),
-        )
+            logger.info(
+                "Topic created via upsert",
+                topic_id=topic_id,
+                created_by=user.user_id,
+                from_registry=endpoint_def is not None,
+            )
 
-        return UpdateTopicResponse(
-            topic_id=topic_id,
-            updated_at=updated_topic.updated_at,
-            message="Topic updated successfully",
-        )
+            response.status_code = status.HTTP_201_CREATED
+            return UpsertTopicResponse(
+                topic_id=topic_id,
+                created=True,
+                timestamp=now,
+                message="Topic created successfully",
+            )
 
     except HTTPException:
         raise
@@ -392,7 +973,7 @@ async def delete_topic(
     """
     try:
         # Get existing topic
-        topic = await repository.get_topic_by_id(topic_id)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -403,13 +984,13 @@ async def delete_topic(
 
         if hard_delete:
             # Hard delete - permanently remove
-            await repository.delete_topic(topic_id)
+            await repository.delete(topic_id=topic_id, hard_delete=True)
             logger.info("Topic hard deleted", topic_id=topic_id, deleted_by=user.user_id)
             raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="")
         else:
             # Soft delete - mark as inactive
-            updated_topic = topic.update(is_active=False, updated_at=now)
-            await repository.update_topic(updated_topic)
+            updated_topic = replace(topic, is_active=False, updated_at=now)
+            await repository.update(topic=updated_topic)
 
             logger.info("Topic deactivated", topic_id=topic_id, deactivated_by=user.user_id)
 
@@ -434,6 +1015,7 @@ async def get_prompt_content(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     prompt_type: Annotated[str, Path(description="Prompt type")],
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
     _user: UserContext = Depends(get_current_context),
 ) -> PromptContentResponse:
     """Get prompt content for editing.
@@ -441,12 +1023,20 @@ async def get_prompt_content(
     Requires admin:topics:read permission.
     """
     try:
-        # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        # Get topic - for GET, we don't auto-create, just check if exists in DB
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
+            # Check if it exists in registry (for better error message)
+            endpoint_def = get_topic_by_topic_id(topic_id)
+            if endpoint_def:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Topic '{topic_id}' exists in registry but has no prompts saved yet. "
+                    "Create a prompt first using POST.",
+                )
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
         # Find prompt
@@ -458,12 +1048,12 @@ async def get_prompt_content(
             )
 
         # Get content from S3
-        content = await repository.get_prompt_content(prompt.s3_bucket, prompt.s3_key)
+        content = await s3_storage.get_prompt(topic_id=topic_id, prompt_type=prompt_type)
 
         return PromptContentResponse(
             topic_id=topic_id,
             prompt_type=prompt_type,
-            content=content,
+            content=content or "",
             s3_key=prompt.s3_key,
             updated_at=prompt.updated_at,
             updated_by=prompt.updated_by,
@@ -492,18 +1082,45 @@ async def update_prompt_content(
     request: UpdatePromptRequest,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> UpdatePromptResponse:
     """Update prompt content.
+
+    If the topic exists in the endpoint registry but not in the database,
+    it will be auto-created from registry defaults before updating the prompt.
 
     Requires admin:topics:write permission.
     """
     try:
-        # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        # Validate prompt_type is a valid PromptType enum value
+        from coaching.src.core.constants import PromptType
+
+        valid_types = {pt.value for pt in PromptType}
+        if prompt_type not in valid_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid prompt type '{prompt_type}'. Valid types: {', '.join(sorted(valid_types))}",
+            )
+
+        # Validate prompt type is allowed for this topic
+        allowed_types = _get_allowed_prompt_types(topic_id)
+        if prompt_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Prompt type '{prompt_type}' is not allowed for topic '{topic_id}'. "
+                f"Allowed types: {', '.join(allowed_types)}",
+            )
+
+        # Get topic from DB or auto-create from registry
+        topic = await _get_or_create_topic_from_registry(
+            topic_id=topic_id,
+            repository=repository,
+            user_id=user.user_id,
+        )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
         # Find prompt
@@ -516,10 +1133,10 @@ async def update_prompt_content(
 
         # Update content in S3
         now = datetime.now(UTC)
-        await repository.update_prompt_content(
-            prompt.s3_bucket,
-            prompt.s3_key,
-            request.content,
+        await s3_storage.save_prompt(
+            topic_id=topic_id,
+            prompt_type=prompt_type,
+            content=request.content,
         )
 
         # Update prompt metadata in topic
@@ -538,8 +1155,8 @@ async def update_prompt_content(
             for p in topic.prompts
         ]
 
-        updated_topic = topic.update(prompts=updated_prompts, updated_at=now)
-        await repository.update_topic(updated_topic)
+        updated_topic = replace(topic, prompts=updated_prompts, updated_at=now)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt updated",
@@ -582,18 +1199,35 @@ async def create_prompt(
     request: CreatePromptRequest,
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> CreatePromptResponse:
     """Create a new prompt for a topic.
+
+    If the topic exists in the endpoint registry but not in the database,
+    it will be auto-created from registry defaults before adding the prompt.
 
     Requires admin:topics:write permission.
     """
     try:
-        # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        # Get topic from DB or auto-create from registry
+        topic = await _get_or_create_topic_from_registry(
+            topic_id=topic_id,
+            repository=repository,
+            user_id=user.user_id,
+        )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database or registry",
+            )
+
+        # Validate prompt type is allowed for this topic
+        allowed_types = _get_allowed_prompt_types(topic_id)
+        if request.prompt_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Prompt type '{request.prompt_type}' is not allowed for topic '{topic_id}'. "
+                f"Allowed types: {', '.join(allowed_types)}",
             )
 
         # Check if prompt type already exists
@@ -603,13 +1237,14 @@ async def create_prompt(
                 detail=f"Prompt type '{request.prompt_type}' already exists for topic '{topic_id}'",
             )
 
-        # Create S3 key
-        s3_bucket = topic.prompts[0].s3_bucket if topic.prompts else "purposepath-prompts-prod"
-        s3_key = f"prompts/{topic_id}/{request.prompt_type}.md"
-
         # Upload content to S3
         now = datetime.now(UTC)
-        await repository.update_prompt_content(s3_bucket, s3_key, request.content)
+        s3_key = await s3_storage.save_prompt(
+            topic_id=topic_id,
+            prompt_type=request.prompt_type,
+            content=request.content,
+        )
+        s3_bucket = s3_storage.bucket_name
 
         # Add prompt to topic
         new_prompt = DomainPromptInfo(
@@ -620,11 +1255,12 @@ async def create_prompt(
             updated_by=user.user_id,
         )
 
-        updated_topic = topic.update(
+        updated_topic = replace(
+            topic,
             prompts=[*topic.prompts, new_prompt],
             updated_at=now,
         )
-        await repository.update_topic(updated_topic)
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt created",
@@ -663,18 +1299,19 @@ async def delete_prompt(
     prompt_type: Annotated[str, Path(description="Prompt type")],
     user: UserContext = Depends(get_current_context),
     repository: TopicRepository = Depends(get_topic_repository),
+    s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> DeletePromptResponse:
     """Delete a prompt from a topic.
 
     Requires admin:topics:delete permission.
     """
     try:
-        # Get topic
-        topic = await repository.get_topic_by_id(topic_id)
+        # Get topic - for DELETE, topic must exist in DB (can't delete what doesn't exist)
+        topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Topic '{topic_id}' not found",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Topic '{topic_id}' not found in database",
             )
 
         # Find prompt
@@ -686,12 +1323,12 @@ async def delete_prompt(
             )
 
         # Delete from S3
-        await repository.delete_prompt_content(prompt.s3_bucket, prompt.s3_key)
+        await s3_storage.delete_prompt(topic_id=topic_id, prompt_type=prompt_type)
 
         # Remove from topic
         updated_prompts = [p for p in topic.prompts if p.prompt_type != prompt_type]
-        updated_topic = topic.update(prompts=updated_prompts, updated_at=datetime.now(UTC))
-        await repository.update_topic(updated_topic)
+        updated_topic = replace(topic, prompts=updated_prompts, updated_at=datetime.now(UTC))
+        await repository.update(topic=updated_topic)
 
         logger.info(
             "Prompt deleted",
@@ -716,65 +1353,6 @@ async def delete_prompt(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete prompt",
         ) from e
-
-
-@router.get("/../../models", response_model=ModelsListResponse)
-async def list_models(
-    _user: UserContext = Depends(get_current_context),
-) -> ModelsListResponse:
-    """List available LLM models.
-
-    Requires admin:topics:read permission.
-    """
-    # Hardcoded model list based on current Bedrock models
-    models = [
-        ModelInfo(
-            model_code="claude-3-5-sonnet-20241022",
-            model_name="Claude 3.5 Sonnet",
-            provider="anthropic",
-            capabilities=["chat", "function_calling"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=3.00,
-            cost_per_output_million=15.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="claude-3-5-haiku-20241022",
-            model_name="Claude 3.5 Haiku",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=0.80,
-            cost_per_output_million=4.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="anthropic.claude-3-sonnet-20240229-v1:0",
-            model_name="Claude 3 Sonnet (Legacy)",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=3.00,
-            cost_per_output_million=15.00,
-            is_active=True,
-        ),
-        ModelInfo(
-            model_code="anthropic.claude-3-haiku-20240307-v1:0",
-            model_name="Claude 3 Haiku (Legacy)",
-            provider="anthropic",
-            capabilities=["chat"],
-            context_window=200000,
-            max_output_tokens=4096,
-            cost_per_input_million=0.25,
-            cost_per_output_million=1.25,
-            is_active=True,
-        ),
-    ]
-
-    return ModelsListResponse(models=models)
 
 
 @router.post("/validate", response_model=ValidationResult)
@@ -819,18 +1397,20 @@ async def validate_topic_config(
                 warnings.append(f"Prompt '{prompt.get('prompt_type')}' is very short")
 
     # Check parameter usage in prompts
-    if request.allowed_parameters and request.prompts:
-        param_names = {p["name"] for p in request.allowed_parameters}
+    # Get parameters from registry for this topic
+    registry_params = get_parameters_for_topic(request.topic_id)
+    if registry_params and request.prompts:
+        param_names = {p["name"] for p in registry_params}
         for prompt in request.prompts:
             content = prompt.get("content", "")
             # Simple check for {param_name} patterns
             import re
 
-            used_params = set(re.findall(r"\{(\w+)\}", content))
+            used_params = set(re.findall(r"\\{(\\w+)\\}", content))
             unused = param_names - used_params
             if unused:
                 suggestions.append(
-                    f"Parameters {unused} are defined but not used in {prompt.get('prompt_type')} prompt"
+                    f"Parameters {unused} are defined in registry but not used in {prompt.get('prompt_type')} prompt"
                 )
 
     return ValidationResult(
@@ -839,3 +1419,164 @@ async def validate_topic_config(
         suggestions=suggestions,
         errors=errors,
     )
+
+
+# ========== New Endpoints for Issue #113 ==========
+
+
+class LLMRunMetadata(BaseModel):
+    """Metadata about the LLM invocation for a test run."""
+
+    provider: str
+    model: str
+    usage: dict[str, int] | None = None
+    finish_reason: str | None = None
+
+
+class TopicTestRequest(BaseModel):
+    """Request model for testing a topic."""
+
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    allow_inactive: bool = False
+
+
+class TopicTestResponse(BaseModel):
+    """Response model for topic testing including rendered prompts."""
+
+    success: bool
+    topic_id: str
+    rendered_system_prompt: str | None = None
+    rendered_user_prompt: str | None = None
+    enriched_parameters: dict[str, Any] | None = None
+    response: dict[str, Any] | None = None
+    response_model: str | None = None
+    response_schema: dict[str, Any] | None = None
+    llm_metadata: LLMRunMetadata | None = None
+    execution_time_ms: float
+    error: str | None = None
+
+
+def _serialize_response_payload(response: BaseModel | Any) -> dict[str, Any]:
+    """Serialize response payload to a dictionary for API responses."""
+
+    if isinstance(response, BaseModel):
+        return response.model_dump()
+    if isinstance(response, dict):
+        return response
+    return {"value": response}
+
+
+@router.post("/{topic_id}/test", response_model=TopicTestResponse)
+async def test_topic(
+    topic_id: Annotated[str, Path(description="Topic identifier")],
+    request: TopicTestRequest,
+    user: UserContext = Depends(get_current_context),
+    unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
+    jwt_token: str | None = Depends(get_jwt_token),
+) -> TopicTestResponse:
+    """Test a topic by rendering prompts, enriching parameters, and executing the LLM.
+
+    Returns rendered system/user prompts, enriched parameters, serialized AI response,
+    and LLM metadata to help admins validate templates before rollout.
+    """
+
+    start_time = time.time()
+
+    endpoint_def = get_topic_by_topic_id(topic_id)
+    if endpoint_def is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic not found: {topic_id}",
+        )
+
+    if endpoint_def.topic_type != TopicType.SINGLE_SHOT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Topic {topic_id} is type {endpoint_def.topic_type.value}, "
+                "only single-shot topics are supported for template testing"
+            ),
+        )
+
+    response_model_cls = get_response_model(endpoint_def.response_model)
+    if response_model_cls is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Response model not configured: {endpoint_def.response_model}",
+        )
+
+    try:
+        template_processor = create_template_processor(jwt_token) if jwt_token else None
+
+        debug_context = await unified_engine.execute_single_shot_debug(
+            topic_id=topic_id,
+            parameters=request.parameters,
+            response_model=response_model_cls,
+            user_id=user.user_id,
+            tenant_id=user.tenant_id,
+            template_processor=template_processor,
+            allow_inactive=request.allow_inactive,
+        )
+
+        execution_time = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Topic test successful",
+            topic_id=topic_id,
+            execution_time_ms=execution_time,
+        )
+
+        return TopicTestResponse(
+            success=True,
+            topic_id=topic_id,
+            rendered_system_prompt=debug_context.rendered_system_prompt,
+            rendered_user_prompt=debug_context.rendered_user_prompt,
+            enriched_parameters=debug_context.enriched_parameters,
+            response=_serialize_response_payload(debug_context.serialized_response),
+            response_model=debug_context.response_model_name,
+            response_schema=debug_context.response_schema,
+            llm_metadata=LLMRunMetadata(
+                provider=debug_context.llm_response.provider,
+                model=debug_context.llm_response.model,
+                usage=debug_context.llm_response.usage,
+                finish_reason=debug_context.llm_response.finish_reason,
+            ),
+            execution_time_ms=execution_time,
+        )
+
+    except TopicNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic configuration not found: {e.topic_id}",
+        ) from e
+    except ParameterValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Missing required parameters: {', '.join(e.missing_params)}",
+        ) from e
+    except PromptRenderError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to render {e.prompt_type} prompt",
+        ) from e
+    except SerializationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to serialize AI response for {e.response_model}",
+        ) from e
+    except UnifiedAIEngineError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI processing failed",
+        ) from e
+    except Exception as e:
+        logger.error(
+            "Topic test failed",
+            topic_id=topic_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from coaching.src.api.models.auth import UserContext
 from coaching.src.core.config_multitenant import settings
-
 from shared.models.multitenant import Permission, RequestContext, SubscriptionTier, UserRole
 from shared.services.aws_helpers import get_secretsmanager_client
 
@@ -22,20 +21,53 @@ logger = logging.getLogger(__name__)
 
 
 def _get_jwt_secret() -> str:
-    """Get JWT secret from settings or AWS Secrets Manager with safe fallback."""
+    """Get JWT secret from settings or AWS Secrets Manager with safe fallback.
+
+    Priority:
+    1. JWT_SECRET environment variable (direct secret value)
+    2. AWS Secrets Manager using JWT_SECRET_NAME (secret name, not ARN)
+    3. Fallback to development default
+
+    Returns:
+        JWT secret string for token validation
+    """
     # Prefer explicit secret in settings when present
-    secret = getattr(settings, "jwt_secret", None)
-    if secret:
-        return str(secret)
-    if settings.jwt_secret_arn:
-        try:
-            secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            response = secrets_client.get_secret_value(SecretId=settings.jwt_secret_arn)
-            val = response.get("SecretString")
-            return str(val) if val else "change-me-in-prod"
-        except Exception as e:
-            logger.warning(f"Failed to get JWT secret from AWS: {e}")
-    return "change-me-in-prod"  # Fallback for development
+    if settings.jwt_secret:
+        return str(settings.jwt_secret)
+
+    # Retrieve from Secrets Manager using secret name with environment suffix
+    secret_name = settings.get_jwt_secret_name()
+    try:
+        secrets_client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+        response = secrets_client.get_secret_value(SecretId=secret_name)
+        secret_value = response.get("SecretString")
+        if secret_value:
+            # Parse JSON to extract jwt_secret key (matches .NET API behavior)
+            import json
+
+            try:
+                secret_data = json.loads(secret_value)
+                if "jwt_secret" in secret_data:
+                    extracted_secret = str(secret_data["jwt_secret"])
+                    logger.info(
+                        f"JWT secret extracted from JSON (length: {len(extracted_secret)}, "
+                        f"first 10 chars: {extracted_secret[:10]})"
+                    )
+                    return extracted_secret
+                # Fallback to raw value if jwt_secret key not found
+                logger.warning("jwt_secret key not found in secret JSON, using raw value")
+                return str(secret_value)
+            except json.JSONDecodeError as e:
+                # If not JSON, return raw value
+                logger.warning(f"Secret is not valid JSON: {e}, using raw value")
+                return str(secret_value)
+    except Exception as e:
+        logger.warning(
+            f"Failed to get JWT secret from AWS Secrets Manager (secret: {secret_name}): {e}"
+        )
+
+    # Fallback for development
+    return "change-me-in-prod"
 
 
 async def get_current_context(
@@ -77,6 +109,22 @@ async def get_current_context(
     try:
         # Decode and validate JWT token
         secret = _get_jwt_secret()
+
+        # Log secret characteristics (safe - no actual secret exposed)
+        logger.info(
+            f"JWT validation starting (get_current_context) - Secret length: {len(secret)}, "
+            f"First 10 chars: {secret[:10]}, "
+            f"Stage: {settings.stage}, "
+            f"Algorithm: {settings.jwt_algorithm}"
+        )
+
+        # Decode token header to see what algorithm it was signed with
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            logger.info(f"Token header: {unverified_header}")
+        except Exception as e:
+            logger.warning(f"Could not decode token header: {e}")
+
         # Decode token; allow flexible fields and issuer in dev
         try:
             payload = jwt.decode(
@@ -84,14 +132,22 @@ async def get_current_context(
                 secret,
                 algorithms=[settings.jwt_algorithm],
                 options={
-                    "verify_aud": False,
+                    "verify_aud": settings.stage != "dev",
                     "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
+                audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
-        except JWTError:
+            logger.info(
+                "JWT signature verification succeeded with AWS secret (get_current_context)"
+            )
+        except JWTError as jwt_err:
+            logger.warning(
+                f"JWT verification failed with AWS secret (get_current_context): {jwt_err}"
+            )
             # Dev-friendly fallback to default secret
             if settings.stage == "dev":
+                logger.info("Attempting fallback to default dev secret (get_current_context)")
                 payload = jwt.decode(
                     token,
                     "change-me-in-prod",
@@ -113,7 +169,7 @@ async def get_current_context(
                 status_code=401, detail="Token missing required fields: user_id, tenant_id"
             )
 
-        # Check user status
+        # Check user status - only Active users allowed
         if user_status and user_status.lower() != "active":
             raise HTTPException(status_code=403, detail="User account is not active")
 
@@ -177,6 +233,21 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         # Decode and validate JWT token
         secret = _get_jwt_secret()
 
+        # Log secret characteristics (safe - no actual secret exposed)
+        logger.info(
+            f"JWT validation starting - Secret length: {len(secret)}, "
+            f"First 10 chars: {secret[:10]}, "
+            f"Stage: {settings.stage}, "
+            f"Algorithm: {settings.jwt_algorithm}"
+        )
+
+        # Decode token header to see what algorithm it was signed with
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            logger.info(f"Token header: {unverified_header}")
+        except Exception as e:
+            logger.warning(f"Could not decode token header: {e}")
+
         # Decode token; allow flexible fields and issuer in dev
         try:
             payload = jwt.decode(
@@ -184,20 +255,25 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 secret,
                 algorithms=[settings.jwt_algorithm],
                 options={
-                    "verify_aud": False,
+                    "verify_aud": settings.stage != "dev",
                     "verify_iss": settings.stage != "dev",
                 },
                 issuer=None if settings.stage == "dev" else settings.jwt_issuer,
+                audience=None if settings.stage == "dev" else settings.jwt_audience,
             )
-        except JWTError:
+            logger.info("JWT signature verification succeeded with AWS secret")
+        except JWTError as jwt_err:
+            logger.warning(f"JWT verification failed with AWS secret: {jwt_err}")
             # Dev-friendly fallback to default secret
             if settings.stage == "dev":
+                logger.info("Attempting fallback to default dev secret")
                 payload = jwt.decode(
                     token,
                     "change-me-in-prod",
                     algorithms=[settings.jwt_algorithm],
                     options={"verify_aud": False, "verify_iss": False},
                 )
+                logger.info("JWT signature verification succeeded with fallback secret")
             else:
                 raise
 
@@ -217,13 +293,44 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
                 status_code=401, detail="Token missing required fields: user_id and tenant_id"
             )
 
-        return UserContext(
-            user_id=str(user_id),
-            tenant_id=str(tenant_id),
-            email=email,
-            roles=roles,
-            scopes=scopes,
+        # Normalize email: .NET API sends email as array, extract first element
+        normalized_email = None
+        if email:
+            logger.info(f"BEFORE NORMALIZATION - email type: {type(email)}, value: {email}")
+            if isinstance(email, list):
+                normalized_email = email[0] if email else None
+                logger.info(
+                    f"AFTER NORMALIZATION (from list) - normalized_email: {normalized_email}"
+                )
+            elif isinstance(email, str):
+                normalized_email = email
+                logger.info(
+                    f"AFTER NORMALIZATION (already string) - normalized_email: {normalized_email}"
+                )
+
+        logger.info(
+            f"CREATING UserContext - user_id: {user_id}, tenant_id: {tenant_id}, "
+            f"normalized_email type: {type(normalized_email)}, value: {normalized_email}"
         )
+
+        try:
+            user_context = UserContext(
+                user_id=str(user_id),
+                tenant_id=str(tenant_id),
+                email=normalized_email,
+                roles=roles,
+                scopes=scopes,
+            )
+            logger.info("✅ UserContext created successfully")
+            return user_context
+        except Exception as ctx_error:
+            logger.error(
+                f"❌ ERROR CREATING UserContext: {ctx_error}\n"
+                f"  user_id={user_id}, tenant_id={tenant_id}\n"
+                f"  email type={type(normalized_email)}, value={normalized_email}\n"
+                f"  roles={roles}, scopes={scopes}"
+            )
+            raise
 
     except JWTError as e:
         logger.warning(f"JWT validation failed: {e}")

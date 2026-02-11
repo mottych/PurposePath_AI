@@ -1,11 +1,18 @@
-"""AWS Bedrock LLM provider implementation with LangChain integration."""
+"""AWS Bedrock LLM provider implementation with LangChain integration.
+
+Uses ChatBedrockConverse for optimized Converse API access with:
+- Better async support
+- Native streaming
+- Prompt caching support
+- Tool/function calling
+"""
 
 import json
 from typing import Any, ClassVar
 
 import boto3
 import structlog
-from langchain_aws import ChatBedrock
+from langchain_aws import ChatBedrockConverse
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 
@@ -22,7 +29,7 @@ except ImportError:  # pragma: no cover - fallback for local testing
         def get_encoding(_: str) -> _FallbackEncoding:
             return _FallbackEncoding()
 
-    tiktoken = _TiktokenFallback()
+    tiktoken = _TiktokenFallback()  # type: ignore[assignment]
 
 from botocore.exceptions import ClientError
 
@@ -43,18 +50,33 @@ class LLMProviderCompatError(Exception):
 class BedrockProvider(BaseProvider):
     """AWS Bedrock provider using LangChain integration."""
 
-    # Supported Bedrock models
+    # Default model - uses inference profile format required for on-demand access
+    DEFAULT_MODEL = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+    # Supported Bedrock models (inference profile format with regional prefix)
     SUPPORTED_MODELS: ClassVar[list[str]] = [
+        # Claude models (us region inference profiles)
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        "us.anthropic.claude-3-opus-20240229-v1:0",
+        "us.anthropic.claude-3-sonnet-20240229-v1:0",
+        "us.anthropic.claude-3-haiku-20240307-v1:0",
+        # Legacy model IDs (for backwards compatibility)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-3-5-haiku-20241022-v1:0",
         "anthropic.claude-3-opus-20240229-v1:0",
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
+        # Amazon Titan
         "amazon.titan-text-premier-v1:0",
         "amazon.titan-text-express-v1",
+        # Cohere
         "cohere.command-r-plus-v1:0",
         "cohere.command-r-v1:0",
+        # Meta Llama
         "meta.llama3-1-405b-instruct-v1:0",
         "meta.llama3-1-70b-instruct-v1:0",
         "meta.llama3-1-8b-instruct-v1:0",
@@ -87,22 +109,30 @@ class BedrockProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the Bedrock client."""
         try:
-            logger.info("Initializing Bedrock provider", model=self.config.model_name)
+            # Use configured model or default to Claude 3.5 Sonnet v2 (inference profile)
+            model_name = self.config.model_name or self.DEFAULT_MODEL
+            logger.info("Initializing Bedrock provider with Converse API", model=model_name)
 
-            # Create LangChain Bedrock client
-            # Note: LangChain's ChatBedrock signature may vary by version
-            self._client = ChatBedrock(
-                model_id=self.config.model_name,
+            # Guard against langchain versions that removed the global verbose attr
+            import langchain  # local import to keep provider optional
+
+            if not hasattr(langchain, "verbose"):
+                langchain.verbose = False
+
+            # Create LangChain Bedrock Converse client
+            # ChatBedrockConverse uses the optimized Converse API for:
+            # - Better async support
+            # - Native streaming
+            # - Prompt caching support
+            # - Tool/function calling
+            self._client = ChatBedrockConverse(
+                model=model_name,
                 region_name=self.config.region_name or "us-east-1",
-                model_kwargs={
-                    "temperature": self.config.temperature,
-                    "max_tokens": self.config.max_tokens or 4096,
-                    "top_p": self.config.top_p or 0.9,
-                },
-                streaming=self.config.streaming,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens or 4096,
             )
 
-            logger.info("Bedrock provider initialized successfully")
+            logger.info("Bedrock provider initialized successfully with Converse API")
 
         except Exception as e:
             logger.error("Failed to initialize Bedrock provider", error=str(e))
@@ -180,7 +210,8 @@ class BedrockProvider(BaseProvider):
             bedrock = session.client("bedrock")
 
             # Get model details
-            response = bedrock.get_foundation_model(modelIdentifier=self.config.model_name)
+            model_id = self.config.model_name or self.DEFAULT_MODEL
+            response = bedrock.get_foundation_model(modelIdentifier=model_id)
             model_details = response.get("modelDetails", {})
 
             return {
@@ -237,7 +268,7 @@ class BedrockProviderLegacy(LLMProvider):
 
     def __init__(
         self,
-        client: Any,  # boto3.client('bedrock-runtime')  # type: ignore[misc]
+        client: Any,  # boto3.client('bedrock-runtime')
         model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0",
     ) -> None:
         """Initialize Bedrock provider.
