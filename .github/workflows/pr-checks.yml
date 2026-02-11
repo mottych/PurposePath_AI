@@ -4,7 +4,6 @@ on:
   # Trigger on PR approval only
   pull_request_review:
     types: [submitted]
-    branches: [dev, main, staging]
   # Allow manual trigger
   workflow_dispatch: {}
 
@@ -13,7 +12,7 @@ jobs:
     name: Code Quality Checks
     runs-on: ubuntu-latest
     # Only run if the review was an approval OR triggered manually
-    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
+    if: (github.event.review.state == 'approved' && contains(fromJson('["dev","master","staging"]'), github.event.pull_request.base.ref)) || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout code
