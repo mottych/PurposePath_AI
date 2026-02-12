@@ -18,8 +18,8 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
-import structlog
 from pydantic import BaseModel, Field
+import structlog
 
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.llm_models import MODEL_REGISTRY
