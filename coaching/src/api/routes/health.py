@@ -10,30 +10,16 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from coaching.src.api.dependencies.ai_engine import get_provider_factory
-from coaching.src.api.multitenant_dependencies import get_redis_client
-from coaching.src.core.config_multitenant import settings
-from coaching.src.domain.ports.llm_provider_port import LLMMessage
-from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
-from coaching.src.models.responses import HealthCheckResponse, ReadinessCheckResponse, ServiceStatus
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
 from shared.models.schemas import ApiResponse
 from shared.services.aws_helpers import get_bedrock_client, get_s3_client
 
+from coaching.src.api.multitenant_dependencies import get_redis_client
+from coaching.src.core.config_multitenant import settings
+from coaching.src.models.responses import HealthCheckResponse, ReadinessCheckResponse, ServiceStatus
+
 router = APIRouter()
 logger = structlog.get_logger()
-
-
-class ExtractionSmokeTestRequest(BaseModel):
-    """Unauthenticated extraction smoke test request (temporary endpoint)."""
-
-    model_code: str = Field(default="CLAUDE_3_5_HAIKU")
-    prompt: str = Field(default="Reply with exactly: PURPOSEPATH_EXTRACTION_OK")
-    expected_substring: str = Field(default="PURPOSEPATH_EXTRACTION_OK")
-    max_tokens: int = Field(default=48, ge=1, le=512)
-    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
-    run_generation: bool = Field(default=True)
 
 
 @router.get("/", response_model=ApiResponse[HealthCheckResponse])
@@ -118,99 +104,3 @@ async def readiness_check(
     )
 
     return ApiResponse(success=all_healthy, data=readiness_data)
-
-
-@router.post("/extraction-smoke", response_model=ApiResponse[dict[str, Any]])
-async def extraction_smoke_test(
-    request: ExtractionSmokeTestRequest,
-    provider_factory: LLMProviderFactory = Depends(get_provider_factory),
-) -> ApiResponse[dict[str, Any]]:
-    """Temporary unauthenticated endpoint to validate extraction model path.
-
-    This validates model registry lookup + provider resolution + real model invocation
-    without creating a full coaching session.
-    """
-    started_at = datetime.now(UTC)
-
-    try:
-        provider, resolved_model_name = provider_factory.get_provider_for_model(request.model_code)
-    except Exception as e:
-        logger.error(
-            "health.extraction_smoke.resolution_failed",
-            model_code=request.model_code,
-            error=str(e),
-        )
-        return ApiResponse(
-            success=False,
-            data={
-                "stage": settings.stage,
-                "model_code": request.model_code,
-                "resolution_ok": False,
-            },
-            error=f"Model resolution failed: {e!s}",
-        )
-
-    result: dict[str, Any] = {
-        "stage": settings.stage,
-        "model_code": request.model_code,
-        "resolved_model_name": resolved_model_name,
-        "provider_class": provider.__class__.__name__,
-        "resolution_ok": True,
-        "generation_ok": None,
-    }
-
-    if not request.run_generation:
-        result["duration_ms"] = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
-        return ApiResponse(success=True, data=result)
-
-    try:
-        response = await provider.generate(
-            messages=[LLMMessage(role="user", content=request.prompt)],
-            model=resolved_model_name,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-        )
-        content = response.content or ""
-        expected_found = request.expected_substring in content
-
-        result.update(
-            {
-                "generation_ok": expected_found,
-                "response_preview": content[:200],
-                "response_model": response.model,
-                "finish_reason": response.finish_reason,
-                "usage": response.usage,
-                "expected_substring": request.expected_substring,
-                "expected_substring_found": expected_found,
-                "duration_ms": int((datetime.now(UTC) - started_at).total_seconds() * 1000),
-            }
-        )
-
-        if not expected_found:
-            return ApiResponse(
-                success=False,
-                data=result,
-                error="Generation succeeded but output did not match expected substring",
-            )
-
-        return ApiResponse(success=True, data=result)
-
-    except Exception as e:
-        logger.error(
-            "health.extraction_smoke.generation_failed",
-            model_code=request.model_code,
-            resolved_model_name=resolved_model_name,
-            error=str(e),
-            exc_info=True,
-        )
-        result.update(
-            {
-                "generation_ok": False,
-                "duration_ms": int((datetime.now(UTC) - started_at).total_seconds() * 1000),
-            }
-        )
-        return ApiResponse(
-            success=False,
-            data=result,
-            error=f"Generation failed: {e!s}",
-        )
