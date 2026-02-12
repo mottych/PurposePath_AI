@@ -119,7 +119,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
             "function_calling",
             "extended_context",
         ],
-        max_tokens=200000,
+        max_tokens=8192,
         cost_per_1k_tokens=0.0008,
         is_active=True,
     ),

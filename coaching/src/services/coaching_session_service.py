@@ -19,7 +19,10 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from pydantic import BaseModel, Field
+
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
+from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
@@ -39,7 +42,6 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -1241,7 +1243,6 @@ class CoachingSessionService:
         # Use configured extraction model, but gracefully fall back if a model code
         # is configured before the corresponding registry entry is deployed.
         extraction_model = llm_topic.get_extraction_model_code()
-        from coaching.src.core.llm_models import MODEL_REGISTRY
 
         if extraction_model not in MODEL_REGISTRY:
             fallback_model = "CLAUDE_3_HAIKU"
@@ -1253,6 +1254,15 @@ class CoachingSessionService:
             extraction_model = fallback_model
         extraction_topic.basic_model_code = extraction_model
         extraction_topic.premium_model_code = extraction_model
+        extraction_model_max = MODEL_REGISTRY[extraction_model].max_tokens
+        extraction_topic.max_tokens = min(8192, extraction_model_max)
+        logger.info(
+            "coaching_service.extraction_max_tokens_applied",
+            extraction_model=extraction_model,
+            configured_topic_max_tokens=llm_topic.max_tokens,
+            extraction_model_max_tokens=extraction_model_max,
+            extraction_max_tokens=extraction_topic.max_tokens,
+        )
 
         messages = [
             {
@@ -1722,12 +1732,27 @@ class CoachingSessionService:
             else:
                 llm_messages.append(LLMMessage(role=role, content=content))
 
-        # Execute using the provider's generate method
+        # Execute using the provider's generate method.
+        # Guardrail: cap requested max_tokens by the selected model's hard limit
+        # from MODEL_REGISTRY to prevent provider ValidationException errors.
+        requested_max_tokens = llm_topic.max_tokens
+        effective_max_tokens = requested_max_tokens
+        model_config = MODEL_REGISTRY.get(model_code)
+        if model_config is not None and requested_max_tokens > model_config.max_tokens:
+            effective_max_tokens = model_config.max_tokens
+            logger.warning(
+                "coaching_service.max_tokens_capped_by_model_limit",
+                model_code=model_code,
+                requested_max_tokens=requested_max_tokens,
+                effective_max_tokens=effective_max_tokens,
+                model_limit=model_config.max_tokens,
+            )
+
         response = await provider.generate(
             messages=llm_messages,
             model=model_name,
             temperature=temperature,
-            max_tokens=llm_topic.max_tokens,
+            max_tokens=effective_max_tokens,
             system_prompt=system_prompt,
         )
 
