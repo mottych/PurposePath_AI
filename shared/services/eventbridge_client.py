@@ -113,6 +113,8 @@ class EventBridgePublisher:
         logger.info(
             "eventbridge.publishing",
             event_type=event.event_type,
+            job_id=event.data.get("jobId"),
+            topic_id=event.data.get("topicId"),
             tenant_id=event.tenant_id,
             user_id=event.user_id,
             source=self._source,
@@ -141,6 +143,8 @@ class EventBridgePublisher:
                 "eventbridge.published",
                 event_type=event.event_type,
                 event_id=event_id,
+                job_id=event.data.get("jobId"),
+                topic_id=event.data.get("topicId"),
                 tenant_id=event.tenant_id,
                 user_id=event.user_id,
             )

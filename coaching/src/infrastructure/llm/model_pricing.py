@@ -9,6 +9,10 @@ from typing import Any
 # Pricing per 1,000 tokens in USD (as of October 2024)
 # Source: https://aws.amazon.com/bedrock/pricing/
 MODEL_PRICING: dict[str, dict[str, float]] = {
+    "anthropic.claude-3-5-haiku-20241022-v1:0": {
+        "input": 0.0008,  # $0.80 per 1M tokens
+        "output": 0.004,  # $4.00 per 1M tokens
+    },
     "anthropic.claude-3-5-sonnet-20241022-v2:0": {
         "input": 0.003,  # $3.00 per 1M tokens
         "output": 0.015,  # $15.00 per 1M tokens

@@ -1238,8 +1238,19 @@ class CoachingSessionService:
         from copy import copy
 
         extraction_topic = copy(llm_topic)
-        # Use configured extraction model (defaults to Haiku for speed/cost optimization)
+        # Use configured extraction model, but gracefully fall back if a model code
+        # is configured before the corresponding registry entry is deployed.
         extraction_model = llm_topic.get_extraction_model_code()
+        from coaching.src.core.llm_models import MODEL_REGISTRY
+
+        if extraction_model not in MODEL_REGISTRY:
+            fallback_model = "CLAUDE_3_HAIKU"
+            logger.warning(
+                "coaching_service.extraction_model_not_in_registry",
+                requested_model=extraction_model,
+                fallback_model=fallback_model,
+            )
+            extraction_model = fallback_model
         extraction_topic.basic_model_code = extraction_model
         extraction_topic.premium_model_code = extraction_model
 

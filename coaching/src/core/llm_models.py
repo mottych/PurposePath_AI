@@ -105,6 +105,24 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.003,
         is_active=True,
     ),
+    # Claude 3.5 Haiku - Requires inference profile (auto-converted by provider)
+    "CLAUDE_3_5_HAIKU": SupportedModel(
+        code="CLAUDE_3_5_HAIKU",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-3-5-haiku-20241022-v1:0",
+        version="20241022",
+        provider_class="BedrockLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "extended_context",
+        ],
+        max_tokens=200000,
+        cost_per_1k_tokens=0.0008,
+        is_active=True,
+    ),
     # Claude 3.5 Sonnet v2 - Requires inference profile (auto-converted by provider)
     "CLAUDE_3_5_SONNET_V2": SupportedModel(
         code="CLAUDE_3_5_SONNET_V2",
