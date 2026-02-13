@@ -45,13 +45,13 @@ def sample_topic():
     return LLMTopic(
         topic_id="test_topic",
         topic_name="Test Topic",
-        topic_type="kpi_system",
+        topic_type="measure_system",
         category="kpi",
         description="Test Description",
         display_order=1,
         is_active=True,
-        basic_model_code="claude-3-sonnet",
-        premium_model_code="claude-3-sonnet",
+        basic_model_code="CLAUDE_3_5_SONNET_V2",
+        premium_model_code="CLAUDE_3_5_SONNET_V2",
         temperature=0.7,
         max_tokens=1000,
         created_at=datetime.now(UTC),
@@ -76,11 +76,11 @@ class TestListTopics:
     def test_list_topics_filtered(self, client, mock_topic_repo, sample_topic):
         mock_topic_repo.list_by_type.return_value = [sample_topic]
 
-        response = client.get("/prompts?topic_type=kpi_system")
+        response = client.get("/prompts?topic_type=measure_system")
 
         assert response.status_code == status.HTTP_200_OK
         mock_topic_repo.list_by_type.assert_called_once_with(
-            topic_type="kpi_system", include_inactive=False
+            topic_type="measure_system", include_inactive=False
         )
 
     def test_list_topics_error(self, client, mock_topic_repo):
@@ -102,12 +102,12 @@ class TestCreateTopic:
         payload = {
             "topic_id": "new_topic",
             "topic_name": "New Topic",
-            "topic_type": "kpi_system",
+            "topic_type": "measure_system",
             "category": "kpi",
             "description": "New Description",
             "display_order": 2,
             "config": {
-                "default_model": "claude-3-sonnet",
+                "default_model": "CLAUDE_3_5_SONNET_V2",
                 "supports_streaming": True,
                 "max_turns": 10,
                 "temperature": 0.7,
@@ -133,11 +133,11 @@ class TestCreateTopic:
         payload = {
             "topic_id": "existing_topic",
             "topic_name": "Existing Topic",
-            "topic_type": "kpi_system",
+            "topic_type": "measure_system",
             "category": "kpi",
             "description": "Existing Description",
             "display_order": 2,
-            "config": {"default_model": "claude-3-sonnet", "supports_streaming": True},
+            "config": {"default_model": "CLAUDE_3_5_SONNET_V2", "supports_streaming": True},
         }
 
         response = client.post("/prompts", json=payload)

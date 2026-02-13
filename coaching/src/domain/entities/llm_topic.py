@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Any, ClassVar
 
 from coaching.src.core.constants import TierLevel
-from coaching.src.core.llm_models import MODEL_REGISTRY
+from coaching.src.core.llm_models import DEFAULT_MODEL_CODE, MODEL_REGISTRY
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
     InvalidTopicTypeError,
@@ -138,7 +138,7 @@ class LLMTopic:
 
     Business Rules:
         - topic_id must be unique across all topics
-        - topic_type must be: conversation_coaching, single_shot, or kpi_system
+        - topic_type must be: conversation_coaching, single_shot, or measure_system
         - At least one prompt must be defined
         - Parameter names must be unique within a topic
         - basic_model_code and premium_model_code must be valid LLM model identifiers
@@ -155,8 +155,8 @@ class LLMTopic:
         category: Grouping category (coaching, analysis, strategy, measure)
         is_active: Whether topic is active and available
         tier_level: Subscription tier required to access this topic (free, basic, premium, ultimate)
-        basic_model_code: LLM model for Free/Basic tiers (e.g., 'claude-3-5-sonnet-20241022')
-        premium_model_code: LLM model for Premium/Ultimate tiers (e.g., 'claude-3-5-sonnet-20241022')
+        basic_model_code: LLM model for Free/Basic tiers (e.g., 'CLAUDE_3_5_SONNET_V2')
+        premium_model_code: LLM model for Premium/Ultimate tiers (e.g., 'CLAUDE_3_5_SONNET_V2')
         extraction_model_code: Optional model for result extraction (defaults to Haiku for speed/cost)
         temperature: LLM temperature parameter (0.0-2.0)
         max_tokens: Maximum tokens for LLM response (must be positive)
@@ -183,8 +183,8 @@ class LLMTopic:
     tier_level: TierLevel = TierLevel.FREE
 
     # LLM Model Configuration (dual models for tier-based selection)
-    basic_model_code: str = "claude-3-5-sonnet-20241022"
-    premium_model_code: str = "claude-3-5-sonnet-20241022"
+    basic_model_code: str = DEFAULT_MODEL_CODE
+    premium_model_code: str = DEFAULT_MODEL_CODE
     temperature: float = 0.7
     max_tokens: int = 2000
     top_p: float = 1.0
@@ -207,7 +207,13 @@ class LLMTopic:
     VALID_TOPIC_TYPES: ClassVar[set[str]] = {
         "conversation_coaching",
         "single_shot",
-        "kpi_system",
+        "measure_system",
+    }
+    LEGACY_MODEL_CODE_ALIASES: ClassVar[dict[str, str]] = {
+        "claude-3-5-sonnet-20241022": "CLAUDE_3_5_SONNET_V2",
+        "claude-3-5-haiku-20241022": "CLAUDE_3_5_HAIKU",
+        "gpt-4o": "GPT_4O",
+        "gpt-4o-mini": "GPT_4O_MINI",
     }
 
     def __post_init__(self) -> None:
@@ -217,12 +223,34 @@ class LLMTopic:
             InvalidTopicTypeError: If topic_type is not valid
             InvalidModelConfigurationError: If model configuration is invalid
         """
+        # Normalize legacy topic type before validation.
+        if self.topic_type == "kpi_system":
+            self.topic_type = "measure_system"
+
+        # Normalize model codes to canonical MODEL_REGISTRY codes.
+        self.basic_model_code = self.normalize_model_code(self.basic_model_code)
+        self.premium_model_code = self.normalize_model_code(self.premium_model_code)
+
         # Validate topic type
         if self.topic_type not in self.VALID_TOPIC_TYPES:
             raise InvalidTopicTypeError(topic_id=self.topic_id, invalid_type=self.topic_type)
 
         # Validate model configuration
         self._validate_model_config()
+
+    @classmethod
+    def normalize_model_code(cls, model_code: str | None) -> str:
+        """Normalize legacy model identifiers to MODEL_REGISTRY code format."""
+        if model_code is None:
+            return DEFAULT_MODEL_CODE
+
+        candidate = model_code.strip()
+        if not candidate:
+            return DEFAULT_MODEL_CODE
+        if candidate in MODEL_REGISTRY:
+            return candidate
+
+        return cls.LEGACY_MODEL_CODE_ALIASES.get(candidate.lower(), candidate)
 
     def _validate_model_config(self) -> None:
         """Validate model configuration parameters.
@@ -239,6 +267,14 @@ class LLMTopic:
         # Validate premium_model_code
         if not self.premium_model_code or not self.premium_model_code.strip():
             errors.append("premium_model_code must not be empty")
+
+        # Model codes must be valid MODEL_REGISTRY identifiers.
+        if self.basic_model_code and self.basic_model_code not in MODEL_REGISTRY:
+            errors.append(f"basic_model_code '{self.basic_model_code}' not found in MODEL_REGISTRY")
+        if self.premium_model_code and self.premium_model_code not in MODEL_REGISTRY:
+            errors.append(
+                f"premium_model_code '{self.premium_model_code}' not found in MODEL_REGISTRY"
+            )
 
         # Validate temperature
         if not (0.0 <= self.temperature <= 2.0):
@@ -359,7 +395,7 @@ class LLMTopic:
             if old_model_code is None and "config" in item:
                 # Very old format: extract from config dict
                 config = item["config"]
-                old_model_code = config.get("model_code", "claude-3-5-sonnet-20241022")
+                old_model_code = config.get("model_code", DEFAULT_MODEL_CODE)
                 temperature = float(config.get("temperature", 0.7))
                 max_tokens = int(config.get("max_tokens", 2000))
                 top_p = float(config.get("top_p", 1.0))
@@ -388,7 +424,7 @@ class LLMTopic:
                 additional_config = item.get("additional_config", {})
 
             # Set both models to the old model_code value
-            default_model = old_model_code or "claude-3-5-sonnet-20241022"
+            default_model = old_model_code or DEFAULT_MODEL_CODE
             basic_model_code = basic_model_code or default_model
             premium_model_code = premium_model_code or default_model
         else:
@@ -400,10 +436,14 @@ class LLMTopic:
             presence_penalty = float(item.get("presence_penalty", 0.0))
             additional_config = item.get("additional_config", {})
 
+        topic_type = item["topic_type"]
+        if topic_type == "kpi_system":
+            topic_type = "measure_system"
+
         return cls(
             topic_id=item["topic_id"],
             topic_name=item["topic_name"],
-            topic_type=item["topic_type"],
+            topic_type=topic_type,
             category=item["category"],
             is_active=item["is_active"],
             tier_level=tier_level,
@@ -509,8 +549,8 @@ class LLMTopic:
             display_order=display_order,
             is_active=False,  # Inactive until configured by admin
             tier_level=TierLevel.FREE,  # Default to FREE tier
-            basic_model_code="claude-3-5-sonnet-20241022",  # Default basic model
-            premium_model_code="claude-3-5-sonnet-20241022",  # Default premium model
+            basic_model_code=DEFAULT_MODEL_CODE,  # Default basic model
+            premium_model_code=DEFAULT_MODEL_CODE,  # Default premium model
             temperature=0.7,
             max_tokens=2000,
             top_p=1.0,

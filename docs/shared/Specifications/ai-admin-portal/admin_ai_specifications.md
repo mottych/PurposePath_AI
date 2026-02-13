@@ -1,12 +1,13 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: January 30, 2026
-- Version: 3.0
+- Last Updated: February 13, 2026
+- Version: 3.1
 
 ## Revision History
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-02-13 | 3.1 | Synced spec to implementation for admin model responses, topic auth, topic type terminology, and conversation extraction config. Updated `/models` response shape (`ApiResponse[LLMModelsResponse]`), enforced admin role on topics routes, standardized `measure_system`, updated `conversation_config.max_turns`, and documented extraction model behavior/defaults. |
 | 2026-01-30 | 3.0 | **Issue #158 Completion:** Added tier-based LLM model selection and topic access control. Replaced `model_code` with `basic_model_code` and `premium_model_code`. Added `tier_level` field (FREE, BASIC, PREMIUM, ULTIMATE). |
 | 2026-01-25 | 2.0 | **Issue #196 Completion:** Fixed category enum values to match actual TopicCategory implementation, verified all field values match constants.py |
 | 2025-12-25 | 1.0 | Initial admin specification |
@@ -17,7 +18,7 @@
 
 This document specifies all admin endpoints for managing the LLM Topic system. Admin users can update topic configurations, manage prompts, and test topics.
 
-**Important:** Topics are defined in the code-based `endpoint_registry` and cannot be created or deleted by admins. Admins can only:
+**Important:** Most topics are defined in the code-based `endpoint_registry`, but admin create/delete endpoints also exist in the API (currently not used by the Admin UI). In practice, admins mainly:
 - Update topic configurations (tier level, dual LLM models, temperature, prompts, etc.)
 - Manage prompt content (system, user, assistant prompts)
 - Test topic configurations before activation
@@ -55,16 +56,19 @@ Each topic has a `tier_level` that controls:
 | GET /models | ✅ Implemented | |
 | POST /topics/validate | ✅ Implemented | |
 | POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
+| GET /topics/stats | ✅ Implemented | Dashboard metrics endpoint used by LLM dashboard |
 | GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
 
 ---
 
 ## Authentication
 
-All admin endpoints require:
+All endpoints in this document require a bearer token:
 
-- **Authentication**: Bearer token with admin role
-- **Authorization**: `admin:topics:*` permission scope
+- **Authentication**: `Authorization: Bearer {token}` must be present and valid
+- **Authorization (current implementation)**:
+  - `/api/v1/admin/models*` endpoints enforce admin access (`ADMIN` or `OWNER`) via `require_admin_access`
+  - `/api/v1/admin/topics*` endpoints enforce admin access (`ADMIN` or `OWNER`) via `require_admin_access`
 - **Headers**:
   - `Authorization: Bearer {token}`
   - `Content-Type: application/json`
@@ -105,8 +109,8 @@ GET /api/v1/admin/topics
       "category": "core_values",
       "topic_type": "conversation_coaching",
       "tier_level": "free",
-      "basic_model_code": "claude-3-5-sonnet-20241022",
-      "premium_model_code": "claude-3-5-sonnet-20241022",
+      "basic_model_code": "CLAUDE_3_5_HAIKU",
+      "premium_model_code": "CLAUDE_3_5_SONNET_V2",
       "temperature": 0.7,
       "max_tokens": 2000,
       "is_active": true,
@@ -176,8 +180,8 @@ GET /api/v1/admin/topics/{topic_id}
   "topic_type": "conversation_coaching",
   "description": "Explore your core values through conversation",
   "tier_level": "free",
-  "basic_model_code": "claude-3-5-sonnet-20241022",
-  "premium_model_code": "claude-3-5-sonnet-20241022",
+  "basic_model_code": "CLAUDE_3_5_HAIKU",
+  "premium_model_code": "CLAUDE_3_5_SONNET_V2",
   "temperature": 0.7,
   "max_tokens": 2000,
   "top_p": 1.0,
@@ -244,7 +248,7 @@ GET /api/v1/admin/topics/{topic_id}
     "max_messages_to_llm": 30,
     "inactivity_timeout_minutes": 30,
     "session_ttl_days": 14,
-    "estimated_messages": 20,
+    "max_turns": 20,
     "extraction_model_code": "CLAUDE_3_5_HAIKU"
   },
   "response_schema": null,
@@ -313,8 +317,20 @@ For topics with `topic_type: "conversation_coaching"`, the response includes `co
 | `max_messages_to_llm` | integer | 5-100 | 30 | Maximum messages to include in LLM context (sliding window) |
 | `inactivity_timeout_minutes` | integer | 5-1440 | 30 | Minutes of inactivity before session auto-pauses |
 | `session_ttl_days` | integer | 1-90 | 14 | Days to keep paused/completed sessions before deletion |
-| `estimated_messages` | integer | 5-100 | 20 | Estimated messages for a typical session (for progress calculation) |
+| `max_turns` | integer | 0-100 | 0 | Maximum conversation turns (0 means unlimited) |
 | `extraction_model_code` | string | - | CLAUDE_3_5_HAIKU | MODEL_REGISTRY code for extraction (e.g., CLAUDE_3_5_HAIKU, CLAUDE_3_5_SONNET_V2) |
+
+**Compatibility Note:** Existing records may still contain `estimated_messages`. The API maps legacy `estimated_messages` to `max_turns` for backward compatibility.
+
+### Extraction Model Runtime Behavior
+
+For `conversation_coaching` completion/extraction:
+
+- API uses `conversation_config.extraction_model_code` when provided
+- Default extraction model is `CLAUDE_3_5_HAIKU`
+- If configured extraction model code is not present in `MODEL_REGISTRY`, runtime falls back to `CLAUDE_3_HAIKU`
+- Extraction call runs with `temperature=0.3`
+- Extraction max tokens are capped to `min(8192, extraction_model.max_tokens)`
 
 **Template Status:**
 
@@ -355,51 +371,23 @@ POST /api/v1/admin/topics
   "topic_type": "conversation_coaching",
   "description": "Discover your life's purpose through guided conversation",
   "tier_level": "free",
-  "basic_model_code": "claude-3-5-sonnet-20241022",
-  "premium_model_code": "claude-3-5-sonnet-20241022",
+  "basic_model_code": "CLAUDE_3_5_HAIKU",
+  "premium_model_code": "CLAUDE_3_5_SONNET_V2",
   "temperature": 0.7,
   "max_tokens": 2000,
   "top_p": 1.0,
   "frequency_penalty": 0.0,
   "presence_penalty": 0.0,
   "is_active": false,
-  "display_order": 10,
-  "allowed_parameters": [
-    {
-      "name": "user_name",
-      "type": "string",
-      "required": true,
-      "description": "User's display name"
-    },
-    {
-      "name": "core_values",
-      "type": "string",
-      "required": false,
-      "description": "User's defined core values"
-    }
-  ]
+  "display_order": 10
 }
 ```
 
-**Allowed Parameter Types:**
+**Notes:**
 
-- `string`: Text value
-- `integer`: Whole number
-- `float`: Decimal number
-- `boolean`: true/false
-- `array`: List of values
-- `object`: Nested structure
-
-**Parameter Definition Schema:**
-
-```json
-{
-  "name": "parameter_name",
-  "type": "string|integer|float|boolean|array|object",
-  "required": true,
-  "description": "Human-readable description"
-}
-```
+- `CreateTopicRequest` does not accept `conversation_config` or `allowed_parameters`
+- For `conversation_coaching` topics, configure extraction settings using `PUT /api/v1/admin/topics/{topic_id}` with `conversation_config`
+- `allowed_parameters` are derived from endpoint registry and returned by topic detail endpoints
 
 **Validation Rules:**
 
@@ -407,11 +395,11 @@ POST /api/v1/admin/topics
 |-------|-------|------------------------|
 | `topic_id` | Required, unique, lowercase, snake_case, 3-50 chars | Regex: `^[a-z][a-z0-9_]*$` |
 | `topic_name` | Required, 3-100 chars | Any printable characters |
-| `category` | Required | Enum: `onboarding`, `conversation`, `insights`, `strategic_planning`, `operations_ai`, `operations_strategic_integration`, `analysis` |
-| `topic_type` | Required | Enum: `conversation_coaching`, `single_shot`, `measure_system` |
+| `category` | Required | String (not enum-validated in request model) |
+| `topic_type` | Required | Enum currently validated by create model: `conversation_coaching`, `single_shot`, `measure_system` |
 | `tier_level` | Optional, default `free` | Enum: `free`, `basic`, `premium`, `ultimate` |
-| `basic_model_code` | Required, must be valid model code | See "Supported Model Codes" below (used for FREE/BASIC tiers) |
-| `premium_model_code` | Required, must be valid model code | See "Supported Model Codes" below (used for PREMIUM/ULTIMATE tiers) |
+| `basic_model_code` | Required, must be valid model code | Use `GET /api/v1/admin/models` values (used for FREE/BASIC tiers) |
+| `premium_model_code` | Required, must be valid model code | Use `GET /api/v1/admin/models` values (used for PREMIUM/ULTIMATE tiers) |
 | `temperature` | Required, float | 0.0-2.0 |
 | `max_tokens` | Required, integer | 1-100000 (model dependent) |
 | `top_p` | Optional, float, default 1.0 | 0.0-1.0 |
@@ -423,31 +411,29 @@ POST /api/v1/admin/topics
 
 **Supported Model Codes:**
 
-- `claude-3-5-sonnet-20241022` (recommended)
-- `claude-3-5-haiku-20241022`
-- `claude-3-opus-20240229`
-- `claude-3-sonnet-20240229`
-- `claude-3-haiku-20240307`
-- `gpt-4o`
-- `gpt-4-turbo`
-- `gpt-4`
-- `gpt-3.5-turbo`
+Model codes are sourced from `MODEL_REGISTRY` and should be retrieved from `GET /api/v1/admin/models`.
 
-**Category Descriptions:**
+Examples currently in use:
+- `CLAUDE_3_5_HAIKU`
+- `CLAUDE_3_5_SONNET_V2`
+- `CLAUDE_OPUS_4_5`
+- `GPT_4O`
 
-- `core_values`: Topics related to identifying and exploring personal values
-- `purpose`: Life purpose and meaning discovery
-- `vision`: Future vision and aspiration setting
-- `goals`: Goal setting and achievement planning
-- `strategy`: Strategic planning and decision making
-- `measure`: Key performance indicators and metrics
-- `custom`: Custom topics not fitting standard categories
+**Category Values in Registry/List Filtering:**
+
+- `onboarding`
+- `conversation`
+- `insights`
+- `strategic_planning`
+- `operations_ai`
+- `operations_strategic_integration`
+- `analysis`
 
 **Topic Type Descriptions:**
 
 - `conversation_coaching`: Interactive conversational coaching sessions (multi-turn)
 - `single_shot`: One-shot evaluations, assessments, and analysis
-- `measure_system`: Measure calculation and tracking
+- `measure_system`: KPI/measure system topic type accepted by current create endpoint validator
 
 **Prompt Types by Topic Type:**
 
@@ -455,7 +441,7 @@ POST /api/v1/admin/topics
 |------------|-----------------|-------------|
 | `conversation_coaching` | `system`, `initiation`, `resume`, `extraction` | System defines coach behavior; initiation starts new sessions; resume continues paused sessions; extraction captures results |
 | `single_shot` | `system`, `user` | System defines behavior; user template with parameters |
-| `measure_system` | `system`, `user` | System defines calculation behavior; user template for input |
+| `measure_system` | `system`, `user` | System defines KPI/measure calculation behavior; user template for input |
 
 **Response:**
 
@@ -515,8 +501,8 @@ PUT /api/v1/admin/topics/{topic_id}
   "topic_name": "Core Values - Updated Name",
   "description": "Updated description",
   "tier_level": "basic",
-  "basic_model_code": "claude-3-5-haiku-20241022",
-  "premium_model_code": "claude-3-5-sonnet-20241022",
+  "basic_model_code": "CLAUDE_3_5_HAIKU",
+  "premium_model_code": "CLAUDE_3_5_SONNET_V2",
   "temperature": 0.5,
   "max_tokens": 1500,
   "is_active": true,
@@ -525,17 +511,9 @@ PUT /api/v1/admin/topics/{topic_id}
     "max_messages_to_llm": 30,
     "inactivity_timeout_minutes": 45,
     "session_ttl_days": 14,
-    "estimated_messages": 25,
+    "max_turns": 25,
     "extraction_model_code": "CLAUDE_3_5_SONNET_V2"
-  },
-  "allowed_parameters": [
-    {
-      "name": "user_name",
-      "type": "string",
-      "required": true,
-      "description": "User's display name"
-    }
-  ]
+  }
 }
 ```
 
@@ -545,7 +523,7 @@ PUT /api/v1/admin/topics/{topic_id}
 - Cannot update `topic_id`
 - Cannot update `category` or `topic_type` (create new topic instead)
 - Cannot update `created_at` or `created_by`
-- `allowed_parameters` replaces entire list when provided
+- `allowed_parameters` is not part of `UpdateTopicRequest`; allowed parameters are derived from endpoint registry
 - `conversation_config` is only applicable for `conversation_coaching` topic types
 
 **Response:**
@@ -619,7 +597,7 @@ GET /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 | Parameter | Type | Required | Description | Allowed Values |
 |-----------|------|----------|-------------|----------------|
 | `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
-| `prompt_type` | string | Yes | Type of prompt | Enum: `system`, `user`, `assistant` |
+| `prompt_type` | string | Yes | Type of prompt | Any `PromptType` value. Effective values are constrained by topic registry allowed prompt types |
 
 **Response:**
 
@@ -637,7 +615,8 @@ GET /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 **Status Codes:**
 
 - `200 OK`: Success
-- `404 Not Found`: Topic or prompt not found
+- `404 Not Found`: Prompt not found on topic
+- `422 Unprocessable Entity`: Topic not found in DB/registry, or topic exists in registry but no prompts are stored yet
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 
@@ -658,7 +637,7 @@ PUT /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 | Parameter | Type | Required | Description | Allowed Values |
 |-----------|------|----------|-------------|----------------|
 | `topic_id` | string | Yes | Unique topic identifier | snake_case, 3-50 chars |
-| `prompt_type` | string | Yes | Type of prompt | Enum: `system`, `user`, `assistant` |
+| `prompt_type` | string | Yes | Type of prompt | Any `PromptType` value. Effective values are constrained by topic registry allowed prompt types |
 
 **Request Body:**
 
@@ -682,7 +661,7 @@ PUT /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
   "prompt_type": "system",
   "s3_key": "prompts/core_values_coaching/system.md",
   "updated_at": "2024-11-13T16:30:00Z",
-  "version": "1.2.0",
+  "version": null,
   "message": "Prompt updated successfully"
 }
 ```
@@ -690,8 +669,8 @@ PUT /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 **Status Codes:**
 
 - `200 OK`: Success
-- `400 Bad Request`: Validation error
-- `404 Not Found`: Topic not found
+- `404 Not Found`: Prompt not found on topic
+- `422 Unprocessable Entity`: Invalid/disallowed prompt type, or topic not found in DB/registry
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 
@@ -718,7 +697,7 @@ POST /api/v1/admin/topics/{topic_id}/prompts
 
 **Validation:**
 
-- `prompt_type`: Required, enum: `system`, `user`, `assistant`
+- `prompt_type`: Required, any `PromptType` value. Must be allowed for the specific topic by endpoint registry rules.
 - `content`: Required, markdown text, 1-50,000 chars, UTF-8 encoded
 
 **Response:**
@@ -736,9 +715,9 @@ POST /api/v1/admin/topics/{topic_id}/prompts
 **Status Codes:**
 
 - `201 Created`: Success
-- `400 Bad Request`: Validation error
+- `422 Unprocessable Entity`: Validation error (invalid prompt type or disallowed prompt type/topic mismatch)
 - `409 Conflict`: Prompt type already exists
-- `404 Not Found`: Topic not found
+- `422 Unprocessable Entity`: Topic not found in DB/registry
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 
@@ -766,6 +745,7 @@ DELETE /api/v1/admin/topics/{topic_id}/prompts/{prompt_type}
 
 - `200 OK`: Success
 - `404 Not Found`: Prompt not found
+- `422 Unprocessable Entity`: Topic not found in database
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 
@@ -785,37 +765,36 @@ GET /api/v1/admin/models
 
 ```json
 {
-  "models": [
-    {
-      "model_code": "claude-3-5-sonnet-20241022",
-      "model_name": "Claude 3.5 Sonnet",
-      "provider": "anthropic",
-      "capabilities": ["chat", "function_calling"],
-      "context_window": 200000,
-      "max_output_tokens": 4096,
-      "cost_per_input_million": 3.00,
-      "cost_per_output_million": 15.00,
-      "is_active": true
-    },
-    {
-      "model_code": "claude-3-5-haiku-20241022",
-      "model_name": "Claude 3.5 Haiku",
-      "provider": "anthropic",
-      "capabilities": ["chat"],
-      "context_window": 200000,
-      "max_output_tokens": 4096,
-      "cost_per_input_million": 0.80,
-      "cost_per_output_million": 4.00,
-      "is_active": true
-    }
-  ]
+  "success": true,
+  "data": {
+    "models": [
+      {
+        "code": "CLAUDE_3_5_SONNET_V2",
+        "provider": "bedrock",
+        "modelName": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "version": "20241022",
+        "capabilities": ["chat", "analysis", "streaming", "function_calling", "vision"],
+        "maxTokens": 200000,
+        "costPer1kTokens": 0.003,
+        "isActive": true
+      }
+    ],
+    "providers": ["bedrock", "openai"],
+    "totalCount": 2
+  }
 }
 ```
+
+**Response Notes:**
+- Wrapped in `ApiResponse` (`success`, `data`, optional `error`)
+- Field names follow current API aliases (`modelName`, `maxTokens`, `costPer1kTokens`, `isActive`, `totalCount`)
+- Pricing is returned as a single `costPer1kTokens` value
 
 **Status Codes:**
 
 - `200 OK`: Success
 - `401 Unauthorized`: Missing or invalid auth token
+- `403 Forbidden`: Insufficient permissions
 
 ---
 
@@ -835,24 +814,17 @@ POST /api/v1/admin/topics/validate
 {
   "topic_id": "test_topic",
   "topic_name": "Test Topic",
-  "category": "custom",
+  "category": "analysis",
   "topic_type": "single_shot",
   "tier_level": "free",
-  "basic_model_code": "claude-3-5-sonnet-20241022",
-  "premium_model_code": "claude-3-5-sonnet-20241022",
+  "basic_model_code": "CLAUDE_3_5_HAIKU",
+  "premium_model_code": "CLAUDE_3_5_SONNET_V2",
   "temperature": 0.7,
   "max_tokens": 2000,
   "prompts": [
     {
       "prompt_type": "system",
       "content": "Test system prompt with {user_name}"
-    }
-  ],
-  "allowed_parameters": [
-    {
-      "name": "user_name",
-      "type": "string",
-      "required": true
     }
   ]
 }
@@ -883,11 +855,7 @@ POST /api/v1/admin/topics/validate
     }
   ],
   "warnings": [
-    {
-      "field": "temperature",
-      "message": "High temperature may produce inconsistent results",
-      "code": "HIGH_TEMPERATURE"
-    }
+    "Temperature 1.2 is high; may produce less consistent results"
   ]
 }
 ```
@@ -895,8 +863,9 @@ POST /api/v1/admin/topics/validate
 **Status Codes:**
 
 - `200 OK`: Validation complete (check `valid` field)
-- `400 Bad Request`: Malformed request
+- `422 Unprocessable Entity`: Malformed request body / schema validation error
 - `401 Unauthorized`: Missing or invalid auth token
+- `403 Forbidden`: Insufficient permissions
 
 ---
 
@@ -960,8 +929,8 @@ POST /api/v1/admin/topics/{topic_id}/test
   "response_model": "WebsiteScanResponse",
   "response_schema": {"title": "WebsiteScanResponse", "type": "object", "properties": {"scan_id": {"type": "string"}, "captured_at": {"type": "string"}}},
   "llm_metadata": {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
+    "provider": "bedrock",
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
     "usage": {"prompt_tokens": 1200, "completion_tokens": 600, "total_tokens": 1800},
     "finish_reason": "stop"
   },
@@ -989,6 +958,77 @@ POST /api/v1/admin/topics/{topic_id}/test
 - `401 Unauthorized`: Missing or invalid auth token
 - `403 Forbidden`: Insufficient permissions
 - `500 Internal Server Error`: AI processing or serialization failure
+
+---
+
+### 13. Get Dashboard Topic Stats
+
+**Purpose:** Retrieve admin dashboard-level LLM metrics (templates, model utilization, interactions summary, system health).
+
+**Endpoint:**
+
+```http
+GET /api/v1/admin/topics/stats
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `start_date` | string (ISO 8601) | No | Filter window start |
+| `end_date` | string (ISO 8601) | No | Filter window end |
+| `tier` | string | No | Filter by tier |
+| `interaction_code` | string | No | Filter by interaction code |
+| `model_code` | string | No | Filter by model code |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "interactions": {
+      "total": 0,
+      "by_tier": {},
+      "by_model": {},
+      "trend": []
+    },
+    "templates": {
+      "total": 12,
+      "active": 10,
+      "inactive": 2
+    },
+    "models": {
+      "total": 15,
+      "active": 4,
+      "utilization": {
+        "CLAUDE_3_5_HAIKU": 8,
+        "CLAUDE_3_5_SONNET_V2": 6
+      }
+    },
+    "system_health": {
+      "overall_status": "healthy",
+      "validation_status": "healthy",
+      "last_validation": "2026-02-13T12:00:00Z",
+      "critical_issues": [],
+      "warnings": [],
+      "recommendations": [],
+      "service_status": {
+        "configurations": {"status": "operational", "last_check": "2026-02-13T12:00:00Z", "response_time_ms": 12},
+        "templates": {"status": "operational", "last_check": "2026-02-13T12:00:00Z", "response_time_ms": 18},
+        "models": {"status": "operational", "last_check": "2026-02-13T12:00:00Z", "response_time_ms": 7}
+      }
+    },
+    "last_updated": "2026-02-13T12:00:00Z"
+  }
+}
+```
+
+**Status Codes:**
+
+- `200 OK`: Success
+- `401 Unauthorized`: Missing or invalid auth token
+- `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: Stats retrieval failed
 
 ---
 
@@ -1056,19 +1096,8 @@ Topics are defined in the `endpoint_registry` code. Admins configure them by:
 
 ## Error Codes
 
-| Code | HTTP Status | Meaning |
-|------|-------------|---------|
-| `TOPIC_NOT_FOUND` | 404 | Topic ID does not exist |
-| `TOPIC_EXISTS` | 409 | Topic ID already taken |
-| `INVALID_TOPIC_ID` | 400 | Topic ID format invalid |
-| `INVALID_MODEL` | 400 | Model code not recognized |
-| `PROMPT_NOT_FOUND` | 404 | Prompt type not found |
-| `PROMPT_EXISTS` | 409 | Prompt type already exists |
-| `VALIDATION_ERROR` | 400 | Request validation failed |
-| `UNAUTHORIZED` | 401 | Missing or invalid auth |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `S3_ERROR` | 500 | Cloud storage error |
-| `CACHE_ERROR` | 500 | Cache operation failed |
+Error payloads are returned as FastAPI `HTTPException` details and are endpoint-specific.
+Use per-endpoint status code tables above as the source of truth.
 
 ---
 
@@ -1092,19 +1121,10 @@ X-RateLimit-Reset: 1699987200
 
 ## Permissions
 
-Required permission scopes:
+Current backend enforcement:
 
-| Action | Permission |
-|--------|-----------|
-| List topics | `admin:topics:read` |
-| View topic | `admin:topics:read` |
-| Create topic | `admin:topics:write` |
-| Update topic | `admin:topics:write` |
-| Delete topic | `admin:topics:delete` |
-| View prompts | `admin:topics:read` |
-| Update prompts | `admin:prompts:write` |
-| Test topic | `admin:topics:write` |
-| View stats | `admin:topics:stats` |
+- `GET/PUT /api/v1/admin/models*`: requires admin role (`ADMIN` or `OWNER`) via `require_admin_access`
+- `/api/v1/admin/topics*`: requires admin role (`ADMIN` or `OWNER`) via `require_admin_access`
 
 ---
 

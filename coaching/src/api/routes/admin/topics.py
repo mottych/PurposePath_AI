@@ -22,7 +22,6 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import structlog
-from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
@@ -32,7 +31,7 @@ from coaching.src.api.dependencies.ai_engine import (
     get_jwt_token,
     get_unified_ai_engine,
 )
-from coaching.src.api.models.auth import UserContext
+from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.application.ai_engine.response_serializer import SerializationError
 from coaching.src.application.ai_engine.unified_ai_engine import (
     ParameterValidationError,
@@ -42,6 +41,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngineError,
 )
 from coaching.src.core.constants import TopicType
+from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
     TOPIC_REGISTRY,
@@ -80,6 +80,7 @@ from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, Field
+from shared.models.multitenant import RequestContext
 
 logger = structlog.get_logger()
 
@@ -314,7 +315,7 @@ async def list_topics(
     is_active: bool | None = None,
     search: str | None = None,
     repository: TopicRepository = Depends(get_topic_repository),
-    _user: UserContext = Depends(get_current_context),
+    _user: RequestContext = Depends(require_admin_access),
 ) -> TopicListResponse:
     """List all topics with optional filtering.
 
@@ -402,13 +403,12 @@ async def list_topics(
 async def get_topics_stats(
     start_date: datetime | None = Query(None, description="Start date for filtering (ISO 8601)"),
     end_date: datetime | None = Query(None, description="End date for filtering (ISO 8601)"),
-    tier: str | None = Query(
-        None, description="Filter by tier (free, basic, professional, enterprise)"
-    ),
+    tier: str
+    | None = Query(None, description="Filter by tier (free, basic, professional, enterprise)"),
     interaction_code: str | None = Query(None, description="Filter by interaction code"),
     model_code: str | None = Query(None, description="Filter by model code"),
     topic_repo: TopicRepository = Depends(get_topic_repository),
-    _user: UserContext = Depends(get_current_context),
+    _user: RequestContext = Depends(require_admin_access),
 ) -> dict[str, Any]:
     """
     Get LLM dashboard statistics and metrics.
@@ -590,7 +590,7 @@ async def get_topic(
         Query(description="Include JSON schema of the response model for template design"),
     ] = False,
     repository: TopicRepository = Depends(get_topic_repository),
-    _user: UserContext = Depends(get_current_context),
+    _user: RequestContext = Depends(require_admin_access),
 ) -> TopicDetail:
     """Get detailed information about a specific topic.
 
@@ -659,7 +659,7 @@ async def get_topic(
 @router.post("", response_model=CreateTopicResponse, status_code=status.HTTP_201_CREATED)
 async def create_topic(
     request: CreateTopicRequest,
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
 ) -> CreateTopicResponse:
     """Create a new topic.
@@ -743,7 +743,7 @@ async def upsert_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: UpdateTopicRequest,
     response: Response,
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
 ) -> UpsertTopicResponse:
     """Create or update a topic (UPSERT).
@@ -910,8 +910,8 @@ async def upsert_topic(
                     tier_level=request.tier_level
                     if request.tier_level is not None
                     else TierLevel.FREE,
-                    basic_model_code=request.basic_model_code or "claude-3-5-sonnet-20241022",
-                    premium_model_code=request.premium_model_code or "claude-3-5-sonnet-20241022",
+                    basic_model_code=request.basic_model_code or DEFAULT_MODEL_CODE,
+                    premium_model_code=request.premium_model_code or DEFAULT_MODEL_CODE,
                     temperature=request.temperature if request.temperature is not None else 0.7,
                     max_tokens=request.max_tokens if request.max_tokens is not None else 2000,
                     top_p=request.top_p if request.top_p is not None else 1.0,
@@ -964,7 +964,7 @@ async def upsert_topic(
 async def delete_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     hard_delete: bool = Query(False, description="Permanently delete if true"),
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
 ) -> DeleteTopicResponse:
     """Delete a topic (soft delete by default).
@@ -1016,7 +1016,7 @@ async def get_prompt_content(
     prompt_type: Annotated[str, Path(description="Prompt type")],
     repository: TopicRepository = Depends(get_topic_repository),
     s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
-    _user: UserContext = Depends(get_current_context),
+    _user: RequestContext = Depends(require_admin_access),
 ) -> PromptContentResponse:
     """Get prompt content for editing.
 
@@ -1080,7 +1080,7 @@ async def update_prompt_content(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     prompt_type: Annotated[str, Path(description="Prompt type")],
     request: UpdatePromptRequest,
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
     s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> UpdatePromptResponse:
@@ -1197,7 +1197,7 @@ async def update_prompt_content(
 async def create_prompt(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: CreatePromptRequest,
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
     s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> CreatePromptResponse:
@@ -1297,7 +1297,7 @@ async def create_prompt(
 async def delete_prompt(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     prompt_type: Annotated[str, Path(description="Prompt type")],
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     repository: TopicRepository = Depends(get_topic_repository),
     s3_storage: S3PromptStorage = Depends(get_s3_prompt_storage),
 ) -> DeletePromptResponse:
@@ -1358,7 +1358,7 @@ async def delete_prompt(
 @router.post("/validate", response_model=ValidationResult)
 async def validate_topic_config(
     request: ValidateTopicRequest,
-    _user: UserContext = Depends(get_current_context),
+    _user: RequestContext = Depends(require_admin_access),
 ) -> ValidationResult:
     """Validate a topic configuration before saving.
 
@@ -1470,7 +1470,7 @@ def _serialize_response_payload(response: BaseModel | Any) -> dict[str, Any]:
 async def test_topic(
     topic_id: Annotated[str, Path(description="Topic identifier")],
     request: TopicTestRequest,
-    user: UserContext = Depends(get_current_context),
+    user: RequestContext = Depends(require_admin_access),
     unified_engine: UnifiedAIEngine = Depends(get_unified_ai_engine),
     jwt_token: str | None = Depends(get_jwt_token),
 ) -> TopicTestResponse:
