@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Any, ClassVar
 
 from coaching.src.core.constants import TierLevel
+from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
     InvalidTopicTypeError,
@@ -246,6 +247,31 @@ class LLMTopic:
         # Validate max_tokens
         if self.max_tokens <= 0:
             errors.append(f"max_tokens must be positive, got {self.max_tokens}")
+        else:
+            # If model codes are known in the registry, enforce model hard limits.
+            # Topic max_tokens is shared across basic/premium tiers, so it must fit both.
+            model_limits: list[tuple[str, str, int]] = []
+            basic_model = MODEL_REGISTRY.get(self.basic_model_code)
+            if basic_model is not None:
+                model_limits.append(
+                    ("basic_model_code", self.basic_model_code, basic_model.max_tokens)
+                )
+            premium_model = MODEL_REGISTRY.get(self.premium_model_code)
+            if premium_model is not None:
+                model_limits.append(
+                    ("premium_model_code", self.premium_model_code, premium_model.max_tokens)
+                )
+            if model_limits:
+                min_supported_max = min(limit for _, _, limit in model_limits)
+                if self.max_tokens > min_supported_max:
+                    limit_details = ", ".join(
+                        f"{field}={code} (max_tokens={limit})"
+                        for field, code, limit in model_limits
+                    )
+                    errors.append(
+                        f"max_tokens {self.max_tokens} exceeds configured model limits: "
+                        f"{limit_details}"
+                    )
 
         # Validate top_p
         if not (0.0 <= self.top_p <= 1.0):

@@ -41,6 +41,7 @@ logger = structlog.get_logger()
 # Models that require inference profiles (region-prefixed identifiers)
 # These cannot be invoked with direct model IDs
 INFERENCE_PROFILE_MODELS: set[str] = {
+    "anthropic.claude-3-5-haiku-20241022-v1:0",  # Claude 3.5 Haiku
     "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
     "anthropic.claude-opus-4-5-20251101-v1:0",  # Claude Opus 4.5
@@ -54,6 +55,11 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    # Claude 3.5 Haiku (direct and inference profiles)
+    "anthropic.claude-3-5-haiku-20241022-v1:0",
+    "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+    "eu.anthropic.claude-3-5-haiku-20241022-v1:0",
+    "apac.anthropic.claude-3-5-haiku-20241022-v1:0",
     # Claude Sonnet 4.5
     "anthropic.claude-sonnet-4-5-20250929-v1:0",
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -94,6 +100,11 @@ class BedrockLLMProvider:
         "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-haiku-20240307-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # Claude 3.5 Haiku (requires inference profile)
+        "anthropic.claude-3-5-haiku-20241022-v1:0",
+        "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "eu.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "apac.anthropic.claude-3-5-haiku-20241022-v1:0",
         # Claude 3.5 Sonnet v2 (requires inference profile)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
