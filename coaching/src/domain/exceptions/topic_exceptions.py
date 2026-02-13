@@ -55,7 +55,7 @@ class InvalidTopicTypeError(DomainError):
     """
     Raised when a topic has an invalid topic_type value.
 
-    Business Rule: topic_type must be one of: conversation_coaching, single_shot, kpi_system
+    Business Rule: topic_type must be one of: conversation_coaching, single_shot, measure_system
     """
 
     def __init__(self, *, topic_id: str, invalid_type: str) -> None:
@@ -68,7 +68,7 @@ class InvalidTopicTypeError(DomainError):
         """
         super().__init__(
             message=f"Invalid topic type '{invalid_type}' for topic '{topic_id}'. "
-            f"Must be one of: conversation_coaching, single_shot, kpi_system",
+            f"Must be one of: conversation_coaching, single_shot, measure_system",
             code="INVALID_TOPIC_TYPE",
             context={"topic_id": topic_id, "invalid_type": invalid_type},
         )

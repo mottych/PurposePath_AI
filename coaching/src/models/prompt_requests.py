@@ -52,8 +52,8 @@ class CreateTopicRequest(BaseModel):
     )
     topic_type: str = Field(
         ...,
-        pattern=r"^kpi_system$",
-        description="Topic type (only kpi_system allowed via API)",
+        pattern=r"^measure_system$",
+        description="Topic type (only measure_system allowed via API)",
     )
     category: str = Field(
         ...,

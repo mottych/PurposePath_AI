@@ -4,16 +4,17 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import (
-    get_current_context,
     get_s3_prompt_storage,
     get_topic_repository,
 )
-from coaching.src.api.models.auth import UserContext
+from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.api.routes.admin.topics import router
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from shared.models.multitenant import RequestContext, UserRole
 
 pytestmark = pytest.mark.unit
 
@@ -27,13 +28,13 @@ def app() -> FastAPI:
 
 
 @pytest.fixture
-def mock_user() -> UserContext:
+def mock_user() -> RequestContext:
     """Create mock user context."""
-    return UserContext(
+    return RequestContext(
         user_id="test_user_123",
         tenant_id="test_tenant",
-        email="admin@test.com",
-        roles=["admin"],
+        role=UserRole.ADMIN,
+        permissions=["admin_access"],
     )
 
 
@@ -94,12 +95,12 @@ def sample_topic() -> LLMTopic:
 @pytest.fixture
 def client(
     app: FastAPI,
-    mock_user: UserContext,
+    mock_user: RequestContext,
     mock_repository: AsyncMock,
     mock_s3_storage: AsyncMock,
 ) -> TestClient:
     """Create test client with dependency overrides."""
-    app.dependency_overrides[get_current_context] = lambda: mock_user
+    app.dependency_overrides[require_admin_access] = lambda: mock_user
     app.dependency_overrides[get_topic_repository] = lambda: mock_repository
     app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
     return TestClient(app)
@@ -188,6 +189,26 @@ class TestListTopics:
         assert data["page"] == 1
         assert data["page_size"] == 10
         assert data["has_more"] is True  # More than 10 topics available
+
+
+class TestAdminAuthEnforcement:
+    """Tests for admin authorization on topics endpoints."""
+
+    def test_list_topics_requires_admin_role(
+        self, app: FastAPI, mock_repository: AsyncMock, mock_s3_storage: AsyncMock
+    ) -> None:
+        """Non-admin users should receive 403 on admin topics routes."""
+        app.dependency_overrides[get_current_context] = lambda: RequestContext(
+            user_id="member_user",
+            tenant_id="test_tenant",
+            role=UserRole.MEMBER,
+            permissions=[],
+        )
+        app.dependency_overrides[get_topic_repository] = lambda: mock_repository
+        app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
+
+        response = TestClient(app).get("/admin/topics")
+        assert response.status_code == 403
 
 
 class TestGetTopic:
@@ -405,6 +426,27 @@ class TestCreateTopic:
         response = client.post("/admin/topics", json=request_data)
 
         assert response.status_code == 422  # Validation error
+
+    async def test_create_topic_invalid_model_code(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Invalid model codes should be rejected by domain validation."""
+        mock_repository.get.return_value = None
+
+        request_data = {
+            "topic_id": "bad_model_topic",
+            "topic_name": "Bad Model Topic",
+            "category": "test",
+            "topic_type": "conversation_coaching",
+            "basic_model_code": "not_a_model",
+            "premium_model_code": "also_not_a_model",
+            "temperature": 0.7,
+            "max_tokens": 2000,
+        }
+
+        response = client.post("/admin/topics", json=request_data)
+        assert response.status_code == 400
+        assert "MODEL_REGISTRY" in response.json()["detail"]
 
 
 class TestUpsertTopic:

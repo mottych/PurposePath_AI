@@ -201,11 +201,11 @@ class TestLLMTopic:
         )
         assert topic2.topic_type == "single_shot"
 
-        # kpi_system
+        # measure_system
         topic3 = LLMTopic(
             topic_id="kpi",
             topic_name="KPI",
-            topic_type="kpi_system",
+            topic_type="measure_system",
             category="kpi",
             is_active=True,
             basic_model_code="claude-3-5-sonnet-20241022",
@@ -217,7 +217,7 @@ class TestLLMTopic:
             created_at=datetime.now(tz=UTC),
             updated_at=datetime.now(tz=UTC),
         )
-        assert topic3.topic_type == "kpi_system"
+        assert topic3.topic_type == "measure_system"
 
     def test_invalid_topic_type_raises_error(self) -> None:
         """Test that invalid topic_type raises exception."""
@@ -251,8 +251,8 @@ class TestLLMTopic:
         assert item["is_active"] is True
         assert len(item["prompts"]) == 1
         assert item["tier_level"] == "free"
-        assert item["basic_model_code"] == "claude-3-5-sonnet-20241022"
-        assert item["premium_model_code"] == "claude-3-5-sonnet-20241022"
+        assert item["basic_model_code"] == "CLAUDE_3_5_SONNET_V2"
+        assert item["premium_model_code"] == "CLAUDE_3_5_SONNET_V2"
         # DynamoDB requires Decimal for float values
         assert item["temperature"] == Decimal("0.7")
         assert item["max_tokens"] == 2000
@@ -298,8 +298,8 @@ class TestLLMTopic:
         assert len(topic.prompts) == 1
         assert topic.additional_config["key"] == "value"
         # Old config.model_code should migrate to both new fields
-        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
-        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.basic_model_code == "CLAUDE_3_5_SONNET_V2"
+        assert topic.premium_model_code == "CLAUDE_3_5_SONNET_V2"
         assert topic.created_at == datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         assert topic.updated_at == datetime(2025, 1, 20, 12, 0, 0, tzinfo=UTC)
         assert topic.description == "Test description"
@@ -324,7 +324,7 @@ class TestLLMTopic:
             "topic_type": "single_shot",
             "category": "analysis",
             "is_active": True,
-            "model_code": "gpt-5-mini",
+            "model_code": "GPT_4O_MINI",
             # DynamoDB returns these as Decimal
             "temperature": Decimal("0.8"),
             "max_tokens": Decimal("2000"),
@@ -472,8 +472,8 @@ class TestLLMTopicFactory:
         assert topic.description == "Discover and clarify personal core values"
         assert topic.is_active is False  # Default inactive
         assert topic.display_order == 0  # First enum value
-        assert topic.basic_model_code == "claude-3-5-sonnet-20241022"
-        assert topic.premium_model_code == "claude-3-5-sonnet-20241022"
+        assert topic.basic_model_code == "CLAUDE_3_5_SONNET_V2"
+        assert topic.premium_model_code == "CLAUDE_3_5_SONNET_V2"
         assert topic.temperature == 0.7
         assert topic.max_tokens == 2000
         assert topic.prompts == []  # No prompts until configured
