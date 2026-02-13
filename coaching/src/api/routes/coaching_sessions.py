@@ -40,6 +40,12 @@ Error Responses:
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
+from shared.services.eventbridge_client import EventBridgePublisher
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import create_template_processor
 from coaching.src.api.multitenant_dependencies import (
@@ -79,11 +85,6 @@ from coaching.src.services.coaching_session_service import (
     TopicNotActiveError,
     TopicsWithStatusResponse,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, Field
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
-from shared.services.eventbridge_client import EventBridgePublisher
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/ai/coaching", tags=["coaching-sessions"])
@@ -142,6 +143,9 @@ class MessageJobStatusResponse(BaseModel):
     message: str | None = Field(default=None, description="Coach's response (when completed)")
     is_final: bool | None = Field(default=None, description="Whether this is the final message")
     result: dict[str, Any] | None = Field(default=None, description="Extraction result (if final)")
+    turn: int | None = Field(default=None, description="Current turn number")
+    max_turns: int | None = Field(default=None, description="Maximum turns allowed")
+    message_count: int | None = Field(default=None, description="Total messages in conversation")
     error: str | None = Field(default=None, description="Error message (if failed)")
     processing_time_ms: int | None = Field(
         default=None, description="Actual processing time (if completed/failed)"
@@ -644,6 +648,9 @@ async def get_message_job_status(
             response.message = job.result.get("message")
             response.is_final = job.result.get("is_final")
             response.result = job.result.get("result")
+            response.turn = job.result.get("turn")
+            response.max_turns = job.result.get("max_turns")
+            response.message_count = job.result.get("message_count")
 
         # Add error if failed
         if job.status == AIJobStatus.FAILED:
