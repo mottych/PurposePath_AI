@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Add to project
-        if: ${{ vars.GH_PROJECT_URL != '' && secrets.GH_PROJECTS_TOKEN != '' }}
+        if: ${{ vars.GH_PROJECT_URL != '' }}
         uses: actions/add-to-project@v0.6.0
         with:
           project-url: ${{ vars.GH_PROJECT_URL }}
-          github-token: ${{ secrets.GH_PROJECTS_TOKEN }}
+          github-token: ${{ secrets.GH_PROJECTS_TOKEN || github.token }}
       - name: Skip project automation (not configured)
-        if: ${{ vars.GH_PROJECT_URL == '' || secrets.GH_PROJECTS_TOKEN == '' }}
-        run: echo "Skipping add-to-project because GH_PROJECT_URL or GH_PROJECTS_TOKEN is not configured."
+        if: ${{ vars.GH_PROJECT_URL == '' }}
+        run: echo "Skipping add-to-project because GH_PROJECT_URL is not configured."
