@@ -181,6 +181,9 @@ Authorization: Bearer <jwt_token>
     "status": "pending",
     "message": null,
     "is_final": null,
+    "turn": null,
+    "max_turns": null,
+    "message_count": null,
     "result": null,
     "error": null,
     "processing_time_ms": null
@@ -200,6 +203,9 @@ Authorization: Bearer <jwt_token>
     "status": "processing",
     "message": null,
     "is_final": null,
+    "turn": null,
+    "max_turns": null,
+    "message_count": null,
     "result": null,
     "error": null,
     "processing_time_ms": null
@@ -219,6 +225,9 @@ Authorization: Bearer <jwt_token>
     "status": "completed",
     "message": "That's wonderful! Integrity shows up in how you communicate transparently with your team...",
     "is_final": false,
+    "turn": 3,
+    "max_turns": 10,
+    "message_count": 6,
     "result": null,
     "error": null,
     "processing_time_ms": 12450
@@ -227,7 +236,7 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
-⚠️ **Note**: `turn`, `max_turns`, and `message_count` are **NOT included** in polling response (WebSocket only).
+✅ **Note**: `turn`, `max_turns`, and `message_count` are included in polling responses for parity with WebSocket completion semantics.
 
 #### State: completed (final turn with extraction)
 
@@ -240,6 +249,9 @@ Authorization: Bearer <jwt_token>
     "status": "completed",
     "message": "Thank you for this wonderful conversation! Here are your three core values...",
     "is_final": true,
+    "turn": 10,
+    "max_turns": 10,
+    "message_count": 20,
     "result": {
       "identified_values": [
         "Integrity: Transparent communication",
@@ -271,6 +283,9 @@ Authorization: Bearer <jwt_token>
     "status": "failed",
     "message": null,
     "is_final": null,
+    "turn": null,
+    "max_turns": null,
+    "message_count": null,
     "result": null,
     "error": "Session not found: f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "processing_time_ms": 2100
@@ -693,7 +708,10 @@ const pollMessageStatus = async (jobId: string) => {
           sessionId: data.data.session_id,
           data: {
             message: data.data.message,
-            isFinal: data.data.isFinal,
+            isFinal: data.data.is_final,
+            turn: data.data.turn,
+            maxTurns: data.data.max_turns,
+            messageCount: data.data.message_count,
             result: data.data.result
           }
         });

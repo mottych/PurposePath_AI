@@ -19,6 +19,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from pydantic import BaseModel, Field
+
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.core.structured_output import (
@@ -40,7 +42,6 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic
@@ -1141,8 +1142,61 @@ class CoachingSessionService:
                 cleaned = cleaned[:-3]
             return cleaned.strip()
 
-        # Pattern 3: Plain JSON (no wrapper)
+        # Pattern 3: Mixed text with fenced JSON block somewhere in the response
+        fenced_patterns = [
+            r"```json\s*(\{.*?\})\s*```",
+            r"```\s*(\{.*?\})\s*```",
+        ]
+        for pattern in fenced_patterns:
+            match = re.search(pattern, cleaned, flags=re.DOTALL)
+            if match:
+                return match.group(1).strip()
+
+        # Pattern 4: First balanced JSON object embedded in plain text
+        extracted_object = self._extract_first_json_object(cleaned)
+        if extracted_object is not None:
+            return extracted_object
+
+        # Pattern 5: Plain JSON (no wrapper)
         return cleaned
+
+    def _extract_first_json_object(self, text: str) -> str | None:
+        """Extract first balanced JSON object from text.
+
+        This supports mixed model outputs like:
+        - Natural language explanation, then a JSON object
+        - Text before/after a JSON object without markdown fences
+        """
+        start = text.find("{")
+        if start == -1:
+            return None
+
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for idx, char in enumerate(text[start:], start=start):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+                continue
+
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : idx + 1].strip()
+
+        return None
 
     # =========================================================================
     # Session Lifecycle - Complete
