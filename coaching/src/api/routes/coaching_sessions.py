@@ -40,12 +40,6 @@ Error Responses:
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, Field
-from shared.models.multitenant import RequestContext
-from shared.models.schemas import ApiResponse
-from shared.services.eventbridge_client import EventBridgePublisher
-
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import create_template_processor
 from coaching.src.api.multitenant_dependencies import (
@@ -85,6 +79,11 @@ from coaching.src.services.coaching_session_service import (
     TopicNotActiveError,
     TopicsWithStatusResponse,
 )
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
+from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
+from shared.services.eventbridge_client import EventBridgePublisher
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/ai/coaching", tags=["coaching-sessions"])

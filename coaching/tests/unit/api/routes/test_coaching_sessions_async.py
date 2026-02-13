@@ -3,10 +3,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from shared.models.multitenant import RequestContext, UserRole
-
 from coaching.src.api.routes.coaching_sessions import get_message_job_status
 from coaching.src.domain.entities.ai_job import AIJob, AIJobStatus, AIJobType
+from shared.models.multitenant import RequestContext, UserRole
 
 
 @pytest.mark.asyncio
