@@ -237,8 +237,8 @@ All fields are optional. Only provided fields will be updated.
 | Field | Type | Description |
 |-------|------|-------------|
 | `personId` | string (GUID) | Person responsible for this link. **When changed, propagates to the Measure and all other links for that Measure.** |
-| `goalId` | string (GUID) | Goal association. Set to associate with a goal or change association. Note: Removing goal (by setting to null) will also remove strategy. |
-| `strategyId` | string (GUID) | Strategy association. Requires a goal to be set. Must belong to the specified goal. |
+| `goalId` | string (GUID) or null | Goal association. Omitted = no change; value = set/change goal; explicit null = remove goal. When goal is explicitly removed and `strategyId` is omitted, strategy is auto-removed. |
+| `strategyId` | string (GUID) or null | Strategy association. Omitted = no change; value = set/change strategy; explicit null = remove strategy. Requires a goal to be set after update. |
 | `thresholdPct` | decimal | Threshold percentage (0-100) |
 | `riskThresholdPct` | decimal | Risk threshold percentage (0-100) |
 | `weight` | decimal | Relative weight/importance |
@@ -254,6 +254,10 @@ All fields are optional. Only provided fields will be updated.
 - **Strategy Validation:** When `strategyId` is provided, the system validates that:
   - A `goalId` is set (either in the request or already on the link)
   - The strategy exists and belongs to the specified goal
+- **Null vs Omitted Semantics (Issue #663):** For `goalId` and `strategyId` updates:
+  - **Omitted field**: existing value is preserved
+  - **Provided value**: association is updated
+  - **Provided as `null`**: association is explicitly removed
 
 #### Response
 
