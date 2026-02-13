@@ -212,6 +212,9 @@ class LLMTopic:
     LEGACY_MODEL_CODE_ALIASES: ClassVar[dict[str, str]] = {
         "claude-3-5-sonnet-20241022": "CLAUDE_3_5_SONNET_V2",
         "claude-3-5-haiku-20241022": "CLAUDE_3_5_HAIKU",
+        "claude-haiku": "CLAUDE_3_5_HAIKU",
+        "gpt-4": "GPT_4O",
+        "gpt-4-turbo": "GPT_4O",
         "gpt-4o": "GPT_4O",
         "gpt-4o-mini": "GPT_4O_MINI",
     }
@@ -242,6 +245,8 @@ class LLMTopic:
     def normalize_model_code(cls, model_code: str | None) -> str:
         """Normalize legacy model identifiers to MODEL_REGISTRY code format."""
         if model_code is None:
+            return DEFAULT_MODEL_CODE
+        if not isinstance(model_code, str):
             return DEFAULT_MODEL_CODE
 
         candidate = model_code.strip()
