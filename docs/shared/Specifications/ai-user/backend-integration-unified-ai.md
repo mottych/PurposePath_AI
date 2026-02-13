@@ -663,11 +663,12 @@ and summarizes the conversation so far. Works for both PAUSED and ACTIVE session
 
 #### POST /ai/coaching/message
 
-Send a message in an active coaching session.
+Send a message in an active coaching session using async execution.
 
-**CHANGED in v2.6:** No longer checks idle timeout. Messages continue active conversations
-even if idle > 30 minutes (user may have chat window open with breaks). Only rejects
-messages to explicitly PAUSED sessions.
+**CHANGED in v2.7:**
+- Endpoint returns `202 Accepted` immediately with a `job_id`
+- AI response is delivered asynchronously (WebSocket event or polling endpoint)
+- Polling response now includes `turn`, `max_turns`, and `message_count`
 
 **Full URL:** `{BASE_URL}/ai/coaching/message`
 
@@ -680,27 +681,18 @@ messages to explicitly PAUSED sessions.
 }
 ```
 
-**Response (In Progress):**
+**Response (202 Accepted):**
 
 ```json
 {
   "success": true,
   "data": {
+    "job_id": "5517f5a7-8886-4d83-a083-add50c663dc6",
     "session_id": "sess_abc123",
-    "message": "That's wonderful! Can you tell me more about how integrity shows up in your daily business decisions?",
-    "status": "active",
-    "turn": 3,
-    "max_turns": 10,
-    "is_final": false,
-    "message_count": 6,
-    "result": null,
-    "metadata": {
-      "model": "CLAUDE_3_5_SONNET_V2",
-      "processing_time_ms": 1234,
-      "tokens_used": 567
-    }
+    "status": "pending",
+    "estimated_duration_ms": 45000
   },
-  "message": "Message processed successfully",
+  "message": "Message job created, processing asynchronously",
   "error": null,
   "error_code": null,
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -708,55 +700,60 @@ messages to explicitly PAUSED sessions.
 }
 ```
 
-**Error Response (Session Paused):**
-
-If session is explicitly PAUSED (not just idle), returns HTTP 400:
-
-```json
-{
-  "code": "SESSION_NOT_ACTIVE",
-  "message": "Session is not active (status: paused)",
-  "current_status": "paused"
-}
-```
-
-Frontend should catch this and prompt user to resume or start new session.
-
-**Response (Auto-Completed):**
+**Polling endpoint:** `GET /ai/coaching/message/{job_id}`
 
 ```json
 {
   "success": true,
   "data": {
+    "job_id": "5517f5a7-8886-4d83-a083-add50c663dc6",
     "session_id": "sess_abc123",
-    "message": "Thank you for this wonderful conversation! I've captured your core values...",
     "status": "completed",
-    "turn": 8,
+    "message": "That's wonderful! Can you tell me more about how integrity shows up in your daily business decisions?",
+    "is_final": false,
+    "result": null,
+    "turn": 3,
     "max_turns": 10,
-    "is_final": true,
-    "message_count": 16,
+    "message_count": 6,
+    "error": null,
+    "processing_time_ms": 1234
+  },
+  "message": "Job status: completed",
+  "error": null,
+  "error_code": null,
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-02-08T21:45:23.123456Z"
+}
+```
+
+**WebSocket completion event (`ai.message.completed`)**:
+
+```json
+{
+  "eventType": "ai.message.completed",
+  "jobId": "5517f5a7-8886-4d83-a083-add50c663dc6",
+  "sessionId": "sess_abc123",
+  "tenantId": "tenant-123",
+  "userId": "user-123",
+  "data": {
+    "message": "Thank you for this wonderful conversation! I've captured your core values...",
+    "isFinal": true,
+    "turn": 8,
+    "maxTurns": 10,
+    "messageCount": 16,
     "result": {
       "core_values": ["Integrity", "Innovation", "Collaboration"],
       "value_descriptions": {
         "Integrity": "Doing the right thing even when no one is watching",
         "Innovation": "Constantly seeking better ways to serve our customers",
         "Collaboration": "Working together to achieve shared goals"
-      },
-      "how_they_guide": "These values shape our hiring decisions, product development, and customer relationships."
-    },
-    "metadata": {
-      "model": "CLAUDE_3_5_SONNET_V2",
-      "processing_time_ms": 2150,
-      "tokens_used": 892
+      }
     }
-  },
-  "message": "Message processed successfully",
-  "error": null,
-  "error_code": null,
-  "request_id": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2026-02-08T21:45:23.123456Z"
+  }
 }
 ```
+
+**Event source of truth:** see `docs/shared/Specifications/eventbridge/async-coaching-message-events.md`
 
 #### POST /ai/coaching/pause
 
