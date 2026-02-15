@@ -82,7 +82,7 @@ class CreateTopicRequest(BaseModel):
     @classmethod
     def validate_topic_type(cls, v: str) -> str:
         """Validate topic_type is one of allowed values."""
-        allowed = {"conversation_coaching", "single_shot", "kpi_system"}
+        allowed = {"conversation_coaching", "single_shot", "measure_system"}
         if v not in allowed:
             raise ValueError(f"topic_type must be one of: {', '.join(allowed)}")
         return v
