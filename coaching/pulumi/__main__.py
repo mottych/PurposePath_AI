@@ -316,7 +316,7 @@ image = docker.Image(
     "coaching-image",
     build=docker.DockerBuildArgs(
         context="../..",  # pp_ai directory
-        dockerfile="coaching/Dockerfile",
+        dockerfile="../../coaching/Dockerfile",
         platform="linux/amd64",
         args={
             "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
