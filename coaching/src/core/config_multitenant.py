@@ -235,15 +235,17 @@ def get_openai_api_key() -> str | None:
         return settings.openai_api_key
 
     # Retrieve from Secrets Manager.
-    # Prefer configured value when provided, and keep legacy fallback for compatibility.
-    # Otherwise, use stage-aware naming and then legacy global fallback.
-    secret_candidates = (
-        [settings.openai_api_key_secret, "purposepath/openai-api-key"]
-        if settings.openai_api_key_secret
-        else [
-            f"purposepath/{settings.stage}/openai-api-key",
-            "purposepath/openai-api-key",
-        ]
+    # Always try configured name first, then stage-aware default, then legacy global.
+    # This keeps compatibility when secrets are renamed between conventions.
+    stage_default = f"purposepath/{settings.stage}/openai-api-key"
+    secret_candidates = list(
+        dict.fromkeys(
+            [
+                settings.openai_api_key_secret,
+                stage_default,
+                "purposepath/openai-api-key",
+            ]
+        )
     )
     try:
         from shared.services.aws_helpers import get_secretsmanager_client
@@ -282,20 +284,17 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
 
     settings = get_settings()
 
-    # Always retrieve from Secrets Manager (ignore GOOGLE_APPLICATION_CREDENTIALS)
-    # This ensures proper OAuth scopes are applied via service_account.Credentials.
-    # Prefer configured value when provided, and keep legacy fallback for compatibility.
-    # Otherwise, use stage-aware naming and then legacy global fallback.
-    secret_candidates = (
-        [
-            settings.google_vertex_credentials_secret,
-            "purposepath/google-vertex-credentials",
-        ]
-        if settings.google_vertex_credentials_secret
-        else [
-            f"purposepath/{settings.stage}/google-vertex-credentials",
-            "purposepath/google-vertex-credentials",
-        ]
+    # Always retrieve from Secrets Manager (ignore GOOGLE_APPLICATION_CREDENTIALS).
+    # Try configured name, then stage-aware default, then legacy global fallback.
+    stage_default = f"purposepath/{settings.stage}/google-vertex-credentials"
+    secret_candidates = list(
+        dict.fromkeys(
+            [
+                settings.google_vertex_credentials_secret,
+                stage_default,
+                "purposepath/google-vertex-credentials",
+            ]
+        )
     )
     try:
         import structlog
