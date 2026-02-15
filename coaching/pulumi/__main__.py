@@ -1,5 +1,6 @@
 import datetime
 import json
+from pathlib import Path
 
 import pulumi_aws as aws
 import pulumi_docker as docker
@@ -308,6 +309,8 @@ except Exception:
 
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()
+project_root = Path(__file__).resolve().parents[2]
+dockerfile_path = project_root / "coaching" / "Dockerfile"
 
 # Cache-busting: use timestamp to force rebuild
 build_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
@@ -315,8 +318,8 @@ build_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 image = docker.Image(
     "coaching-image",
     build=docker.DockerBuildArgs(
-        context="../..",  # pp_ai directory
-        dockerfile="../../coaching/Dockerfile",
+        context=str(project_root),  # pp_ai directory
+        dockerfile=str(dockerfile_path),
         platform="linux/amd64",
         args={
             "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
