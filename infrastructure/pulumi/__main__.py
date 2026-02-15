@@ -82,6 +82,27 @@ coaching_sessions_table = aws.dynamodb.Table(
     tags={**common_tags, "Name": "coaching_sessions", "Purpose": "Session-Tracking"},
 )
 
+# Topic definitions table (master data consumed by coaching service runtime)
+topics_table = aws.dynamodb.Table(
+    "topics",
+    name=f"purposepath-topics-{stack}",
+    billing_mode="PAY_PER_REQUEST",
+    hash_key="topic_id",
+    attributes=[
+        aws.dynamodb.TableAttributeArgs(name="topic_id", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="topic_type", type="S"),
+    ],
+    global_secondary_indexes=[
+        aws.dynamodb.TableGlobalSecondaryIndexArgs(
+            name="type-index",
+            hash_key="topic_type",
+            projection_type="ALL",
+        ),
+    ],
+    point_in_time_recovery=aws.dynamodb.TablePointInTimeRecoveryArgs(enabled=True),
+    tags={**common_tags, "Name": "topics", "Purpose": "Topic-Definitions"},
+)
+
 # S3 Bucket for LLM Prompts
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
@@ -153,6 +174,7 @@ pulumi.export(
     {
         "coachingConversations": conversations_table.name,
         "coachingSessions": coaching_sessions_table.name,
+        "topics": topics_table.name,
     },
 )
 pulumi.export(
@@ -160,6 +182,7 @@ pulumi.export(
     {
         "conversations": f"purposepath-coaching-conversations-{stack}",
         "sessions": f"purposepath-coaching-sessions-{stack}",
+        "topics": f"purposepath-topics-{stack}",
     },
 )
 pulumi.export("promptsBucket", prompts_bucket.bucket)
@@ -175,5 +198,6 @@ pulumi.export(
     {
         "conversations": conversations_table.arn,
         "sessions": coaching_sessions_table.arn,
+        "topics": topics_table.arn,
     },
 )
