@@ -73,6 +73,11 @@ class Settings(BaseSettings):
         """Get AI jobs table name."""
         return f"purposepath-ai-jobs-{self.stage}"
 
+    @property
+    def template_metadata_table(self) -> str:
+        """Get template metadata table name."""
+        return f"prompt_templates_metadata_{self.stage}"
+
     # Optional: Allow override via env var for local development
     dynamodb_endpoint: str | None = None
 
@@ -163,10 +168,10 @@ class Settings(BaseSettings):
 
     # Secrets Manager ARNs/Names for API Keys
     openai_api_key_secret: str | None = Field(
-        default="purposepath/openai-api-key", validation_alias="OPENAI_API_KEY_SECRET"
+        default=None, validation_alias="OPENAI_API_KEY_SECRET"
     )
     google_vertex_credentials_secret: str | None = Field(
-        default="purposepath/google-vertex-credentials",
+        default=None,
         validation_alias="GOOGLE_VERTEX_CREDENTIALS_SECRET",
     )
 
@@ -229,18 +234,35 @@ def get_openai_api_key() -> str | None:
     if settings.openai_api_key:
         return settings.openai_api_key
 
-    # Retrieve from Secrets Manager if configured
-    if settings.openai_api_key_secret:
-        try:
-            from shared.services.aws_helpers import get_secretsmanager_client
+    # Retrieve from Secrets Manager.
+    # Prefer configured value when provided, and keep legacy fallback for compatibility.
+    # Otherwise, use stage-aware naming and then legacy global fallback.
+    secret_candidates = (
+        [settings.openai_api_key_secret, "purposepath/openai-api-key"]
+        if settings.openai_api_key_secret
+        else [
+            f"purposepath/{settings.stage}/openai-api-key",
+            "purposepath/openai-api-key",
+        ]
+    )
+    try:
+        from shared.services.aws_helpers import get_secretsmanager_client
 
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            response = client.get_secret_value(SecretId=settings.openai_api_key_secret)
-            secret_value = response.get("SecretString")
-            return secret_value if secret_value else None
-        except Exception:
-            # Log error but don't fail - allow None to be returned
-            return None
+        client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
+        for secret_id in secret_candidates:
+            if not secret_id:
+                continue
+            try:
+                response = client.get_secret_value(SecretId=secret_id)
+                secret_value = response.get("SecretString")
+                if secret_value:
+                    return secret_value
+            except Exception:
+                # Continue trying fallback candidates
+                continue
+    except Exception:
+        # Log error but don't fail - allow None to be returned
+        return None
 
     return None
 
@@ -261,39 +283,57 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     settings = get_settings()
 
     # Always retrieve from Secrets Manager (ignore GOOGLE_APPLICATION_CREDENTIALS)
-    # This ensures proper OAuth scopes are applied via service_account.Credentials
-    if settings.google_vertex_credentials_secret:
-        try:
-            import structlog
-            from shared.services.aws_helpers import get_secretsmanager_client
+    # This ensures proper OAuth scopes are applied via service_account.Credentials.
+    # Prefer configured value when provided, and keep legacy fallback for compatibility.
+    # Otherwise, use stage-aware naming and then legacy global fallback.
+    secret_candidates = (
+        [
+            settings.google_vertex_credentials_secret,
+            "purposepath/google-vertex-credentials",
+        ]
+        if settings.google_vertex_credentials_secret
+        else [
+            f"purposepath/{settings.stage}/google-vertex-credentials",
+            "purposepath/google-vertex-credentials",
+        ]
+    )
+    try:
+        import structlog
+        from shared.services.aws_helpers import get_secretsmanager_client
 
-            log = structlog.get_logger()
+        log = structlog.get_logger()
+        client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
 
-            client: SecretsManagerClient = get_secretsmanager_client(settings.aws_region)
-            response = client.get_secret_value(SecretId=settings.google_vertex_credentials_secret)
-            secret_value = response.get("SecretString")
+        for secret_id in secret_candidates:
+            if not secret_id:
+                continue
+            try:
+                response = client.get_secret_value(SecretId=secret_id)
+                secret_value = response.get("SecretString")
 
-            if secret_value:
+                if not secret_value:
+                    log.warning("google_vertex_credentials.empty_secret", secret_id=secret_id)
+                    continue
+
                 # Parse JSON credentials
                 credentials_dict: dict[str, Any] = json.loads(secret_value)
                 log.info(
                     "google_vertex_credentials.loaded",
+                    secret_id=secret_id,
                     project_id=credentials_dict.get("project_id"),
                     client_email=credentials_dict.get("client_email"),
                 )
                 return credentials_dict
+            except Exception:
+                # Continue trying fallback candidates
+                continue
+        return None
+    except Exception as e:
+        import structlog
 
-            log.warning(
-                "google_vertex_credentials.empty_secret",
-                secret_id=settings.google_vertex_credentials_secret,
-            )
-            return None
-        except Exception as e:
-            import structlog
-
-            log = structlog.get_logger()
-            log.error("google_vertex_credentials.error", error=str(e), error_type=type(e).__name__)
-            return None
+        log = structlog.get_logger()
+        log.error("google_vertex_credentials.error", error=str(e), error_type=type(e).__name__)
+        return None
 
     return None
 

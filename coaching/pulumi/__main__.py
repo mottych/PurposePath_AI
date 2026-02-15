@@ -17,8 +17,12 @@ config = {
         "api_domain": "api.dev.purposepath.app",
         "certificate_output": "apiDev",
         "jwt_secret": "purposepath-jwt-secret-dev",
+        "openai_api_key_secret": "purposepath/dev/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/dev/google-vertex-credentials",
         "jwt_issuer": "https://api.dev.purposepath.app",
         "jwt_audience": "https://dev.purposepath.app",
+        "account_api_url": "https://api.dev.purposepath.app",
+        "business_api_base_url": "https://api.dev.purposepath.app/account/api/v1",
         "log_level": "INFO",
         "ai_debug_logging": "true",  # Enable detailed AI execution logging for debugging
     },
@@ -28,8 +32,12 @@ config = {
         "api_domain": "api.staging.purposepath.app",
         "certificate_output": "apiStaging",
         "jwt_secret": "purposepath-jwt-secret-staging",
+        "openai_api_key_secret": "purposepath/staging/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/staging/google-vertex-credentials",
         "jwt_issuer": "https://api.staging.purposepath.app",
         "jwt_audience": "https://staging.purposepath.app",
+        "account_api_url": "https://api.staging.purposepath.app",
+        "business_api_base_url": "https://api.staging.purposepath.app/account/api/v1",
         "log_level": "INFO",
     },
     "prod": {
@@ -38,8 +46,12 @@ config = {
         "api_domain": "api.purposepath.app",
         "certificate_output": "apiProd",
         "jwt_secret": "purposepath-jwt-secret-prod",
+        "openai_api_key_secret": "purposepath/prod/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/prod/google-vertex-credentials",
         "jwt_issuer": "https://api.purposepath.app",
         "jwt_audience": "https://purposepath.app",
+        "account_api_url": "https://api.purposepath.app",
+        "business_api_base_url": "https://api.purposepath.app/account/api/v1",
         "log_level": "WARNING",
     },
 }
@@ -298,7 +310,7 @@ except Exception:
 auth_token = aws.ecr.get_authorization_token()
 
 # Cache-busting: use timestamp to force rebuild
-build_timestamp = datetime.datetime.utcnow().isoformat()
+build_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
 image = docker.Image(
     "coaching-image",
@@ -332,10 +344,17 @@ coaching_lambda = aws.lambda_.Function(
         variables={
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": stack,
+            "AWS_REGION": "us-east-1",
             "LOG_LEVEL": stack_config["log_level"],
             "JWT_SECRET_NAME": stack_config["jwt_secret"],
             "JWT_ISSUER": stack_config["jwt_issuer"],
             "JWT_AUDIENCE": stack_config["jwt_audience"],
+            "OPENAI_API_KEY_SECRET": stack_config["openai_api_key_secret"],
+            "GOOGLE_VERTEX_CREDENTIALS_SECRET": stack_config[
+                "google_vertex_credentials_secret"
+            ],
+            "ACCOUNT_API_URL": stack_config["account_api_url"],
+            "BUSINESS_API_BASE_URL": stack_config["business_api_base_url"],
             "AI_DEBUG_LOGGING": stack_config.get(
                 "ai_debug_logging", "false"
             ),  # Optional, defaults to false

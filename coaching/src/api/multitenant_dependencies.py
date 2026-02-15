@@ -151,10 +151,9 @@ async def get_template_metadata_repository() -> Any:
     )
 
     dynamodb = get_dynamodb_resource(region_name=settings.aws_region)
-    table_name = getattr(settings, "template_metadata_table", "prompt_templates_metadata")
     return TemplateMetadataRepository(
         dynamodb_resource=dynamodb,
-        table_name=table_name,
+        table_name=settings.template_metadata_table,
     )
 
 
