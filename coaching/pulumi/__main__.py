@@ -347,7 +347,6 @@ coaching_lambda = aws.lambda_.Function(
         variables={
             "PROMPTS_BUCKET": prompts_bucket,
             "STAGE": stack,
-            "AWS_REGION": "us-east-1",
             "LOG_LEVEL": stack_config["log_level"],
             "JWT_SECRET_NAME": stack_config["jwt_secret"],
             "JWT_ISSUER": stack_config["jwt_issuer"],
