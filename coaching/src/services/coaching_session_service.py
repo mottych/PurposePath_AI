@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
+from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
@@ -1140,8 +1141,61 @@ class CoachingSessionService:
                 cleaned = cleaned[:-3]
             return cleaned.strip()
 
-        # Pattern 3: Plain JSON (no wrapper)
+        # Pattern 3: Mixed text with fenced JSON block somewhere in the response
+        fenced_patterns = [
+            r"```json\s*(\{.*?\})\s*```",
+            r"```\s*(\{.*?\})\s*```",
+        ]
+        for pattern in fenced_patterns:
+            match = re.search(pattern, cleaned, flags=re.DOTALL)
+            if match:
+                return match.group(1).strip()
+
+        # Pattern 4: First balanced JSON object embedded in plain text
+        extracted_object = self._extract_first_json_object(cleaned)
+        if extracted_object is not None:
+            return extracted_object
+
+        # Pattern 5: Plain JSON (no wrapper)
         return cleaned
+
+    def _extract_first_json_object(self, text: str) -> str | None:
+        """Extract first balanced JSON object from text.
+
+        This supports mixed model outputs like:
+        - Natural language explanation, then a JSON object
+        - Text before/after a JSON object without markdown fences
+        """
+        start = text.find("{")
+        if start == -1:
+            return None
+
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for idx, char in enumerate(text[start:], start=start):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+                continue
+
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : idx + 1].strip()
+
+        return None
 
     # =========================================================================
     # Session Lifecycle - Complete
@@ -1238,10 +1292,29 @@ class CoachingSessionService:
         from copy import copy
 
         extraction_topic = copy(llm_topic)
-        # Use configured extraction model (defaults to Haiku for speed/cost optimization)
+        # Use configured extraction model, but gracefully fall back if a model code
+        # is configured before the corresponding registry entry is deployed.
         extraction_model = llm_topic.get_extraction_model_code()
+
+        if extraction_model not in MODEL_REGISTRY:
+            fallback_model = "CLAUDE_3_HAIKU"
+            logger.warning(
+                "coaching_service.extraction_model_not_in_registry",
+                requested_model=extraction_model,
+                fallback_model=fallback_model,
+            )
+            extraction_model = fallback_model
         extraction_topic.basic_model_code = extraction_model
         extraction_topic.premium_model_code = extraction_model
+        extraction_model_max = MODEL_REGISTRY[extraction_model].max_tokens
+        extraction_topic.max_tokens = min(8192, extraction_model_max)
+        logger.info(
+            "coaching_service.extraction_max_tokens_applied",
+            extraction_model=extraction_model,
+            configured_topic_max_tokens=llm_topic.max_tokens,
+            extraction_model_max_tokens=extraction_model_max,
+            extraction_max_tokens=extraction_topic.max_tokens,
+        )
 
         messages = [
             {
@@ -1711,12 +1784,27 @@ class CoachingSessionService:
             else:
                 llm_messages.append(LLMMessage(role=role, content=content))
 
-        # Execute using the provider's generate method
+        # Execute using the provider's generate method.
+        # Guardrail: cap requested max_tokens by the selected model's hard limit
+        # from MODEL_REGISTRY to prevent provider ValidationException errors.
+        requested_max_tokens = llm_topic.max_tokens
+        effective_max_tokens = requested_max_tokens
+        model_config = MODEL_REGISTRY.get(model_code)
+        if model_config is not None and requested_max_tokens > model_config.max_tokens:
+            effective_max_tokens = model_config.max_tokens
+            logger.warning(
+                "coaching_service.max_tokens_capped_by_model_limit",
+                model_code=model_code,
+                requested_max_tokens=requested_max_tokens,
+                effective_max_tokens=effective_max_tokens,
+                model_limit=model_config.max_tokens,
+            )
+
         response = await provider.generate(
             messages=llm_messages,
             model=model_name,
             temperature=temperature,
-            max_tokens=llm_topic.max_tokens,
+            max_tokens=effective_max_tokens,
             system_prompt=system_prompt,
         )
 

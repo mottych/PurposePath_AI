@@ -21,6 +21,7 @@ Features:
 
 import argparse
 import asyncio
+import os
 import re
 import sys
 from datetime import UTC, datetime
@@ -260,7 +261,7 @@ async def seed_templates(
     dynamodb = boto3.resource("dynamodb", region_name=region)
 
     # Initialize repository
-    table_name = "prompt_templates_metadata"  # Default table name
+    table_name = os.environ.get("TEMPLATE_METADATA_TABLE") or f"prompt_templates_metadata_{environment}"
     repository = TemplateMetadataRepository(
         dynamodb_resource=dynamodb,
         table_name=table_name,

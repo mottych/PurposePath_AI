@@ -66,6 +66,9 @@ ignore = [
     "N999",   # Invalid module name (false positive from repo name PurposePath_AI)
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["coaching", "shared"]
+
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "**/tests/**/*" = ["B011", "ARG001", "ARG002", "S101", "B007", "B017", "SIM118", "RUF043"]

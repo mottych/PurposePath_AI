@@ -121,12 +121,9 @@ async def get_template_metadata_repository() -> TemplateMetadataRepository:
         TemplateMetadataRepository instance configured with settings
     """
     dynamodb = get_dynamodb_resource_singleton()
-    # Use a dedicated table for template metadata
-    # For now, using a default name - this should be in settings
-    table_name = getattr(settings, "template_metadata_table", "prompt_templates_metadata")
     return TemplateMetadataRepository(
         dynamodb_resource=dynamodb,
-        table_name=table_name,
+        table_name=settings.template_metadata_table,
     )
 
 

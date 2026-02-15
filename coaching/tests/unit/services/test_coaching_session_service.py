@@ -1093,6 +1093,32 @@ class TestLLMResponseParsing:
         assert message == response
         assert is_final is False
 
+    def test_parse_llm_response_mixed_text_and_json_block(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test parsing mixed output with plain text and fenced JSON block."""
+        response = (
+            "Sure, here is your summary.\n\n"
+            "```json\n"
+            '{"message": "Clean message", "is_final": true, "result": {"values": ["Integrity"]}}\n'
+            "```"
+        )
+        message, is_final = service._parse_llm_response(response)
+        assert message == "Clean message"
+        assert is_final is True
+
+    def test_extract_json_from_response_embedded_object(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test extracting first balanced JSON object from mixed plain text."""
+        response = (
+            "Narrative text before.\n"
+            '{"message": "Structured output", "is_final": false}\n'
+            "Trailing notes."
+        )
+        result = service._extract_json_from_response(response)
+        assert result == '{"message": "Structured output", "is_final": false}'
+
     def test_parse_llm_response_missing_message_field(
         self, service: CoachingSessionService
     ) -> None:

@@ -18,6 +18,7 @@ from typing import Annotated
 import structlog
 from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
 from coaching.src.core.topic_registry import get_parameters_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition, PromptInfo
 from coaching.src.domain.exceptions.topic_exceptions import (
@@ -169,7 +170,7 @@ async def list_topics(
     """
     List all topics, optionally filtered by type.
 
-    - **topic_type**: Filter by conversation_coaching, single_shot, or kpi_system
+    - **topic_type**: Filter by conversation_coaching, single_shot, or measure_system
     - **include_inactive**: Include topics marked as inactive
 
     Returns:
@@ -209,9 +210,9 @@ async def create_topic(
     context: RequestContext = Depends(require_admin_access),
 ) -> ApiResponse[TopicResponse]:
     """
-    Create a new KPI-system topic.
+    Create a new measure-system topic.
 
-    Only kpi_system topics can be created via API.
+    Only measure_system topics can be created via API.
     Coaching topics are seeded at deployment.
 
     Args:
@@ -232,7 +233,7 @@ async def create_topic(
         config_dict = request.config.model_dump()
 
         # Map default_model to model_code
-        model_code = config_dict.pop("default_model", "claude-3-5-sonnet-20241022")
+        model_code = config_dict.pop("default_model", DEFAULT_MODEL_CODE)
         # Also check for model_code just in case
         if "model_code" in config_dict:
             model_code = config_dict.pop("model_code")

@@ -32,7 +32,7 @@ class TopicSeedData:
     Attributes:
         topic_id: Unique identifier (snake_case)
         topic_name: Human-readable display name
-        topic_type: Type (conversation_coaching, single_shot, kpi_system)
+        topic_type: Type (conversation_coaching, single_shot, measure_system)
         category: Grouping category
         description: Detailed description of topic purpose
         tier_level: Subscription tier required to access this topic
@@ -1862,7 +1862,7 @@ def get_seed_data_by_type(topic_type: str) -> list[TopicSeedData]:
     """Get seed data for topics of a specific type.
 
     Args:
-        topic_type: Topic type (conversation_coaching, single_shot, kpi_system)
+        topic_type: Topic type (conversation_coaching, single_shot, measure_system)
 
     Returns:
         List of TopicSeedData for the type

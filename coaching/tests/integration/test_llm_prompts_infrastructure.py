@@ -83,7 +83,7 @@ class TestLLMPromptsTableStructure:
 
     def test_topic_type_values(self, sample_topic_item: dict[str, Any]) -> None:
         """Test that topic_type is one of allowed values."""
-        allowed_types = ["conversation_coaching", "single_shot", "kpi_system"]
+        allowed_types = ["conversation_coaching", "single_shot", "measure_system"]
         assert sample_topic_item["topic_type"] in allowed_types
 
     def test_prompts_array_structure(self, sample_topic_item: dict[str, Any]) -> None:
@@ -269,16 +269,16 @@ class TestS3PromptStorage:
         assert "ETag" in response
 
 
-class TestKPISystemTopicStructure:
-    """Test KPI-system specific topic structure."""
+class TestMeasureSystemTopicStructure:
+    """Test measure-system specific topic structure."""
 
     @pytest.fixture
     def kpi_topic_item(self) -> dict[str, Any]:
-        """Sample KPI-system topic."""
+        """Sample measure-system topic."""
         return {
             "topic_id": "revenue_salesforce",
             "topic_name": "Revenue Growth - Salesforce",
-            "topic_type": "kpi_system",
+            "topic_type": "measure_system",
             "category": "kpi",
             "description": "Analyze revenue KPI from Salesforce",
             "display_order": 100,
@@ -303,7 +303,7 @@ class TestKPISystemTopicStructure:
 
     def test_kpi_topic_has_kpi_type(self, kpi_topic_item: dict[str, Any]) -> None:
         """Test that KPI topic has correct topic_type."""
-        assert kpi_topic_item["topic_type"] == "kpi_system"
+        assert kpi_topic_item["topic_type"] == "measure_system"
         assert kpi_topic_item["category"] == "kpi"
 
     def test_kpi_topic_parameters_from_registry(self, kpi_topic_item: dict[str, Any]) -> None:
