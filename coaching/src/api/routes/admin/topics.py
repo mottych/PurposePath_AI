@@ -403,8 +403,9 @@ async def list_topics(
 async def get_topics_stats(
     start_date: datetime | None = Query(None, description="Start date for filtering (ISO 8601)"),
     end_date: datetime | None = Query(None, description="End date for filtering (ISO 8601)"),
-    tier: str
-    | None = Query(None, description="Filter by tier (free, basic, professional, enterprise)"),
+    tier: str | None = Query(
+        None, description="Filter by tier (free, basic, professional, enterprise)"
+    ),
     interaction_code: str | None = Query(None, description="Filter by interaction code"),
     model_code: str | None = Query(None, description="Filter by model code"),
     topic_repo: TopicRepository = Depends(get_topic_repository),

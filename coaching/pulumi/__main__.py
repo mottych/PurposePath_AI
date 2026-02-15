@@ -352,9 +352,7 @@ coaching_lambda = aws.lambda_.Function(
             "JWT_ISSUER": stack_config["jwt_issuer"],
             "JWT_AUDIENCE": stack_config["jwt_audience"],
             "OPENAI_API_KEY_SECRET": stack_config["openai_api_key_secret"],
-            "GOOGLE_VERTEX_CREDENTIALS_SECRET": stack_config[
-                "google_vertex_credentials_secret"
-            ],
+            "GOOGLE_VERTEX_CREDENTIALS_SECRET": stack_config["google_vertex_credentials_secret"],
             "ACCOUNT_API_URL": stack_config["account_api_url"],
             "BUSINESS_API_BASE_URL": stack_config["business_api_base_url"],
             "AI_DEBUG_LOGGING": stack_config.get(
