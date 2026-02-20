@@ -74,6 +74,11 @@ class Settings(BaseSettings):
         return f"purposepath-ai-jobs-{self.stage}"
 
     @property
+    def sql_generation_idempotency_table(self) -> str:
+        """Get SQL generation idempotency table name."""
+        return f"purposepath-sql-generation-idempotency-{self.stage}"
+
+    @property
     def template_metadata_table(self) -> str:
         """Get template metadata table name."""
         return f"prompt_templates_metadata_{self.stage}"
@@ -108,6 +113,12 @@ class Settings(BaseSettings):
         default="https://api.dev.purposepath.app/account/api/v1",
         validation_alias="BUSINESS_API_BASE_URL",
     )
+    cdata_mcp_base_url: str = Field(
+        default="https://mcp.cloud.cdata.com",
+        validation_alias="CDATA_MCP_BASE_URL",
+    )
+    cdata_mcp_user_id: str | None = Field(default=None, validation_alias="CDATA_MCP_USER_ID")
+    cdata_mcp_pat: str | None = Field(default=None, validation_alias="CDATA_MCP_PAT")
     account_api_url: str = Field(
         default="https://api.dev.purposepath.app",
         validation_alias="ACCOUNT_API_URL",

@@ -114,8 +114,8 @@ app.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
 # CORS middleware must be added LAST so it runs FIRST in the middleware chain
 # This ensures CORS headers are added before any authentication or error handling
 _cors_config: dict[str, Any] = {
-    # Allow purposepath apex + subdomains, and local dev.
-    "allow_origin_regex": r"https://([a-zA-Z0-9-]+\.)?purposepath\.app|http://localhost:\d+",
+    # Allow purposepath.app apex + any depth of subdomains, and local dev ports.
+    "allow_origin_regex": r"(^https://([a-zA-Z0-9-]+\.)*purposepath\.app$)|(^http://localhost:\d+$)",
     "allow_credentials": True,
     "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     "allow_headers": [

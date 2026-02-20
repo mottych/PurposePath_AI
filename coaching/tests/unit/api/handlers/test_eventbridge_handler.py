@@ -7,6 +7,7 @@ import pytest
 from coaching.src.api.handlers.eventbridge_handler import (
     handle_ai_job_created_event,
     handle_eventbridge_event,
+    handle_integration_sql_template_generate_requested_event,
     is_eventbridge_event,
 )
 
@@ -192,3 +193,46 @@ class TestHandleEventBridgeEvent:
 
         assert result["statusCode"] == 400
         assert "Unknown event type" in result["body"]
+
+    def test_routes_integration_sql_template_generate_requested(self) -> None:
+        """Test routing for integration SQL generation events."""
+        event: dict[str, Any] = {
+            "source": "purposepath.integration",
+            "detail-type": "integration.sql.template.generate.requested",
+            "detail": {
+                "generationId": "ebca00f5-0360-4a45-bc0a-0739a6ddcb36",
+            },
+        }
+        mock_service = AsyncMock()
+        mock_service.process_event.return_value = {"status": "completed"}
+
+        with patch(
+            "coaching.src.api.dependencies.sql_template_generation.get_sql_template_generation_service",
+            return_value=mock_service,
+        ):
+            result = handle_eventbridge_event(event, None)
+
+        assert result["statusCode"] == 200
+
+
+class TestHandleIntegrationSqlTemplateEvent:
+    """Tests for SQL template generation handler."""
+
+    @pytest.mark.asyncio
+    async def test_handle_integration_sql_template_success(self) -> None:
+        event: dict[str, Any] = {
+            "source": "purposepath.integration",
+            "detail-type": "integration.sql.template.generate.requested",
+            "detail": {},
+        }
+        mock_service = AsyncMock()
+        mock_service.process_event.return_value = {"status": "completed"}
+
+        with patch(
+            "coaching.src.api.dependencies.sql_template_generation.get_sql_template_generation_service",
+            return_value=mock_service,
+        ):
+            result = await handle_integration_sql_template_generate_requested_event(event)
+
+        assert result["statusCode"] == 200
+        assert "completed" in result["body"]
