@@ -396,11 +396,22 @@ Does **not** persist measure actuals/current measure value.
   "data": {
     "integrationId": "f8f8d8b7-81de-42f7-b689-c0d4b709bc3d",
     "executionId": "ea619bc1-f4ac-4d75-934b-73fc912af5f0",
+    "success": true,
+    "status": "Succeeded",
     "actualValue": 125.52,
     "measuredAtUtc": "2026-02-19T08:30:00Z",
     "windowStartUtc": "2026-01-01T00:00:00Z",
     "windowEndUtc": "2026-01-31T23:59:59Z",
-    "dataSource": "CData"
+    "dataSource": "CData",
+    "errorCode": null,
+    "errorMessage": null,
+    "queryMetadata": {
+      "templateKey": "templates/cdata/revenue/prompt.txt",
+      "systemType": "CData",
+      "connectionType": "ApiKey",
+      "usesExternalReference": false,
+      "externalProvider": null
+    }
   }
 }
 ```
