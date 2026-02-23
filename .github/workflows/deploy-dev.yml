@@ -168,9 +168,36 @@ jobs:
             exit 1
           fi
 
+      - name: CORS Preflight Check
+        run: |
+          echo "Testing CORS preflight behavior..."
+          ORIGIN="https://dev.purposepath.app"
+          TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+
+          CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
+            -H "Origin: $ORIGIN" \
+            -H "Access-Control-Request-Method: GET" \
+            -H "Access-Control-Request-Headers: Authorization,Content-Type")
+
+          ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
+          ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
+
+          if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
+            echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
+            exit 1
+          fi
+
+          if [ "$ALLOW_CREDENTIALS" != "true" ]; then
+            echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
+            exit 1
+          fi
+
+          echo "✅ CORS preflight returned expected headers"
+
       - name: Smoke Test Summary
         run: |
           echo "## Smoke Tests - Dev" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Health check passed" >> $GITHUB_STEP_SUMMARY
           echo "✅ API is responsive" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CORS preflight check passed" >> $GITHUB_STEP_SUMMARY
