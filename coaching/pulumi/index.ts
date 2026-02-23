@@ -62,14 +62,12 @@ const coachingLambda = new aws.lambda.Function("coaching-api", {
     },
 });
 
+// IMPORTANT: CORS is intentionally handled only in FastAPI middleware.
+// Keeping API Gateway CORS enabled created split-brain behavior where
+// preflight responses could come from APIGW ("*") while app responses came
+// from FastAPI (credential-aware origin regex), causing intermittent browser failures.
 const api = new aws.apigatewayv2.Api("coaching-api", {
     protocolType: "HTTP",
-    corsConfiguration: {
-        allowOrigins: ["*"],
-        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowHeaders: ["*"],
-        maxAge: 300,
-    },
 });
 
 const integration = new aws.apigatewayv2.Integration("coaching-integration", {

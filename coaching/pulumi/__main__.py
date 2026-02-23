@@ -363,15 +363,13 @@ coaching_lambda = aws.lambda_.Function(
 )
 
 # API Gateway HTTP API
+# IMPORTANT: CORS is intentionally handled only in FastAPI middleware.
+# Keeping API Gateway CORS enabled created split-brain behavior where
+# preflight responses could come from APIGW ("*") while app responses came
+# from FastAPI (credential-aware origin regex), causing intermittent browser failures.
 api = aws.apigatewayv2.Api(
     "coaching-api",
     protocol_type="HTTP",
-    cors_configuration=aws.apigatewayv2.ApiCorsConfigurationArgs(
-        allow_origins=["*"],
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-        max_age=300,
-    ),
 )
 
 integration = aws.apigatewayv2.Integration(
