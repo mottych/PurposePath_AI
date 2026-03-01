@@ -347,7 +347,7 @@ interface CreateMeasureIntegrationRequest {
     selectedValueName?: string;
   }>;
 
-  testFingerprint: string;                        // required for create
+  testFingerprint: string;                        // required for create (successful test execution id/fingerprint)
 }
 ```
 
@@ -356,6 +356,7 @@ interface CreateMeasureIntegrationRequest {
 - Enabled parameters must include both `selectedValueKey` and `selectedValueName`.
 - `lagDaysAfterPeriodEnd` required when `dataCalculationMethod=previousPeriod` for aggregate measures.
 - Create is rejected without valid tested state/fingerprint.
+- Save-gating failure returns deterministic code: `TEST_REQUIRED_BEFORE_CREATE`.
 
 #### Response (201)
 
@@ -369,6 +370,8 @@ Returns `MeasureIntegrationResponse`.
 
 Same payload model as create.
 
+`testFingerprint` is optional for update and is only required when template-affecting changes are included.
+
 #### Save-Gating Rules
 
 - Template-affecting changes require valid tested state before save:
@@ -378,6 +381,7 @@ Same payload model as create.
   - timezone changes
   - period/lag semantics changes
 - Frequency-only changes do not invalidate tested state.
+- If template-affecting changes are submitted without a fresh `testFingerprint`, save fails with code `RETEST_REQUIRED_FOR_TEMPLATE_CHANGES`.
 
 ---
 
