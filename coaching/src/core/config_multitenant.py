@@ -160,6 +160,7 @@ class Settings(BaseSettings):
     # Session Configuration
     session_ttl_hours: int = 24
     conversation_ttl_days: int = 30
+    ai_async_jobs_enabled: bool = Field(default=True, validation_alias="AI_ASYNC_JOBS_ENABLED")
 
     # LLM Configuration
     llm_temperature: float = 0.7

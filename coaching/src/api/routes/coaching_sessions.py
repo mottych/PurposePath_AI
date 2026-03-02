@@ -221,6 +221,7 @@ async def get_event_publisher() -> EventBridgePublisher:
     return EventBridgePublisher(
         region_name="us-east-1",
         stage=settings.stage,
+        enabled=settings.ai_async_jobs_enabled,
     )
 
 

@@ -1,12 +1,12 @@
 # Production Promotion Checklist
 
-This checklist verifies that automatic promotion from `staging` to `master` reliably deploys to production.
+This checklist verifies that automatic promotion from `staging` or `preprod` to `master` reliably deploys to production.
 
 ## 1) GitHub Branch and Workflow Alignment
 
 - [ ] Repository default branch is `master`
 - [ ] Production workflow trigger is `pull_request` closed on `master`
-- [ ] Production workflow validates merged PR source branch is `staging`
+- [ ] Production workflow validates merged PR source branch is `staging` or `preprod`
 - [ ] `deploy-production.yml` workflow is enabled
 
 Quick checks:
@@ -98,11 +98,15 @@ pulumi config set aws:region us-east-1 --stack prod
 
 ## 7) Promotion Execution
 
-1. Merge PR from `staging` into `master`
+1. Merge PR from `staging` or `preprod` into `master`
 2. Confirm `Deploy Production` workflow starts automatically
 3. Confirm deployment job succeeds
 4. Confirm smoke tests succeed
 5. Confirm API health endpoint returns expected status
+
+If promotion source is `preprod`:
+- [ ] Confirm production workflow resolved a promoted image URI (digest form `repo@sha256:*`)
+- [ ] Confirm deployed prod image URI matches resolved promotion source
 
 Post-deployment verification:
 

@@ -66,6 +66,7 @@ class EventBridgePublisher:
         event_bus_name: str = DEFAULT_EVENT_BUS,
         source: str = AI_EVENT_SOURCE,
         stage: str = "dev",
+        enabled: bool = True,
     ) -> None:
         """Initialize the EventBridge publisher.
 
@@ -74,11 +75,13 @@ class EventBridgePublisher:
             event_bus_name: EventBridge bus name (default: "default")
             source: Event source identifier
             stage: Environment stage (dev/staging/production) for event filtering
+            enabled: Whether publishing is enabled for this environment
         """
         self._client: Any = get_eventbridge_client(region_name)
         self._event_bus_name = event_bus_name
         self._source = source
         self._stage = stage
+        self._enabled = enabled
 
     def publish(self, event: DomainEvent) -> str:
         """Publish a domain event to EventBridge.
@@ -92,6 +95,16 @@ class EventBridgePublisher:
         Raises:
             EventBridgePublishError: If publishing fails
         """
+        if not self._enabled:
+            logger.warning(
+                "eventbridge.publish_skipped_disabled",
+                event_type=event.event_type,
+                tenant_id=event.tenant_id,
+                user_id=event.user_id,
+                stage=self._stage,
+            )
+            return f"disabled-{event.event_type}"
+
         detail = {
             "jobId": event.data.get("jobId", ""),
             "tenantId": event.tenant_id,

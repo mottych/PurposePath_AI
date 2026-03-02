@@ -23,7 +23,7 @@ Default model codes are stored in Parameter Store at:
 /purposepath/{stage}/models/default_premium  - Model for Premium/Ultimate tier topics
 ```
 
-Where `{stage}` is `dev`, `staging`, or `prod`.
+Where `{stage}` is `dev`, `staging`, `preprod`, or `prod`.
 
 ### Infrastructure Definition
 
