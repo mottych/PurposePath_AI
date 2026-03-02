@@ -10,6 +10,12 @@
 The Integration Service API enables end-user integration workflows in Settings and Measure screens.  
 This specification covers **user-facing** endpoints only (no admin metadata-definition endpoints).
 
+### Contract Source of Truth
+
+- Backend async Integration AI+CData event contracts are specified in [../integration/async-integration-ai-cdata-contracts.md](../../integration/async-integration-ai-cdata-contracts.md).
+- This frontend spec owns UX-facing request/response behavior and client handling expectations.
+- Backend event schema changes must be reflected in both docs in the same change set.
+
 ### Key Capabilities
 
 - Connected systems list with status/diagnostics and measure counts
