@@ -58,7 +58,13 @@ This specification is split into multiple documents for efficient AI assistant c
    - Dynamic Widget Data Retrieval
    - Responsive Grid Layouts
 
-9. **[Common Patterns & Data Models](./common-patterns.md)**
+9. **[Integration Service](./integration-service/integration-service.md)** ⭐ NEW (v1.0)
+   - Connected systems management and diagnostics
+   - Add-system bootstrap and provider account provisioning
+   - Measure integration add/edit/test/save lifecycle
+   - Tested-state gating and execution status visibility
+
+10. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations
@@ -285,5 +291,6 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 - [Account Service Specs →](./account-service.md)
 - [AI/Coaching Service Specs →](../ai-user/backend-integration-unified-ai.md)
 - [Traction Service Specs →](./traction-service/README.md)
+- [Integration Service Specs →](./integration-service/integration-service.md)
 - [People & Org Structure →](./people-service.md)
 - [Common Patterns & Data Models →](./common-patterns.md)

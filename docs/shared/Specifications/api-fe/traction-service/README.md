@@ -202,6 +202,15 @@ Example: `"2025-12-23T15:30:00.000Z"`
 
 ## Version History
 
+### v7.1 (February 25, 2026)
+- Added measure-definition integration hint contract fields across available-measures and measure create/read/update responses:
+  - `isIntegrationEnabled`
+  - `supportedSystems[]` (`systemId`, `systemName`, `systemIconUrl`)
+  - `hasExistingCompatibleConnection`
+  - `existingCompatibleConnectionIds[]`
+  - `integrationEligibilityReason`
+- Clarified tenant-scoped active compatible connection detection semantics.
+
 ### v7.0 (December 23, 2025)
 - Removed deprecated Measure endpoints (GoalMeasureLink, MeasureMilestone, MeasureActual, MeasureReading)
 - Split monolithic spec into controller-based documents

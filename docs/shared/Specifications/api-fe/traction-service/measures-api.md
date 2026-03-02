@@ -384,6 +384,16 @@ Retrieve the Measures catalog (catalog + tenant custom) when designing a goal th
         "aggregationPeriod": "monthly",
         "calculationMethod": "Sum of all active subscription values",
         "isIntegrationEnabled": true,
+        "supportedSystems": [
+          {
+            "systemId": "system-001",
+            "systemName": "Salesforce",
+            "systemIconUrl": "https://cdn.example.com/icons/salesforce.svg"
+          }
+        ],
+        "hasExistingCompatibleConnection": true,
+        "existingCompatibleConnectionIds": ["connection-001"],
+        "integrationEligibilityReason": null,
         "usageInfo": {
           "goalCount": 3,
           "isUsedByThisGoal": false
@@ -405,6 +415,10 @@ Retrieve the Measures catalog (catalog + tenant custom) when designing a goal th
         "calculationMethod": "Average of all survey responses",
         "measureCatalogId": null,
         "isIntegrationEnabled": false,
+        "supportedSystems": [],
+        "hasExistingCompatibleConnection": false,
+        "existingCompatibleConnectionIds": [],
+        "integrationEligibilityReason": "non_catalog_measure",
         "createdAt": "2025-01-15T10:00:00.000Z",
         "createdBy": "user-123",
         "usageInfo": {
@@ -1010,6 +1024,21 @@ Retrieve the Measure catalog for a tenant when designing a new goal that is not 
 - Use when the frontend constructs a goal in-memory and needs the catalog before persisting the goal.
 - Usage counts still reflect existing goal links in the tenant; `isUsedByThisGoal` remains `false`.
 - Response shape matches `GET /goals/{goalId}/available-measures` for compatibility.
+
+#### Integration Hint Fields (Measure Definition Flows)
+
+The following fields are included in available-measures payloads and measure definition responses (`POST /measures`, `PUT /measures/{id}`, `GET /measures/{id}`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `isIntegrationEnabled` | boolean | True only when integration is eligible for this measure definition. |
+| `supportedSystems[]` | array | Supported active systems from `SystemMeasureConfig` + active systems catalog. |
+| `supportedSystems[].systemId` | string | Integration system ID. |
+| `supportedSystems[].systemName` | string | Integration system display name. |
+| `supportedSystems[].systemIconUrl` | string/null | Integration system icon URL. |
+| `hasExistingCompatibleConnection` | boolean | Whether tenant has at least one active compatible connection. |
+| `existingCompatibleConnectionIds[]` | array | Active tenant connection IDs compatible with supported systems. |
+| `integrationEligibilityReason` | string/null | Deterministic reason when integration is not eligible (e.g., `non_catalog_measure`, `non_quantitative_measure`, `no_supported_systems`, `catalog_integration_disabled`). |
 
 ---
 

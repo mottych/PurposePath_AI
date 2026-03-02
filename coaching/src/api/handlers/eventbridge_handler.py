@@ -194,6 +194,43 @@ async def handle_ai_message_created_event(event: dict[str, Any]) -> dict[str, An
         }
 
 
+async def handle_integration_sql_template_generate_requested_event(
+    event: dict[str, Any],
+) -> dict[str, Any]:
+    """Handle integration.sql.template.generate.requested EventBridge event."""
+    detail_type = event.get("detail-type", "")
+    source = event.get("source", "")
+    logger.info(
+        "eventbridge.integration_sql_event_received",
+        source=source,
+        detail_type=detail_type,
+    )
+    if (
+        source != "purposepath.integration"
+        or detail_type != "integration.sql.template.generate.requested"
+    ):
+        return {
+            "statusCode": 400,
+            "body": f"Unknown integration event type: {source}/{detail_type}",
+        }
+
+    from coaching.src.api.dependencies.sql_template_generation import (
+        get_sql_template_generation_service,
+    )
+
+    try:
+        service = await get_sql_template_generation_service()
+        result = await service.process_event(event)
+        return {"statusCode": 200, "body": f"Processed SQL generation event: {result['status']}"}
+    except Exception as e:
+        logger.exception(
+            "eventbridge.integration_sql_event_failed",
+            detail_type=detail_type,
+            error=str(e),
+        )
+        return {"statusCode": 500, "body": f"Integration SQL generation failed: {e!s}"}
+
+
 def handle_eventbridge_event(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Main handler for EventBridge events.
 
@@ -231,6 +268,14 @@ def handle_eventbridge_event(event: dict[str, Any], _context: Any) -> dict[str, 
 
     elif source == "purposepath.ai" and detail_type == "ai.message.created":
         return loop.run_until_complete(handle_ai_message_created_event(event))
+
+    elif (
+        source == "purposepath.integration"
+        and detail_type == "integration.sql.template.generate.requested"
+    ):
+        return loop.run_until_complete(
+            handle_integration_sql_template_generate_requested_event(event)
+        )
 
     logger.warning(
         "eventbridge.unknown_event_type",
