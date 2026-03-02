@@ -51,6 +51,7 @@ async def get_event_publisher() -> EventBridgePublisher:
             event_bus_name="default",  # Using default EventBridge bus
             source="purposepath.ai",
             stage=settings.stage,
+            enabled=settings.ai_async_jobs_enabled,
         )
         logger.info(
             "EventBridgePublisher initialized",

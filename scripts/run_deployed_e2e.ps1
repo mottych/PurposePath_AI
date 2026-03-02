@@ -1,6 +1,11 @@
 # Script to run E2E tests against deployed environment
 # Gets fresh auth token and runs tests
 
+param(
+    [ValidateSet("dev", "preprod")]
+    [string]$Environment = "dev"
+)
+
 Write-Host "=== PurposePath AI - Deployed E2E Tests ===" -ForegroundColor Cyan
 Write-Host ""
 
@@ -17,7 +22,7 @@ Write-Host "Token obtained successfully" -ForegroundColor Green
 Write-Host ""
 
 # Set environment variables
-$env:E2E_API_URL = "https://api.dev.purposepath.app/coaching"
+$env:E2E_API_URL = "https://api.$Environment.purposepath.app/coaching"
 $env:E2E_AUTH_TOKEN = $token
 $env:E2E_TENANT_ID = "f937af6d-ea49-4bb4-bd65-38ef496da252"
 $env:E2E_USER_ID = "6ca4f578-a7e6-4f58-84e5-26cc089515df"

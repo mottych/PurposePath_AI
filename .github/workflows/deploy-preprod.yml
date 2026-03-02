@@ -1,0 +1,287 @@
+name: Deploy Preprod
+
+on:
+  push:
+    branches:
+      - "hotfix/**"
+      - "preprod"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy to preprod"
+        required: true
+        default: "preprod"
+        type: string
+      skip_tests:
+        description: "Skip tests before deployment"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: deploy-preprod
+  cancel-in-progress: false
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_tests != 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv .venv
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -r coaching/requirements.txt
+          uv pip install -r coaching/requirements-dev.txt
+        shell: bash
+
+      - name: Run Ruff Linting
+        run: |
+          source .venv/bin/activate
+          python -m ruff check . --exclude=".venv,venv,__pycache__,.pytest_cache"
+        shell: bash
+
+      - name: Run MyPy Type Checking
+        run: |
+          source .venv/bin/activate
+          python -m mypy coaching/src/ shared/ --config-file=pyproject.toml
+        shell: bash
+
+      - name: Run Unit Tests
+        run: |
+          source .venv/bin/activate
+          python -m pytest coaching/tests/unit/ -v --cov=coaching/src --cov-fail-under=70
+        shell: bash
+        env:
+          PYTHONPATH: coaching:shared:.
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks]
+    if: always() && (needs.pre-deployment-checks.result == 'success' || github.event.inputs.skip_tests == 'true')
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Pulumi Python dependencies
+        working-directory: infrastructure/pulumi
+        run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Validate required preprod secrets exist
+        run: |
+          aws secretsmanager describe-secret --secret-id purposepath-jwt-secret-preprod >/dev/null
+          aws secretsmanager describe-secret --secret-id purposepath/preprod/openai-api-key >/dev/null
+          aws secretsmanager describe-secret --secret-id purposepath/preprod/google-vertex-credentials >/dev/null
+          echo "✅ Required preprod secrets found"
+
+      - name: Deploy Infrastructure
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: preprod
+          work-dir: infrastructure/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+
+  deploy-coaching:
+    name: Deploy to Preprod
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure]
+    if: always() && (needs.deploy-infrastructure.result == 'success')
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Pulumi Python dependencies
+        working-directory: coaching/pulumi
+        run: pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Deploy Coaching Service
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: preprod
+          work-dir: coaching/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+
+      - name: Get API Gateway URL
+        id: api-url
+        working-directory: coaching/pulumi
+        run: |
+          URL=$(pulumi stack output customDomainUrl --stack preprod)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Capture promotion metadata
+        working-directory: coaching/pulumi
+        run: |
+          IMAGE_URI=$(pulumi stack output deployedImageUri --stack preprod)
+          cat > preprod-promotion-metadata.json <<EOF
+          {
+            "source_environment": "preprod",
+            "commit_sha": "${{ github.sha }}",
+            "image_uri": "${IMAGE_URI}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "captured_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          echo "Captured promotion metadata:"
+          cat preprod-promotion-metadata.json
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Upload promotion metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprod-promotion-metadata
+          path: coaching/pulumi/preprod-promotion-metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Summary - Preprod" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Preprod" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** preprod" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  smoke-tests:
+    name: Post-Deployment Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-coaching]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
+        with:
+          pulumi-version: latest
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Get API Gateway URL
+        id: api-url
+        working-directory: coaching/pulumi
+        run: |
+          URL=$(pulumi stack output customDomainUrl --stack preprod)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Health Check
+        run: |
+          echo "Testing API health endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/health || echo "000")
+          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
+            echo "✅ API is responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ API returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: CORS Preflight Check
+        run: |
+          echo "Testing CORS preflight behavior..."
+          ORIGIN="https://preprod.purposepath.app"
+          TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+
+          CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
+            -H "Origin: $ORIGIN" \
+            -H "Access-Control-Request-Method: GET" \
+            -H "Access-Control-Request-Headers: Authorization,Content-Type")
+
+          ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
+          ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
+
+          if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
+            echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
+            exit 1
+          fi
+
+          if [ "$ALLOW_CREDENTIALS" != "true" ]; then
+            echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
+            exit 1
+          fi
+
+          echo "✅ CORS preflight returned expected headers"

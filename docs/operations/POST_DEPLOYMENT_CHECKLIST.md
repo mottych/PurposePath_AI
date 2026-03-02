@@ -73,7 +73,7 @@ AI topics are defined in code (`topic_registry.py`) but must be seeded into Dyna
 # Set AWS credentials
 export AWS_PROFILE=purposepath-{env}
 export AWS_REGION=us-east-1
-export STAGE={env}  # dev, staging, or prod
+export STAGE={env}  # dev, staging, preprod, or prod
 
 # Seed all topics
 cd coaching
@@ -269,6 +269,15 @@ uv run python -m src.scripts.seed_topics --topic-id {topic_id} --force-update
 - [ ] Test endpoints working
 - [ ] SSL certificate valid
 - [ ] Smoke tests passing
+
+### Preprod
+
+- [ ] Infrastructure deployed
+- [ ] Topics seeded (all 44 topics)
+- [ ] Test endpoints working
+- [ ] SSL certificate valid
+- [ ] Smoke tests passing
+- [ ] Async/background jobs behavior verified against preprod safety switch
 
 ### Production
 
