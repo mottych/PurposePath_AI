@@ -1157,7 +1157,7 @@ These endpoints update individual sections without affecting others. They may fa
 {
   "success": true,
   "data": {
-    "currentStep": "number (1-6)",
+    "currentStep": "number (1-8)",
     "completedSteps": [1, 2, 3],
     "skippedSteps": [],
     "isComplete": "boolean",
@@ -1167,10 +1167,10 @@ These endpoints update individual sections without affecting others. They may fa
 ```
 
 **Notes:**
-- `currentStep` - Where user is currently (1=profile, 2=identity, 3=products, 4=market, 5=proposition, 6=review)
+- `currentStep` - Where user is currently (1=intro, 2=profile, 3=values, 4=identity, 5=products, 6=market, 7=proposition, 8=review)
 - `completedSteps` - Array of step numbers user has completed
 - `skippedSteps` - Array of step numbers user has skipped
-- `isComplete` - True if all 6 steps completed
+- `isComplete` - True if all 8 steps completed
 
 **Error Responses:**
 - 401 Unauthorized
@@ -1189,7 +1189,7 @@ These endpoints update individual sections without affecting others. They may fa
 
 ```json
 {
-  "currentStep": "number (1-6)",
+  "currentStep": "number (1-8)",
   "completedSteps": [1, 2, 3],
   "skippedSteps": [],
   "isComplete": "boolean"
@@ -1199,9 +1199,9 @@ These endpoints update individual sections without affecting others. They may fa
 **Response:** 200 OK (same structure as GET response)
 
 **Validation:**
-- `currentStep` - Required, must be 1-6
-- `completedSteps` - Required array of integers 1-6
-- `skippedSteps` - Required array of integers 1-6
+- `currentStep` - Required, must be 1-8
+- `completedSteps` - Required array of integers 1-8
+- `skippedSteps` - Required array of integers 1-8
 - `isComplete` - Required boolean
 
 **Frontend Handling:**

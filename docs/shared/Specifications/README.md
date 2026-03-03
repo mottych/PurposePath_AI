@@ -18,9 +18,10 @@ Specifications/
 │   ├── account-api.md           # Account, billing, subscriptions (consolidated)
 │   ├── account-gap.md           # Account service gap analysis
 │   ├── business-foundation-api.md # Business foundation, wizard, values, ICAs
-│   ├── people-service.md        # People CRUD operations
-│   ├── org-structure-service.md # Roles, org chart (user endpoints)
+│   ├── org-structure-service.md # People + roles + org chart (user endpoints)
 │   ├── dashboard-service.md     # Dashboard configuration and widgets
+│   ├── integration-service/      # Integration user workflows
+│   │   └── integration-service.md
 │   ├── common-patterns.md       # Shared patterns & data models
 │   ├── traction-service/        # Traction feature APIs
 │   │   ├── README.md            # Traction service index
@@ -38,6 +39,7 @@ Specifications/
 │
 ├── admin-portal/                # Admin Portal (Internal)
 │   └── admin-api-specification.md  # Complete admin API spec (v2.0)
+│   └── integration-admin-api-specification.md # Integration admin workflows
 │
 ├── ai-user/                     # AI/Coaching Services
 │   └── backend-integration-unified-ai.md  # Unified AI/Coaching API
@@ -62,9 +64,9 @@ Specifications/
 | [Business Foundation Service](./user-app/business-foundation-service.md) | Business setup, wizard, values | ~25 |
 | [Account API](./user-app/account-api.md) | Auth, billing, subscriptions (consolidated) | ~40 |
 | [AI/Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~20 |
-| [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
-| [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
+| [Org Structure Service](./user-app/org-structure-service.md) | People, roles, relationships, org chart | ~45 |
 | [Dashboard Service](./user-app/dashboard-service.md) | Dashboard configuration, widgets | ~15 |
+| [Integration Service](./user-app/integration-service/integration-service.md) | Connected systems, integrations, testing lifecycle | ~14 |
 | [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | ~66 |
 
 **Total User App Endpoints:** ~227
@@ -74,6 +76,7 @@ Specifications/
 | Document | Description | Endpoints |
 |----------|-------------|-----------|
 | [Admin API v2.0](./admin-portal/admin-api-specification.md) | Complete admin portal spec (updated Feb 4, 2026) | 88 |
+| [Integration Admin API](./admin-portal/integration-admin-api-specification.md) | Integration metadata sync and catalog/system/parameter definitions | ~8 |
 
 **Total Admin Endpoints:** 88
 
@@ -111,19 +114,21 @@ Each API document follows this structure:
 
 1. **Header** - Version, dates, base URL
 2. **Overview** - Service purpose, key concepts
-3. **Endpoints** - Grouped by resource/feature
+3. **Change Log** - A table with version, date and brief summary of the change  
+4. **Endoint List** a list of all endpoints in the document with a hyperlink to the detail section
+5. **Endpoints** - Grouped by resource/feature
    - HTTP method + path
    - Request/response examples
    - Field constraints
    - Error responses
-4. **Data Types** - TypeScript interfaces, enums
-5. **Error Codes** - Standard error codes
+6. **Data Types** - TypeScript interfaces, enums
+7. **Error Codes** - Standard error codes
 
 ### Naming Conventions
 
 | Type | Convention | Example |
 |------|------------|---------|
-| File names | kebab-case | `people-service.md` |
+| File names | kebab-case | `org-structure-service.md` |
 | Endpoint paths | kebab-case | `/api/people/{id}/tags` |
 | Request/Response fields | snake_case | `first_name`, `created_at` |
 | TypeScript types | PascalCase | `PersonResponse` |

@@ -30,17 +30,15 @@ This specification is split into multiple documents for efficient AI assistant c
    - Products & Services Inventory
    - Wizard Progress Tracking
 
-4. **[People Service](./people-service.md)**
-   - Person CRUD operations
+4. **[Org Structure Service](./org-structure-service.md)**
+   - People endpoints and contracts
    - Person tags and types
    - User-person relationships
-
-5. **[Org Structure Service](./org-structure-service.md)**
    - Organization roles and permissions
    - Organization chart and relationships
    - User org structure endpoints
 
-6. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
+5. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
@@ -58,7 +56,13 @@ This specification is split into multiple documents for efficient AI assistant c
    - Dynamic Widget Data Retrieval
    - Responsive Grid Layouts
 
-9. **[Common Patterns & Data Models](./common-patterns.md)**
+9. **[Integration Service](./integration-service/integration-service.md)** ⭐ NEW (v1.0)
+   - Connected systems management and diagnostics
+   - Add-system bootstrap and provider account provisioning
+   - Measure integration add/edit/test/save lifecycle
+   - Tested-state gating and execution status visibility
+
+10. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations
@@ -285,5 +289,6 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 - [Account Service Specs →](./account-service.md)
 - [AI/Coaching Service Specs →](../ai-user/backend-integration-unified-ai.md)
 - [Traction Service Specs →](./traction-service/README.md)
-- [People & Org Structure →](./people-service.md)
+- [Integration Service Specs →](./integration-service/integration-service.md)
+- [People & Org Structure →](./org-structure-service.md)
 - [Common Patterns & Data Models →](./common-patterns.md)
