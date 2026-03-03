@@ -18,8 +18,7 @@ Specifications/
 │   ├── account-api.md           # Account, billing, subscriptions (consolidated)
 │   ├── account-gap.md           # Account service gap analysis
 │   ├── business-foundation-api.md # Business foundation, wizard, values, ICAs
-│   ├── people-service.md        # People CRUD operations
-│   ├── org-structure-service.md # Roles, org chart (user endpoints)
+│   ├── org-structure-service.md # People + roles + org chart (user endpoints)
 │   ├── dashboard-service.md     # Dashboard configuration and widgets
 │   ├── integration-service/      # Integration user workflows
 │   │   └── integration-service.md
@@ -65,8 +64,7 @@ Specifications/
 | [Business Foundation Service](./user-app/business-foundation-service.md) | Business setup, wizard, values | ~25 |
 | [Account API](./user-app/account-api.md) | Auth, billing, subscriptions (consolidated) | ~40 |
 | [AI/Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~20 |
-| [People Service](./user-app/people-service.md) | Person management, tags, types | ~25 |
-| [Org Structure Service](./user-app/org-structure-service.md) | Roles, relationships, org chart | ~20 |
+| [Org Structure Service](./user-app/org-structure-service.md) | People, roles, relationships, org chart | ~45 |
 | [Dashboard Service](./user-app/dashboard-service.md) | Dashboard configuration, widgets | ~15 |
 | [Integration Service](./user-app/integration-service/integration-service.md) | Connected systems, integrations, testing lifecycle | ~14 |
 | [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | ~66 |
@@ -130,7 +128,7 @@ Each API document follows this structure:
 
 | Type | Convention | Example |
 |------|------------|---------|
-| File names | kebab-case | `people-service.md` |
+| File names | kebab-case | `org-structure-service.md` |
 | Endpoint paths | kebab-case | `/api/people/{id}/tags` |
 | Request/Response fields | snake_case | `first_name`, `created_at` |
 | TypeScript types | PascalCase | `PersonResponse` |

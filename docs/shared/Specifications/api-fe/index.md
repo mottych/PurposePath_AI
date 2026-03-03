@@ -30,17 +30,15 @@ This specification is split into multiple documents for efficient AI assistant c
    - Products & Services Inventory
    - Wizard Progress Tracking
 
-4. **[People Service](./people-service.md)**
-   - Person CRUD operations
+4. **[Org Structure Service](./org-structure-service.md)**
+   - People endpoints and contracts
    - Person tags and types
    - User-person relationships
-
-5. **[Org Structure Service](./org-structure-service.md)**
    - Organization roles and permissions
    - Organization chart and relationships
    - User org structure endpoints
 
-6. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
+5. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
@@ -292,5 +290,5 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 - [AI/Coaching Service Specs →](../ai-user/backend-integration-unified-ai.md)
 - [Traction Service Specs →](./traction-service/README.md)
 - [Integration Service Specs →](./integration-service/integration-service.md)
-- [People & Org Structure →](./people-service.md)
+- [People & Org Structure →](./org-structure-service.md)
 - [Common Patterns & Data Models →](./common-patterns.md)
