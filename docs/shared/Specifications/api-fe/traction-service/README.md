@@ -1,7 +1,7 @@
 # Traction Service API Specifications (v7)
 
 **Version:** 7.0  
-**Last Updated:** December 23, 2025  
+**Last Updated:** March 3, 2026  
 **Service Base URL:** `{REACT_APP_TRACTION_API_URL}`  
 **Default (Localhost):** `http://localhost:8002`
 
@@ -47,6 +47,7 @@ This directory contains detailed API specifications for the Traction Service, or
 | [Actions API](./actions-api.md) | ActionsController | 10 endpoints | Action items management |
 | [Issues API](./issues-api.md) | IssuesController | 5 endpoints | Issue tracking |
 | [Coaching Insights API](./insights-api.md) | InsightsController | 5 endpoints | AI-generated coaching insights (CRUD) |
+| [Integration Service API](./integration-service.md) | ConnectionsController + MeasureIntegrationsController | 12 endpoints | User-facing system connections and measure integration setup |
 | [Dashboard, Reports & Activities](./dashboard-reports-activities-api.md) | Multiple | 5 endpoints | Command center, reports, activity feeds |
 
 > **Note:** People API has been deferred and moved to Account Service for better organizational alignment.
@@ -201,6 +202,12 @@ Example: `"2025-12-23T15:30:00.000Z"`
 ---
 
 ## Version History
+
+### v7.2 (March 3, 2026)
+- Updated `integration-service.md` to match implemented `PurposePath.Traction.Lambda` user contracts exactly.
+- Corrected endpoint inventory and removed unimplemented user-facing entries from FE contract scope.
+- Added explicit parameter lookup endpoint contract (`POST /measure-integrations/parameter-lookup-values`).
+- Aligned payload/field names with runtime DTOs (`connectionConfigurationId`, `parameterValues`, `isActive`, etc.).
 
 ### v7.1 (February 25, 2026)
 - Added measure-definition integration hint contract fields across available-measures and measure create/read/update responses:
