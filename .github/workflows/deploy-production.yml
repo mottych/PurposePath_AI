@@ -277,28 +277,37 @@ jobs:
       - name: CORS Preflight Check
         run: |
           echo "Testing CORS preflight behavior..."
-          ORIGIN="https://purposepath.app"
           TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+          ORIGINS=(
+            "https://dev.purposepath.app"
+            "https://staging.purposepath.app"
+            "https://preprod.purposepath.app"
+            "https://www.purposepath.app"
+            "https://purposepath.app"
+          )
 
-          CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
-            -H "Origin: $ORIGIN" \
-            -H "Access-Control-Request-Method: GET" \
-            -H "Access-Control-Request-Headers: Authorization,Content-Type")
+          for ORIGIN in "${ORIGINS[@]}"; do
+            echo "Checking origin: $ORIGIN"
+            CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization,Content-Type,Baggage,Sentry-Trace")
 
-          ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
-          ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
+            ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
+            ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
 
-          if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
-            echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
-            exit 1
-          fi
+            if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
+              echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
+              exit 1
+            fi
 
-          if [ "$ALLOW_CREDENTIALS" != "true" ]; then
-            echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
-            exit 1
-          fi
+            if [ "$ALLOW_CREDENTIALS" != "true" ]; then
+              echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
+              exit 1
+            fi
+          done
 
-          echo "✅ CORS preflight returned expected headers"
+          echo "✅ CORS preflight returned expected headers for all production frontend origins"
 
       - name: Smoke Test Summary
         run: |
