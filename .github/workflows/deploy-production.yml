@@ -207,20 +207,29 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
       - name: Lambda Runtime State Check
+        working-directory: coaching/pulumi
         run: |
           echo "Validating Lambda runtime state..."
           LAMBDA_ARN=$(pulumi stack output lambdaArn --stack prod)
           LAMBDA_NAME=${LAMBDA_ARN##*:function:}
 
-          STATE=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.State" --output text)
-          REASON=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.StateReason" --output text)
+          for ATTEMPT in {1..18}; do
+            STATE=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.State" --output text)
+            REASON=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.StateReason" --output text)
+            UPDATE_STATUS=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.LastUpdateStatus" --output text)
 
-          if [ "$STATE" != "Active" ]; then
-            echo "❌ Lambda is not Active (state=$STATE, reason=$REASON)"
-            exit 1
-          fi
+            echo "Attempt $ATTEMPT: state=$STATE, updateStatus=$UPDATE_STATUS, reason=$REASON"
 
-          echo "✅ Lambda state is Active"
+            if [ "$STATE" == "Active" ] && [ "$UPDATE_STATUS" == "Successful" ]; then
+              echo "✅ Lambda state is Active and update status is Successful"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "❌ Lambda did not reach Active/Successful in expected time window"
+          exit 1
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
