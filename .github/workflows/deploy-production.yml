@@ -14,11 +14,6 @@ on:
         options:
           - 'true'
           - 'false'
-      source_image_uri:
-        description: 'Optional exact image URI (repo@sha256:...) to promote without rebuild'
-        required: false
-        default: ''
-        type: string
 
 concurrency:
   group: deploy-production
@@ -31,7 +26,6 @@ jobs:
     outputs:
       should_deploy: ${{ steps.promotion-check.outputs.should_deploy }}
       trigger_reason: ${{ steps.promotion-check.outputs.trigger_reason }}
-      promotion_source: ${{ steps.promotion-check.outputs.promotion_source }}
 
     steps:
       - name: Evaluate deployment trigger
@@ -40,31 +34,27 @@ jobs:
         run: |
           SHOULD_DEPLOY="false"
           TRIGGER_REASON="not-eligible"
-          PROMOTION_SOURCE="none"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
           if [ "${{ github.event_name }}" == "pull_request" ] && \
              [ "${{ github.event.pull_request.merged }}" == "true" ] && \
              [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
-             [ "${{ github.event.pull_request.head.ref }}" == "staging" ]; then
+             [ "$HEAD_REF" == "staging" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="merged-staging-to-master-pr"
-            PROMOTION_SOURCE="staging"
           elif [ "${{ github.event_name }}" == "pull_request" ] && \
-             [ "${{ github.event.pull_request.merged }}" == "true" ] && \
-             [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
-             [ "${{ github.event.pull_request.head.ref }}" == "preprod" ]; then
+               [ "${{ github.event.pull_request.merged }}" == "true" ] && \
+               [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
+               [[ "$HEAD_REF" == hotfix/* ]]; then
             SHOULD_DEPLOY="true"
-            TRIGGER_REASON="merged-preprod-to-master-pr"
-            PROMOTION_SOURCE="preprod"
+            TRIGGER_REASON="merged-hotfix-to-master-pr"
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="manual-dispatch"
-            PROMOTION_SOURCE="manual"
           fi
 
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           echo "trigger_reason=$TRIGGER_REASON" >> "$GITHUB_OUTPUT"
-          echo "promotion_source=$PROMOTION_SOURCE" >> "$GITHUB_OUTPUT"
 
           echo "Promotion check result: $SHOULD_DEPLOY"
           echo "Reason: $TRIGGER_REASON"
@@ -73,7 +63,7 @@ jobs:
         if: steps.promotion-check.outputs.should_deploy != 'true'
         run: |
           echo "No production deployment triggered."
-          echo "This workflow only deploys on merged PRs from staging/preprod -> master, or manual dispatch."
+          echo "This workflow deploys on merged PRs from staging/hotfix -> master, or manual dispatch."
 
   pre-deployment-checks:
     name: Pre-Deployment Validation
@@ -172,7 +162,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-promotion, deploy-infrastructure]
     if: ${{ needs.validate-promotion.outputs.should_deploy == 'true' && needs.deploy-infrastructure.result == 'success' }}
-    environment: production
     permissions:
       id-token: write
       contents: write
@@ -196,31 +185,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Resolve promotion image URI
-        id: promotion-image
-        shell: bash
-        run: |
-          IMAGE_URI=""
-
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.source_image_uri }}" ]; then
-            IMAGE_URI="${{ github.event.inputs.source_image_uri }}"
-          elif [ "${{ needs.validate-promotion.outputs.trigger_reason }}" == "merged-preprod-to-master-pr" ]; then
-            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            DIGEST=$(aws ecr describe-images \
-              --repository-name purposepath-coaching \
-              --image-ids imageTag=preprod \
-              --query 'imageDetails[0].imageDigest' \
-              --output text)
-            IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/purposepath-coaching@${DIGEST}"
-          fi
-
-          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          if [ -n "$IMAGE_URI" ]; then
-            echo "Using promoted image URI: $IMAGE_URI"
-          else
-            echo "No explicit image URI provided; deployment may rebuild image."
-          fi
-
       - name: Deploy Coaching Service
         uses: pulumi/actions@v5
         with:
@@ -232,7 +196,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
-          COACHING_IMAGE_URI: ${{ steps.promotion-image.outputs.image_uri }}
 
       - name: Get API Gateway URL
         id: api-url
@@ -243,19 +206,30 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
-      - name: Verify promoted image URI
-        if: ${{ steps.promotion-image.outputs.image_uri != '' }}
+      - name: Lambda Runtime State Check
         working-directory: coaching/pulumi
-        shell: bash
         run: |
-          DEPLOYED_IMAGE_URI=$(pulumi stack output deployedImageUri --stack prod)
-          if [ "$DEPLOYED_IMAGE_URI" != "${{ steps.promotion-image.outputs.image_uri }}" ]; then
-            echo "Expected image URI: ${{ steps.promotion-image.outputs.image_uri }}"
-            echo "Deployed image URI: $DEPLOYED_IMAGE_URI"
-            echo "❌ Deployed image does not match promotion source"
-            exit 1
-          fi
-          echo "✅ Deployed image matches promotion source"
+          echo "Validating Lambda runtime state..."
+          LAMBDA_ARN=$(pulumi stack output lambdaArn --stack prod)
+          LAMBDA_NAME=${LAMBDA_ARN##*:function:}
+
+          for ATTEMPT in {1..18}; do
+            STATE=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.State" --output text)
+            REASON=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.StateReason" --output text)
+            UPDATE_STATUS=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.LastUpdateStatus" --output text)
+
+            echo "Attempt $ATTEMPT: state=$STATE, updateStatus=$UPDATE_STATUS, reason=$REASON"
+
+            if [ "$STATE" == "Active" ] && [ "$UPDATE_STATUS" == "Successful" ]; then
+              echo "✅ Lambda state is Active and update status is Successful"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "❌ Lambda did not reach Active/Successful in expected time window"
+          exit 1
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
@@ -287,8 +261,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
           echo "**Stack:** prod" >> $GITHUB_STEP_SUMMARY
-          echo "**Promotion source:** ${{ needs.validate-promotion.outputs.promotion_source }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Promoted image URI:** ${{ steps.promotion-image.outputs.image_uri || 'n/a (rebuild path)' }}" >> $GITHUB_STEP_SUMMARY
           echo "**API URL:** ${{ steps.api-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** us-east-1" >> $GITHUB_STEP_SUMMARY
           echo "**Release:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
@@ -339,28 +311,37 @@ jobs:
       - name: CORS Preflight Check
         run: |
           echo "Testing CORS preflight behavior..."
-          ORIGIN="https://purposepath.app"
           TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+          ORIGINS=(
+            "https://dev.purposepath.app"
+            "https://staging.purposepath.app"
+            "https://preprod.purposepath.app"
+            "https://www.purposepath.app"
+            "https://purposepath.app"
+          )
 
-          CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
-            -H "Origin: $ORIGIN" \
-            -H "Access-Control-Request-Method: GET" \
-            -H "Access-Control-Request-Headers: Authorization,Content-Type")
+          for ORIGIN in "${ORIGINS[@]}"; do
+            echo "Checking origin: $ORIGIN"
+            CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization,Content-Type,Baggage,Sentry-Trace")
 
-          ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
-          ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
+            ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
+            ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
 
-          if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
-            echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
-            exit 1
-          fi
+            if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
+              echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
+              exit 1
+            fi
 
-          if [ "$ALLOW_CREDENTIALS" != "true" ]; then
-            echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
-            exit 1
-          fi
+            if [ "$ALLOW_CREDENTIALS" != "true" ]; then
+              echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
+              exit 1
+            fi
+          done
 
-          echo "✅ CORS preflight returned expected headers"
+          echo "✅ CORS preflight returned expected headers for all production frontend origins"
 
       - name: Smoke Test Summary
         run: |

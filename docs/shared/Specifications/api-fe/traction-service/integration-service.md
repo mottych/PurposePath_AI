@@ -1,15 +1,14 @@
 # Integration Service API Specification (User App)
 
-**Service:** Traction Service (User App Integration APIs)  
-**Route Prefixes:** `/connections`, `/measure-integrations`  
-**Version:** 1.2  
-**Last Updated:** March 3, 2026
+**Service:** Integration Service  
+**Base Path:** `/integration`  
+**Version:** 1.1  
+**Last Updated:** February 19, 2026
 
 ## Overview
 
-This specification documents the **implemented user-facing integration APIs** used by the frontend in Settings and Measure flows.
-
-This file intentionally reflects current runtime behavior in `PurposePath.Traction.Lambda` and excludes admin metadata-definition APIs.
+The Integration Service API enables end-user integration workflows in Settings and Measure screens.  
+This specification covers **user-facing** endpoints only (no admin metadata-definition endpoints).
 
 ### Contract Source of Truth
 
@@ -21,16 +20,10 @@ This file intentionally reflects current runtime behavior in `PurposePath.Tracti
 
 - Connected systems list with status/diagnostics and measure counts
 - Add-system bootstrap (provider subaccount + connection persistence)
-- Measure integration eligibility/list/get/create/update
-- Parameter lookup values from connected systems (`valueKey` + `valueName`)
+- Measure integration create/edit/delete with eligibility checks
 - Snapshot/aggregate scheduling controls and frequency rules
-- Save-gating behavior based on current tested-state rules
-
-### Scope Notes
-
-- `POST /measure-integrations/{integrationId}/test` is **not** currently exposed by the Traction user controller.
-- Integration runtime test/config endpoints exist in `PurposePath.Integration.Lambda` and are not part of this FE user contract.
-- Admin metadata-definition APIs are out-of-scope here (see `api-admin` specs).
+- Parameter selection with optional lookup values (`valueKey` + `valueName`)
+- Test-first lifecycle and save gating based on tested-state validity
 
 ---
 
@@ -58,11 +51,11 @@ All endpoints are tenant-scoped and require authenticated user context.
 | POST | `/connections/{connectionId}/test` | Test connection and refresh health status |
 | GET | `/connections/{connectionId}/measures` | List integrations under a connection |
 | GET | `/measure-integrations/eligible-measures` | List measures eligible for integration for selected system |
-| GET | `/measure-integrations/eligible` | Alias of eligible-measures endpoint |
 | GET | `/measure-integrations/{integrationId}` | Get integration details for edit/view |
-| POST | `/measure-integrations/parameter-lookup-values` | Fetch lookup options for a parameter |
-| POST | `/measure-integrations` | Create integration definition |
-| PUT | `/measure-integrations/{integrationId}` | Update integration definition |
+| POST | `/measure-integrations` | Create integration (save-gated by tested state) |
+| PUT | `/measure-integrations/{integrationId}` | Update integration (save-gated by tested state rules) |
+| DELETE | `/measure-integrations/{integrationId}` | Delete integration |
+| POST | `/measure-integrations/{integrationId}/test` | Test retrieval only (no measure-data persistence) |
 
 ---
 
@@ -85,73 +78,49 @@ interface ConnectionSummaryResponse {
 }
 ```
 
-### MeasureIntegrationDefinitionResponse
+### MeasureIntegrationResponse
 
 ```typescript
-interface MeasureIntegrationDefinitionResponse {
-  integrationId: string;
-  measureId: string;
-  connectionConfigurationId: string;
-  isActive: boolean;
+interface MeasureIntegrationResponse {
+  integrationId: string;                       // UUID
+  measureId: string;                           // UUID
+  measureName: string;
+  connectionId: string;                        // UUID
+  systemId: string;                            // UUID
+  systemName: string;
+
+  isEnabled: boolean;
   testStatus: 'NotTested' | 'Tested' | 'Invalidated';
   testedAtUtc?: string;
-  lastTestExecutionId?: string;
   testFingerprint?: string;
-  testInvalidationReasonCode?: string;
+
+  measureType: 'quantitative';
+  measureDataType: 'snapshot' | 'aggregate';
+  aggregationType?: 'sum' | 'average' | 'count' | 'min' | 'max';
+  aggregationPeriod?: 'day' | 'week' | 'month' | 'quarter' | 'year';
+  measureIntent: string;
+
+  dataCalculationMethod?: 'previousPeriod' | 'movingAverage';
+  frequencyValue: number;                      // integer > 0
+  frequencyUnit: 'days' | 'months';
+  lagDaysAfterPeriodEnd?: number;              // integer >= 0
+  measureTimeZone: string;                     // IANA timezone
+
+  parameters: IntegrationParameterSelection[];
+
   lastReadingAtUtc?: string;
   lastReadingStatus?: 'Success' | 'Failed';
   lastReadingReason?: string;
-  dataCalculationMethod: 'PreviousPeriod' | 'MovingAverage';
-  frequencyValue: number;
-  frequencyUnit: 'Days' | 'Months';
-  lagDaysAfterPeriodEnd: number;
-  measureTimeZone: string;
-  parameterValues: Record<string, IntegrationParameterValueResponse>;
 }
 
-interface IntegrationParameterValueResponse {
-  isEnabled: boolean;
-  value?: string;
-  lookupKey?: string;
-  lookupDisplayName?: string;
-}
-```
-
-### EligibleMeasureForIntegrationResponse
-
-```typescript
-interface EligibleMeasureForIntegrationResponse {
-  measureId: string;
-  name: string;
-  unit: string;
-  dataType?: string;
-  aggregationType?: string;
-  aggregationPeriod?: string;
-  aiQueryIntent?: string;
-}
-```
-
-### ParameterLookupValues
-
-```typescript
-interface GetParameterLookupValuesRequest {
-  connectionId: string;
+interface IntegrationParameterSelection {
   parameterId: string;
-  systemMeasureConfigId?: string; // mutually exclusive with measureId+systemId
-  measureId?: string;
-  systemId?: string;
-  search?: string;
-  page?: number;                  // default 1, min 1
-  pageSize?: number;              // default 50, min 1, max 200
-}
-
-interface ParameterLookupValuesResponse {
-  parameterId: string;
-  values: Array<{ valueKey: string; valueName: string }>;
-  page: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
+  parameterName: string;
+  sourceColumnName: string;
+  dataType: 'string' | 'number' | 'boolean' | 'date' | 'datetime';
+  enabled: boolean;
+  selectedValueKey?: string;
+  selectedValueName?: string;
 }
 ```
 
@@ -308,32 +277,6 @@ Returns `ConnectionSummaryResponse`.
 
 ---
 
-### 4a) Update Connection
-
-**PATCH** `/connections/{connectionId}`
-
-Updates editable user metadata for a connection.
-
-#### Request Body
-
-```typescript
-interface UpdateConnectionRequest {
-  workspaceContext?: string;
-  displayName?: string;
-}
-```
-
-#### Response (200)
-
-Returns `ConnectionSummaryResponse`.
-
-#### Notes
-
-- If `workspaceContext` is provided but external provider/reference is missing, update fails with code `EXTERNAL_CONNECTION_REFERENCE_MISSING`.
-- Not found returns 404 with `INTEGRATION_CONNECTION_NOT_FOUND`.
-
----
-
 ### 5) Test Connection
 
 **POST** `/connections/{connectionId}/test`
@@ -364,25 +307,13 @@ Used by expandable row in Connected Systems screen.
 
 #### Response (200)
 
-```typescript
-interface ConnectionMeasureResponse {
-  integrationId: string;
-  measureId: string;
-  measureName: string;
-  isEnabled: boolean;
-  lastReadingAtUtc?: string;
-  lastReadingStatus?: string;
-  lastReadingReason?: string;
-}
-```
+Returns `MeasureIntegrationResponse[]` (list view projection).
 
 ---
 
 ### 7) List Eligible Measures for System
 
 **GET** `/measure-integrations/eligible-measures?systemId={systemId}`
-
-Alias supported: `GET /measure-integrations/eligible?systemId={systemId}`
 
 Returns measures eligible for new integration under selected system.
 
@@ -395,10 +326,6 @@ Eligible measure must be:
 - not already connected to another system
 - quantitative
 
-#### Response (200)
-
-Returns `EligibleMeasureForIntegrationResponse[]`.
-
 ---
 
 ### 8) Create Measure Integration
@@ -410,32 +337,36 @@ Returns `EligibleMeasureForIntegrationResponse[]`.
 ```typescript
 interface CreateMeasureIntegrationRequest {
   measureId: string;                              // required UUID
-  connectionConfigurationId: string;              // required UUID
-  dataCalculationMethod: 'previousPeriod' | 'movingAverage';
+  connectionId: string;                           // required UUID
+  isEnabled: boolean;
+
+  dataCalculationMethod?: 'previousPeriod' | 'movingAverage';
   frequencyValue: number;                         // integer > 0
   frequencyUnit: 'days' | 'months';
-  lagDaysAfterPeriodEnd: number;                  // integer >= 0
+  lagDaysAfterPeriodEnd?: number;                 // integer >= 0
   measureTimeZone: string;                        // IANA timezone
-  isActive: boolean;
-  testFingerprint?: string;
-  parameterValues: Record<string, {
-    isEnabled: boolean;
-    value?: string;
-    lookupKey?: string;
-    lookupDisplayName?: string;
+
+  parameters: Array<{
+    parameterId: string;
+    enabled: boolean;
+    selectedValueKey?: string;
+    selectedValueName?: string;
   }>;
+
+  testFingerprint: string;                        // required for create (successful test execution id/fingerprint)
 }
 ```
 
 #### Validation Rules
 
-- Create currently requires successful test fingerprint in handler; missing fingerprint fails with `TEST_REQUIRED_BEFORE_CREATE`.
-- `connectionConfigurationId` and `measureId` must be valid GUIDs.
-- `dataCalculationMethod` and `frequencyUnit` must parse to known enum values.
+- Enabled parameters must include both `selectedValueKey` and `selectedValueName`.
+- `lagDaysAfterPeriodEnd` required when `dataCalculationMethod=previousPeriod` for aggregate measures.
+- Create is rejected without valid tested state/fingerprint.
+- Save-gating failure returns deterministic code: `TEST_REQUIRED_BEFORE_CREATE`.
 
-#### Response (200)
+#### Response (201)
 
-Returns `MeasureIntegrationDefinitionResponse`.
+Returns `MeasureIntegrationResponse`.
 
 ---
 
@@ -443,84 +374,59 @@ Returns `MeasureIntegrationDefinitionResponse`.
 
 **PUT** `/measure-integrations/{integrationId}`
 
-#### Request Body
+Same payload model as create.
 
-```typescript
-interface UpdateMeasureIntegrationRequest {
-  connectionConfigurationId: string;
-  dataCalculationMethod: 'previousPeriod' | 'movingAverage';
-  frequencyValue: number;
-  frequencyUnit: 'days' | 'months';
-  lagDaysAfterPeriodEnd: number;
-  measureTimeZone: string;
-  isActive: boolean;
-  testFingerprint?: string;
-  parameterValues: Record<string, {
-    isEnabled: boolean;
-    value?: string;
-    lookupKey?: string;
-    lookupDisplayName?: string;
-  }>;
+`testFingerprint` is optional for update and is only required when template-affecting changes are included.
+
+#### Save-Gating Rules
+
+- Template-affecting changes require valid tested state before save:
+  - parameter enable/disable
+  - parameter value changes
+  - calculation method changes
+  - timezone changes
+  - period/lag semantics changes
+- Frequency-only changes do not invalidate tested state.
+- If template-affecting changes are submitted without a fresh `testFingerprint`, save fails with code `RETEST_REQUIRED_FOR_TEMPLATE_CHANGES`.
+
+---
+
+### 10) Test Measure Integration
+
+**POST** `/measure-integrations/{integrationId}/test`
+
+Runs retrieval path and returns computed value + execution metadata.  
+Does **not** persist measure actuals/current measure value.
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "integrationId": "f8f8d8b7-81de-42f7-b689-c0d4b709bc3d",
+    "executionId": "ea619bc1-f4ac-4d75-934b-73fc912af5f0",
+    "success": true,
+    "status": "Succeeded",
+    "actualValue": 125.52,
+    "measuredAtUtc": "2026-02-19T08:30:00Z",
+    "windowStartUtc": "2026-01-01T00:00:00Z",
+    "windowEndUtc": "2026-01-31T23:59:59Z",
+    "dataSource": "CData",
+    "errorCode": null,
+    "errorMessage": null,
+    "queryMetadata": {
+      "templateKey": "templates/cdata/revenue/prompt.txt",
+      "systemType": "CData",
+      "connectionType": "ApiKey",
+      "usesExternalReference": false,
+      "externalProvider": null
+    }
+  }
 }
 ```
 
-#### Save-Gating Rules (Current Implementation)
-
-- Template-affecting changes require `testFingerprint`, else fails with `RETEST_REQUIRED_FOR_TEMPLATE_CHANGES`.
-- Template-affecting checks currently include:
-  - connection change
-  - parameter dictionary/value/lookup changes
-  - calculation method changes
-  - lag changes
-  - timezone changes
-- Frequency-only changes do not trigger retest.
-
-#### Response (200)
-
-Returns `MeasureIntegrationDefinitionResponse`.
-
 ---
-
-### 10) Get Parameter Lookup Values
-
-**POST** `/measure-integrations/parameter-lookup-values`
-
-Returns selectable lookup key/name options for a parameter from connected system data.
-
-#### Request Body
-
-`GetParameterLookupValuesRequest` (see common data models).
-
-#### Scope Rules
-
-- Provide either:
-  - `systemMeasureConfigId`, or
-  - `measureId` + `systemId`
-- Do not provide both scope modes together.
-
-#### Response (200)
-
-Returns `ParameterLookupValuesResponse`.
-
----
-
-### 11) Get Integration Definition
-
-**GET** `/measure-integrations/{integrationId}`
-
-Returns full definition for edit/read views.
-
-#### Response (200)
-
-Returns `MeasureIntegrationDefinitionResponse`.
-
----
-
-### 12) Not in Current User Contract
-
-- `DELETE /measure-integrations/{integrationId}` is not currently exposed in `PurposePath.Traction.Lambda`.
-- `POST /measure-integrations/{integrationId}/test` is not currently exposed in `PurposePath.Traction.Lambda`.
-- Any FE use of runtime test endpoint must be explicitly routed/documented via separate Integration runtime contract.
 
 ## Error Responses
 
@@ -538,12 +444,14 @@ Returns `MeasureIntegrationDefinitionResponse`.
 
 ### Common Error Codes
 
-- `INTEGRATION_CONNECTION_NOT_FOUND`
-- `EXTERNAL_CONNECTION_REFERENCE_MISSING`
-- `TEST_REQUIRED_BEFORE_CREATE`
-- `RETEST_REQUIRED_FOR_TEMPLATE_CHANGES`
-- `CONNECTION_INVALID`
-- `PARAMETER_NOT_FOUND`
-- `INVALID_LOOKUP_SCOPE`
-- `INVALID_PAGINATION`
-- `LOOKUP_NOT_CONFIGURED`
+- `CONNECTION_NOT_FOUND`
+- `SYSTEM_NOT_ELIGIBLE`
+- `MEASURE_NOT_ELIGIBLE`
+- `INTEGRATION_NOT_FOUND`
+- `ENABLED_PARAMETER_VALUE_REQUIRED`
+- `INVALID_TIMEZONE`
+- `INVALID_CALCULATION_CONFIGURATION`
+- `TEST_REQUIRED_BEFORE_SAVE`
+- `TEST_FINGERPRINT_MISMATCH`
+- `CONNECTION_TEST_FAILED`
+- `EXECUTION_FAILED`
