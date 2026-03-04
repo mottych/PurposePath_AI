@@ -74,6 +74,11 @@ class Settings(BaseSettings):
         return f"purposepath-ai-jobs-{self.stage}"
 
     @property
+    def sql_generation_idempotency_table(self) -> str:
+        """Get SQL generation idempotency table name."""
+        return f"purposepath-sql-generation-idempotency-{self.stage}"
+
+    @property
     def template_metadata_table(self) -> str:
         """Get template metadata table name."""
         return f"prompt_templates_metadata_{self.stage}"
@@ -108,6 +113,12 @@ class Settings(BaseSettings):
         default="https://api.dev.purposepath.app/account/api/v1",
         validation_alias="BUSINESS_API_BASE_URL",
     )
+    cdata_mcp_base_url: str = Field(
+        default="https://mcp.cloud.cdata.com",
+        validation_alias="CDATA_MCP_BASE_URL",
+    )
+    cdata_mcp_user_id: str | None = Field(default=None, validation_alias="CDATA_MCP_USER_ID")
+    cdata_mcp_pat: str | None = Field(default=None, validation_alias="CDATA_MCP_PAT")
     account_api_url: str = Field(
         default="https://api.dev.purposepath.app",
         validation_alias="ACCOUNT_API_URL",
@@ -149,6 +160,7 @@ class Settings(BaseSettings):
     # Session Configuration
     session_ttl_hours: int = 24
     conversation_ttl_days: int = 30
+    ai_async_jobs_enabled: bool = Field(default=True, validation_alias="AI_ASYNC_JOBS_ENABLED")
 
     # LLM Configuration
     llm_temperature: float = 0.7

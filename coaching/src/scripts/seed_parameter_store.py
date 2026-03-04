@@ -8,7 +8,7 @@ Usage:
     python -m coaching.src.scripts.seed_parameter_store [options]
 
 Options:
-    --stage STAGE              Environment stage (dev, staging, prod). Default: dev
+    --stage STAGE              Environment stage (dev, staging, preprod, prod). Default: dev
     --region REGION            AWS region. Default: us-east-1
     --basic-model CODE         Basic model code. Default: CLAUDE_3_5_SONNET_V2
     --premium-model CODE       Premium model code. Default: CLAUDE_OPUS_4_5
@@ -92,7 +92,7 @@ def parse_args() -> argparse.Namespace:
         "--stage",
         type=str,
         default="dev",
-        choices=["dev", "staging", "prod"],
+        choices=["dev", "staging", "preprod", "prod"],
         help="Environment stage (default: dev)",
     )
 

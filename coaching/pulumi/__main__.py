@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 from pathlib import Path
 
 import pulumi_aws as aws
@@ -40,6 +41,23 @@ config = {
         "account_api_url": "https://api.staging.purposepath.app",
         "business_api_base_url": "https://api.staging.purposepath.app/account/api/v1",
         "log_level": "INFO",
+        "ai_async_jobs_enabled": "true",
+    },
+    "preprod": {
+        "infra_stack": "mottych/purposepath-infrastructure/preprod",
+        "coaching_infra_stack": "mottych/purposepath-coaching-infrastructure/preprod",
+        "api_domain": "api.preprod.purposepath.app",
+        "certificate_output": "apiPreprod",
+        "jwt_secret": "purposepath-jwt-secret-preprod",
+        "openai_api_key_secret": "purposepath/preprod/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/preprod/google-vertex-credentials",
+        "jwt_issuer": "https://api.preprod.purposepath.app",
+        "jwt_audience": "https://preprod.purposepath.app",
+        "account_api_url": "https://api.preprod.purposepath.app",
+        "business_api_base_url": "https://api.preprod.purposepath.app/account/api/v1",
+        "log_level": "INFO",
+        # Safe default for permanent preprod: keep async background execution off unless explicitly enabled.
+        "ai_async_jobs_enabled": "false",
     },
     "preprod": {
         "infra_stack": "mottych/purposepath-infrastructure/preprod",
@@ -68,6 +86,7 @@ config = {
         "account_api_url": "https://api.purposepath.app",
         "business_api_base_url": "https://api.purposepath.app/account/api/v1",
         "log_level": "WARNING",
+        "ai_async_jobs_enabled": "true",
     },
 }
 
@@ -321,23 +340,30 @@ dockerfile_path = project_root / "coaching" / "Dockerfile"
 
 # Cache-busting: use timestamp to force rebuild
 build_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+image_uri_override = os.getenv("COACHING_IMAGE_URI", "").strip()
 
-image = docker.Image(
-    "coaching-image",
-    build=docker.DockerBuildArgs(
-        context=str(project_root),  # pp_ai directory
-        dockerfile=str(dockerfile_path),
-        platform="linux/amd64",
-        args={
-            "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
-        },
-    ),
-    image_name=pulumi.Output.concat(ecr_repository_url, ":", stack),
-    registry=docker.RegistryArgs(
-        server=ecr_repository_url, username=auth_token.user_name, password=auth_token.password
-    ),
-    skip_push=False,
-)
+if image_uri_override:
+    # Promotion path (e.g., preprod -> prod): deploy exact previously built image digest.
+    image = None
+    resolved_image_uri = pulumi.Output.from_input(image_uri_override)
+else:
+    image = docker.Image(
+        "coaching-image",
+        build=docker.DockerBuildArgs(
+            context=str(project_root),  # pp_ai directory
+            dockerfile=str(dockerfile_path),
+            platform="linux/amd64",
+            args={
+                "BUILD_TIMESTAMP": build_timestamp,  # Force rebuild with timestamp
+            },
+        ),
+        image_name=pulumi.Output.concat(ecr_repository_url, ":", stack),
+        registry=docker.RegistryArgs(
+            server=ecr_repository_url, username=auth_token.user_name, password=auth_token.password
+        ),
+        skip_push=False,
+    )
+    resolved_image_uri = image.repo_digest
 
 # Python Lambda function with Docker
 # NOTE: Using repo_digest instead of image_name to ensure Lambda updates when image changes.
@@ -347,7 +373,7 @@ coaching_lambda = aws.lambda_.Function(
     "coaching-api",
     package_type="Image",
     role=lambda_role.arn,
-    image_uri=image.repo_digest,
+    image_uri=resolved_image_uri,
     timeout=300,
     memory_size=1024,
     environment=aws.lambda_.FunctionEnvironmentArgs(
@@ -365,6 +391,7 @@ coaching_lambda = aws.lambda_.Function(
             "AI_DEBUG_LOGGING": stack_config.get(
                 "ai_debug_logging", "false"
             ),  # Optional, defaults to false
+            "AI_ASYNC_JOBS_ENABLED": stack_config.get("ai_async_jobs_enabled", "true"),
         }
     ),
 )
@@ -428,39 +455,40 @@ aws.lambda_.Permission(
 # Handles:
 # - ai.job.created: Single-shot AI jobs (purpose discovery, goal setting, etc.)
 # - ai.message.created: Coaching conversation messages (async to avoid 30s timeout)
-ai_job_executor_rule = aws.cloudwatch.EventRule(
-    "ai-job-executor-rule",
-    name=f"ai-job-executor-{stack}",
-    description="Triggers async job execution for AI jobs and coaching messages",
-    event_bus_name="default",
-    event_pattern=json.dumps(
-        {
-            "source": ["purposepath.ai"],
-            "detail-type": ["ai.job.created", "ai.message.created"],
-            "detail": {
-                "stage": [stack]  # Filter by environment to prevent cross-stage execution
-            },
-        }
-    ),
-    tags={"Environment": stack, "Service": "coaching-ai"},
-)
+if stack_config.get("ai_async_jobs_enabled", "true").lower() == "true":
+    ai_job_executor_rule = aws.cloudwatch.EventRule(
+        "ai-job-executor-rule",
+        name=f"ai-job-executor-{stack}",
+        description="Triggers async job execution for AI jobs and coaching messages",
+        event_bus_name="default",
+        event_pattern=json.dumps(
+            {
+                "source": ["purposepath.ai"],
+                "detail-type": ["ai.job.created", "ai.message.created"],
+                "detail": {
+                    "stage": [stack]  # Filter by environment to prevent cross-stage execution
+                },
+            }
+        ),
+        tags={"Environment": stack, "Service": "coaching-ai"},
+    )
 
-# Target: invoke the coaching Lambda when async job events are received
-aws.cloudwatch.EventTarget(
-    "ai-job-executor-target",
-    rule=ai_job_executor_rule.name,
-    arn=coaching_lambda.arn,
-    event_bus_name="default",
-)
+    # Target: invoke the coaching Lambda when async job events are received
+    aws.cloudwatch.EventTarget(
+        "ai-job-executor-target",
+        rule=ai_job_executor_rule.name,
+        arn=coaching_lambda.arn,
+        event_bus_name="default",
+    )
 
-# Permission for EventBridge to invoke the Lambda
-aws.lambda_.Permission(
-    "eventbridge-invoke-permission",
-    action="lambda:InvokeFunction",
-    function=coaching_lambda.name,
-    principal="events.amazonaws.com",
-    source_arn=ai_job_executor_rule.arn,
-)
+    # Permission for EventBridge to invoke the Lambda
+    aws.lambda_.Permission(
+        "eventbridge-invoke-permission",
+        action="lambda:InvokeFunction",
+        function=coaching_lambda.name,
+        principal="events.amazonaws.com",
+        source_arn=ai_job_executor_rule.arn,
+    )
 
 # Parameter Store - Default Model Configuration
 # These parameters control default model codes for topic creation fallback
@@ -517,3 +545,4 @@ pulumi.export("aiJobsTable", ai_jobs_dynamodb_table.name)
 pulumi.export("aiJobsTableArn", ai_jobs_dynamodb_table.arn)
 pulumi.export("defaultBasicModelParam", default_basic_model_param.name)
 pulumi.export("defaultPremiumModelParam", default_premium_model_param.name)
+pulumi.export("deployedImageUri", resolved_image_uri)

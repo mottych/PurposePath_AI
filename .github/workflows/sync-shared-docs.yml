@@ -17,7 +17,6 @@
 # - PurposePath_Web (User Frontend)
 # - PurposePath_AI (Coaching Service)
 # - PurposePath_Admin (Admin Frontend)
-# - PurposePath_Kpi (KPI Integration)
 
 name: Sync Shared Documentation
 
@@ -60,7 +59,6 @@ jobs:
         PurposePath_Web
         PurposePath_AI
         PurposePath_Admin
-        PurposePath_Kpi
       
     steps:
       - name: Checkout source repository
@@ -123,9 +121,9 @@ jobs:
                 "source/docs/shared/" "$TARGET_DIR/docs/shared/"
             fi
             
-            # Check for changes
+            # Check for changes (including untracked/new files)
             cd "$TARGET_DIR"
-            if git diff --quiet && git diff --cached --quiet; then
+            if [ -z "$(git status --porcelain docs/shared)" ]; then
               echo "No changes needed for $repo"
               cd ..
               continue
