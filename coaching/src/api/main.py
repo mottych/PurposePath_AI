@@ -118,17 +118,9 @@ _cors_config: dict[str, Any] = {
     "allow_origin_regex": r"(^https://([a-zA-Z0-9-]+\.)*(purposepath|purpopsepath)\.app$)|(^http://localhost:\d+$)",
     "allow_credentials": True,
     "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    "allow_headers": [
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Accept",
-        "Origin",
-        "X-Api-Key",
-        "X-Tenant-Id",
-        "X-User-Id",
-        "X-CSRF-Token",
-    ],
+    # Allow all request headers to prevent preflight breakage when frontend tooling
+    # adds non-static headers (for example tracing/monitoring headers).
+    "allow_headers": ["*"],
     "expose_headers": [
         "X-Request-Id",
         "X-RateLimit-Limit",

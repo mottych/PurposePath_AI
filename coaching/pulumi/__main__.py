@@ -41,6 +41,20 @@ config = {
         "business_api_base_url": "https://api.staging.purposepath.app/account/api/v1",
         "log_level": "INFO",
     },
+    "preprod": {
+        "infra_stack": "mottych/purposepath-infrastructure/preprod",
+        "coaching_infra_stack": "mottych/purposepath-coaching-infrastructure/preprod",
+        "api_domain": "api.preprod.purposepath.app",
+        "certificate_output": "apiPreprod",
+        "jwt_secret": "purposepath-jwt-secret-preprod",
+        "openai_api_key_secret": "purposepath/preprod/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/preprod/google-vertex-credentials",
+        "jwt_issuer": "https://api.preprod.purposepath.app",
+        "jwt_audience": "https://preprod.purposepath.app",
+        "account_api_url": "https://api.preprod.purposepath.app",
+        "business_api_base_url": "https://api.preprod.purposepath.app/account/api/v1",
+        "log_level": "INFO",
+    },
     "prod": {
         "infra_stack": "mottych/purposepath-infrastructure/prod",
         "coaching_infra_stack": "mottych/purposepath-coaching-infrastructure/prod",
@@ -71,6 +85,10 @@ default_models = {
         "premium": "CLAUDE_OPUS_4_5",
     },
     "staging": {
+        "basic": "CLAUDE_3_5_SONNET_V2",
+        "premium": "CLAUDE_OPUS_4_5",
+    },
+    "preprod": {
         "basic": "CLAUDE_3_5_SONNET_V2",
         "premium": "CLAUDE_OPUS_4_5",
     },
@@ -291,21 +309,10 @@ aws.iam.RolePolicy(
     ),
 )
 
-# Reuse shared ECR repository when it already exists.
-# This avoids cross-stack repository creation conflicts in production.
-try:
-    existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
-    ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
-except Exception:
-    ecr_repo = aws.ecr.Repository(
-        "coaching-repo",
-        name="purposepath-coaching",
-        image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
-            scan_on_push=True
-        ),
-        force_delete=True,
-    )
-    ecr_repository_url = ecr_repo.repository_url
+# Use the shared ECR repository managed outside this stack.
+# Do not create/delete this repository from service deployments.
+existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
+ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
 
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()
@@ -363,13 +370,30 @@ coaching_lambda = aws.lambda_.Function(
 )
 
 # API Gateway HTTP API
-# IMPORTANT: CORS is intentionally handled only in FastAPI middleware.
-# Keeping API Gateway CORS enabled created split-brain behavior where
-# preflight responses could come from APIGW ("*") while app responses came
-# from FastAPI (credential-aware origin regex), causing intermittent browser failures.
+# CORS is configured at the gateway layer so browser preflight OPTIONS requests
+# always receive CORS headers, even when requests are rejected before FastAPI.
 api = aws.apigatewayv2.Api(
     "coaching-api",
     protocol_type="HTTP",
+    cors_configuration={
+        "allow_credentials": True,
+        "allow_headers": ["*"],
+        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        "allow_origins": [
+            "https://dev.purposepath.app",
+            "https://staging.purposepath.app",
+            "https://preprod.purposepath.app",
+            "https://www.purposepath.app",
+            "https://purposepath.app",
+        ],
+        "expose_headers": [
+            "X-Request-Id",
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Reset",
+        ],
+        "max_age": 3600,
+    },
 )
 
 integration = aws.apigatewayv2.Integration(

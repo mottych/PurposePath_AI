@@ -34,13 +34,20 @@ jobs:
         run: |
           SHOULD_DEPLOY="false"
           TRIGGER_REASON="not-eligible"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
           if [ "${{ github.event_name }}" == "pull_request" ] && \
              [ "${{ github.event.pull_request.merged }}" == "true" ] && \
              [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
-             [ "${{ github.event.pull_request.head.ref }}" == "staging" ]; then
+             [ "$HEAD_REF" == "staging" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="merged-staging-to-master-pr"
+          elif [ "${{ github.event_name }}" == "pull_request" ] && \
+               [ "${{ github.event.pull_request.merged }}" == "true" ] && \
+               [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
+               [[ "$HEAD_REF" == hotfix/* ]]; then
+            SHOULD_DEPLOY="true"
+            TRIGGER_REASON="merged-hotfix-to-master-pr"
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="manual-dispatch"
@@ -56,7 +63,7 @@ jobs:
         if: steps.promotion-check.outputs.should_deploy != 'true'
         run: |
           echo "No production deployment triggered."
-          echo "This workflow only deploys on merged PRs from staging -> master, or manual dispatch."
+          echo "This workflow deploys on merged PRs from staging/hotfix -> master, or manual dispatch."
 
   pre-deployment-checks:
     name: Pre-Deployment Validation
@@ -199,6 +206,33 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
+      - name: Lambda Runtime State Check
+        working-directory: coaching/pulumi
+        run: |
+          echo "Validating Lambda runtime state..."
+          LAMBDA_ARN=$(pulumi stack output lambdaArn --stack prod)
+          LAMBDA_NAME=${LAMBDA_ARN##*:function:}
+
+          for ATTEMPT in {1..18}; do
+            STATE=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.State" --output text)
+            REASON=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.StateReason" --output text)
+            UPDATE_STATUS=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.LastUpdateStatus" --output text)
+
+            echo "Attempt $ATTEMPT: state=$STATE, updateStatus=$UPDATE_STATUS, reason=$REASON"
+
+            if [ "$STATE" == "Active" ] && [ "$UPDATE_STATUS" == "Successful" ]; then
+              echo "✅ Lambda state is Active and update status is Successful"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "❌ Lambda did not reach Active/Successful in expected time window"
+          exit 1
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
@@ -277,28 +311,37 @@ jobs:
       - name: CORS Preflight Check
         run: |
           echo "Testing CORS preflight behavior..."
-          ORIGIN="https://purposepath.app"
           TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+          ORIGINS=(
+            "https://dev.purposepath.app"
+            "https://staging.purposepath.app"
+            "https://preprod.purposepath.app"
+            "https://www.purposepath.app"
+            "https://purposepath.app"
+          )
 
-          CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
-            -H "Origin: $ORIGIN" \
-            -H "Access-Control-Request-Method: GET" \
-            -H "Access-Control-Request-Headers: Authorization,Content-Type")
+          for ORIGIN in "${ORIGINS[@]}"; do
+            echo "Checking origin: $ORIGIN"
+            CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
+              -H "Origin: $ORIGIN" \
+              -H "Access-Control-Request-Method: GET" \
+              -H "Access-Control-Request-Headers: Authorization,Content-Type,Baggage,Sentry-Trace")
 
-          ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
-          ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
+            ALLOW_ORIGIN=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-origin"{print $2}' | tail -n 1)
+            ALLOW_CREDENTIALS=$(echo "$CORS_HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1)=="access-control-allow-credentials"{print $2}' | tail -n 1)
 
-          if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
-            echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
-            exit 1
-          fi
+            if [ "$ALLOW_ORIGIN" != "$ORIGIN" ]; then
+              echo "❌ Invalid Access-Control-Allow-Origin: '$ALLOW_ORIGIN' (expected '$ORIGIN')"
+              exit 1
+            fi
 
-          if [ "$ALLOW_CREDENTIALS" != "true" ]; then
-            echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
-            exit 1
-          fi
+            if [ "$ALLOW_CREDENTIALS" != "true" ]; then
+              echo "❌ Invalid Access-Control-Allow-Credentials: '$ALLOW_CREDENTIALS' (expected 'true')"
+              exit 1
+            fi
+          done
 
-          echo "✅ CORS preflight returned expected headers"
+          echo "✅ CORS preflight returned expected headers for all production frontend origins"
 
       - name: Smoke Test Summary
         run: |
