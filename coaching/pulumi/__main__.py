@@ -309,21 +309,10 @@ aws.iam.RolePolicy(
     ),
 )
 
-# Reuse shared ECR repository when it already exists.
-# This avoids cross-stack repository creation conflicts in production.
-try:
-    existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
-    ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
-except Exception:
-    ecr_repo = aws.ecr.Repository(
-        "coaching-repo",
-        name="purposepath-coaching",
-        image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
-            scan_on_push=True
-        ),
-        force_delete=True,
-    )
-    ecr_repository_url = ecr_repo.repository_url
+# Use the shared ECR repository managed outside this stack.
+# Do not create/delete this repository from service deployments.
+existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
+ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
 
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()
