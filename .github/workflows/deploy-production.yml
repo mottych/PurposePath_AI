@@ -34,13 +34,20 @@ jobs:
         run: |
           SHOULD_DEPLOY="false"
           TRIGGER_REASON="not-eligible"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
           if [ "${{ github.event_name }}" == "pull_request" ] && \
              [ "${{ github.event.pull_request.merged }}" == "true" ] && \
              [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
-             [ "${{ github.event.pull_request.head.ref }}" == "staging" ]; then
+             [ "$HEAD_REF" == "staging" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="merged-staging-to-master-pr"
+          elif [ "${{ github.event_name }}" == "pull_request" ] && \
+               [ "${{ github.event.pull_request.merged }}" == "true" ] && \
+               [ "${{ github.event.pull_request.base.ref }}" == "master" ] && \
+               [[ "$HEAD_REF" == hotfix/* ]]; then
+            SHOULD_DEPLOY="true"
+            TRIGGER_REASON="merged-hotfix-to-master-pr"
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             SHOULD_DEPLOY="true"
             TRIGGER_REASON="manual-dispatch"
@@ -56,7 +63,7 @@ jobs:
         if: steps.promotion-check.outputs.should_deploy != 'true'
         run: |
           echo "No production deployment triggered."
-          echo "This workflow only deploys on merged PRs from staging -> master, or manual dispatch."
+          echo "This workflow deploys on merged PRs from staging/hotfix -> master, or manual dispatch."
 
   pre-deployment-checks:
     name: Pre-Deployment Validation
@@ -196,6 +203,24 @@ jobs:
         run: |
           URL=$(pulumi stack output customDomainUrl --stack prod)
           echo "url=$URL" >> $GITHUB_OUTPUT
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Lambda Runtime State Check
+        run: |
+          echo "Validating Lambda runtime state..."
+          LAMBDA_ARN=$(pulumi stack output lambdaArn --stack prod)
+          LAMBDA_NAME=${LAMBDA_ARN##*:function:}
+
+          STATE=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.State" --output text)
+          REASON=$(aws lambda get-function --function-name "$LAMBDA_NAME" --region us-east-1 --query "Configuration.StateReason" --output text)
+
+          if [ "$STATE" != "Active" ]; then
+            echo "❌ Lambda is not Active (state=$STATE, reason=$REASON)"
+            exit 1
+          fi
+
+          echo "✅ Lambda state is Active"
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
