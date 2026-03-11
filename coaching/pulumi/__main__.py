@@ -59,20 +59,6 @@ config = {
         # Safe default for permanent preprod: keep async background execution off unless explicitly enabled.
         "ai_async_jobs_enabled": "false",
     },
-    "preprod": {
-        "infra_stack": "mottych/purposepath-infrastructure/preprod",
-        "coaching_infra_stack": "mottych/purposepath-coaching-infrastructure/preprod",
-        "api_domain": "api.preprod.purposepath.app",
-        "certificate_output": "apiPreprod",
-        "jwt_secret": "purposepath-jwt-secret-preprod",
-        "openai_api_key_secret": "purposepath/preprod/openai-api-key",
-        "google_vertex_credentials_secret": "purposepath/preprod/google-vertex-credentials",
-        "jwt_issuer": "https://api.preprod.purposepath.app",
-        "jwt_audience": "https://preprod.purposepath.app",
-        "account_api_url": "https://api.preprod.purposepath.app",
-        "business_api_base_url": "https://api.preprod.purposepath.app/account/api/v1",
-        "log_level": "INFO",
-    },
     "prod": {
         "infra_stack": "mottych/purposepath-infrastructure/prod",
         "coaching_infra_stack": "mottych/purposepath-coaching-infrastructure/prod",
