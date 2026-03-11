@@ -416,6 +416,115 @@ class TestWebsiteScanResponse:
         # Assert
         assert len(response.products) == 10
 
+    def test_legacy_flat_payload_maps_to_business_profile(self):
+        """Test legacy flat response properties map into canonical business_profile fields."""
+        # Arrange
+        legacy_payload = {
+            "scan_id": "scan-legacy",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://legacy-example.com",
+            "businessName": "Legacy Example Inc",
+            "description": "Legacy description from old payload.",
+            "industry": "Professional Services",
+            "yearFounded": "Founded in 2017",
+            "businessAddress": "Austin, TX",
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "SMB services", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        # Act
+        response = WebsiteScanResponse(**legacy_payload)
+
+        # Assert
+        assert response.business_profile.business_name == "Legacy Example Inc"
+        assert response.business_profile.business_description == "Legacy description from old payload."
+        assert response.business_profile.industry == "Professional Services"
+        assert response.business_profile.year_founded == 2017
+        assert response.business_profile.headquarters_location == "Austin, TX"
+        assert response.business_profile.website == "https://legacy-example.com"
+
+    def test_existing_canonical_profile_values_are_preserved(self):
+        """Test canonical business_profile values win over root aliases."""
+        # Arrange
+        payload = {
+            "scan_id": "scan-canonical",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://example.com",
+            "businessName": "Root Name",
+            "description": "Root description",
+            "industry": "Root Industry",
+            "business_profile": {
+                "business_name": "Canonical Name",
+                "business_description": "Canonical description",
+                "industry": "Canonical Industry",
+                "year_founded": 2020,
+                "headquarters_location": "Seattle, WA",
+                "website": "https://example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        # Act
+        response = WebsiteScanResponse(**payload)
+
+        # Assert
+        assert response.business_profile.business_name == "Canonical Name"
+        assert response.business_profile.business_description == "Canonical description"
+        assert response.business_profile.industry == "Canonical Industry"
+
+    def test_business_profile_aliases_and_description_isolation(self):
+        """Test camelCase aliases and noisy descriptions are normalized."""
+        # Arrange
+        long_description = (
+            "We help founders build durable businesses through strategy and execution. "
+            "Our advisors combine operating experience with practical planning frameworks. "
+            "Clients use our process to align goals, metrics, and accountability. "
+            "```raw``` {\"website_content\": \"huge scraped data\"} and additional trailing noise."
+        )
+        payload = {
+            "scan_id": "scan-aliases",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://alias-example.com",
+            "business_profile": {
+                "businessName": "Alias Example",
+                "businessDescription": long_description,
+                "yearFounded": "2019",
+                "headquartersLocation": "  London, UK   ",
+                "website": "https://alias-example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        # Act
+        response = WebsiteScanResponse(**payload)
+
+        # Assert
+        assert response.business_profile.business_name == "Alias Example"
+        assert response.business_profile.year_founded == 2019
+        assert response.business_profile.headquarters_location == "London, UK"
+        assert len(response.business_profile.business_description) <= 320
+        assert "durable businesses" in response.business_profile.business_description
+
 
 @pytest.mark.unit
 class TestOnboardingCoachingRequest:
