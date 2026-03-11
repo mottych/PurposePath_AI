@@ -1082,6 +1082,15 @@ Scan a website URL and extract business foundation information for onboarding. T
 - The `website_url` parameter is passed from the frontend payload
 - The retrieval method scrapes the website and provides `website_content`, `website_title`, and `meta_description` to the prompt template
 - **Response structure aligns with BusinessFoundation data model** - extracted data can be directly mapped to business foundation fields
+- **Canonical API response contract remains nested under `data.business_profile`**:
+  - `business_name`
+  - `business_description`
+  - `industry`
+  - `year_founded`
+  - `headquarters_location`
+  - `website`
+- **Compatibility normalization (server-side):** website scan extraction now normalizes legacy/alias property names before response validation (for example `businessName`, `businessAddress`, `yearFounded`, `description`, `business_info.*`) so these values are mapped into canonical `business_profile` fields.
+- **Description isolation:** `business_description` is normalized to a concise profile summary to avoid long raw scraped-content dumps.
 - Optional fields (industry, year_founded, vision_hint, purpose_hint, etc.) return null if not found on website
 - May return partial results if website has anti-scraping measures
 - Use extracted data to pre-populate business foundation onboarding wizard
