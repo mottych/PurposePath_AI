@@ -1,182 +1,32 @@
-# PurposePath API Specifications
+# Shared Specifications Index
 
-**Last Updated:** February 4, 2026
+## Purpose
 
-This folder contains all API specification documents for PurposePath, organized by consuming application.
+`docs/shared/Specifications/` contains cross-repository API and integration specifications synchronized by the shared-docs workflow.
 
----
+## How to Add or Modify Specifications
 
-## Directory Structure
+Use the canonical workflow guide:
+- `docs/shared/guides/specification-change-guide.md`
 
-```
-Specifications/
-├── README.md                    ← You are here
-├── admin-api.md                 # Legacy admin API (see admin-portal/ for current)
-│
-├── user-app/                    # User Application (React Frontend)
-│   ├── index.md                 # Master index for user-facing APIs
-│   ├── account-api.md           # Account, billing, subscriptions (consolidated)
-│   ├── account-gap.md           # Account service gap analysis
-│   ├── business-foundation-api.md # Business foundation, wizard, values, ICAs
-│   ├── org-structure-service.md # People + roles + org chart (user endpoints)
-│   ├── dashboard-service.md     # Dashboard configuration and widgets
-│   ├── integration-service/      # Integration user workflows
-│   │   └── integration-service.md
-│   ├── common-patterns.md       # Shared patterns & data models
-│   ├── traction-service/        # Traction feature APIs
-│   │   ├── README.md            # Traction service index
-│   │   ├── goals-api.md         # Goals management
-│   │   ├── strategies-api.md    # Strategies management
-│   │   ├── measures-api.md      # MEASUREs management
-│   │   ├── measure-links-api.md # MEASURE relationships
-│   │   ├── measure-data-api.md  # MEASURE data points
-│   │   ├── actions-api.md       # Actions/To-dos
-│   │   ├── issues-api.md        # Issues/Roadblocks
-│   │   ├── alignment-api.md     # Alignment calculations
-│   │   ├── insights-api.md      # AI insights
-│   │   └── dashboard-reports-activities-api.md
-│   └── Websocket/               # WebSocket specifications
-│
-├── admin-portal/                # Admin Portal (Internal)
-│   └── admin-api-specification.md  # Complete admin API spec (v2.0)
-│   └── integration-admin-api-specification.md # Integration admin workflows
-│
-├── ai-user/                     # AI/Coaching Services
-│   └── backend-integration-unified-ai.md  # Unified AI/Coaching API
-│
-├── ai-admin-portal/             # AI Admin Portal
-│
-└── archive/                     # Obsolete/Reference Documents
-    ├── README.md                # Archive index
-    └── ...                      # Various archived specs
-```
+## Folder Map
 
----
+- `api-fe/`: User-facing frontend API specifications.
+- `api-admin/`: Admin portal API specifications.
+- `ai-fe/`: AI/coaching integration specifications for frontend use.
+- `ai-admin/`: AI/admin related specifications.
+- `integration/`: Async and cross-system integration contracts.
+- `archive/`: Superseded historical specs kept for traceability.
 
-## Quick Links
+## Working Rules
 
-### User Application APIs
+- Specs here are source of truth for API contracts.
+- Contract changes must follow the specification change workflow.
+- Keep section README/index documents updated when adding or moving files.
 
-| Document | Description | Endpoints |
-|----------|-------------|-----------|
-| [Master Index](./user-app/index.md) | Complete user app API overview | All |
-| [User & Tenant Service](./user-app/user-tenant-service.md) | Authentication, profile, subscriptions | ~16 |
-| [Business Foundation Service](./user-app/business-foundation-service.md) | Business setup, wizard, values | ~25 |
-| [Account API](./user-app/account-api.md) | Auth, billing, subscriptions (consolidated) | ~40 |
-| [AI/Coaching Service](./user-app/coaching-service.md) | AI/ML coaching features | ~20 |
-| [Org Structure Service](./user-app/org-structure-service.md) | People, roles, relationships, org chart | ~45 |
-| [Dashboard Service](./user-app/dashboard-service.md) | Dashboard configuration, widgets | ~15 |
-| [Integration Service](./user-app/integration-service/integration-service.md) | Connected systems, integrations, testing lifecycle | ~14 |
-| [Traction Service](./user-app/traction-service/README.md) | Goals, Measures, Actions, Issues | ~66 |
+## Related References
 
-**Total User App Endpoints:** ~227
-
-### Admin Portal APIs
-
-| Document | Description | Endpoints |
-|----------|-------------|-----------|
-| [Admin API v2.0](./admin-portal/admin-api-specification.md) | Complete admin portal spec (updated Feb 4, 2026) | 88 |
-| [Integration Admin API](./admin-portal/integration-admin-api-specification.md) | Integration metadata sync and catalog/system/parameter definitions | ~8 |
-
-**Total Admin Endpoints:** 88
-
----
-
-## Service Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    API Gateway                               │
-│    api.dev.purposepath.app / api.purposepath.app            │
-└─────────────────┬───────────────────┬───────────────────────┘
-                  │                   │
-    ┌─────────────▼─────────┐   ┌─────▼─────────────┐
-    │    User App Routes    │   │  Admin Routes     │
-    │    /account/api/v1    │   │  /admin/api/v1    │
-    │    /traction/api/v1   │   │                   │
-    │    /coaching/api/v1   │   │                   │
-    └─────────────┬─────────┘   └─────┬─────────────┘
-                  │                   │
-    ┌─────────────▼─────────┐   ┌─────▼─────────────┐
-    │   Account Lambda      │   │   Admin Lambda    │
-    │   Traction Lambda     │   │                   │
-    │   Coaching Lambda     │   │                   │
-    └───────────────────────┘   └───────────────────┘
-```
-
----
-
-## Document Standards
-
-### API Documentation Format
-
-Each API document follows this structure:
-
-1. **Header** - Version, dates, base URL
-2. **Overview** - Service purpose, key concepts
-3. **Change Log** - A table with version, date and brief summary of the change  
-4. **Endoint List** a list of all endpoints in the document with a hyperlink to the detail section
-5. **Endpoints** - Grouped by resource/feature
-   - HTTP method + path
-   - Request/response examples
-   - Field constraints
-   - Error responses
-6. **Data Types** - TypeScript interfaces, enums
-7. **Error Codes** - Standard error codes
-
-### Naming Conventions
-
-| Type | Convention | Example |
-|------|------------|---------|
-| File names | kebab-case | `org-structure-service.md` |
-| Endpoint paths | kebab-case | `/api/people/{id}/tags` |
-| Request/Response fields | snake_case | `first_name`, `created_at` |
-| TypeScript types | PascalCase | `PersonResponse` |
-
----
-
-## Versioning
-
-- **Current Version:** 7.0 (December 2025)
-- **Traction Service:** v7 modular (controller-based docs)
-- **People/Org Service:** v1.1 (migrated to Account Lambda)
-- **Admin API:** v2.0 (comprehensive spec with all endpoints, Feb 4, 2026)
-
-### Change History
-
-| Date | Version | Changes |
-|------|---------|---------|
-| Feb 4, 2026 | 2.0 | Admin API v2.0: Complete specification with all 88 endpoints documented |
-| Dec 30, 2025 | 1.0 | User/Tenant and Business Foundation services split from Account service |
-| Dec 23, 2025 | 7.0 | Documentation reorganization, v7 traction specs |
-| Dec 22, 2025 | 1.1 | People/Org endpoints migrated to Account service |
-| Dec 21, 2025 | 7.0 | Measure Link/Data refactoring, modular traction specs |
-
----
-
-## For Developers
-
-### Adding New Endpoints
-
-1. Determine which service/document the endpoint belongs to
-2. Add to appropriate section following existing format
-3. Include request/response examples with realistic data
-4. Document all field constraints and validation rules
-5. Add error responses for common failure cases
-6. Update endpoint counts in this README
-
-### Archiving Documents
-
-When deprecating a specification:
-1. Move to `archive/` folder
-2. Add entry to `archive/README.md`
-3. Note the superseding document
-4. Keep for 6 months minimum for reference
-
----
-
-## Related Documentation
-
-- **[Backend Development Guidelines](../../.github/DEVELOPMENT_GUIDELINES.md)** - Architecture & coding standards
-- **[Copilot Rules](../../.github/COPILOT_RULES.md)** - Spec enforcement rules
-- **[Deployment Guide](../Deployment/)** - Infrastructure & deployment
+- `docs/shared/guides/specification-change-guide.md`
+- `docs/shared/guides/api-naming-conventions.md`
+- `.github/COPILOT_RULES.md`
+- `docs/shared/guides/workflow-governance.md`

@@ -25,7 +25,7 @@ This epic covers a comprehensive refactoring of the Measure linking and data tra
 | Document | Purpose |
 |----------|---------|
 | `docs/Specifications/people-org-structure-technical-design.md` | Person entity specification |
-| `docs/guides/Measure_PLANNING_REQUIREMENTS.md` | Current Measure planning requirements |
+| `docs/shared/Requirements/strategic-planning/measure-planning-requirements.md` | Current Measure planning requirements |
 | `docs/Specifications/archive/backend-integration-traction-service-v5.md` | Archived v5 API specifications |
 | `docs/Specifications/traction-service/` | Current v7 modular API specifications |
 

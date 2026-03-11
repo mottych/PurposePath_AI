@@ -18,7 +18,7 @@ It defines event schemas, lifecycle transitions, retryability semantics, idempot
 
 - Frontend/user-facing Integration service behavior: [../api-fe/traction-service/integration-service.md](../api-fe/traction-service/integration-service.md)
 - Legacy coaching async frontend spec: [async-coaching-message-events.md](async-coaching-message-events.md)
-- Architecture/process standards: [../../../standards/DEVELOPMENT_GUIDELINES.md](../../../standards/DEVELOPMENT_GUIDELINES.md)
+- Architecture/process standards: [../../../local/guides/development-guidelines.md](../../../local/guides/development-guidelines.md)
 
 ---
 
