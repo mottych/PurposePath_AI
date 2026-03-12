@@ -314,10 +314,27 @@ aws.iam.RolePolicy(
     ),
 )
 
-# Use the shared ECR repository managed outside this stack.
-# Do not create/delete this repository from service deployments.
-existing_ecr_repo = aws.ecr.get_repository(name="purposepath-coaching")
-ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
+# Prefer shared ECR repo when present; create it only if missing.
+ecr_repo_name = "purposepath-coaching"
+try:
+    aws.ecr.get_repository(name=ecr_repo_name)
+    managed_ecr_repo = aws.ecr.Repository.get(
+        "coaching-shared-ecr-repo",
+        id=ecr_repo_name,
+    )
+    ecr_repository_url = managed_ecr_repo.repository_url
+except Exception:
+    managed_ecr_repo = aws.ecr.Repository(
+        "coaching-shared-ecr-repo",
+        name=ecr_repo_name,
+        image_tag_mutability="MUTABLE",
+        image_scanning_configuration=aws.ecr.RepositoryImageScanningConfigurationArgs(
+            scan_on_push=True
+        ),
+        force_delete=False,
+        opts=pulumi.ResourceOptions(retain_on_delete=True),
+    )
+    ecr_repository_url = managed_ecr_repo.repository_url
 
 # Build and push Docker image
 auth_token = aws.ecr.get_authorization_token()

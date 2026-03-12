@@ -97,7 +97,8 @@ GUIDELINES:
 - Extract only what's present; use null for missing optional fields, empty arrays for lists
 - Keep descriptions concise (1-3 sentences for business_description)
 - Return valid JSON with exact field names as specified
-- Avoid speculation; base inferences on actual website content""",
+- Avoid speculation; base inferences on actual website content
+- Do not output legacy/alias field names - follow the exact response schema only""",
         default_user_prompt="""Extract business foundation information from this website content:
 
 URL: {website_url}
@@ -107,15 +108,15 @@ Body Content: {website_content}
 
 Return JSON with this exact structure:
 {
-  "scan_id": "<generate short unique id>",
-  "captured_at": "<current ISO8601 timestamp>",
+  "scan_id": "<placeholder - server overwrites>",
+  "captured_at": "<placeholder - server overwrites>",
   "source_url": "{website_url}",
   "business_profile": {
     "business_name": "<company name>",
     "business_description": "<1-3 sentence business overview>",
-    "industry": "<primary industry classification or null>",
+    "industry": "<one of: Technology, Healthcare, Finance, Education, Retail, Manufacturing, Real Estate, Professional Services, Media & Entertainment, Food & Beverage, Transportation, Construction, Agriculture, Energy, Hospitality, Nonprofit, Government, Other; or null>",
     "year_founded": <year as integer or null>,
-    "headquarters_location": "<City, State/Country or null>",
+    "business_address": "<City, State/Country or null>",
     "website": "{website_url}"
   },
   "core_identity": {
@@ -142,6 +143,14 @@ Return JSON with this exact structure:
     "proof_points": ["<metric, testimonial, achievement>", ...]
   }
 }
+
+STRICT OUTPUT CONTRACT:
+- Return only the fields shown above (no additional keys, no legacy aliases)
+- `scan_id` and `captured_at` are server-generated and overwritten at response validation time
+- Use `business_profile.business_address` for business address/location
+- If `industry` is present, it must be exactly one of: Technology, Healthcare, Finance, Education, Retail, Manufacturing, Real Estate, Professional Services, Media & Entertainment, Food & Beverage, Transportation, Construction, Agriculture, Energy, Hospitality, Nonprofit, Government, Other
+- Keep `business_profile.business_description` concise and profile-focused (1-3 sentences)
+- If unknown, use null (or empty arrays for list fields) rather than inventing values
 
 EXTRACTION PRIORITIES:
 1. Company name and description (required)
