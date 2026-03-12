@@ -1,7 +1,8 @@
 """Pydantic models for onboarding AI endpoints."""
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -296,6 +297,18 @@ class WebsiteScanResponse(BaseModel):
         default_factory=list, description="Products or services offered"
     )
     value_proposition: WebsiteScanValueProposition
+
+    @model_validator(mode="before")
+    @classmethod
+    def _apply_server_scan_metadata(cls, data: object) -> object:
+        """Always stamp response metadata server-side per scan execution."""
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        normalized["scan_id"] = f"scan-{uuid4().hex[:12]}"
+        normalized["captured_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        return normalized
 
 
 # Coaching endpoint models

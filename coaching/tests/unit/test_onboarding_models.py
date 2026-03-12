@@ -283,7 +283,9 @@ class TestWebsiteScanResponse:
         )
 
         # Assert
-        assert response.scan_id == "scan-123"
+        assert response.scan_id.startswith("scan-")
+        assert response.scan_id != "scan-123"
+        assert response.captured_at.endswith("Z")
         assert response.business_profile.business_name == "Acme Corp"
         assert "Mid-market" in response.target_market.niche_statement
         assert len(response.products) == 1
@@ -333,9 +335,40 @@ class TestWebsiteScanResponse:
         response = WebsiteScanResponse(**data)
 
         # Assert
-        assert response.scan_id == "scan-456"
+        assert response.scan_id.startswith("scan-")
+        assert response.scan_id != "scan-456"
+        assert response.captured_at.endswith("Z")
         assert isinstance(response.business_profile, WebsiteScanBusinessProfile)
         assert response.products[0].name == "Product One"
+
+    def test_server_generated_metadata_overrides_payload_values(self):
+        """Test scan metadata is always generated server-side."""
+        payload = {
+            "scan_id": "llm-static-id",
+            "captured_at": "2024-01-01T00:00:00Z",
+            "source_url": "https://example.com",
+            "business_profile": {
+                "business_name": "Example Co",
+                "business_description": "Simple description.",
+                "industry": "Technology",
+                "website": "https://example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        response = WebsiteScanResponse(**payload)
+
+        assert response.scan_id != "llm-static-id"
+        assert response.scan_id.startswith("scan-")
+        assert response.captured_at != "2024-01-01T00:00:00Z"
+        assert response.captured_at.endswith("Z")
 
     def test_empty_products_list(self):
         """Test response with empty optional lists."""

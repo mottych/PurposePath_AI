@@ -108,8 +108,8 @@ Body Content: {website_content}
 
 Return JSON with this exact structure:
 {
-  "scan_id": "<generate short unique id>",
-  "captured_at": "<current ISO8601 timestamp>",
+  "scan_id": "<placeholder - server overwrites>",
+  "captured_at": "<placeholder - server overwrites>",
   "source_url": "{website_url}",
   "business_profile": {
     "business_name": "<company name>",
@@ -146,6 +146,7 @@ Return JSON with this exact structure:
 
 STRICT OUTPUT CONTRACT:
 - Return only the fields shown above (no additional keys, no legacy aliases)
+- `scan_id` and `captured_at` are server-generated and overwritten at response validation time
 - Use `business_profile.business_address` for business address/location
 - If `industry` is present, it must be exactly one of: Technology, Healthcare, Finance, Education, Retail, Manufacturing, Real Estate, Professional Services, Media & Entertainment, Food & Beverage, Transportation, Construction, Agriculture, Energy, Hospitality, Nonprofit, Government, Other
 - Keep `business_profile.business_description` concise and profile-focused (1-3 sentences)
