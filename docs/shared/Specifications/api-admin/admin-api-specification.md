@@ -4806,8 +4806,8 @@ Business rule violations return 400 Bad Request with context:
 
 ## Related Documentation
 
-- **[Backend Development Guidelines](../../.github/DEVELOPMENT_GUIDELINES.md)** - Architecture & coding standards
-- **[Copilot Rules](../../.github/COPILOT_RULES.md)** - Specification enforcement rules
+- **[Local Development Guidelines](../../../local/guides/development-guidelines.md)** - Architecture and coding standards
+- **[Copilot Instructions](../../../.github/copilot-instructions.md)** - Repository implementation rules
 - **[User App Specifications](../user-app/index.md)** - User-facing API specifications
 
 ---

@@ -99,13 +99,13 @@ must remain logically distinct.
 
 **AR-012** Runtime state and terminal outcome identity must be keyed by a stable generation identity.
 
-**AR-013** Solution design must conform to `.github/DEVELOPMENT_GUIDELINES.md` architectural boundaries:
+**AR-013** Solution design must conform to `docs/local/guides/development-guidelines.md` architectural boundaries:
 - controllers remain boundary-only and delegate via MediatR
 - domain layer remains pure and free of infrastructure concerns
 - contracts/interfaces required by domain are defined in domain-facing boundaries
 - cross-layer dependencies must follow Clean Architecture direction
 
-**AR-014** Any architecture deviation from `.github/DEVELOPMENT_GUIDELINES.md` must be explicitly documented, risk-assessed, and approved before release.
+**AR-014** Any architecture deviation from `docs/local/guides/development-guidelines.md` must be explicitly documented, risk-assessed, and approved before release.
 
 ### 4.3 Intent and Parameter Architecture
 **AR-020** Intent precedence must be:
@@ -319,7 +319,7 @@ Use this section to validate delivery against requirements and epic/issue scope.
 - [ ] Tenant isolation controls validated (including mismatch rejection scenarios)
 
 ### 10.2.1 Architecture Compliance Completion
-- [ ] Design review confirms conformance to `.github/DEVELOPMENT_GUIDELINES.md`
+- [ ] Design review confirms conformance to `docs/local/guides/development-guidelines.md`
 - [ ] Layer-boundary checklist completed (controller/application/domain/infrastructure responsibilities)
 - [ ] No unapproved architecture deviations remain open
 
