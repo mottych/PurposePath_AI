@@ -456,7 +456,7 @@ class TestWebsiteScanResponse:
             "We help founders build durable businesses through strategy and execution. "
             "Our advisors combine operating experience with practical planning frameworks. "
             "Clients use our process to align goals, metrics, and accountability. "
-            "```raw``` {\"website_content\": \"huge scraped data\"} and additional trailing noise."
+            '```raw``` {"website_content": "huge scraped data"} and additional trailing noise.'
         )
         payload = {
             "scan_id": "scan-aliases",
