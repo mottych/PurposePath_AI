@@ -1023,7 +1023,7 @@ Scan a website URL and extract business foundation information for onboarding. T
       "business_description": "Example Corp provides AI-powered strategic planning tools that help growing businesses achieve clarity and focus.",
       "industry": "Technology",
       "year_founded": 2018,
-      "headquarters_location": "San Francisco, CA",
+      "business_address": "San Francisco, CA",
       "website": "https://example.com"
     },
     "core_identity": {
@@ -1070,7 +1070,7 @@ Scan a website URL and extract business foundation information for onboarding. T
 
 | Section | Fields | Description |
 |---------|--------|-------------|
-| `business_profile` | business_name, business_description, industry, year_founded, headquarters_location, website | Core business information aligned with BusinessFoundation.profile |
+| `business_profile` | business_name, business_description, industry, year_founded, business_address, website | Core business information aligned with BusinessFoundation.profile |
 | `core_identity` | vision_hint, purpose_hint, inferred_values | Vision, purpose, and values inferred from website content, aligned with BusinessFoundation.identity |
 | `target_market` | niche_statement, segments, pain_points | Target market information aligned with BusinessFoundation.market |
 | `products` | name, description, problem_solved, key_features | Product/service array aligned with BusinessFoundation.products |
@@ -1087,9 +1087,10 @@ Scan a website URL and extract business foundation information for onboarding. T
   - `business_description`
   - `industry`
   - `year_founded`
-  - `headquarters_location`
+  - `business_address`
   - `website`
-- **Compatibility normalization (server-side):** website scan extraction now normalizes legacy/alias property names before response validation (for example `businessName`, `businessAddress`, `yearFounded`, `description`, `business_info.*`) so these values are mapped into canonical `business_profile` fields.
+- **Industry enum contract:** `business_profile.industry` must be one of `Technology`, `Healthcare`, `Finance`, `Education`, `Retail`, `Manufacturing`, `Real Estate`, `Professional Services`, `Media & Entertainment`, `Food & Beverage`, `Transportation`, `Construction`, `Agriculture`, `Energy`, `Hospitality`, `Nonprofit`, `Government`, `Other` (or `null` when not detectable).
+- **Strict v2 contract (no backward compatibility):** only canonical `WebsiteScanResponse` field names are accepted/returned. Legacy/flat aliases (for example `businessName`, `businessAddress`, `yearFounded`, `description`, `business_info.*`) are not part of the contract.
 - **Description isolation:** `business_description` is normalized to a concise profile summary to avoid long raw scraped-content dumps.
 - Optional fields (industry, year_founded, vision_hint, purpose_hint, etc.) return null if not found on website
 - May return partial results if website has anti-scraping measures

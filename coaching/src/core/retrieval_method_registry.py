@@ -166,7 +166,7 @@ def list_retrieval_methods() -> list[RetrievalMethodDefinition]:
         "revenue_range",
         "year_founded",
         "geographic_focus",
-        "headquarters_location",
+        "business_address",
         "website",
         # Identity (Pillar 2)
         "vision",
@@ -233,7 +233,7 @@ async def get_business_foundation(context: RetrievalContext) -> dict[str, Any]:
         result["revenue_range"] = profile.get("revenueRange", "")
         result["year_founded"] = profile.get("yearFounded")
         result["geographic_focus"] = profile.get("geographicFocus", [])
-        result["headquarters_location"] = profile.get("headquartersLocation", "")
+        result["business_address"] = profile.get("headquartersLocation", "")
         result["website"] = profile.get("website", "")
 
         # Extract Identity (Pillar 2)
