@@ -157,8 +157,9 @@ For complex AI orchestration, use LangGraph workflows in `coaching/src/workflows
 
 ## Documentation References
 
-- Architecture: `docs/Plans/AI_COACHING_ARCHITECTURE_DESIGN.md`
-- Clean Architecture Guide: `docs/Guides/clean-architecture-ddd-guidelines.md`
-- API Specs: `docs/Specifications/`
+- Local architecture standards: `docs/local/guides/architecture-standards.md`
+- Local coding standards: `docs/local/guides/coding-standards.md`
+- Local workflow standards: `docs/local/guides/development-guidelines.md`
+- Shared API specs: `docs/shared/Specifications/`
 
 **When in doubt - ask me**

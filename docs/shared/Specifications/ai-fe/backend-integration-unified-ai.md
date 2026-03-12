@@ -6,7 +6,7 @@
 **Default (Localhost):** `http://localhost:8000`  
 **Dev Environment:** `https://api.dev.purposepath.app/coaching/api/v1`
 
-[← Back to Index](./backend-integration-index.md)
+[← Back to Specifications Index](../README.md)
 
 ---
 
