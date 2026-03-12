@@ -312,8 +312,12 @@ aws.iam.RolePolicy(
 # Prefer shared ECR repo when present; create it only if missing.
 ecr_repo_name = "purposepath-coaching"
 try:
-    existing_ecr_repo = aws.ecr.get_repository(name=ecr_repo_name)
-    ecr_repository_url = pulumi.Output.from_input(existing_ecr_repo.repository_url)
+    aws.ecr.get_repository(name=ecr_repo_name)
+    managed_ecr_repo = aws.ecr.Repository.get(
+        "coaching-shared-ecr-repo",
+        id=ecr_repo_name,
+    )
+    ecr_repository_url = managed_ecr_repo.repository_url
 except Exception:
     managed_ecr_repo = aws.ecr.Repository(
         "coaching-shared-ecr-repo",
@@ -323,6 +327,7 @@ except Exception:
             scan_on_push=True
         ),
         force_delete=False,
+        opts=pulumi.ResourceOptions(retain_on_delete=True),
     )
     ecr_repository_url = managed_ecr_repo.repository_url
 
