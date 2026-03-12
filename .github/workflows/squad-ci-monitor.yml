@@ -1,0 +1,269 @@
+name: Squad CI Monitor
+
+# Fires when any deployment workflow completes (success or failure).
+# Extracts the issue number from the branch name, posts a structured
+# result comment on the linked GitHub issue, and manages labels.
+#
+# Branch naming conventions recognized:
+#   squad/{issue-number}-{slug}    → standard feature branch
+#   hotfix/{issue-number}-{slug}   → production hotfix branch
+#   copilot/{issue-number}-{slug}  → @copilot autonomous branch
+#
+# Deploy to each .github/workflows/ in all 4 repos.
+# Ensure your deployment workflow `name:` fields match the list below.
+
+on:
+  workflow_run:
+    workflows:
+      - "Deploy Dev"
+      - "Deploy Branch to Dev"
+      - "Deploy Staging"
+      - "Deploy Preprod"
+      - "Deploy Preprod Hotfix"
+      - "Deploy Production"
+    types:
+      - completed
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  notify-issue:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Extract issue number and metadata from branch
+        id: extract
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          WORKFLOW="${{ github.event.workflow_run.name }}"
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+
+          echo "Branch: $BRANCH"
+          echo "Workflow: $WORKFLOW"
+          echo "Conclusion: $CONCLUSION"
+
+          # Extract issue number from branch prefix pattern
+          ISSUE_NUM=$(echo "$BRANCH" | grep -oP '(?<=(squad|hotfix|copilot)/)\d+' | head -1)
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "No issue number found in branch '$BRANCH' — skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "workflow=$WORKFLOW" >> $GITHUB_OUTPUT
+          echo "conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
+          echo "run_url=$RUN_URL" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+          # Determine environment
+          case "$WORKFLOW" in
+            *"Dev"*)        echo "environment=dev"     >> $GITHUB_OUTPUT ;;
+            *"Staging"*)    echo "environment=staging" >> $GITHUB_OUTPUT ;;
+            *"Preprod"*)    echo "environment=preprod" >> $GITHUB_OUTPUT ;;
+            *"Production"*) echo "environment=prod"    >> $GITHUB_OUTPUT ;;
+            *)              echo "environment=unknown" >> $GITHUB_OUTPUT ;;
+          esac
+
+          # Detect hotfix branch
+          if echo "$BRANCH" | grep -q "^hotfix/"; then
+            echo "is_hotfix=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_hotfix=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ── FAILURE: Fetch failed job details ─────────────────────────────────
+      - name: Fetch failed job details
+        id: failed-jobs
+        if: steps.extract.outputs.skip == 'false' && steps.extract.outputs.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = ${{ github.event.workflow_run.id }};
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            const failed = jobs.data.jobs
+              .filter(j => j.conclusion === 'failure')
+              .map(j => {
+                const failedSteps = j.steps
+                  .filter(s => s.conclusion === 'failure')
+                  .map(s => `    - Step: **${s.name}**`)
+                  .join('\n');
+                return `**Job: \`${j.name}\`**\n${failedSteps || '    - (no step detail available)'}`;
+              })
+              .join('\n\n');
+
+            core.setOutput('summary', failed || 'No detailed job info available.');
+
+      # ── FAILURE: Post comment and reopen issue ─────────────────────────────
+      - name: Post failure comment and reopen issue
+        if: steps.extract.outputs.skip == 'false' && steps.extract.outputs.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ steps.extract.outputs.issue_number }}');
+            const env         = '${{ steps.extract.outputs.environment }}';
+            const workflow    = '${{ steps.extract.outputs.workflow }}';
+            const runUrl      = '${{ steps.extract.outputs.run_url }}';
+            const branch      = '${{ steps.extract.outputs.branch }}';
+            const isHotfix    = '${{ steps.extract.outputs.is_hotfix }}' === 'true';
+            const failedJobs  = `${{ steps.failed-jobs.outputs.summary }}`;
+
+            const envGuide = {
+              dev:     'Fix on the feature branch and push again to re-trigger.',
+              staging: 'Staging failures often indicate an environment-specific config issue — investigate before re-triggering.',
+              preprod: 'Fix on the hotfix branch and push again to re-trigger preprod deployment.',
+              prod:    '⚠️ PRODUCTION deployment failed — treat as urgent. Some services may be in a mixed state.',
+            };
+
+            const body = [
+              `## CI/CD ❌ ${env.toUpperCase()} Deployment Failed`,
+              ``,
+              `**Workflow:** ${workflow}`,
+              `**Branch:** \`${branch}\``,
+              `**Run:** [View full logs](${runUrl})`,
+              ``,
+              `## Failed Jobs`,
+              failedJobs,
+              ``,
+              `## What to Do`,
+              `Review the [full workflow log](${runUrl}) for the exact error, then:`,
+              ``,
+              `**Build failed** (\`/warnaserror\` enforced):`,
+              `→ Fix all warnings and errors. Zero warnings required — check nullable types, unused vars, deprecated APIs.`,
+              ``,
+              `**Unit tests failed:**`,
+              `→ Fix the failing test or the code causing it to fail. All tests must pass.`,
+              ``,
+              `**Pulumi infrastructure failed:**`,
+              `→ Check the specific resource error in Pulumi output. Common: IAM permissions, resource conflicts.`,
+              `→ Do not modify Pulumi infra without @mottych approval. Tag @mottych with findings.`,
+              ``,
+              `**Pulumi service failed (Account/Traction/Billing/etc.):**`,
+              `→ Check \`Services/PurposePath.{Service}.Lambda/pulumi/\` stack output.`,
+              `→ Common: Lambda packaging error, missing SSM parameter, IAM role issue.`,
+              ``,
+              `---`,
+              ``,
+              `${envGuide[env] || 'Investigate the failure and push a fix.'}`,
+              ``,
+              `@mottych — reopening this issue. \`go:review-failed\` label applied.`,
+            ].join('\n');
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
+
+            // Reopen issue
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'open'
+            });
+
+            // Remove go:promote if present
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: 'go:promote'
+              });
+            } catch (e) { /* label may not exist */ }
+
+            // Apply go:review-failed
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['go:review-failed']
+            });
+
+            console.log(`Failure: commented and reopened issue #${issueNumber}`);
+
+      # ── SUCCESS: Post confirmation comment ────────────────────────────────
+      - name: Post success comment
+        if: steps.extract.outputs.skip == 'false' && steps.extract.outputs.conclusion == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ steps.extract.outputs.issue_number }}');
+            const env         = '${{ steps.extract.outputs.environment }}';
+            const workflow    = '${{ steps.extract.outputs.workflow }}';
+            const runUrl      = '${{ steps.extract.outputs.run_url }}';
+            const branch      = '${{ steps.extract.outputs.branch }}';
+            const isHotfix    = '${{ steps.extract.outputs.is_hotfix }}' === 'true';
+
+            const envDetails = {
+              dev: {
+                label: 'Dev',
+                next: 'Validate on dev AWS environment.\nWhen satisfied: manual PR `dev` → `staging`.',
+                healthNote: '_(Dev health URLs — update with your dev environment URLs)_'
+              },
+              staging: {
+                label: 'Staging',
+                next: 'Validate on staging.\nWhen satisfied: manual PR `staging` → `master` for production.',
+                healthNote: '_(Staging health URLs — update with your staging environment URLs)_'
+              },
+              preprod: {
+                label: 'Preprod',
+                next: 'Validate on preprod AWS environment.\nWhen satisfied: PR `hotfix/{branch}` → `master` → production deployment.',
+                healthNote: '_(Preprod health URLs — update with your preprod environment URLs)_'
+              },
+              prod: {
+                label: 'Production',
+                next: isHotfix
+                  ? 'Verify health endpoints below.\n**Backmerge required:** `hotfix-backmerge.yml` has auto-opened PRs for master → staging → dev. Merge those to keep branches in sync.'
+                  : 'Verify health endpoints below.',
+                healthNote: [
+                  '- https://api.purposepath.app/account/health',
+                  '- https://api.purposepath.app/traction/health',
+                  '- https://api.purposepath.app/admin/health',
+                ].join('\n')
+              }
+            };
+
+            const details = envDetails[env] || {
+              label: env,
+              next: 'Validate the deployment.',
+              healthNote: ''
+            };
+
+            const body = [
+              `## CI/CD ✅ ${details.label} Deployment Succeeded`,
+              ``,
+              `**Workflow:** ${workflow}`,
+              `**Branch:** \`${branch}\``,
+              `**Run:** [View details](${runUrl})`,
+              ``,
+              details.healthNote ? `## Health Endpoints\n${details.healthNote}` : '',
+              ``,
+              `## Next Step`,
+              `@mottych — ${details.next}`,
+              ``,
+              `Apply \`go:promote\` when validation is complete.`,
+            ].filter(Boolean).join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
+
+            console.log(`Success: commented on issue #${issueNumber}`);
