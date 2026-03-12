@@ -1,6 +1,7 @@
 # GitHub Copilot Prompt Files
 
-This folder contains workflow prompt files that can be invoked directly in GitHub Copilot Chat.
+This folder contains lightweight prompt entrypoints that route execution to canonical shared and local guides.
+Prompt files intentionally avoid duplicating policy text.
 
 ## Usage
 
@@ -16,73 +17,27 @@ In GitHub Copilot Chat, use `@` to invoke prompt files:
 ## Available Prompts
 
 ### @resolve-issue
-**Purpose:** Fix GitHub issues following complete workflow  
-**Usage:** `@resolve-issue #{issue-number}`  
-**Example:** `@resolve-issue #290`
-
-**Enforces:**
-- Branch check (creates feature branch if needed)
-- Waits for user approval before changes
-- Follows Clean Architecture & DDD patterns
-- Runs all tests (must pass)
-- Commits to feature branch only
-- Merges to dev and deletes feature branch
-- Closes GitHub issue with summary
+**Purpose:** Route issue work to canonical workflow, architecture, coding, and spec guides.
 
 ### @implement-feature
-**Purpose:** Add new features following Clean Architecture  
-**Usage:** `@implement-feature {description}`  
-**Example:** `@implement-feature add email notifications`
-
-**Enforces:**
-- Architecture planning (domain → application → infrastructure → API)
-- GUID-based strongly-typed identifiers
-- No dictionaries or dynamic types
-- DTOs only in presentation layer
-- Complete test coverage
+**Purpose:** Route feature work to canonical implementation and specification guidance.
 
 ### @fix-bug
-**Purpose:** Fix bugs with root cause analysis  
-**Usage:** `@fix-bug {description}`  
-**Example:** `@fix-bug null reference in user service`
-
-**Enforces:**
-- Root cause analysis before fix
-- Regression test creation
-- Minimal targeted fix (no over-engineering)
-- Maintains API contracts
-- All existing tests must still pass
+**Purpose:** Route defect work to canonical bug-fix and validation standards.
 
 ### @refactor
-**Purpose:** Refactor code while preserving behavior  
-**Usage:** `@refactor {component-name}`  
-**Example:** `@refactor user-service`
-
-**Enforces:**
-- Tests must pass BEFORE refactoring starts
-- Behavior remains identical (no functional changes)
-- Tests must pass AFTER refactoring completes
-- Incremental changes with continuous validation
+**Purpose:** Route refactoring to canonical architecture and quality boundaries.
 
 ### @Prompt Enhancement
-**Purpose:** General development workflow  
-**Usage:** `@Prompt Enhancement`
-
-**Enforces:**
-- Quality over speed
-- Feature branch workflow
-- Zero warnings/errors policy
-- Complete testing requirements
+**Purpose:** General routing prompt for mixed tasks.
 
 ## Common Features
 
-All prompts enforce:
-- ✅ **Branch Check**: Must be on feature branch (not dev/main)
-- ✅ **Approval Gate**: Waits for user approval before code changes
-- ✅ **Workflow Compliance**: Follows `AI_WORKFLOW_CHECKLIST.md`
-- ✅ **Testing Requirements**: All tests must pass
-- ✅ **Clean Build**: Zero warnings, zero errors
-- ✅ **Proper Merge**: Feature branch → dev → delete feature branch
+All prompts route to canonical docs that enforce:
+- ✅ Branch safety and issue workflow hygiene
+- ✅ Quality gates and deployment controls
+- ✅ Architecture and coding boundaries
+- ✅ Shared specification alignment
 
 ## Backup Protection
 
@@ -94,12 +49,13 @@ Even if AI forgets workflow, the **git pre-commit hook** blocks direct commits t
 
 ## Related Documentation
 
-- **AI_WORKFLOW_CHECKLIST.md** - Mandatory workflow steps
-- **AI_PROMPT_TEMPLATES.md** - Copy-paste templates (fallback)
-- **README_AI_ENFORCEMENT.md** - Complete enforcement system docs
-- **QUICK_REFERENCE.md** - One-page cheat sheet
-- **COPILOT_RULES.md** - API specification compliance rules
-- **DEVELOPMENT_GUIDELINES.md** - Clean Architecture & DDD guide
+- `../copilot-instructions.md`
+- `../../docs/shared/guides/workflow-governance.md`
+- `../../docs/shared/guides/deployment-standards.md`
+- `../../docs/local/guides/development-guidelines.md`
+- `../../docs/local/guides/architecture-standards.md`
+- `../../docs/local/guides/coding-standards.md`
+- `../../docs/shared/Specifications/`
 
 ## Technical Details
 
@@ -117,8 +73,8 @@ Even if AI forgets workflow, the **git pre-commit hook** blocks direct commits t
 
 **Prompt not enforcing workflow?**
 - File references must be correct (relative paths)
-- `AI_WORKFLOW_CHECKLIST.md` must exist
-- Git hook must be installed (see `GIT_HOOKS_SETUP.md`)
+- Canonical docs must exist at referenced locations
+- Git hook setup should still block direct protected-branch commits
 
 ---
 
