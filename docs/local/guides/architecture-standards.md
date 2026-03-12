@@ -24,6 +24,14 @@ Define mandatory architecture boundaries for `PurposePath_AI` services.
 - Domain logic must not depend directly on Bedrock/OpenAI client code.
 - Workflow orchestration state should be typed and validated.
 
+## Endpoint-Topic Mapping Baseline
+
+- Maintain an explicit endpoint-to-topic mapping for AI execution endpoints.
+- Avoid hardcoded topic routing in handlers; centralize mapping in configuration/registry.
+- Ensure topic metadata covers prompt source, parameter schema, and response contract.
+- Keep response serialization aligned to topic metadata instead of per-handler custom shaping.
+- Conversation flows (start/resume/check) should remain topic-driven and validation-backed.
+
 ## Multi-Tenant and Security Rules
 
 - All data access paths must enforce tenant isolation.
@@ -36,3 +44,4 @@ Define mandatory architecture boundaries for `PurposePath_AI` services.
 - Execution workflow and quality gates: `docs/local/guides/development-guidelines.md`
 - Shared workflow policy: `docs/shared/guides/workflow-governance.md`
 - Shared deployment policy: `docs/shared/guides/deployment-standards.md`
+- Historical endpoint mapping analysis: `docs/local/archive/analysis/endpoint-topic-mapping-analysis-2025-12-02.md`
