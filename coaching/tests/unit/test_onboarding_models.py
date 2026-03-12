@@ -254,7 +254,7 @@ class TestWebsiteScanResponse:
                 business_description="A company that makes innovative software solutions",
                 industry="Technology",
                 year_founded=2015,
-                headquarters_location="San Francisco, CA",
+                business_address="San Francisco, CA",
                 website="https://example.com",
             ),
             core_identity=WebsiteScanCoreIdentity(
@@ -283,7 +283,9 @@ class TestWebsiteScanResponse:
         )
 
         # Assert
-        assert response.scan_id == "scan-123"
+        assert response.scan_id.startswith("scan-")
+        assert response.scan_id != "scan-123"
+        assert response.captured_at.endswith("Z")
         assert response.business_profile.business_name == "Acme Corp"
         assert "Mid-market" in response.target_market.niche_statement
         assert len(response.products) == 1
@@ -301,7 +303,7 @@ class TestWebsiteScanResponse:
                 "business_description": "Test company description",
                 "industry": "Software",
                 "year_founded": 2020,
-                "headquarters_location": "New York, NY",
+                "business_address": "New York, NY",
                 "website": "https://test.com",
             },
             "core_identity": {
@@ -333,9 +335,40 @@ class TestWebsiteScanResponse:
         response = WebsiteScanResponse(**data)
 
         # Assert
-        assert response.scan_id == "scan-456"
+        assert response.scan_id.startswith("scan-")
+        assert response.scan_id != "scan-456"
+        assert response.captured_at.endswith("Z")
         assert isinstance(response.business_profile, WebsiteScanBusinessProfile)
         assert response.products[0].name == "Product One"
+
+    def test_server_generated_metadata_overrides_payload_values(self):
+        """Test scan metadata is always generated server-side."""
+        payload = {
+            "scan_id": "llm-static-id",
+            "captured_at": "2024-01-01T00:00:00Z",
+            "source_url": "https://example.com",
+            "business_profile": {
+                "business_name": "Example Co",
+                "business_description": "Simple description.",
+                "industry": "Technology",
+                "website": "https://example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        response = WebsiteScanResponse(**payload)
+
+        assert response.scan_id != "llm-static-id"
+        assert response.scan_id.startswith("scan-")
+        assert response.captured_at != "2024-01-01T00:00:00Z"
+        assert response.captured_at.endswith("Z")
 
     def test_empty_products_list(self):
         """Test response with empty optional lists."""
@@ -415,6 +448,100 @@ class TestWebsiteScanResponse:
 
         # Assert
         assert len(response.products) == 10
+
+    def test_business_profile_normalization_and_description_isolation(self):
+        """Test canonical profile fields are normalized and descriptions isolated."""
+        # Arrange
+        long_description = (
+            "We help founders build durable businesses through strategy and execution. "
+            "Our advisors combine operating experience with practical planning frameworks. "
+            "Clients use our process to align goals, metrics, and accountability. "
+            "```raw``` {\"website_content\": \"huge scraped data\"} and additional trailing noise."
+        )
+        payload = {
+            "scan_id": "scan-aliases",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://alias-example.com",
+            "business_profile": {
+                "business_name": "Alias Example",
+                "business_description": long_description,
+                "industry": "Business Software / SaaS",
+                "year_founded": "2019",
+                "business_address": "  London, UK   ",
+                "website": "https://alias-example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        # Act
+        response = WebsiteScanResponse(**payload)
+
+        # Assert
+        assert response.business_profile.business_name == "Alias Example"
+        assert response.business_profile.industry == "Technology"
+        assert response.business_profile.year_founded == 2019
+        assert response.business_profile.business_address == "London, UK"
+        assert len(response.business_profile.business_description) <= 320
+        assert "durable businesses" in response.business_profile.business_description
+
+    def test_business_profile_unknown_industry_maps_to_other(self):
+        """Test industry values outside allowed list map to Other."""
+        payload = {
+            "scan_id": "scan-industry",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://example.com",
+            "business_profile": {
+                "business_name": "Example Co",
+                "business_description": "Simple description.",
+                "industry": "Space Mining",
+                "website": "https://example.com",
+            },
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "Niche", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        response = WebsiteScanResponse(**payload)
+
+        assert response.business_profile.industry == "Other"
+
+    def test_legacy_flat_payload_is_rejected(self):
+        """Test strict v2 contract rejects non-canonical/legacy response shapes."""
+        # Arrange
+        legacy_payload = {
+            "scan_id": "scan-legacy",
+            "captured_at": "2026-03-11T10:00:00Z",
+            "source_url": "https://legacy-example.com",
+            "businessName": "Legacy Example Inc",
+            "description": "Legacy description from old payload.",
+            "industry": "Professional Services",
+            "yearFounded": 2017,
+            "businessAddress": "Austin, TX",
+            "core_identity": {"vision_hint": None, "purpose_hint": None, "inferred_values": []},
+            "target_market": {"niche_statement": "SMB services", "segments": [], "pain_points": []},
+            "products": [],
+            "value_proposition": {
+                "unique_selling_proposition": None,
+                "key_differentiators": [],
+                "proof_points": [],
+            },
+        }
+
+        # Act / Assert
+        with pytest.raises(ValidationError):
+            WebsiteScanResponse(**legacy_payload)
 
 
 @pytest.mark.unit
