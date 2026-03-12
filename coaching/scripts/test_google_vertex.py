@@ -42,14 +42,14 @@ def check_prerequisites() -> bool:
 
     print(f"\n2. GOOGLE_PROJECT_ID: {project_id or '(will use credentials file)'}")
 
-    # Check if google-cloud-aiplatform is installed
+    # Check if google-genai is installed
     try:
-        import google.cloud.aiplatform  # noqa: F401
+        import google.genai  # noqa: F401
 
-        print("\n3. google-cloud-aiplatform: ✅ Installed")
+        print("\n3. google-genai: ✅ Installed")
     except ImportError:
-        print("\n3. google-cloud-aiplatform: ❌ NOT installed")
-        print("   Run: uv pip install google-cloud-aiplatform>=1.40.0")
+        print("\n3. google-genai: ❌ NOT installed")
+        print("   Run: uv pip install google-genai>=1.67.0")
         return False
 
     if not creds_path and not project_id:
@@ -72,7 +72,7 @@ async def test_gemini_model() -> None:
     print("=" * 60)
 
     project_id = os.getenv("GOOGLE_PROJECT_ID")
-    location = os.getenv("GOOGLE_VERTEX_LOCATION", "us-central1")
+    location = os.getenv("GOOGLE_VERTEX_LOCATION", "global")
 
     print("\nInitializing GoogleVertexLLMProvider...")
     print(f"  Project ID: {project_id or '(from credentials)'}")
