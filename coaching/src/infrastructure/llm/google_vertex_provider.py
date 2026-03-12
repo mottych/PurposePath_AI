@@ -54,7 +54,7 @@ class GoogleVertexLLMProvider:
     Google Vertex AI adapter implementing LLMProviderPort.
 
     This adapter provides Google Vertex AI-backed LLM access using the new
-    google-genai SDK (v1.56.0+), implementing the provider port interface
+    google-genai SDK (v1.67.0+), implementing the provider port interface
     defined in the domain layer.
 
     Design:
@@ -72,7 +72,7 @@ class GoogleVertexLLMProvider:
     # Supported Vertex AI model IDs
     SUPPORTED_MODELS: ClassVar[list[str]] = [
         # Gemini 3.x Series (latest - December 2025)
-        "gemini-3-pro-preview",
+        "gemini-3.1-pro-preview",
         # Gemini 2.5 Series
         "gemini-2.5-pro",
         "gemini-2.5-flash",
@@ -141,7 +141,7 @@ class GoogleVertexLLMProvider:
             except ImportError as e:
                 raise ImportError(
                     "Google Gen AI SDK not installed. "
-                    "Install with: pip install google-genai>=1.56.0"
+                    "Install with: pip install google-genai>=1.67.0"
                 ) from e
 
             # Get project_id and credentials from Secrets Manager if not provided
