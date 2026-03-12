@@ -1,6 +1,157 @@
 """Pydantic models for onboarding AI endpoints."""
 
-from pydantic import BaseModel, Field
+import re
+from datetime import UTC, datetime
+from uuid import uuid4
+
+from pydantic import BaseModel, Field, model_validator
+
+_MAX_DESCRIPTION_LENGTH = 320
+_MAX_LOCATION_LENGTH = 120
+_ALLOWED_INDUSTRIES: tuple[str, ...] = (
+    "Technology",
+    "Healthcare",
+    "Finance",
+    "Education",
+    "Retail",
+    "Manufacturing",
+    "Real Estate",
+    "Professional Services",
+    "Media & Entertainment",
+    "Food & Beverage",
+    "Transportation",
+    "Construction",
+    "Agriculture",
+    "Energy",
+    "Hospitality",
+    "Nonprofit",
+    "Government",
+    "Other",
+)
+_INDUSTRY_KEYWORD_MAP: tuple[tuple[str, str], ...] = (
+    ("saas", "Technology"),
+    ("software", "Technology"),
+    ("tech", "Technology"),
+    ("it ", "Technology"),
+    ("health", "Healthcare"),
+    ("medical", "Healthcare"),
+    ("hospital", "Healthcare"),
+    ("bank", "Finance"),
+    ("fintech", "Finance"),
+    ("insurance", "Finance"),
+    ("school", "Education"),
+    ("education", "Education"),
+    ("retail", "Retail"),
+    ("ecommerce", "Retail"),
+    ("e-commerce", "Retail"),
+    ("manufactur", "Manufacturing"),
+    ("factory", "Manufacturing"),
+    ("real estate", "Real Estate"),
+    ("property", "Real Estate"),
+    ("consult", "Professional Services"),
+    ("agency", "Professional Services"),
+    ("media", "Media & Entertainment"),
+    ("entertain", "Media & Entertainment"),
+    ("food", "Food & Beverage"),
+    ("beverage", "Food & Beverage"),
+    ("restaurant", "Food & Beverage"),
+    ("transport", "Transportation"),
+    ("logistics", "Transportation"),
+    ("construction", "Construction"),
+    ("agri", "Agriculture"),
+    ("farm", "Agriculture"),
+    ("energy", "Energy"),
+    ("power", "Energy"),
+    ("hospitality", "Hospitality"),
+    ("hotel", "Hospitality"),
+    ("nonprofit", "Nonprofit"),
+    ("non-profit", "Nonprofit"),
+    ("charity", "Nonprofit"),
+    ("government", "Government"),
+    ("public sector", "Government"),
+)
+
+
+def _collapse_ws(value: str) -> str:
+    """Collapse repeated whitespace while preserving plain text content."""
+    return " ".join(value.split()).strip()
+
+
+def _normalize_business_description(value: object) -> str:
+    """Keep description concise to avoid dumping large scraped payloads."""
+    if not isinstance(value, str):
+        return ""
+
+    compact = _collapse_ws(value)
+    if not compact:
+        return ""
+
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", compact) if part.strip()]
+    if sentences:
+        selected: list[str] = []
+        current_length = 0
+        for sentence in sentences:
+            next_length = current_length + len(sentence) + (1 if selected else 0)
+            if selected and next_length > _MAX_DESCRIPTION_LENGTH:
+                break
+            selected.append(sentence)
+            current_length = next_length
+            if len(selected) >= 3:
+                break
+        if selected:
+            return " ".join(selected)
+
+    return compact[:_MAX_DESCRIPTION_LENGTH].rstrip()
+
+
+def _normalize_location(value: object) -> str | None:
+    """Normalize location-like values into short display text."""
+    if not isinstance(value, str):
+        return None
+
+    compact = _collapse_ws(value)
+    if not compact:
+        return None
+
+    return compact[:_MAX_LOCATION_LENGTH].rstrip()
+
+
+def _normalize_year(value: object) -> int | None:
+    """Extract and validate a founded year from mixed input formats."""
+    current_year = datetime.now().year
+    if isinstance(value, int):
+        return value if 1800 <= value <= current_year + 1 else None
+    if isinstance(value, float):
+        as_int = int(value)
+        return as_int if 1800 <= as_int <= current_year + 1 else None
+    if isinstance(value, str):
+        match = re.search(r"\b(18|19|20)\d{2}\b", value)
+        if not match:
+            return None
+        parsed = int(match.group(0))
+        return parsed if 1800 <= parsed <= current_year + 1 else None
+    return None
+
+
+def _normalize_industry(value: object) -> str | None:
+    """Normalize industry to the canonical Business Foundation option list."""
+    if not isinstance(value, str):
+        return None
+
+    compact = _collapse_ws(value)
+    if not compact:
+        return None
+
+    compact_folded = compact.casefold()
+    for option in _ALLOWED_INDUSTRIES:
+        if compact_folded == option.casefold():
+            return option
+
+    for keyword, mapped in _INDUSTRY_KEYWORD_MAP:
+        if keyword in compact_folded:
+            return mapped
+
+    return "Other"
 
 
 # Suggestions endpoint models
@@ -53,8 +204,35 @@ class WebsiteScanBusinessProfile(BaseModel):
     business_description: str = Field(..., description="1-3 sentence business overview")
     industry: str | None = Field(None, description="Primary industry classification")
     year_founded: int | None = Field(None, description="Year the company was founded")
-    headquarters_location: str | None = Field(None, description="City, State or City, Country")
+    business_address: str | None = Field(None, description="City, State or City, Country")
     website: str = Field(..., description="Company website URL")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_profile_fields(cls, data: object) -> object:
+        """Normalize canonical business_profile fields for cleaner payload output."""
+        if not isinstance(data, dict):
+            return data
+
+        profile_data = dict(data)
+        if isinstance(profile_data.get("business_name"), str):
+            profile_data["business_name"] = _collapse_ws(profile_data["business_name"])
+        if "business_description" in profile_data:
+            profile_data["business_description"] = _normalize_business_description(
+                profile_data.get("business_description")
+            )
+        if "industry" in profile_data:
+            profile_data["industry"] = _normalize_industry(profile_data.get("industry"))
+        if "year_founded" in profile_data:
+            profile_data["year_founded"] = _normalize_year(profile_data.get("year_founded"))
+        if "business_address" in profile_data:
+            profile_data["business_address"] = _normalize_location(
+                profile_data.get("business_address")
+            )
+        if isinstance(profile_data.get("website"), str):
+            profile_data["website"] = profile_data["website"].strip()
+
+        return profile_data
 
 
 class WebsiteScanCoreIdentity(BaseModel):
@@ -119,6 +297,18 @@ class WebsiteScanResponse(BaseModel):
         default_factory=list, description="Products or services offered"
     )
     value_proposition: WebsiteScanValueProposition
+
+    @model_validator(mode="before")
+    @classmethod
+    def _apply_server_scan_metadata(cls, data: object) -> object:
+        """Always stamp response metadata server-side per scan execution."""
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        normalized["scan_id"] = f"scan-{uuid4().hex[:12]}"
+        normalized["captured_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        return normalized
 
 
 # Coaching endpoint models
