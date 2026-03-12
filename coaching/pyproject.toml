@@ -61,7 +61,7 @@ dependencies = [
     
     # Google Gen AI SDK (replaces deprecated google-cloud-aiplatform for generative AI)
     # Migration: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
-    "google-genai>=1.56.0",
+    "google-genai>=1.67.0",
 ]
 
 [project.optional-dependencies]

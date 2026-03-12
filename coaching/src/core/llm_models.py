@@ -373,12 +373,12 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.00025,  # Avg of $0.10/1M input, $0.40/1M output
         is_active=True,
     ),
-    # Gemini 3 Pro - Latest generation (Preview - December 2025)
+    # Gemini 3.1 Pro - Latest generation (Preview - February 2026)
     "GEMINI_3_PRO": SupportedModel(
         code="GEMINI_3_PRO",
         provider=LLMProvider.GOOGLE_VERTEX,
-        model_name="gemini-3-pro-preview",
-        version="3.0",
+        model_name="gemini-3.1-pro-preview",
+        version="3.1",
         provider_class="GoogleVertexLLMProvider",
         capabilities=[
             "chat",
