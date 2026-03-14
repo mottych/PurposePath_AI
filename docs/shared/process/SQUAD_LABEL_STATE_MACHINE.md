@@ -303,5 +303,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-13
+- Guard workflows updated: `squad-state-doc-guard.yml` requires `pull-requests:read` for PR file enumeration and state-governance checks.
 - 2026-03-12
 - Includes Copilot Q&A wait/resume automation state (`squad-copilot-qa-loop.yml`)
