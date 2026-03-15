@@ -7,7 +7,7 @@
 
 PurposePath is a serverless AI coaching platform using **Clean Architecture with DDD**. The coaching service (`coaching/src/`) orchestrates multi-turn conversations with Amazon Bedrock (Claude).
 
-```
+```text
 coaching/src/
 ├── domain/          # Business logic, NO external dependencies
 │   ├── entities/    # Aggregate roots (Conversation)
@@ -31,20 +31,25 @@ coaching/src/
 ## Critical Development Rules
 
 ### Workflow (MANDATORY)
+
 - **Always work in feature branch off `dev`** - NEVER commit to master/staging/dev directly
 - **Every change needs a GitHub issue** - Mark `in-progress`, reference in commits
 - **Commit format**: `feat(coaching): description - refs #42`
 - **Before merge**: All tests pass, zero mypy/ruff errors (even pre-existing ones)
 
 ### Type Safety (MANDATORY)
+
 - **ZERO `dict[str, Any]` in domain layer** - use Pydantic models
 - **Use NewType IDs** from `coaching/src/core/types.py`:
+
   ```python
   from coaching.src.core.types import ConversationId, UserId, TenantId
   ```
+
 - **Transform DynamoDB responses immediately** to domain entities
 
 ### Multi-Tenancy (MANDATORY)
+
 All queries MUST enforce tenant isolation. Two patterns exist:
 
 ```python
@@ -58,6 +63,7 @@ if item.get("tenant_id") != tenant_id:
 ```
 
 ### Test Coverage (MANDATORY)
+
 - **Domain layer**: 85%+ unit test coverage
 - **Service layer**: 75%+ coverage
 - **Overall project**: 75%+ combined coverage
@@ -93,6 +99,7 @@ cd coaching/pulumi && pulumi up         # Lambda + API Gateway
 ## Code Patterns
 
 ### Domain Entity (Aggregate Root)
+
 ```python
 # coaching/src/domain/entities/conversation.py
 class Conversation(BaseModel):
@@ -107,6 +114,7 @@ class Conversation(BaseModel):
 ```
 
 ### Application Service
+
 ```python
 # coaching/src/application/conversation/conversation_service.py
 class ConversationApplicationService:
@@ -115,6 +123,7 @@ class ConversationApplicationService:
 ```
 
 ### Repository (Port/Adapter)
+
 ```python
 # Port (domain layer)
 class ConversationRepositoryPort(Protocol):
@@ -128,6 +137,7 @@ class DynamoDBConversationRepository:
 ```
 
 ### API Route with Dependency Injection
+
 ```python
 # coaching/src/api/routes/conversations.py
 @router.post("/initiate", response_model=ConversationResponse)
@@ -139,7 +149,9 @@ async def initiate_conversation(
 ```
 
 ### AI Workflows (LangGraph)
+
 For complex AI orchestration, use LangGraph workflows in `coaching/src/workflows/`:
+
 - Keep workflow logic separate from business logic
 - Use typed state objects for workflow data
 - Implement as composable, testable graph nodes
