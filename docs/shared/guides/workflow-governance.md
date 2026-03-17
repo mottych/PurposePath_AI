@@ -8,7 +8,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 
 ## Mandatory Control Rules
 
-- Never commit directly to `dev` or `master`.
+- Never commit directly to `dev` or `main`.
 - Never use git stash in normal workflow (`git stash`, `pop`, `apply`, `clear`).
 - Keep one issue per branch; do not carry unrelated changes.
 - Before switching branches, working tree must be clean (`git status --short`).
@@ -26,7 +26,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 1. For standard development issues:
 	- `git checkout dev && git pull origin dev`
 2. For production issues/hotfixes:
-	- `git checkout master && git pull origin master`
+	- `git checkout main && git pull origin main`
 3. Resolve conflicts before continuing.
 4. Confirm clean state:
 	- `git stash list` is empty.
@@ -60,7 +60,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 5. If alignment/spec deviation is discovered, stop and raise correction path.
 
 ### Production Issue Path
-1. Create hotfix branch from `master`:
+1. Create hotfix branch from `main`:
 	- `git checkout -b hotfix/issue-{NUMBER}-{description}`
 2. Push branch immediately:
 	- `git push -u origin hotfix/issue-{NUMBER}-{description}`
@@ -91,10 +91,10 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 
 ### Production Issue Path
 1. Validate in preprod first (mandatory).
-2. Open PR `hotfix/* -> master` after successful preprod validation.
+2. Open PR `hotfix/* -> main` after successful preprod validation.
 3. Promote same validated commit/artifact to production.
 4. Complete merge-down sequence:
-	- `master -> staging -> dev`
+	- `main -> preview -> dev`
 
 ## Step 5: Close Issue
 

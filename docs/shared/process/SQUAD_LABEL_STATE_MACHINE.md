@@ -5,6 +5,11 @@
 This document is the single source of truth for issue workflow states driven by label namespaces in repositories running Squad, especially:
 - `squad` and `squad:*`
 - `go:*`
+- `release:*`
+- `type:*`
+- `priority:*`
+- `env:*`
+- `human:*`
 
 It also includes related operational states that directly affect coding-agent wait/resume flow.
 
@@ -27,7 +32,9 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 - `release:*` labels are mutually exclusive (enforced automatically).
 - `type:*` labels are mutually exclusive (enforced automatically).
 - `priority:*` labels are mutually exclusive (enforced automatically).
+- `env:*` labels are environment context signals (not mutually exclusive with other namespaces).
 - `human:*` labels are explicit human-gate signals and are mutually exclusive (one open gate at a time).
+- `bug` and `feedback` are high-signal standalone labels managed by sync workflow.
 - `squad` is inbox/triage entry; `squad:*` is assignment/routing.
 
 ## State Catalog
@@ -51,16 +58,61 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 | `go:no` | Not pursuing implementation | Manual | Explicit reject/defer decision | Any `release:*` labels are removed automatically |
 | `go:scope-approved` | Scope approved, proceed to design | Manual gate per team/lead process | @mottych scope confirmation | Advance to design and decomposition path |
 | `go:design-approved` | Design approved, proceed to implementation sub-issues | Manual gate per team/lead process | @mottych design confirmation | Create/route implementation issues |
-| `go:review-ready` | Implementation complete and ready for reviewer validation stage | Lead/implementor/manual | Code complete and local/unit validation done | Route to reviewer validation lane |
+| `go:review-ready` | Implementation complete and ready for reviewer validation stage | Lead/implementor/manual | Code complete and local/unit validation done | Route to reviewer validation lane and auto-post implementation handoff summary on issue |
 | `go:skip-human-validation` | Explicit approval to skip human deploy-validation gate | Manual gate per team/lead process | @mottych risk acceptance decision | Bypass `human:deploy-validate` and move to deploy decision |
 | `go:deploy` | Deployment authorized to target environment (dev or prod) | Manual/role-driven gate | Validation complete and owner acknowledgement | Execute deployment/promotion workflow for target environment |
-| `go:review-failed` | CI/review/deploy failed; needs correction | Manual/role-driven or automation-linked operations | Failure diagnostics/reopen flow | Reopen corrective work, fix issue, re-run validation |
+| `go:review-failed` | CI/review/deploy failed; needs correction | Manual/role-driven or automation-linked operations | Failure diagnostics/reopen flow | Reopen corrective work, fix issue, re-run validation; auto-post short failure findings summary on issue |
+| `go:changes-requested` | Human reviewer requested changes before approval | Manual/role-driven gate | Review feedback requiring implementation updates | Return to implementation loop; auto-post failure/change summary on issue |
 
 ### Hotfix Flag (Warning)
 
 | Label | Meaning | Set By | Trigger | What Must Happen In This State |
 |---|---|---|---|---|
-| `hotfix` | Production fix warning flag | Automatic or manual | Existing prod/hotfix signals or explicit decision | Use hotfix workflow from production baseline (`master`) and validate on preprod before production |
+| `hotfix` | Production fix warning flag | Automatic or manual | Existing prod/hotfix signals or explicit decision | Use hotfix workflow from production baseline (`main`) and validate on preprod before production |
+
+### Environment Namespace
+
+| Label | Meaning | Set By | Trigger | What Must Happen In This State |
+|---|---|---|---|---|
+| `env:dev` | Work targets dev environment | Manual or triage context | Environment scoping decision | Keep validation/deploy plan aligned to dev scope |
+| `env:prod` | Issue affects production environment | Manual or triage context | Incident/production-impact signal | Force lead hotfix path consideration; may add `hotfix` |
+
+### Release Namespace
+
+| Label | Meaning | Set By | Trigger | What Must Happen In This State |
+|---|---|---|---|---|
+| `release:backlog` | Not yet targeted to a version | Automatic/manual | Added directly or auto-added for `go:yes` when release target missing | Keep in backlog until explicit release target is chosen |
+| `release:v0.4.0` | Targeted for v0.4.0 | Manual | Release planning decision | Deliver within v0.4.0 scope |
+| `release:v0.5.0` | Targeted for v0.5.0 | Manual | Release planning decision | Deliver within v0.5.0 scope |
+| `release:v0.6.0` | Targeted for v0.6.0 | Manual | Release planning decision | Deliver within v0.6.0 scope |
+| `release:v1.0.0` | Targeted for v1.0.0 | Manual | Release planning decision | Deliver within v1.0.0 scope |
+
+### Type Namespace
+
+| Label | Meaning | Set By | Trigger | What Must Happen In This State |
+|---|---|---|---|---|
+| `type:feature` | New capability | Manual/triage | Feature work intake | Lead-guided feature/design path before implementation |
+| `type:enhancement` | Improvement to existing capability | Manual/triage | Enhancement intake | Lead-guided enhancement path before implementation |
+| `type:bug` | Defect fix | Manual/triage | Bug report intake | Route to implementation and validation flow |
+| `type:spike` | Research/investigation only | Manual/triage | Uncertain scope/approach | Produce findings and implementation recommendation |
+| `type:docs` | Documentation work | Manual/triage | Docs update intake | Route docs scope through review/validation flow |
+| `type:chore` | Maintenance/refactor/cleanup | Manual/triage | Maintenance request | Route operational work through normal approvals |
+| `type:epic` | Parent issue for decomposition | Manual | Epic planning decision | Decompose into sub-issues and track overall progress |
+
+### Priority Namespace
+
+| Label | Meaning | Set By | Trigger | What Must Happen In This State |
+|---|---|---|---|---|
+| `priority:p0` | Blocking release | Manual | Critical priority decision | Expedite triage, assignment, and validation |
+| `priority:p1` | Current sprint priority | Manual | Sprint planning decision | Schedule for current sprint execution |
+| `priority:p2` | Next sprint priority | Manual | Sprint planning decision | Schedule for near-term backlog execution |
+
+### High-Signal Standalone Labels
+
+| Label | Meaning | Set By | Trigger | What Must Happen In This State |
+|---|---|---|---|---|
+| `bug` | High-visibility defect signal | Manual/intake | Defect identified | Use with `type:bug` where applicable for urgency visibility |
+| `feedback` | High-visibility user feedback signal | Manual/intake | Feedback report identified | Ensure triage captures user-impact context |
 
 ### Related Operational Labels (Non-go/squad, but state-critical)
 
@@ -278,6 +330,18 @@ flowchart TB
   - `human:scope-validate` -> `go:scope-approved`
   - `human:deploy-validate` -> `go:deploy` (or `go:skip-human-validation`)
 
+### Design/Scope Rework Loop (`go:changes-requested`)
+
+For design and scope gates, `go:changes-requested` now drives a no-manual-reroute correction loop:
+
+1. Reviewer applies `go:changes-requested` while `human:design-review` or `human:scope-validate` is active.
+2. `squad-label-enforce.yml` captures the active design/scope human gate, removes it temporarily, and (when in `squad:copilot`) re-assigns Copilot to revise.
+3. Copilot posts a revised proposal in the issue thread.
+4. `squad-copilot-qa-loop.yml` removes `go:changes-requested` and restores the captured human gate label.
+5. Human reviewer re-evaluates the revised design/scope.
+
+This prevents repeated external automation triggers while revision work is in progress, while still reopening the correct human gate once a revised proposal is ready.
+
 ## Automatic vs Manual Responsibility Matrix
 
 | Transition Type | Automatic | Manual |
@@ -285,10 +349,67 @@ flowchart TB
 | Initial squad triage | Yes (`squad-triage.yml`) | Optional override by lead/owner |
 | Member assignment from `squad:*` | Yes (`squad-issue-assign.yml`) | Manual reassign by label swap |
 | `go:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
+| `release:*`, `type:*`, `priority:*`, `human:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | Research hold (`go:needs-research`) | Yes (default) / manual hold | Lead/owner resolves and transitions |
 | Approval gates (`go:scope-approved`, `go:design-approved`) | No | Owner/lead workflow decision |
 | Failure gate (`go:review-failed`) | Operational/manual per role flow | Reviewer/lead/CI monitor process |
+| Review transition summaries (`go:review-ready`, `go:review-failed`, `go:changes-requested`) | Yes (`squad-label-enforce.yml` posts issue comments with handoff/failure context) | Manual details can be added if deeper analysis is needed |
+| Design/scope rework (`go:changes-requested` with active `human:design-review` or `human:scope-validate`) | Yes (`squad-label-enforce.yml` captures+clears gate and reassigns Copilot; `squad-copilot-qa-loop.yml` restores gate after revised Copilot comment) | Reviewer applies `go:changes-requested`; human reviewer re-evaluates on restored gate |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`) | Owner replies to resume |
+
+## Workflow Label Inventory (Cleanup Safe List)
+
+This inventory is derived from current workflow behavior and label-sync automation. Do not delete these labels unless workflows and this document are updated in the same change.
+
+### Required Labels (Directly Used by Workflow Logic)
+
+- `squad`
+- `squad:copilot`
+- `squad:{member}` (dynamic from roster)
+- `go:needs-research`
+- `go:yes`
+- `go:no`
+- `go:scope-approved`
+- `go:design-approved`
+- `go:review-ready`
+- `go:skip-human-validation`
+- `go:deploy`
+- `go:review-failed`
+- `go:changes-requested`
+- `hotfix`
+- `env:prod`
+- `release:*` (at minimum one target or `release:backlog`)
+- `type:*`
+- `priority:*`
+- `human:needs-info`
+- `human:design-review`
+- `human:scope-validate`
+- `human:deploy-validate`
+
+### Managed By Label Sync (Should Also Be Kept)
+
+- `env:dev`
+- `release:v0.4.0`
+- `release:v0.5.0`
+- `release:v0.6.0`
+- `release:v1.0.0`
+- `release:backlog`
+- `type:feature`
+- `type:enhancement`
+- `type:bug`
+- `type:spike`
+- `type:docs`
+- `type:chore`
+- `type:epic`
+- `priority:p0`
+- `priority:p1`
+- `priority:p2`
+- `bug`
+- `feedback`
+
+### Legacy Compatibility (Do Not Recreate, But Recognize)
+
+- `go:hotfix` is still read by triage/heartbeat as a backward-compatibility signal; `hotfix` is the canonical current label.
 
 ## Maintenance Contract (Required)
 
@@ -303,6 +424,12 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-13
+- Added workflow-derived label inventory and documented missing namespaces/labels: `env:*`, `release:*`, `type:*`, `priority:*`, `go:changes-requested`, high-signal labels (`bug`, `feedback`), and legacy `go:hotfix` compatibility note.
+- 2026-03-15
+- Added automated design/scope rework loop for `go:changes-requested`: capture and clear active `human:design-review`/`human:scope-validate`, reassign Copilot for revision, then restore the correct human gate and clear `go:changes-requested` after revised proposal comment.
+- 2026-03-13
+- `squad-label-enforce.yml` now auto-posts issue-level transition summaries for `go:review-ready` and `go:review-failed`/`go:changes-requested`, including best-effort linked PR and failed-check context.
 - 2026-03-13
 - Guard workflows updated: `squad-state-doc-guard.yml` requires `pull-requests:read` for PR file enumeration and state-governance checks.
 - 2026-03-12

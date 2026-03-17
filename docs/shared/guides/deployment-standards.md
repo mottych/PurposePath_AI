@@ -21,18 +21,18 @@ This guide is repository-agnostic. Repository-specific deployment commands, stac
 ## Environment Flow
 
 - `dev` for continuous integration and early validation.
-- `staging` for release candidate validation.
-- `master` for production release.
+- `preview` for release candidate validation.
+- `main` for production release.
 
 ## Production Hotfix Promotion Flow (Mandatory)
 
-1. Start from `master` on a `hotfix/*` branch.
+1. Start from `main` on a `hotfix/*` branch.
 2. Push `hotfix/*` to trigger preprod deployment workflow.
 3. Validate in preprod before any production promotion.
 4. Promote the same validated commit/artifact to production (no rebuild drift).
 5. If preprod validation fails, fix in hotfix branch and repeat validation.
 6. After production success, merge-down in sequence:
-	- `master -> staging -> dev`
+	- `main -> preview -> dev`
 
 ## Deployment Requirements
 
