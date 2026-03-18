@@ -62,6 +62,14 @@ Use this guide for:
 7. Validation and close-out
 - Confirm implementation and tests align with updated spec.
 - Include spec references in issue/PR notes.
+- Ensure repository contract guard workflow passes (API contract changes without spec updates must fail CI).
+
+## Repository Enforcement (PurposePath_Api)
+
+- Workflow: `.github/workflows/api-contract-spec-guard.yml`
+- Enforcement behavior:
+  - Fails when Account API contract-related files change without updating `docs/shared/Specifications/api-fe/account-api.md`.
+  - Validates required contract markers in the spec for register idempotency and confirm-email status outcomes.
 
 ## Minimum Checklist
 

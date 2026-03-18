@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.4  
-**Last Updated:** January 28, 2026 (Username support in invitation activation + conflict error)  
+**Version:** 2.5  
+**Last Updated:** March 18, 2026 (Registration idempotency + confirm-email status contract)  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -14,7 +14,7 @@ Consolidated account endpoints implemented by the Account Lambda controllers: `A
 - Response envelope (`ApiResponse<T>`): `{ "success": true|false, "data": {}, "message": "?", "error": "?", "code": "?" }`.
 - Paginated responses use `PaginatedResponse<T>`: same envelope plus `pagination: { page, limit, total, totalPages }`.
 - Authenticated endpoints require headers: `Authorization: Bearer {accessToken}`, `X-Tenant-Id: {tenantId}`. Public endpoints are marked.
-- Optional headers: `X-Frontend-Base-Url` (used for auth emails), `X-E2E-Test: true` (DEV only to bypass email verification on register).
+- Optional headers: `X-Frontend-Base-Url` (used for auth emails), `X-E2E-Test: true` (DEV only to bypass email verification on register), `Idempotency-Key` (register replay protection).
 
 ## JWT Claims (Issue #545)
 
@@ -76,7 +76,14 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ### POST /auth/register
 - Body: `{ "username": "string", "email": "string", "password": "string", "firstName": "string", "lastName": "string", "phone": "string|null" }`.
 - DEV-only bypass: `X-E2E-Test: true` skips email verification.
+- Optional header: `Idempotency-Key: {string}`.
+- Idempotency behavior:
+  - If the same `Idempotency-Key` is replayed within 30 minutes, the endpoint returns the cached original successful response.
+  - If no key is supplied, backend retry heuristics may still return a success-like outcome when a matching pending registration already exists.
 - Response: `AuthResponse` (auto-login path) or validation error. Email verification links use `X-Frontend-Base-Url` if provided.
+- `AuthResponse` additions for idempotent replay path:
+  - `registrationStatus: "already_created_pending_verification"` when backend detects a successful prior registration/retry outcome.
+  - `registrationStatus: null` for normal first-time registration.
 
 ### POST /auth/forgot-password
 - Body: `{ "username": "string" }`.
@@ -93,7 +100,29 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 
 ### POST /auth/confirm-email
 - Body: `{ "token": "string" }`.
-- Response: `{ "success": true, "message": "Email confirmed successfully" }`.
+- Response (success):
+```json
+{
+  "success": true,
+  "data": {
+    "status": "confirmed|already_verified"
+  }
+}
+```
+- Response (failure):
+```json
+{
+  "success": false,
+  "error": "Email confirmation failed",
+  "code": "expired|not_found|invalid",
+  "data": {
+    "status": "expired|not_found|invalid"
+  }
+}
+```
+- Notes:
+  - Re-confirming an already verified account is treated as success with `status: "already_verified"`.
+  - Expired/not_found/invalid token outcomes remain failure responses.
 
 ### GET /auth/confirm-email/validate
 - Query: `token`.
