@@ -18,6 +18,7 @@ It also includes related operational states that directly affect coding-agent wa
 This state machine describes issue lifecycle behavior across the standard Squad files:
 - `.github/workflows/squad-triage.yml`
 - `.github/workflows/squad-issue-assign.yml`
+- `.github/workflows/squad-state-transitions.yml`
 - `.github/workflows/squad-label-enforce.yml`
 - `.github/workflows/squad-heartbeat.yml`
 - `.github/workflows/sync-squad-labels.yml`
@@ -27,12 +28,12 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 - `.squad/routing.md`
 - `.squad/team.md`
 
-## Ownership Model (Recommended Squad Path)
+## Ownership Model
 
-- Primary transition engine: Squad orchestration (routing rules, agent charters, and skills) using Squad tools.
-- Workflow role: GitHub workflows are adapters for label hygiene and wait/resume mechanics only.
-- Source of truth: `squad.config.ts` and generated `.squad/` artifacts.
-- Durability rule: business transitions (for example rework loops and gate restoration) must be owned by Squad behavior, not by workflow-side comment parsing.
+- Primary transition engine: GitHub workflow adapters operating on label events.
+- Workflow role: enforce label-state progression, routing handoff, and wait/resume mechanics.
+- Source of truth for behavior: this state machine plus the corresponding `.github/workflows/squad-*.yml` implementations.
+- Source of truth for team composition/routing metadata: `squad.config.ts` and generated `.squad/` artifacts.
 
 ## Namespace Rules
 
@@ -130,10 +131,11 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 
 ### Automation Boundary
 
-- `squad-copilot-qa-loop.yml` handles only Q&A wait/resume (`human:needs-info`) lifecycle.
-- `squad-label-enforce.yml` handles only namespace exclusivity and release-target hygiene.
-- Rework transitions for `go:changes-requested` and human-gate restoration are handled by Squad orchestration (lead/reviewer/skill flow), not by GitHub workflow logic.
-- `squad-workflow-boundary-guard.yml` enforces this boundary in CI by failing if workflow-side rework transition logic is reintroduced.
+- `squad-triage.yml` handles initial intake to lead-owned design/requirements gates.
+- `squad-state-transitions.yml` handles cross-gate transitions (`go:*`, `human:*`) including Copilot routing, rework loops, deploy gating, and close-on-deploy behavior.
+- `squad-copilot-qa-loop.yml` handles Copilot clarification wait/resume (`human:needs-info`) during implementation.
+- `squad-label-enforce.yml` handles namespace exclusivity and release-target hygiene.
+- `squad-workflow-boundary-guard.yml` enforces architecture constraints defined in this repository.
 
 ### Human Namespace (Explicit Human Gates)
 
@@ -345,17 +347,14 @@ flowchart TB
   - `human:scope-validate` -> `go:scope-approved`
   - `human:deploy-validate` -> `go:deploy` (or `go:skip-human-validation`)
 
-### Design/Scope Rework Loop (`go:changes-requested`)
+### Design Rework Loop (`go:changes-requested`)
 
-For design and scope gates, `go:changes-requested` now drives a no-manual-reroute correction loop:
+`go:changes-requested` returns the issue to lead-owned design review:
 
-1. Reviewer applies `go:changes-requested` while `human:design-review` or `human:scope-validate` is active.
-2. `squad-label-enforce.yml` captures the active design/scope human gate, removes it temporarily, and (when in `squad:copilot`) re-assigns Copilot to revise.
-3. Copilot posts a revised proposal in the issue thread.
-4. `squad-copilot-qa-loop.yml` removes `go:changes-requested` and restores the captured human gate label.
-5. Human reviewer re-evaluates the revised design/scope.
-
-This prevents repeated external automation triggers while revision work is in progress, while still reopening the correct human gate once a revised proposal is ready.
+1. Reviewer applies `go:changes-requested`.
+2. `squad-state-transitions.yml` ensures `squad:lead` and `human:design-review` are active.
+3. Lead updates design direction and requests a new `go:design-approved` decision.
+4. On `go:design-approved`, `squad-state-transitions.yml` routes back to `squad:copilot`.
 
 ## Automatic vs Manual Responsibility Matrix
 
@@ -366,11 +365,13 @@ This prevents repeated external automation triggers while revision work is in pr
 | `go:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | `release:*`, `type:*`, `priority:*`, `human:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | Research hold (`go:needs-research`) | Yes (default) / manual hold | Lead/owner resolves and transitions |
-| Approval gates (`go:scope-approved`, `go:design-approved`) | No | Owner/lead workflow decision |
-| Failure gate (`go:review-failed`) | Operational/manual per role flow | Reviewer/lead/CI monitor process |
-| Review transition summaries (`go:review-ready`, `go:review-failed`, `go:changes-requested`) | Yes (`squad-label-enforce.yml` posts issue comments with handoff/failure context) | Manual details can be added if deeper analysis is needed |
-| Design/scope rework (`go:changes-requested` with active `human:design-review` or `human:scope-validate`) | Yes (`squad-label-enforce.yml` captures+clears gate and reassigns Copilot; `squad-copilot-qa-loop.yml` restores gate after revised Copilot comment) | Reviewer applies `go:changes-requested`; human reviewer re-evaluates on restored gate |
-| Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`) | Owner replies to resume |
+| Design approval handoff (`go:design-approved`) | Yes (`squad-state-transitions.yml` routes to `squad:copilot` and assigns coding agent) | Human applies approval label |
+| Design rework (`go:changes-requested`) | Yes (`squad-state-transitions.yml` restores `squad:lead` + `human:design-review`) | Human/reviewer applies changes-requested label |
+| Review-ready deploy gate (`go:review-ready`) | Yes (`squad-state-transitions.yml` adds `human:deploy-validate` or `go:deploy`) | Human/reviewer applies review-ready label |
+| Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
+| Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
+| Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` closes non-prod issues or triggers production workflow) | Human/reviewer applies deploy label |
+| Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 
 ## Workflow Label Inventory (Cleanup Safe List)
 
@@ -439,6 +440,9 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-18
+- Added `squad-state-transitions.yml` as transition adapter for design approval/rework loops, deploy gates, skip-human-validation path, and close-on-dev deploy behavior.
+- Updated ownership and automation-boundary sections to reflect workflow-driven state transitions.
 - 2026-03-13
 - Added workflow-derived label inventory and documented missing namespaces/labels: `env:*`, `release:*`, `type:*`, `priority:*`, `go:changes-requested`, high-signal labels (`bug`, `feedback`), and legacy `go:hotfix` compatibility note.
 - 2026-03-15
