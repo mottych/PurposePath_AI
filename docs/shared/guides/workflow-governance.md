@@ -134,4 +134,5 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 
 - Deployment release policy: `docs/shared/guides/deployment-standards.md`
 - Agent behavior and escalation: `docs/shared/guides/agent-operation-standard.md`
+- Squad SDK-first extension model: `docs/shared/guides/squad-extension-guide.md`
 - Repository local architecture and coding rules: `docs/local/guides/`

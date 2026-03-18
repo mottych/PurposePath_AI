@@ -22,9 +22,17 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 - `.github/workflows/squad-heartbeat.yml`
 - `.github/workflows/sync-squad-labels.yml`
 - `.github/workflows/squad-copilot-qa-loop.yml`
+- `.github/workflows/squad-workflow-boundary-guard.yml`
 - `.squad/agents/*.md`
 - `.squad/routing.md`
 - `.squad/team.md`
+
+## Ownership Model (Recommended Squad Path)
+
+- Primary transition engine: Squad orchestration (routing rules, agent charters, and skills) using Squad tools.
+- Workflow role: GitHub workflows are adapters for label hygiene and wait/resume mechanics only.
+- Source of truth: `squad.config.ts` and generated `.squad/` artifacts.
+- Durability rule: business transitions (for example rework loops and gate restoration) must be owned by Squad behavior, not by workflow-side comment parsing.
 
 ## Namespace Rules
 
@@ -119,6 +127,13 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 | Label | Meaning | Set By | Trigger | What Must Happen In This State |
 |---|---|---|---|---|
 | `human:needs-info` | Waiting for reporter/owner input | Manual or automatic | Clarification required, or Copilot question detected in `squad-copilot-qa-loop.yml` | Owner responds; Q&A loop removes label and resumes agent work |
+
+### Automation Boundary
+
+- `squad-copilot-qa-loop.yml` handles only Q&A wait/resume (`human:needs-info`) lifecycle.
+- `squad-label-enforce.yml` handles only namespace exclusivity and release-target hygiene.
+- Rework transitions for `go:changes-requested` and human-gate restoration are handled by Squad orchestration (lead/reviewer/skill flow), not by GitHub workflow logic.
+- `squad-workflow-boundary-guard.yml` enforces this boundary in CI by failing if workflow-side rework transition logic is reintroduced.
 
 ### Human Namespace (Explicit Human Gates)
 
