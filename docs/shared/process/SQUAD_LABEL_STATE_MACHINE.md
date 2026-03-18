@@ -370,8 +370,8 @@ flowchart TB
 | Research hold (`go:needs-research`) | Yes (default) / manual hold | Lead/owner resolves and transitions |
 | Design approval handoff (`go:design-approved`) | Yes (`squad-state-transitions.yml` routes to `squad:copilot` and assigns coding agent) | Human applies approval label |
 | Design rework (`go:changes-requested`) | Yes (`squad-state-transitions.yml` restores `squad:lead` + `human:design-review`) | Human/reviewer applies changes-requested label |
-| Post-merge deploy outcome (`Deploy to Dev` / `Deploy to Preprod`) | Yes (`squad-copilot-delivery-loop.yml` applies `go:review-ready` on success or `go:review-failed` on failure) | N/A |
-| Review-ready deploy gate (`go:review-ready`) | Yes (`squad-state-transitions.yml` adds `human:deploy-validate` or `go:deploy`) | Human/reviewer applies review-ready label |
+| Post-merge deploy outcome (`Deploy to Dev` / `Deploy to Preprod`) | Yes (`squad-copilot-delivery-loop.yml` applies `go:review-ready` + `human:deploy-validate` on success, or `go:review-failed` on failure; if `go:skip-human-validation` is present, applies `go:review-ready` + `go:deploy`) | N/A |
+| Review-ready deploy gate (`go:review-ready`) | Yes (retained via `squad-state-transitions.yml` for manual label path) | Human/reviewer can apply review-ready manually |
 | Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
 | Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
 | Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` closes non-prod issues or triggers production workflow) | Human/reviewer applies deploy label |
@@ -447,6 +447,8 @@ If behavior changes and this document is not updated, workflow policy should fai
 - 2026-03-18
 - Added `squad-copilot-delivery-loop.yml` for Copilot PR auto-merge arming and deployment outcome sync to `go:review-ready`/`go:review-failed`.
 - Clarified that for dev/non-prod flow, successful deployment transitions to `human:deploy-validate` via `go:review-ready` automation.
+- 2026-03-18
+- Updated deploy outcome mapping: `squad-copilot-delivery-loop.yml` now applies `human:deploy-validate` directly on success (or `go:deploy` when `go:skip-human-validation` is set), avoiding chained workflow-trigger dependency.
 - 2026-03-18
 - Added `squad-state-transitions.yml` as transition adapter for design approval/rework loops, deploy gates, skip-human-validation path, and close-on-dev deploy behavior.
 - Updated ownership and automation-boundary sections to reflect workflow-driven state transitions.
