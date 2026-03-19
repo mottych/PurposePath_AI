@@ -139,6 +139,7 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 - `squad-copilot-qa-loop.yml` handles Copilot clarification wait/resume (`human:needs-info`) during implementation.
 - `squad-label-enforce.yml` handles namespace exclusivity and release-target hygiene.
 - `squad-workflow-boundary-guard.yml` enforces architecture constraints defined in this repository.
+- `squad-heartbeat.yml` periodically checks open `squad:copilot` issues for inactivity and posts a stall-watch alert comment that mentions the owner.
 
 ### Human Namespace (Explicit Human Gates)
 
@@ -378,6 +379,7 @@ flowchart TB
 | PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed` and posts failure summary) | Optional human override/comment |
 | Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` closes non-prod issues or triggers production workflow) | Human/reviewer applies deploy label |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
+| Copilot inactivity visibility (assigned but quiet) | Yes (`squad-heartbeat.yml` stall-watch posts owner-mentioned alert comments with cooldown) | Optional owner nudge to wake Copilot |
 
 ## Workflow Label Inventory (Cleanup Safe List)
 
@@ -446,6 +448,8 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-19
+- Enabled scheduled Ralph heartbeat and added Copilot stall-watch alerts in `squad-heartbeat.yml` to surface assigned-but-inactive `squad:copilot` issues via owner-mentioned comments.
 - 2026-03-19
 - Added automatic Copilot PR validation workflow-run failure recovery in `squad-copilot-delivery-loop.yml`: failed validation runs now auto-apply `go:review-failed` and post failure context on the linked issue, resuming implementation without manual relabeling.
 - 2026-03-18
