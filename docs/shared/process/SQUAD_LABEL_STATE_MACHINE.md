@@ -135,7 +135,7 @@ This state machine describes issue lifecycle behavior across the standard Squad 
 - `squad-triage.yml` handles initial intake to lead-owned design/requirements gates.
 - `squad-state-transitions.yml` handles cross-gate transitions (`go:*`, `human:*`) including Copilot routing, rework loops, deploy gating, and close-on-deploy behavior.
 - `squad-copilot-delivery-loop.yml` handles Copilot PR auto-merge arming plus deployment outcome sync to `go:review-ready` or `go:review-failed`.
-- `squad-copilot-delivery-loop.yml` also watches failed Copilot PR validation check suites and applies `go:review-failed` automatically to resume implementation.
+- `squad-copilot-delivery-loop.yml` also watches failed Copilot PR validation workflow runs and applies `go:review-failed` automatically to resume implementation.
 - `squad-copilot-qa-loop.yml` handles Copilot clarification wait/resume (`human:needs-info`) during implementation.
 - `squad-label-enforce.yml` handles namespace exclusivity and release-target hygiene.
 - `squad-workflow-boundary-guard.yml` enforces architecture constraints defined in this repository.
@@ -375,7 +375,7 @@ flowchart TB
 | Review-ready deploy gate (`go:review-ready`) | Yes (retained via `squad-state-transitions.yml` for manual label path) | Human/reviewer can apply review-ready manually |
 | Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
 | Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
-| PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` check-suite recovery applies `go:review-failed` and posts failure summary) | Optional human override/comment |
+| PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed` and posts failure summary) | Optional human override/comment |
 | Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` closes non-prod issues or triggers production workflow) | Human/reviewer applies deploy label |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 
@@ -447,7 +447,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 ## Last Updated
 
 - 2026-03-19
-- Added automatic Copilot PR check-suite failure recovery in `squad-copilot-delivery-loop.yml`: failed validation checks now auto-apply `go:review-failed` and post failure context on the linked issue, resuming implementation without manual relabeling.
+- Added automatic Copilot PR validation workflow-run failure recovery in `squad-copilot-delivery-loop.yml`: failed validation runs now auto-apply `go:review-failed` and post failure context on the linked issue, resuming implementation without manual relabeling.
 - 2026-03-18
 - Added `squad-copilot-delivery-loop.yml` for Copilot PR auto-merge arming and deployment outcome sync to `go:review-ready`/`go:review-failed`.
 - Clarified that for dev/non-prod flow, successful deployment transitions to `human:deploy-validate` via `go:review-ready` automation.
