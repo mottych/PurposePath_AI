@@ -366,7 +366,7 @@ flowchart TB
 |---|---|---|
 | Initial squad triage | Yes (`squad-triage.yml`) | Optional override by lead/owner |
 | Member assignment from `squad:*` | Yes (`squad-issue-assign.yml`) | Manual reassign by label swap |
-| Copilot PR merge progression | Yes (`squad-copilot-delivery-loop.yml` runs Copilot PR automation on `pull_request_target` (base branch workflow), auto-clears requested reviewers, auto-marks drafts ready after green checks, and merges via check-suite, immediate pull_request fallback, or validation `workflow_run` success path) | Optional reviewer intervention |
+| Copilot PR merge progression | Yes (`squad-copilot-delivery-loop.yml` runs Copilot PR automation on `pull_request_target` (base branch workflow), auto-clears requested reviewers, auto-marks drafts ready after green checks, and merges via check-suite, immediate pull_request fallback, or validation `workflow_run` success path; merge logic ignores delivery-loop self-checks to avoid pending-state deadlock) | Optional reviewer intervention |
 | Delivery loop auth | Yes (`squad-copilot-delivery-loop.yml` uses `${{ secrets.COPILOT_ASSIGN_TOKEN || github.token }}` for merge/recovery operations to avoid integration-token permission gaps) | N/A |
 | `go:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | `release:*`, `type:*`, `priority:*`, `human:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
