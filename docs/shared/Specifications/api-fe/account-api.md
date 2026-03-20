@@ -1,7 +1,7 @@
 # Account API Specification
 
-**Version:** 2.5  
-**Last Updated:** March 18, 2026 (Registration idempotency + confirm-email status contract)  
+**Version:** 2.6  
+**Last Updated:** March 20, 2026 (Add POST /auth/forgot-username endpoint)  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
@@ -89,6 +89,15 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Body: `{ "username": "string" }`.
 - Response: `{ "success": true, "message": "Password reset email sent" }`.
 - Notes: Password reset email is sent to the email address of the Person linked to the username.
+
+### POST /auth/forgot-username
+- Body: `{ "email": "string" }`.
+- Response: `{ "success": true, "message": "If the email is associated with any accounts, instructions have been sent." }`.
+- Notes:
+  - Finds all Person records globally (across all tenants) matching the provided email.
+  - For each Person linked to a User, retrieves the username and tenant/company name.
+  - Sends a single recovery email listing all associated `(username, company)` pairs.
+  - Always returns 200 even if the email is not found (prevents email enumeration).
 
 ### POST /auth/reset-password
 - Body: `{ "token": "string", "newPassword": "string" }`.
