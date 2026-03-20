@@ -377,7 +377,7 @@ flowchart TB
 | Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
 | Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
 | PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed`, posts failure summary, and tags `@copilot` to continue automatically) | Optional human override/comment |
-| Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` handles deploy routing; `squad-repo-hygiene.yml` performs Copilot branch cleanup and final non-prod issue close) | Human/reviewer applies deploy label |
+| Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` performs routing only; `squad-repo-hygiene.yml` is the single owner of non-prod cleanup summary, Copilot branch cleanup, and final issue close) | Human/reviewer applies deploy label |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 | Copilot inactivity visibility (assigned but quiet) | Yes (`squad-heartbeat.yml` stall-watch posts owner-mentioned alert comments with cooldown) | Optional owner nudge to wake Copilot |
 
@@ -455,6 +455,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Fixed deploy-gate sequencing so `go:review-ready` no longer opens `human:deploy-validate` early; the human validation gate is now applied only after successful `Deploy to Dev`/`Deploy to Preprod` workflow completion.
 - Added required post-deploy E2E validation to `Deploy to Dev`; if those tests fail, deployment workflow conclusion is failure and auto-recovery routes issue back to `go:review-failed` without manual trigger.
 - Hardened `go:deploy` cleanup path in `squad-repo-hygiene.yml`: it now resolves linked PRs via issue timeline cross-references, deletes merged `copilot/*` branches, and performs final non-prod issue close in cleanup pass.
+- Removed overlapping close behavior from `squad-state-transitions.yml` and local completion script handoff: `go:deploy` now hands off to hygiene for a single closure owner path.
 - 2026-03-18
 - Added `squad-copilot-delivery-loop.yml` for Copilot PR auto-merge arming and deployment outcome sync to `go:review-ready`/`go:review-failed`.
 - Clarified that for dev/non-prod flow, successful deployment transitions to `human:deploy-validate` via `go:review-ready` automation.
