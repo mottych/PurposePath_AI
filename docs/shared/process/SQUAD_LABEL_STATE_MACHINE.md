@@ -382,7 +382,7 @@ flowchart TB
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 | Copilot inactivity visibility (assigned but quiet) | Yes (`squad-heartbeat.yml` stall-watch posts owner-mentioned alert comments with cooldown) | Optional owner nudge to wake Copilot |
 | Copilot flow execution monitoring (Ralph) | Yes (`squad-heartbeat.yml` now continuously enforces open Copilot PR flow: clear requested reviewers, wait for green non-delivery checks, then arm auto-merge with retries) | N/A |
-| Issue closure control | Yes (Copilot assignment instructions require `Related to #...` links only; no `fixes/closes/resolves` keywords) | Final close remains workflow-controlled (`go:deploy`/hygiene path) |
+| Issue closure control | Yes (Copilot assignment instructions require `Related to #...` links only; no `fixes/closes/resolves` keywords; delivery loop sanitizes PR body keywords if present) | Final close remains workflow-controlled (`go:deploy`/hygiene path) |
 
 ## Workflow Label Inventory (Cleanup Safe List)
 
@@ -456,6 +456,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Added Ralph flow enforcement in `squad-heartbeat.yml`: scheduled monitor continuously normalizes open Copilot PRs by clearing requested reviewers and arming auto-merge when non-delivery checks are green, with retry handling for transient unstable status.
 - Removed immediate direct-merge fallback from `arm-automerge` to reduce maintenance and permission-surface complexity.
 - Updated Copilot assignment instructions to prohibit PR closing keywords; PRs must use `Related to #...` so issue closure is not triggered by merge side effects.
+- Added PR body sanitization in `arm-automerge` to automatically rewrite accidental closing keywords to `Related to ...` before merge automation continues.
 - 2026-03-19
 - Enabled scheduled Ralph heartbeat and added Copilot stall-watch alerts in `squad-heartbeat.yml` to surface assigned-but-inactive `squad:copilot` issues via owner-mentioned comments.
 - 2026-03-19
