@@ -376,7 +376,7 @@ flowchart TB
 | Review-ready deploy gate (`go:review-ready`) | Yes (`squad-state-transitions.yml` keeps issue in deploy-pending state; human gate is deferred until deployment workflow success) | Human/reviewer can apply review-ready manually |
 | Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
 | Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
-| PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed`, posts failure summary, and tags `@copilot` to continue automatically) | Optional human override/comment |
+| PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed`, clears PR review requests, posts failure summary, and tags `@copilot` on issue + PR to continue automatically) | Optional human override/comment |
 | Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` performs routing only; `squad-repo-hygiene.yml` is the single owner of non-prod cleanup summary, Copilot branch cleanup, and final issue close) | Human/reviewer applies deploy label |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 | Copilot inactivity visibility (assigned but quiet) | Yes (`squad-heartbeat.yml` stall-watch posts owner-mentioned alert comments with cooldown) | Optional owner nudge to wake Copilot |
