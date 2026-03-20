@@ -453,6 +453,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 - 2026-03-19
 - Added automatic Copilot PR validation workflow-run failure recovery in `squad-copilot-delivery-loop.yml`: failed validation runs now auto-apply `go:review-failed`, post failure context on the linked issue, and explicitly tag `@copilot` to continue without manual wake-up.
 - Fixed deploy-gate sequencing so `go:review-ready` no longer opens `human:deploy-validate` early; the human validation gate is now applied only after successful `Deploy to Dev`/`Deploy to Preprod` workflow completion.
+- Added required post-deploy E2E validation to `Deploy to Dev`; if those tests fail, deployment workflow conclusion is failure and auto-recovery routes issue back to `go:review-failed` without manual trigger.
 - 2026-03-18
 - Added `squad-copilot-delivery-loop.yml` for Copilot PR auto-merge arming and deployment outcome sync to `go:review-ready`/`go:review-failed`.
 - Clarified that for dev/non-prod flow, successful deployment transitions to `human:deploy-validate` via `go:review-ready` automation.
