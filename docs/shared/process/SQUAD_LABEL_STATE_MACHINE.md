@@ -367,7 +367,7 @@ flowchart TB
 | Initial squad triage | Yes (`squad-triage.yml`) | Optional override by lead/owner |
 | Member assignment from `squad:*` | Yes (`squad-issue-assign.yml`) | Manual reassign by label swap |
 | Copilot PR merge progression | Yes (`squad-copilot-delivery-loop.yml` runs Copilot PR automation on `pull_request_target` (base branch workflow), auto-clears requested reviewers, auto-marks drafts ready after green checks, and merges via check-suite, immediate pull_request fallback, or validation `workflow_run` success path; merge logic ignores delivery-loop self-checks to avoid pending-state deadlock) | Optional reviewer intervention |
-| Delivery loop auth | Yes (`squad-copilot-delivery-loop.yml` uses `${{ secrets.COPILOT_ASSIGN_TOKEN || github.token }}` for merge/recovery operations to avoid integration-token permission gaps) | N/A |
+| Delivery loop auth | Yes (`squad-copilot-delivery-loop.yml` uses `github.token` for merge/recovery operations) | N/A |
 | `go:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | `release:*`, `type:*`, `priority:*`, `human:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | Research hold (`go:needs-research`) | Yes (default) / manual hold | Lead/owner resolves and transitions |
@@ -381,6 +381,7 @@ flowchart TB
 | Deploy decision (`go:deploy`) | Yes (`squad-state-transitions.yml` performs routing only; `squad-repo-hygiene.yml` is the single owner of non-prod cleanup summary, Copilot branch cleanup, and final issue close) | Human/reviewer applies deploy label |
 | Copilot wait/resume (`human:needs-info` loop) | Yes (`squad-copilot-qa-loop.yml`, and `squad-state-transitions.yml` for lead-phase clarification) | Owner replies to resume |
 | Copilot inactivity visibility (assigned but quiet) | Yes (`squad-heartbeat.yml` stall-watch posts owner-mentioned alert comments with cooldown) | Optional owner nudge to wake Copilot |
+| Copilot flow execution monitoring (Ralph) | Yes (`squad-heartbeat.yml` now continuously enforces open Copilot PR flow: clear requested reviewers, wait for green non-delivery checks, then arm auto-merge with retries) | N/A |
 
 ## Workflow Label Inventory (Cleanup Safe List)
 
@@ -449,6 +450,9 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-20
+- Simplified merge progression ownership: `squad-copilot-delivery-loop.yml` now uses check-run readiness (not combined status) and `github.token` for merge/recovery operations.
+- Added Ralph flow enforcement in `squad-heartbeat.yml`: scheduled monitor continuously normalizes open Copilot PRs by clearing requested reviewers and arming auto-merge when non-delivery checks are green, with retry handling for transient unstable status.
 - 2026-03-19
 - Enabled scheduled Ralph heartbeat and added Copilot stall-watch alerts in `squad-heartbeat.yml` to surface assigned-but-inactive `squad:copilot` issues via owner-mentioned comments.
 - 2026-03-19
