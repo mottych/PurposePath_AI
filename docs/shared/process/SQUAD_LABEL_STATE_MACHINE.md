@@ -373,7 +373,7 @@ flowchart TB
 | Design approval handoff (`go:design-approved`) | Yes (`squad-state-transitions.yml` routes to `squad:copilot` and assigns coding agent) | Human applies approval label |
 | Design rework (`go:changes-requested`) | Yes (`squad-state-transitions.yml` restores `squad:lead` + `human:design-review`) | Human/reviewer applies changes-requested label |
 | Post-merge deploy outcome (`Deploy to Dev` / `Deploy to Preprod`) | Yes (`squad-copilot-delivery-loop.yml` applies `go:review-ready` + `human:deploy-validate` on success, or `go:review-failed` on failure; if `go:skip-human-validation` is present, applies `go:review-ready` + `go:deploy`) | N/A |
-| Review-ready deploy gate (`go:review-ready`) | Yes (retained via `squad-state-transitions.yml` for manual label path) | Human/reviewer can apply review-ready manually |
+| Review-ready deploy gate (`go:review-ready`) | Yes (`squad-state-transitions.yml` keeps issue in deploy-pending state; human gate is deferred until deployment workflow success) | Human/reviewer can apply review-ready manually |
 | Skip-human path (`go:skip-human-validation`) | Yes (`squad-state-transitions.yml` clears human gate and adds `go:deploy`) | Human applies skip label |
 | Review failure loop (`go:review-failed`) | Yes (`squad-state-transitions.yml` routes back to `squad:copilot`) | Human/reviewer applies failure label |
 | PR validation/check failure on Copilot branch | Yes (`squad-copilot-delivery-loop.yml` workflow-run recovery applies `go:review-failed`, posts failure summary, and tags `@copilot` to continue automatically) | Optional human override/comment |
@@ -452,6 +452,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Enabled scheduled Ralph heartbeat and added Copilot stall-watch alerts in `squad-heartbeat.yml` to surface assigned-but-inactive `squad:copilot` issues via owner-mentioned comments.
 - 2026-03-19
 - Added automatic Copilot PR validation workflow-run failure recovery in `squad-copilot-delivery-loop.yml`: failed validation runs now auto-apply `go:review-failed`, post failure context on the linked issue, and explicitly tag `@copilot` to continue without manual wake-up.
+- Fixed deploy-gate sequencing so `go:review-ready` no longer opens `human:deploy-validate` early; the human validation gate is now applied only after successful `Deploy to Dev`/`Deploy to Preprod` workflow completion.
 - 2026-03-18
 - Added `squad-copilot-delivery-loop.yml` for Copilot PR auto-merge arming and deployment outcome sync to `go:review-ready`/`go:review-failed`.
 - Clarified that for dev/non-prod flow, successful deployment transitions to `human:deploy-validate` via `go:review-ready` automation.
