@@ -779,6 +779,9 @@ Update Measure details (name, description, target, etc.). Does not update curren
   "direction": "Increase",
   "type": "Leading",
   "category": "Finance",
+  "aggregationType": "sum",
+  "aggregationPeriod": "monthly",
+  "valueType": "aggregate",
   "measurementFrequency": "Monthly",
   "dataSource": "Stripe API v2",
   "ownerId": "new-owner-123"
@@ -798,6 +801,9 @@ All fields are optional. Only provided fields will be updated.
 | `direction` | enum | `Increase` or `Decrease` |
 | `type` | enum | `Leading` or `Lagging` |
 | `category` | string | Measure category |
+| `aggregationType` | string | How data is aggregated — `sum`, `average`, `min`, `max`, `latest`, `count`, `pointInTime` |
+| `aggregationPeriod` | string | Aggregation time window — `none`, `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
+| `valueType` | string | Nature of the data — `snapshot`, `aggregate`, `other` |
 | `measurementFrequency` | string | Measurement frequency |
 | `dataSource` | string | Data source identifier |
 | `ownerId` | string (GUID) | New owner (person responsible) |
@@ -822,6 +828,9 @@ All fields are optional. Only provided fields will be updated.
     "direction": "Increase",
     "type": "Leading",
     "category": "Finance",
+    "aggregationType": "sum",
+    "aggregationPeriod": "monthly",
+    "valueType": "aggregate",
     "measurementFrequency": "Monthly",
     "dataSource": "Stripe API v2",
     "ownerId": "new-owner-123",
@@ -837,6 +846,7 @@ All fields are optional. Only provided fields will be updated.
 - **Current Value:** Cannot be updated via this endpoint (use value endpoint)
 - **Tenant & ID:** Cannot change Measure's tenant or ID
 - **Catalog ID:** Cannot change `catalogId` after creation
+- **Aggregation Fields:** `aggregationType`, `aggregationPeriod`, and `valueType` can be updated independently; unknown/invalid enum values are silently treated as null
 
 ---
 
