@@ -366,7 +366,7 @@ flowchart TB
 |---|---|---|
 | Initial squad triage | Yes (`squad-triage.yml`) | Optional override by lead/owner |
 | Member assignment from `squad:*` | Yes (`squad-issue-assign.yml`) | Manual reassign by label swap |
-| Copilot PR merge progression | Yes (`squad-copilot-delivery-loop.yml` auto-clears requested reviewers, auto-marks draft Copilot PRs ready after green checks, and merges via check-suite or immediate pull_request fallback when already green) | Optional reviewer intervention |
+| Copilot PR merge progression | Yes (`squad-copilot-delivery-loop.yml` runs Copilot PR automation on `pull_request_target` (base branch workflow), auto-clears requested reviewers, auto-marks drafts ready after green checks, and merges via check-suite or immediate pull_request fallback when already green) | Optional reviewer intervention |
 | `go:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | `release:*`, `type:*`, `priority:*`, `human:*` exclusivity | Yes (`squad-label-enforce.yml`) | N/A |
 | Research hold (`go:needs-research`) | Yes (default) / manual hold | Lead/owner resolves and transitions |
