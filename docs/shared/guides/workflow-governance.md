@@ -14,6 +14,15 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 - Before switching branches, working tree must be clean (`git status --short`).
 - Before starting a new issue, stash list must be empty.
 
+### Windows Read-Only Attribute Guard (Mandatory)
+
+- On Windows, clear read-only attributes before branch cleanup, merges, or file operations that can touch `.git` and working tree metadata.
+- Run from repository root:
+	- `$ro=[System.IO.FileAttributes]::ReadOnly; Get-ChildItem -LiteralPath . -Force -Recurse -ErrorAction SilentlyContinue | ForEach-Object { try { if(($_.Attributes -band $ro) -ne 0){ $_.Attributes = ($_.Attributes -band (-bnot $ro)) } } catch {} }`
+- Verify no remaining read-only entries:
+	- `$ro=[System.IO.FileAttributes]::ReadOnly; (Get-ChildItem -LiteralPath . -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { ($_.Attributes -band $ro) -ne 0 }).Count`
+- If any entries remain under `.git`, stop and clear attributes before continuing.
+
 ## Work Intake
 
 - Every implementation should be tied to a GitHub issue.
