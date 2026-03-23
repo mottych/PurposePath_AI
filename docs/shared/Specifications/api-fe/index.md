@@ -23,14 +23,25 @@ This specification is split into multiple documents for efficient AI assistant c
    - Billing portal, payment intents, provider webhooks
    - Health endpoints
 
-3. **[Business Foundation Service](./business-foundation-service.md)** ⭐ NEW (v1.0)
+3. **[Billing Backend Redesign Draft](./billing-backend-redesign-draft.md)** ⭐ NEW (v1.0)
+   - Backend target architecture and clean rewrite scope
+   - Canonical owner/admin/webhook endpoint taxonomy
+   - Domain invariants, lifecycle state machine, orchestration jobs
+   - Legacy component replacement map and epic breakdown
+
+4. **[Billing Backend OpenAPI Draft](./billing-backend-openapi.yaml)** ⭐ NEW (v1.0)
+   - Machine-readable endpoint and schema contract
+   - Error and idempotency contract baseline
+   - Frontend integration planning for redesigned billing APIs
+
+5. **[Business Foundation Service](./business-foundation-service.md)** ⭐ NEW (v1.0)
    - Business Profile, Identity, Market, Proposition, Model
    - Core Values Management
    - Ideal Customer Avatars (ICAs)
    - Products & Services Inventory
    - Wizard Progress Tracking
 
-4. **[Org Structure Service](./org-structure-service.md)**
+6. **[Org Structure Service](./org-structure-service.md)**
    - People endpoints and contracts
    - Person tags and types
    - User-person relationships
@@ -38,31 +49,31 @@ This specification is split into multiple documents for efficient AI assistant c
    - Organization chart and relationships
    - User org structure endpoints
 
-5. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
+7. **[AI/Coaching Service](../ai-user/backend-integration-unified-ai.md)**
    - AI/ML Endpoints (Alignment, Validation, Suggestions)
    - Business Insights & Metrics
    - Coaching Conversations
    - Strategic Planning AI
 
-7. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
+8. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
    - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
    - [View Traction Service Index →](./traction-service/README.md)
 
-8. **[Dashboard Service](./dashboard-service.md)** ⭐ NEW (v1.0)
+9. **[Dashboard Service](./dashboard-service.md)** ⭐ NEW (v1.0)
    - User Dashboard Configuration CRUD
    - System Templates Management
    - Widget Catalog & Registry
    - Dynamic Widget Data Retrieval
    - Responsive Grid Layouts
 
-9. **[Integration Service](./integration-service/integration-service.md)** ⭐ NEW (v1.0)
+10. **[Integration Service](./integration-service/integration-service.md)** ⭐ NEW (v1.0)
    - Connected systems management and diagnostics
    - Add-system bootstrap and provider account provisioning
    - Measure integration add/edit/test/save lifecycle
    - Tested-state gating and execution status visibility
 
-10. **[Common Patterns & Data Models](./common-patterns.md)**
+11. **[Common Patterns & Data Models](./common-patterns.md)**
    - Authentication Headers
    - Error Handling
    - Data Models & Enumerations

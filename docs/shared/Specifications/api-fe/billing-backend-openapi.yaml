@@ -1,0 +1,794 @@
+openapi: 3.0.3
+info:
+  title: PurposePath Billing Backend Redesign API
+  version: 1.0.0
+  description: Backend contract draft for plans, subscriptions, billing, and provider webhooks.
+servers:
+  - url: https://api.dev.purposepath.app/account/api/v1
+    description: Account API
+  - url: https://api.dev.purposepath.app/admin/api/v1
+    description: Admin API
+  - url: https://api.dev.purposepath.app/billing
+    description: Billing provider webhook API
+tags:
+  - name: owner-billing
+  - name: admin-billing
+  - name: provider-webhooks
+paths:
+  /billing/subscription/current:
+    get:
+      tags: [owner-billing]
+      summary: Get current tenant subscription billing view
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Subscription view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
+  /billing/plans/catalog:
+    get:
+      tags: [owner-billing]
+      summary: Get published billing catalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: includeCurrentPlan
+          schema:
+            type: boolean
+        - in: query
+          name: schedule
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanCatalog"
+  /billing/subscription/preview-change:
+    post:
+      tags: [owner-billing]
+      summary: Preview subscription change with proration
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewSubscriptionChangeRequest"
+      responses:
+        "200":
+          description: Change preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionChangePreview"
+  /billing/subscription/confirm-change:
+    post:
+      tags: [owner-billing]
+      summary: Confirm subscription change
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmSubscriptionChangeRequest"
+      responses:
+        "200":
+          description: Change result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionChangeResult"
+  /billing/subscription/cancel:
+    post:
+      tags: [owner-billing]
+      summary: Cancel auto-renewal
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelSubscriptionRequest"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
+  /billing/subscription/reactivate:
+    post:
+      tags: [owner-billing]
+      summary: Reactivate subscription auto-renew
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactivateSubscriptionRequest"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
+  /billing/subscription/extensions:
+    get:
+      tags: [owner-billing]
+      summary: Get subscription extensions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Extension state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionState"
+    post:
+      tags: [owner-billing]
+      summary: Upsert extension selections
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertExtensionsRequest"
+      responses:
+        "200":
+          description: Updated extensions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionMutationResult"
+  /billing/subscription/extensions/{extensionSelectionId}:
+    delete:
+      tags: [owner-billing]
+      summary: Schedule extension removal
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: extensionSelectionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Removal scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionRemovalResult"
+  /billing/payment-method:
+    get:
+      tags: [owner-billing]
+      summary: Get masked payment method
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentMethod"
+  /billing/payment-method/setup-intent:
+    post:
+      tags: [owner-billing]
+      summary: Create provider setup intent/session
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Setup payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSetupIntent"
+  /billing/payment-method/confirm:
+    post:
+      tags: [owner-billing]
+      summary: Confirm payment method update
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmPaymentMethodRequest"
+      responses:
+        "200":
+          description: Updated payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentMethod"
+  /billing/payment-history:
+    get:
+      tags: [owner-billing]
+      summary: Get payment history
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+      responses:
+        "200":
+          description: Payment history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentHistory"
+  /billing/payment-history/{paymentId}/receipt:
+    get:
+      tags: [owner-billing]
+      summary: Get receipt download metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Receipt metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseReceipt"
+  /billing/entitlements/effective:
+    get:
+      tags: [owner-billing]
+      summary: Get effective feature and limit entitlements
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Entitlement snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseEntitlements"
+  /admin/billing/feature-sets:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Feature sets
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/plans:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plans
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/payment-schedules:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Schedules
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/extensions:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Extensions
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/price-tiers:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Price tiers
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/discount-codes:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Discount codes
+    post:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/tenants/{tenantId}/overrides:
+    post:
+      tags: [admin-billing]
+      summary: Add tenant override
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Created
+  /admin/billing/tenants/{tenantId}/audit:
+    get:
+      tags: [admin-billing]
+      summary: Get tenant billing audit log
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Audit entries
+  /admin/billing/settings:
+    get:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Billing settings
+    patch:
+      tags: [admin-billing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Updated settings
+  /billing/providers/stripe/webhooks:
+    post:
+      tags: [provider-webhooks]
+      summary: Stripe webhook endpoint
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Accepted or already processed
+        "400":
+          description: Invalid signature or invalid payload
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        correlationId: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+    ApiResponseBase:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string, nullable: true }
+        error:
+          $ref: "#/components/schemas/ApiError"
+    Money:
+      type: object
+      properties:
+        amount: { type: number, format: decimal }
+        currency: { type: string, example: USD }
+    SubscriptionCurrent:
+      type: object
+      properties:
+        tenantId: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        status: { type: string }
+        isTrial: { type: boolean }
+        autoRenew: { type: boolean }
+        effectiveDate: { type: string, format: date-time }
+        terminationDate: { type: string, format: date-time, nullable: true }
+        inGracePeriod: { type: boolean }
+        gracePeriodEndDate: { type: string, format: date-time, nullable: true }
+    SubscriptionChangeLineItem:
+      type: object
+      properties:
+        code: { type: string }
+        description: { type: string }
+        amount:
+          $ref: "#/components/schemas/Money"
+        kind: { type: string, enum: [charge, credit] }
+    PreviewSubscriptionChangeRequest:
+      type: object
+      required: [targetPlanId, targetScheduleId]
+      properties:
+        targetPlanId: { type: string, format: uuid }
+        targetScheduleId: { type: string, format: uuid }
+        discountCode: { type: string, nullable: true }
+        extensionSelections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionSelectionRequest"
+    ConfirmSubscriptionChangeRequest:
+      type: object
+      required: [validationSnapshotId]
+      properties:
+        validationSnapshotId: { type: string }
+        confirmationToken: { type: string, nullable: true }
+        paymentMethodToken: { type: string, nullable: true }
+    CancelSubscriptionRequest:
+      type: object
+      properties:
+        reason: { type: string, nullable: true }
+    ReactivateSubscriptionRequest:
+      type: object
+      properties:
+        paymentMethodToken: { type: string, nullable: true }
+    ExtensionSelectionRequest:
+      type: object
+      required: [extensionDefinitionId, quantity]
+      properties:
+        extensionDefinitionId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+    UpsertExtensionsRequest:
+      type: object
+      required: [extensionSelections]
+      properties:
+        extensionSelections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionSelectionRequest"
+    ConfirmPaymentMethodRequest:
+      type: object
+      required: [providerToken]
+      properties:
+        providerToken: { type: string }
+    PlanCatalog:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    SubscriptionChangePreview:
+      type: object
+      properties:
+        effectiveMode: { type: string, enum: [immediate, nextCycle] }
+        validationSnapshotId: { type: string }
+        totalDueNow:
+          $ref: "#/components/schemas/Money"
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionChangeLineItem"
+        downgradeWarnings:
+          type: array
+          items: { type: string }
+        blockingViolations:
+          type: array
+          items: { type: string }
+    SubscriptionChangeResult:
+      type: object
+      properties:
+        subscription:
+          $ref: "#/components/schemas/SubscriptionCurrent"
+        paymentResult:
+          type: object
+          properties:
+            status: { type: string, enum: [succeeded, requiresAction, failed] }
+            receiptId: { type: string, format: uuid, nullable: true }
+            providerReference: { type: string, nullable: true }
+    ExtensionState:
+      type: object
+      properties:
+        activeExtensions:
+          type: array
+          items: { type: object, additionalProperties: true }
+        availableExtensions:
+          type: array
+          items: { type: object, additionalProperties: true }
+    ExtensionMutationResult:
+      type: object
+      properties:
+        activeExtensions:
+          type: array
+          items: { type: object, additionalProperties: true }
+        totalDueNow:
+          $ref: "#/components/schemas/Money"
+        receiptId: { type: string, format: uuid, nullable: true }
+    ExtensionRemovalResult:
+      type: object
+      properties:
+        extensionSelectionId: { type: string, format: uuid }
+        effectiveRemovalDate: { type: string, format: date-time }
+    PaymentMethod:
+      type: object
+      properties:
+        brand: { type: string }
+        last4: { type: string }
+        expMonth: { type: integer }
+        expYear: { type: integer }
+        isExpiringSoon: { type: boolean }
+    SetupIntentResponse:
+      type: object
+      properties:
+        provider: { type: string, example: stripe }
+        clientToken: { type: string }
+    PaymentHistory:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items: { type: object, additionalProperties: true }
+    ReceiptResponse:
+      type: object
+      properties:
+        receiptId: { type: string, format: uuid }
+        downloadUrl: { type: string, format: uri }
+        expiresAtUtc: { type: string, format: date-time }
+    EffectiveEntitlements:
+      type: object
+      properties:
+        features:
+          type: object
+          additionalProperties: true
+        limits:
+          type: object
+          additionalProperties: true
+    ApiResponseSubscriptionCurrent:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/SubscriptionCurrent"
+    ApiResponsePlanCatalog:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PlanCatalog"
+    ApiResponseSubscriptionChangePreview:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/SubscriptionChangePreview"
+    ApiResponseSubscriptionChangeResult:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/SubscriptionChangeResult"
+    ApiResponseExtensionState:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ExtensionState"
+    ApiResponseExtensionMutationResult:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ExtensionMutationResult"
+    ApiResponseExtensionRemovalResult:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ExtensionRemovalResult"
+    ApiResponsePaymentMethod:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PaymentMethod"
+    ApiResponseSetupIntent:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/SetupIntentResponse"
+    ApiResponsePaymentHistory:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PaymentHistory"
+    ApiResponseReceipt:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ReceiptResponse"
+    ApiResponseEntitlements:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/EffectiveEntitlements"
