@@ -11,6 +11,8 @@ servers:
   - url: https://api.dev.purposepath.app
     description: Shared API host
 tags:
+  - name: tenant-billing-read
+    description: Authenticated tenant-user billing read endpoints that do not require tenant-owner role.
   - name: owner-billing
     description: Tenant-owner billing and subscription management endpoints.
   - name: admin-billing
@@ -23,6 +25,7 @@ paths:
       tags: [owner-billing]
       summary: Get current tenant subscription billing view
       description: Tenant-owner view with full subscription and billing management state.
+      x-roles: [tenant_owner]
       security:
         - bearerAuth: []
       responses:
@@ -35,12 +38,13 @@ paths:
 
   /account/api/v1/billing/subscription/summary:
     get:
-      tags: [owner-billing]
+      tags: [tenant-billing-read]
       summary: Get current tenant subscription summary
       description: >-
         Lightweight authenticated tenant-user endpoint for navigation and shared shell
         UI. Owner role is not required. This endpoint exists specifically so non-owner
         users can see the current plan label without receiving owner-only billing data.
+      x-roles: [tenant_user, tenant_owner]
       security:
         - bearerAuth: []
       responses:
@@ -53,9 +57,10 @@ paths:
 
   /account/api/v1/billing/plans/catalog:
     get:
-      tags: [owner-billing]
+      tags: [tenant-billing-read]
       summary: Get published billing catalog
       description: Authenticated tenant-user read endpoint. Owner role is not required.
+      x-roles: [tenant_user, tenant_owner]
       security:
         - bearerAuth: []
       parameters:
@@ -368,9 +373,10 @@ paths:
 
   /account/api/v1/billing/entitlements/effective:
     get:
-      tags: [owner-billing]
+      tags: [tenant-billing-read]
       summary: Get effective feature and limit entitlements
       description: Authenticated tenant-user read endpoint. Owner role is not required.
+      x-roles: [tenant_user, tenant_owner]
       security:
         - bearerAuth: []
       responses:
@@ -2617,6 +2623,7 @@ components:
 
     SubscriptionSummary:
       type: object
+      required: [tenantId, planId, planName, planDisplayName, accessState, isTrial]
       properties:
         tenantId:
           type: string
@@ -2638,6 +2645,7 @@ components:
 
     ActiveExtensionSelection:
       type: object
+      required: [extensionSelectionId, extensionDefinitionId, name, featureKey, quantity, unitValue, unitLabel, schedulePrice, totalPrice]
       properties:
         extensionSelectionId:
           type: string
@@ -2663,8 +2671,27 @@ components:
         totalPrice:
           $ref: "#/components/schemas/Money"
 
+    RecommendedActionTarget:
+      type: object
+      required: [targetType]
+      properties:
+        targetType:
+          type: string
+          enum: [billingSettings, usageDashboard, memberManagement, contentManagement, extensionCatalog, route, url]
+        routeName:
+          type: string
+          nullable: true
+        resourceId:
+          type: string
+          nullable: true
+        externalUrl:
+          type: string
+          format: uri
+          nullable: true
+
     DowngradeImpact:
       type: object
+      required: [featureKey, featureName, currentUsage, newLimit, overageAmount, severity, blocked]
       properties:
         featureKey:
           type: string
@@ -2684,38 +2711,90 @@ components:
           type: string
           nullable: true
         recommendedActionTarget:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/RecommendedActionTarget"
           nullable: true
 
     PaymentNextAction:
+      oneOf:
+        - $ref: "#/components/schemas/PaymentNextActionNone"
+        - $ref: "#/components/schemas/PaymentNextActionRedirect"
+        - $ref: "#/components/schemas/PaymentNextActionUseStripeSdk"
+        - $ref: "#/components/schemas/PaymentNextActionProviderAction"
+      discriminator:
+        propertyName: nextActionType
+        mapping:
+          none: "#/components/schemas/PaymentNextActionNone"
+          redirect: "#/components/schemas/PaymentNextActionRedirect"
+          useStripeSdk: "#/components/schemas/PaymentNextActionUseStripeSdk"
+          providerAction: "#/components/schemas/PaymentNextActionProviderAction"
+
+    PaymentNextActionNone:
       type: object
+      required: [nextActionType]
       properties:
         nextActionType:
-          $ref: "#/components/schemas/PaymentNextActionType"
-        clientSecret:
           type: string
-          nullable: true
-        paymentIntentId:
+          enum: [none]
+
+    PaymentNextActionRedirect:
+      type: object
+      required: [nextActionType, redirectUrl]
+      properties:
+        nextActionType:
           type: string
-          nullable: true
+          enum: [redirect]
         redirectUrl:
           type: string
           format: uri
-          nullable: true
         expiresAtUtc:
           type: string
           format: date-time
           nullable: true
+
+    PaymentNextActionUseStripeSdk:
+      type: object
+      required: [nextActionType, clientSecret, paymentIntentId]
+      properties:
+        nextActionType:
+          type: string
+          enum: [useStripeSdk]
+        clientSecret:
+          type: string
+        paymentIntentId:
+          type: string
+        expiresAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaymentNextActionProviderAction:
+      type: object
+      required: [nextActionType, providerPayload]
+      properties:
+        nextActionType:
+          type: string
+          enum: [providerAction]
         providerPayload:
           type: object
-          nullable: true
           additionalProperties: true
+        expiresAtUtc:
+          type: string
+          format: date-time
+          nullable: true
 
     PaymentResult:
+      oneOf:
+        - $ref: "#/components/schemas/PaymentResultTerminal"
+        - $ref: "#/components/schemas/PaymentResultRequiresAction"
+
+    PaymentResultTerminal:
       type: object
+      required: [status]
       properties:
         status:
-          $ref: "#/components/schemas/PaymentResultStatus"
+          type: string
+          enum: [succeeded, failed]
         receiptId:
           type: string
           format: uuid
@@ -2724,10 +2803,31 @@ components:
           type: string
           nullable: true
         nextAction:
-          $ref: "#/components/schemas/PaymentNextAction"
+          $ref: "#/components/schemas/PaymentNextActionNone"
+
+    PaymentResultRequiresAction:
+      type: object
+      required: [status, nextAction]
+      properties:
+        status:
+          type: string
+          enum: [requiresAction]
+        receiptId:
+          type: string
+          format: uuid
+          nullable: true
+        providerReference:
+          type: string
+          nullable: true
+        nextAction:
+          oneOf:
+            - $ref: "#/components/schemas/PaymentNextActionRedirect"
+            - $ref: "#/components/schemas/PaymentNextActionUseStripeSdk"
+            - $ref: "#/components/schemas/PaymentNextActionProviderAction"
 
     PaymentCardSnapshot:
       type: object
+      required: [brand, last4]
       properties:
         brand:
           type: string
@@ -2754,6 +2854,7 @@ components:
 
     PaymentHistoryDetail:
       type: object
+      required: [paymentId, status, amount, planName, billingPeriod, lineItems, cardSnapshot]
       properties:
         paymentId:
           type: string
