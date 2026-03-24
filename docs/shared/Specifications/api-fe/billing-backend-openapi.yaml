@@ -5,6 +5,8 @@ info:
   description: >-
     Backend contract draft for plans, subscriptions, billing, entitlements,
     admin catalog management, pricing controls, and provider webhooks.
+    Billing-related notification preference management remains in the existing
+    notification settings API and is intentionally out of scope for this contract.
 servers:
   - url: https://api.dev.purposepath.app
     description: Shared API host
@@ -20,6 +22,7 @@ paths:
     get:
       tags: [owner-billing]
       summary: Get current tenant subscription billing view
+      description: Tenant-owner view with full subscription and billing management state.
       security:
         - bearerAuth: []
       responses:
@@ -30,10 +33,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
 
+  /account/api/v1/billing/subscription/summary:
+    get:
+      tags: [owner-billing]
+      summary: Get current tenant subscription summary
+      description: >-
+        Lightweight authenticated tenant-user endpoint for navigation and shared shell
+        UI. Owner role is not required. This endpoint exists specifically so non-owner
+        users can see the current plan label without receiving owner-only billing data.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Subscription summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseSubscriptionSummary"
+
   /account/api/v1/billing/plans/catalog:
     get:
       tags: [owner-billing]
       summary: Get published billing catalog
+      description: Authenticated tenant-user read endpoint. Owner role is not required.
       security:
         - bearerAuth: []
       parameters:
@@ -157,6 +179,12 @@ paths:
     post:
       tags: [owner-billing]
       summary: Upsert extension selections
+      description: >-
+        Internal or non-UI convenience mutation. Frontend flows must use
+        `/account/api/v1/billing/subscription/preview-change` followed by
+        `/account/api/v1/billing/subscription/confirm-change` for any priced extension
+        change so the user always sees a confirmed cost summary first.
+      x-internal: true
       security:
         - bearerAuth: []
       parameters:
@@ -271,6 +299,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponsePaymentHistory"
 
+  /account/api/v1/billing/payment-history/{paymentId}:
+    get:
+      tags: [owner-billing]
+      summary: Get payment history detail
+      description: >-
+        Owner-facing drill-in endpoint for payment history row details, including line
+        items, provider result information, invoice or receipt references, and retry
+        context where applicable.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentHistoryDetail"
+
   /account/api/v1/billing/payment-history/{paymentId}/receipt:
     get:
       tags: [owner-billing]
@@ -322,6 +370,7 @@ paths:
     get:
       tags: [owner-billing]
       summary: Get effective feature and limit entitlements
+      description: Authenticated tenant-user read endpoint. Owner role is not required.
       security:
         - bearerAuth: []
       responses:
@@ -1276,7 +1325,7 @@ paths:
           $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
-      summary: Remove tenant price tier assignment
+        summary: Remove tenant hidden plan assignment
       security:
         - bearerAuth: []
       parameters:
@@ -1284,7 +1333,7 @@ paths:
         - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
-          description: Assignment removed
+            description: Hidden plan assignment removed
           content:
             application/json:
               schema:
@@ -2053,6 +2102,14 @@ components:
       type: string
       enum: [succeeded, requiresAction, failed]
 
+    PaymentNextActionType:
+      type: string
+      enum: [none, redirect, useStripeSdk, providerAction]
+
+    DowngradeImpactSeverity:
+      type: string
+      enum: [info, warning, blocking]
+
     FeatureComponentValue:
       type: object
       required: [featureKey, valueType]
@@ -2558,6 +2615,185 @@ components:
           additionalProperties:
             type: boolean
 
+    SubscriptionSummary:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+          nullable: true
+        planName:
+          type: string
+          nullable: true
+        planDisplayName:
+          type: string
+          nullable: true
+        accessState:
+          $ref: "#/components/schemas/AccessState"
+        isTrial:
+          type: boolean
+
+    ActiveExtensionSelection:
+      type: object
+      properties:
+        extensionSelectionId:
+          type: string
+          format: uuid
+        extensionDefinitionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        featureKey:
+          type: string
+        quantity:
+          type: integer
+        unitValue:
+          type: number
+        unitLabel:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        schedulePrice:
+          $ref: "#/components/schemas/Money"
+        totalPrice:
+          $ref: "#/components/schemas/Money"
+
+    DowngradeImpact:
+      type: object
+      properties:
+        featureKey:
+          type: string
+        featureName:
+          type: string
+        currentUsage:
+          type: number
+        newLimit:
+          type: number
+        overageAmount:
+          type: number
+        severity:
+          $ref: "#/components/schemas/DowngradeImpactSeverity"
+        blocked:
+          type: boolean
+        recommendedAction:
+          type: string
+          nullable: true
+        recommendedActionTarget:
+          type: string
+          nullable: true
+
+    PaymentNextAction:
+      type: object
+      properties:
+        nextActionType:
+          $ref: "#/components/schemas/PaymentNextActionType"
+        clientSecret:
+          type: string
+          nullable: true
+        paymentIntentId:
+          type: string
+          nullable: true
+        redirectUrl:
+          type: string
+          format: uri
+          nullable: true
+        expiresAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        providerPayload:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    PaymentResult:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/PaymentResultStatus"
+        receiptId:
+          type: string
+          format: uuid
+          nullable: true
+        providerReference:
+          type: string
+          nullable: true
+        nextAction:
+          $ref: "#/components/schemas/PaymentNextAction"
+
+    PaymentCardSnapshot:
+      type: object
+      properties:
+        brand:
+          type: string
+        last4:
+          type: string
+        expMonth:
+          type: integer
+          nullable: true
+        expYear:
+          type: integer
+          nullable: true
+
+    PaymentRetryContext:
+      type: object
+      properties:
+        attemptCount:
+          type: integer
+        maxAutomaticAttemptsPerCycle:
+          type: integer
+        nextRetryAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaymentHistoryDetail:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        paidAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        providerStatus:
+          type: string
+          nullable: true
+        providerFailureReason:
+          type: string
+          nullable: true
+        amount:
+          $ref: "#/components/schemas/Money"
+        planName:
+          type: string
+        billingPeriod:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionChangeLineItem"
+        cardSnapshot:
+          $ref: "#/components/schemas/PaymentCardSnapshot"
+        invoiceReference:
+          type: string
+          nullable: true
+        receiptReference:
+          type: string
+          nullable: true
+        providerReference:
+          type: string
+          nullable: true
+        retryContext:
+          $ref: "#/components/schemas/PaymentRetryContext"
+
     SubscriptionCurrent:
       type: object
       properties:
@@ -2593,8 +2829,7 @@ components:
         activeExtensions:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: "#/components/schemas/ActiveExtensionSelection"
         accessState:
           $ref: "#/components/schemas/AccessState"
         pendingChangeSummary:
@@ -2662,13 +2897,11 @@ components:
         downgradeWarnings:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: "#/components/schemas/DowngradeImpact"
         blockingViolations:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: "#/components/schemas/DowngradeImpact"
         discountApplication:
           type: string
           enum: [none, tenantPriceTier, discountCode, discountCodeRejected]
@@ -2700,17 +2933,7 @@ components:
         subscription:
           $ref: "#/components/schemas/SubscriptionCurrent"
         paymentResult:
-          type: object
-          properties:
-            status:
-              $ref: "#/components/schemas/PaymentResultStatus"
-            receiptId:
-              type: string
-              format: uuid
-              nullable: true
-            providerReference:
-              type: string
-              nullable: true
+          $ref: "#/components/schemas/PaymentResult"
 
     CancelSubscriptionRequest:
       type: object
@@ -2752,8 +2975,7 @@ components:
         activeExtensions:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: "#/components/schemas/ActiveExtensionSelection"
         availableExtensions:
           type: array
           items:
@@ -2765,8 +2987,7 @@ components:
         activeExtensions:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: "#/components/schemas/ActiveExtensionSelection"
         totalDueNow:
           $ref: "#/components/schemas/Money"
         receiptId:
@@ -3368,6 +3589,14 @@ components:
             data:
               $ref: "#/components/schemas/SubscriptionCurrent"
 
+    ApiResponseSubscriptionSummary:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/SubscriptionSummary"
+
     ApiResponsePlanCatalog:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -3439,6 +3668,14 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/PaymentHistory"
+
+    ApiResponsePaymentHistoryDetail:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PaymentHistoryDetail"
 
     ApiResponseReceipt:
       allOf:

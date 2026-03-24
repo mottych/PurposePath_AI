@@ -87,8 +87,17 @@ Shared conventions:
 - Admin endpoints require admin policy authorization.
 - Mutating endpoints require `Idempotency-Key` for retry-safe execution.
 - Catalog mutations are effective-dated where a change can affect future billing or compliance-sensitive messaging.
+- Billing-related notification preference management remains in the existing notification settings surface; this billing contract only defines emitted event families and category additions.
 
 ### 3.1 Owner Billing Endpoints (Account API)
+
+#### GET `/billing/subscription/summary`
+- Purpose: Return lightweight current-plan summary for shared authenticated tenant UI such as navigation/header badges.
+- Auth: Any authenticated tenant user.
+- Response shape (data):
+  - `tenantId`, `planId`, `planName`, `planDisplayName`
+  - `accessState` (`full`, `fallback`, `blocked`)
+  - `isTrial`
 
 #### GET `/billing/subscription/current`
 - Purpose: Return active subscription, lifecycle flags, next billing action, and selected schedule.
@@ -121,12 +130,13 @@ Shared conventions:
   - `effectiveMode` (`immediate` or `nextCycle`)
   - `lineItems[]` (charges, credits, extension deltas)
   - `totalDueNow`
-  - `downgradeWarnings[]`
-  - `blockingViolations[]`
+  - `downgradeWarnings[]` with typed items containing `featureKey`, `featureName`, `currentUsage`, `newLimit`, `overageAmount`, `severity`, `blocked`, `recommendedAction`, `recommendedActionTarget`
+  - `blockingViolations[]` with the same typed downgrade-impact contract
   - `discountApplication` (`none`, `tenantPriceTier`, `discountCode`, `discountCodeRejected`)
   - `effectivePriceTierId` (nullable)
   - `scheduledStartDateUtc`
   - `validationSnapshotId` (for confirm replay safety)
+- Contract rule: all priced user-facing plan and extension mutations must use preview then confirm; frontend should not bypass preview for extension-only changes.
 
 #### POST `/billing/subscription/confirm-change`
 - Purpose: Execute change from a preview snapshot with payment authorization.
@@ -135,7 +145,7 @@ Shared conventions:
   - `validationSnapshotId`, `paymentMethodToken`, `confirmationToken`
 - Response:
   - `subscription`
-  - `paymentResult` (`succeeded`, `requiresAction`, `failed`)
+  - `paymentResult` (`succeeded`, `requiresAction`, `failed`) with typed continuation payload for `requiresAction`: `nextActionType`, `clientSecret`, `paymentIntentId`, `redirectUrl`, `expiresAtUtc`
   - `receiptId` (if charged)
 
 #### POST `/billing/subscription/cancel`
@@ -157,10 +167,14 @@ Shared conventions:
 #### GET `/billing/subscription/extensions`
 - Purpose: Return active extension selections and available extension catalog for current plan.
 - Auth: Tenant owner only.
+- Response:
+  - `activeExtensions[]` with typed selection details (`extensionSelectionId`, `extensionDefinitionId`, `name`, `featureKey`, `quantity`, `unitValue`, `unitLabel`, `schedulePrice`, `totalPrice`)
+  - `availableExtensions[]`
 
 #### POST `/billing/subscription/extensions`
-- Purpose: Add/update extension quantities; immediate prorated charge.
+- Purpose: Internal or non-UI convenience mutation for extension quantity updates.
 - Auth: Tenant owner only.
+- Contract note: frontend flows must not call this endpoint directly for priced changes; extension-only updates are previewed via `POST /billing/subscription/preview-change` using the current plan/schedule plus updated `extensionSelections[]`, then committed through `POST /billing/subscription/confirm-change`.
 - Request:
   - `extensionSelections[]` (`extensionDefinitionId`, `quantity`)
 - Response:
@@ -199,6 +213,16 @@ Shared conventions:
   - `page`, `limit`, `from`, `to`
 - Response:
   - `items[]` with payment date, amount, period covered, method last4, status
+
+#### GET `/billing/payment-history/{paymentId}`
+- Purpose: Return payment drill-in details for the payment history row detail view.
+- Auth: Tenant owner only.
+- Response:
+  - `paymentId`, `paidAtUtc`, `status`, `providerStatus`, `providerFailureReason`
+  - `amount`, `planName`, `billingPeriod`, `lineItems[]`
+  - `cardSnapshot` (`brand`, `last4`, optional expiration snapshot)
+  - `invoiceReference`, `receiptReference`, `providerReference`
+  - `retryContext` (`attemptCount`, `maxAutomaticAttemptsPerCycle`, `nextRetryAtUtc`)
 
 #### GET `/billing/payment-history/{paymentId}/receipt`
 - Purpose: Return receipt metadata and downloadable file URL.
