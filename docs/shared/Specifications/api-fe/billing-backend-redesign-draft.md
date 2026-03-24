@@ -1,6 +1,6 @@
 # Backend Billing Redesign Draft
 
-Version: 1.0  
+Version: 1.1  
 Audience: Backend, Frontend, Product  
 Status: Proposed design draft for review
 
@@ -14,6 +14,10 @@ Hard decisions for this redesign:
 - Provider webhooks are hosted by billing service provider endpoints, not in account API.
 - Clean rewrite is preferred over legacy adaptation where model mismatch exists.
 - No backward compatibility constraints for old subscription/billing endpoints.
+- This design exposes internal backend APIs for account and admin clients; external partner APIs and reporting dashboards remain out of scope for this phase.
+- Trial subscriptions are first-class subscriptions, but trial plans are non-renewing and cannot accept user-purchased extensions.
+- Price changes are implemented through effective-dated price versions with mandatory notice enforcement before a higher price can become active.
+- Billing notifications reuse the existing email and in-app notification center pipeline; billing redesign adds event types and preference categories, not a separate notification subsystem.
 
 ## 2. Architecture Overview
 
@@ -82,6 +86,7 @@ Shared conventions:
 - Owner endpoints require tenant owner authorization.
 - Admin endpoints require admin policy authorization.
 - Mutating endpoints require `Idempotency-Key` for retry-safe execution.
+- Catalog mutations are effective-dated where a change can affect future billing or compliance-sensitive messaging.
 
 ### 3.1 Owner Billing Endpoints (Account API)
 
@@ -92,6 +97,9 @@ Shared conventions:
   - `tenantId`, `subscriptionId`, `plan`, `status`, `isTrial`, `autoRenew`
   - `effectiveDate`, `terminationDate`, `inGracePeriod`, `gracePeriodEndDate`
   - `paymentSchedule`, `activeExtensions[]`, `nextChargePreview`
+  - `accessState` (`full`, `fallback`, `blocked`)
+  - `pendingChangeSummary` (nullable)
+  - `trialUpgradeBanner` (`show`, `message`, `expiresAtUtc`) for the 7-day trial reminder window
 
 #### GET `/billing/plans/catalog`
 - Purpose: Return published plans, schedules, extensions, and pricing overlays applicable to tenant.
@@ -101,6 +109,8 @@ Shared conventions:
   - `schedule=<scheduleCode>`
 - Response:
   - `plans[]` with `featureSummary`, `limitsSummary`, `availableSchedules[]`, `availableExtensions[]`
+  - trial plan is flagged and returned as non-upgradable for extension purchase
+  - prices resolved through price-tier/discount preview rules without hiding base price provenance
 
 #### POST `/billing/subscription/preview-change`
 - Purpose: Dry-run plan/schedule/extension change with downgrade validation and cost summary.
@@ -113,6 +123,9 @@ Shared conventions:
   - `totalDueNow`
   - `downgradeWarnings[]`
   - `blockingViolations[]`
+  - `discountApplication` (`none`, `tenantPriceTier`, `discountCode`, `discountCodeRejected`)
+  - `effectivePriceTierId` (nullable)
+  - `scheduledStartDateUtc`
   - `validationSnapshotId` (for confirm replay safety)
 
 #### POST `/billing/subscription/confirm-change`
@@ -192,6 +205,15 @@ Shared conventions:
 - Auth: Tenant owner only.
 - Response:
   - `receiptId`, `downloadUrl`, `expiresAtUtc`
+  - `lineItems[]`, `planName`, `billingPeriod`, `cardLast4`
+
+#### GET `/billing/audit`
+- Purpose: Return tenant-visible billing and subscription audit history for the current tenant.
+- Auth: Tenant owner only.
+- Query:
+  - `page`, `limit`, `from`, `to`, `eventType`
+- Response:
+  - `items[]` containing the immutable audit schema defined in section 7.3, filtered to tenant-visible events only
 
 #### GET `/billing/entitlements/effective`
 - Purpose: Return effective features/limits after plan + extensions + overrides.
@@ -205,6 +227,8 @@ Shared conventions:
 - `POST /admin/billing/feature-sets`
 - `PATCH /admin/billing/feature-sets/{featureSetId}`
 - `DELETE /admin/billing/feature-sets/{featureSetId}`
+- `POST /admin/billing/feature-sets/{featureSetId}/deactivate`
+- `POST /admin/billing/feature-sets/{featureSetId}/activate`
 
 #### Plans
 - `GET /admin/billing/plans`
@@ -212,38 +236,69 @@ Shared conventions:
 - `POST /admin/billing/plans`
 - `PATCH /admin/billing/plans/{planId}`
 - `DELETE /admin/billing/plans/{planId}`
+- `POST /admin/billing/plans/{planId}/archive`
+- `POST /admin/billing/plans/{planId}/restore`
+- `PUT /admin/billing/plans/{planId}/schedules/{scheduleId}/price`
 - `POST /admin/billing/plans/{planId}/publish`
 - `POST /admin/billing/plans/{planId}/hide`
 - `POST /admin/billing/plans/{planId}/set-trial`
+- `DELETE /admin/billing/plans/trial-designation`
 - `POST /admin/billing/plans/{planId}/set-fallback`
+- `DELETE /admin/billing/plans/fallback-designation`
 
 #### Payment schedules
 - `GET /admin/billing/payment-schedules`
+- `GET /admin/billing/payment-schedules/{scheduleId}`
 - `POST /admin/billing/payment-schedules`
 - `PATCH /admin/billing/payment-schedules/{scheduleId}`
 - `DELETE /admin/billing/payment-schedules/{scheduleId}`
+- `POST /admin/billing/payment-schedules/{scheduleId}/deactivate`
+- `POST /admin/billing/payment-schedules/{scheduleId}/activate`
 
 #### Extensions
 - `GET /admin/billing/extensions`
+- `GET /admin/billing/extensions/{extensionDefinitionId}`
 - `POST /admin/billing/extensions`
 - `PATCH /admin/billing/extensions/{extensionDefinitionId}`
 - `DELETE /admin/billing/extensions/{extensionDefinitionId}`
+- `POST /admin/billing/extensions/{extensionDefinitionId}/deactivate`
+- `POST /admin/billing/extensions/{extensionDefinitionId}/activate`
+- `PUT /admin/billing/extensions/{extensionDefinitionId}/plans/{planId}/schedules/{scheduleId}/price`
 
 #### Price tiers and discount codes
 - `GET /admin/billing/price-tiers`
+- `GET /admin/billing/price-tiers/{priceTierId}`
 - `POST /admin/billing/price-tiers`
 - `PATCH /admin/billing/price-tiers/{priceTierId}`
 - `DELETE /admin/billing/price-tiers/{priceTierId}`
+- `POST /admin/billing/price-tiers/{priceTierId}/deactivate`
+- `POST /admin/billing/price-tiers/{priceTierId}/activate`
+- `PUT /admin/billing/tenants/{tenantId}/price-tier-assignment`
+- `GET /admin/billing/tenants/{tenantId}/price-tier-assignment`
+- `DELETE /admin/billing/tenants/{tenantId}/price-tier-assignment`
 - `GET /admin/billing/discount-codes`
+- `GET /admin/billing/discount-codes/{discountCodeId}`
 - `POST /admin/billing/discount-codes`
 - `PATCH /admin/billing/discount-codes/{discountCodeId}`
 - `DELETE /admin/billing/discount-codes/{discountCodeId}`
+- `POST /admin/billing/discount-codes/{discountCodeId}/deactivate`
+- `POST /admin/billing/discount-codes/{discountCodeId}/activate`
 
 #### Tenant overrides and audit
+- `GET /admin/billing/tenants/{tenantId}/overrides`
 - `POST /admin/billing/tenants/{tenantId}/overrides`
+- `GET /admin/billing/tenants/{tenantId}/overrides/{overrideId}`
 - `PATCH /admin/billing/tenants/{tenantId}/overrides/{overrideId}`
+- `POST /admin/billing/tenants/{tenantId}/overrides/{overrideId}/end`
 - `DELETE /admin/billing/tenants/{tenantId}/overrides/{overrideId}`
 - `GET /admin/billing/tenants/{tenantId}/audit`
+- `GET /admin/billing/audit`
+
+Admin endpoint expectations:
+- Every admin-managed catalog resource supports collection list/create plus item read/update and explicit lifecycle controls where hard delete is unsafe.
+- Trial and fallback designation controls must enforce the single-designated-plan invariant and expose both set and unset operations.
+- Override management supports create, list, read, update, scheduled end, and removal semantics so support/admin operations do not depend on direct datastore edits.
+- Admin list endpoints support filtering by status and archived state; audit endpoints support date and event filtering.
 
 #### Billing settings
 - `GET /admin/billing/settings`
@@ -251,6 +306,9 @@ Shared conventions:
 - Fields:
   - `retryDelayDays` (default 3)
   - `maxAutomaticAttemptsPerCycle` (fixed to 2 for this phase)
+  - `cardExpiryWarningDays` (default 14)
+  - `priceChangeNoticeMinimumDays` (default 7)
+  - `annualRenewalReminderLeadWindowDays` (range 15-45)
   - notification policy toggles required by legal/compliance
 
 ### 3.3 Provider Webhook Endpoints (Billing Service)
@@ -282,15 +340,19 @@ Billing-specific codes:
 - `BILLING_WEBHOOK_EVENT_DUPLICATE`
 - `BILLING_DISCOUNT_INELIGIBLE`
 - `BILLING_PRICE_TIER_CONFLICT`
+- `BILLING_TRIAL_EXTENSION_NOT_ALLOWED`
+- `BILLING_PRICE_CHANGE_NOTICE_REQUIRED`
+- `BILLING_DISCOUNT_COMBINATION_BLOCKED`
+- `BILLING_ACCESS_BLOCKED`
 
 ## 4. Domain Contexts, Aggregates, Invariants
 
 ### 4.1 Contexts
 
 - Catalog context:
-  - `FeatureSet`, `Plan`, `PaymentSchedule`, `PlanPrice`, `ExtensionDefinition`, `ExtensionPrice`, `PriceTier`, `DiscountCode`.
+  - `FeatureSet`, `Plan`, `PaymentSchedule`, `PlanPrice`, `ExtensionDefinition`, `ExtensionPrice`, `PriceTier`, `DiscountCode`, `PriceTierAssignment`.
 - Subscription context:
-  - `TenantSubscription`, `SubscriptionExtensionSelection`, `SubscriptionOverride`.
+  - `TenantSubscription`, `SubscriptionExtensionSelection`, `SubscriptionOverride`, `PendingSubscriptionChange`, `AppliedDiscount`.
 - Billing context:
   - `BillingTransaction`, `InvoiceSnapshot`, `PaymentMethodSnapshot`, `ProviderCustomerLink`, `ProviderSubscriptionLink`.
 - Audit context:
@@ -302,9 +364,13 @@ Billing-specific codes:
 - At most one active subscription per tenant for any time interval.
 - Only one trial plan and one fallback plan can be designated globally at a time.
 - Overrides are additive only; never reduce a base capability.
+- Trial plan pricing is zero-priced, non-renewing, and rejects user-selected extension purchases.
 - Prices must resolve deterministically: discount code or tenant tier overlay, then base fallback.
+- Tenant price-tier assignment and discount-code application cannot create ambiguous stacked pricing; the pricing engine must choose one effective tier per billable line item.
 - State transitions must be valid against lifecycle rules (no ad-hoc status jumps).
+- Cancellation-at-term-end bypasses grace and transitions directly to fallback or blocked access.
 - Billing cycle calculations always use UTC.
+- Audit records are append-only and retained indefinitely in this phase.
 
 ### 4.3 Policy services
 
@@ -314,6 +380,9 @@ Billing-specific codes:
 - `GraceAndFallbackPolicyService`
 - `RetrySchedulingPolicyService`
 - `DiscountEligibilityPolicyService`
+- `PriceSelectionPolicyService`
+- `NotificationCompliancePolicyService`
+- `AccessRestrictionPolicyService`
 
 ### 4.4 Aggregate command and event boundaries
 
@@ -328,6 +397,8 @@ Billing-specific codes:
 - `DefineExtensionPrice`
 - `CreatePriceTier`
 - `CreateDiscountCode`
+- `AssignTenantPriceTier`
+- `SchedulePriceChange`
 
 `PlanCatalog` domain events:
 - `FeatureSetCreated`
@@ -336,6 +407,8 @@ Billing-specific codes:
 - `FallbackPlanDesignated`
 - `PriceTierDefined`
 - `DiscountCodeActivated`
+- `TenantPriceTierAssigned`
+- `FuturePriceChangeScheduled`
 
 `TenantSubscription` aggregate commands:
 - `AssignTrialSubscription`
@@ -345,9 +418,11 @@ Billing-specific codes:
 - `ReactivateAutoRenew`
 - `ApplyExtensionSelection`
 - `RemoveExtensionSelection`
+- `ApplyDiscountCode`
 - `EnterGracePeriod`
 - `ApplyFallbackPlan`
 - `RecoverFromGrace`
+- `BlockTenantAccess`
 
 `TenantSubscription` domain events:
 - `SubscriptionActivated`
@@ -355,6 +430,8 @@ Billing-specific codes:
 - `SubscriptionPlanChanged`
 - `SubscriptionCancelled`
 - `SubscriptionReactivated`
+- `SubscriptionChangeScheduled`
+- `DiscountCodeAppliedToSubscription`
 - `SubscriptionEnteredGrace`
 - `SubscriptionRecoveredFromGrace`
 - `SubscriptionFallbackApplied`
@@ -384,6 +461,12 @@ stateDiagram-v2
   InactiveExpired --> ActivePaid : newPaidEnrollment
 ```
 
+Transition semantics that resolve requirement ambiguities:
+- Trial expiry moves the tenant to `InactiveGrace`; the grace clock uses the trial plan's grace period.
+- Auto-renew cancellation keeps the subscription active through the paid-through date, then transitions directly to fallback or blocked access with no grace period.
+- Payment failure only enters grace for billable subscriptions that were expected to auto-renew and reached termination without a successful renewal charge.
+- Applying a fallback plan closes the prior paid subscription interval and creates a new non-billable fallback subscription record so entitlement history stays explicit and intervals do not overlap.
+
 ### 5.2 Orchestrated jobs
 
 - Month-start billing run (UTC day 1):
@@ -401,6 +484,10 @@ stateDiagram-v2
   - trial expiration notifications (7d and 1d).
   - schedule expiration reminders.
   - payment method expiration warning (14d).
+- Legal/compliance notification jobs:
+  - annual renewal reminders 15-45 days before annual renewal.
+  - price change notices at least 7 days before a higher effective price activates.
+  - cancellation confirmations, enrollment confirmations, and plan change confirmations emitted immediately from domain events.
 
 Deterministic due-subscription selector:
 - A subscription is due in month `M` when:
@@ -420,6 +507,11 @@ Retry and grace timeline policy:
   - fallback plan exists: apply fallback subscription immediately.
   - fallback missing: mark tenant as access blocked and emit critical notification.
 
+Price-version activation policy:
+- Base plan prices, extension prices, and price-tier prices are stored as effective-dated versions.
+- A price increase cannot become active unless a compliant notice has been scheduled and emitted at least `priceChangeNoticeMinimumDays` before the effective date.
+- Existing preview and renewal calculations resolve prices based on the target transaction date, not the request date.
+
 ### 5.3 Proration and change logic
 
 - Upgrade:
@@ -434,20 +526,72 @@ Retry and grace timeline policy:
   - immediate prorated charge.
 - Extension remove:
   - effective next cycle, no refund.
+- Trial-to-paid conversion:
+  - treated as a first-time paid enrollment with immediate proration through month end.
+- Discount application:
+  - price selection runs before proration; proration always uses the resolved effective price.
 
 Proration formula:
 - `proratedAmount = fullPeriodPrice * (remainingDaysInCycle / totalDaysInCycle)`
 - `deltaDueNow = max(0, proratedTarget + proratedExtensions - proratedCreditCurrent)`
 - Downgrade where `proratedCreditCurrent > proratedTarget` never creates refund; credit is consumed by deferred effective date.
 
+Price selection policy:
+- Resolve applicable tenant price-tier assignment for the tenant and transaction date.
+- Evaluate discount code eligibility for the requested line items, schedule, tenant, and renewal/new-purchase context.
+- If an eligible discount code yields a price tier, that tier replaces tenant-tier pricing for the affected line items only.
+- If a resolved tier does not define a price for a line item, fall back to the base plan or extension price.
+- Supported adjustment modes are percent discount, fixed amount discount, and override price.
+- Combination rules are explicit on the discount definition. When an active applied discount blocks additional discounts, preview must reject incompatible combinations with `BILLING_DISCOUNT_COMBINATION_BLOCKED`.
+
 ### 5.4 Downgrade enforcement outcomes
 
 - If `activeUsers > maxUsers` then block plan change.
+- If `activeUsers > includedUsers` and `activeUsers <= maxUsers`, warn about required additional-user pricing; if no qualifying extension exists on the target plan, block the downgrade.
 - If capacity features exceed target limits then warn and allow with deterministic disable policy:
   - keep first N by creation date.
   - disable remainder without deletion.
 - Boolean/tier features change at effective date.
 - Token consumables do not retrocharge; new cap enforced until next reset.
+
+Warning payload requirements:
+- Preview responses must identify each exceeded feature, current usage, target limit, whether the result is `warning` or `blocking`, and the post-effective-date consequence.
+- The deterministic disable list must be reproducible from a stable ordering key so UI preview and background execution produce the same disabled set.
+
+### 5.5 Notifications and legal-compliance orchestration
+
+Delivery rules:
+- Every billing/subscription notification is delivered by email to the tenant owner and published into the existing in-app notification center.
+- Existing notification preferences infrastructure is extended with billing categories; mandatory categories cannot be opted out of.
+
+Required notification event families:
+- Enrollment confirmation, cancellation confirmation, and plan change confirmation.
+- Trial expiration warning, subscription expiration reminder, annual renewal reminder, and price change notice.
+- Payment success receipt, payment failure, grace period started, grace period ending, fallback applied, access blocked, and payment method expiring.
+
+Compliance rules:
+- Enrollment confirmation and plan change confirmation must include price, billing frequency, renewal terms, and cancellation instructions.
+- Annual renewal reminders must be sent 15-45 days before annual renewals.
+- Price change notices must be sent at least 7 days before the higher price takes effect.
+- Cancellation must remain online and owner-accessible without contacting support; the backend must therefore preserve a single-step `cancel` mutation and emit a durable confirmation event.
+
+Preference categories added to notification settings:
+- `enrollmentAndCancellationConfirmations` (mandatory)
+- `renewalReminders` (mandatory)
+- `trialExpirationWarnings` (mandatory)
+- `priceChangeNotices` (mandatory)
+- `paymentSuccessReceipts` (optional)
+- `paymentFailureAlerts` (mandatory)
+- `gracePeriodAlerts` (mandatory)
+- `paymentMethodExpiration` (optional)
+- `planChangeConfirmations` (mandatory)
+
+### 5.6 Payment method, receipts, disputes, and provider-initiated changes
+
+- The platform stores only masked payment-method metadata and provider references; raw card numbers never enter domain storage.
+- Stripe automatic card updates are accepted and projected into `PaymentMethodSnapshot`, with tenant-owner notification only when the effective card details visible to the user change.
+- Charge disputes and chargebacks create immutable audit records and a high-priority admin notification; they do not automatically suspend access in this phase.
+- Receipts and invoices are the same document. Receipt snapshots must preserve plan name, billing period, line items, amount, and card last4 even if catalog pricing changes later.
 
 ## 6. Provider Layer and Stripe Boundaries
 
@@ -497,6 +641,7 @@ Stripe event normalization map:
 - `customer.subscription.updated` -> `ProviderSubscriptionStateChanged`
 - `customer.subscription.deleted` -> `ProviderSubscriptionCancelled`
 - `charge.dispute.created` -> `PaymentDisputeOpened`
+- `customer.source.updated` or equivalent card-update events -> `PaymentMethodUpdatedByProvider`
 - payment method update events -> `PaymentMethodUpdatedByProvider`
 
 ### 6.3 Webhook processing pipeline
@@ -521,6 +666,8 @@ Stripe event normalization map:
 - `BillingOverrides`
 - `BillingDiscountCodes`
 - `BillingPriceTiers`
+- `BillingPriceTierAssignments`
+- `BillingAppliedDiscounts`
 - `BillingTransactions`
 - `BillingReceipts`
 - `BillingPaymentMethods`
@@ -535,6 +682,7 @@ Recommended key design:
 | --- | --- | --- | --- |
 | BillingPlanCatalog | `CATALOG#<entityType>` | `<entityId>#<version>` | Immutable or versioned catalog entities |
 | BillingSubscription | `TENANT#<tenantId>` | `SUB#<subscriptionId>` | Subscription aggregate snapshots |
+| BillingAppliedDiscounts | `TENANT#<tenantId>` | `DISC#<appliedDiscountId>` | Active and historical discount applications with repeatability windows |
 | BillingTransactions | `TENANT#<tenantId>` | `TXN#<timestampUtc>#<transactionId>` | Payment attempts and outcomes |
 | BillingPaymentMethods | `TENANT#<tenantId>` | `PM#<paymentMethodId>` | Masked method metadata only |
 | BillingProviderLinks | `TENANT#<tenantId>` | `PROVIDER#<provider>#<linkType>` | Customer/subscription external references |
@@ -546,6 +694,7 @@ Suggested GSIs:
 - `GSI1` on `BillingSubscription` for status scans by due month.
 - `GSI2` on `BillingTransactions` for provider reference lookup.
 - `GSI3` on `BillingAuditLog` for event type and date filtering.
+- `GSI4` on `BillingAppliedDiscounts` for active-discount lookup by tenant and effective date.
 
 ### 7.2 Idempotency model
 
@@ -574,6 +723,11 @@ Fields:
 - `description`
 - `beforeState`, `afterState`
 - `metadata` (provider ids, failure reasons, proration details, correlation id)
+
+Access and retention:
+- Tenant owners can query only their tenant's billing/subscription audit stream.
+- Admins can query any tenant's audit stream.
+- Retention is indefinite for this phase; archival policy is deferred.
 
 ### 7.4 Reconciliation jobs
 
@@ -607,13 +761,22 @@ Operational thresholds:
 
 - Registration to trial subscription.
 - Trial expiration without conversion.
+- Trial upgrade banner eligibility in the 7-day window.
 - Mid-cycle upgrade with immediate charge.
 - Downgrade with over-limit warnings and deterministic disable.
+- Downgrade blocked because included users are exceeded and no qualifying extension exists.
 - Billing retry flow (first fail, second fail, grace).
 - Recovery from grace with successful payment.
 - Fallback plan application.
+- Cancellation reaching paid-through date and going directly to fallback/block without grace.
 - Cancel/reactivate before termination.
+- Tenant price-tier assignment with missing tier price falling back to base price.
+- Discount code eligibility for new subscription, renewal, referral, and tenant-specific restrictions.
+- Discount code duration preventing a conflicting second discount while active.
 - Payment method expiring notification.
+- Stripe automatic card update webhook projection.
+- Charge dispute webhook producing admin alert and audit record.
+- Price change scheduling blocked when notice window is not satisfied.
 - Duplicate webhook replay ignored idempotently.
 
 ### 8.3 Quality gates before cutover
@@ -714,11 +877,9 @@ Rollback policy:
 - Run shadow verification on legacy data.
 - Cutover and deprecate replaced legacy components.
 
-## 11. Open Questions Requiring Product/Legal Sign-off
+## 11. Remaining Open Items
 
 - Perpetual plan behavior: exact billing and lifecycle semantics when termination is null.
-- Discount code combination policy: strict global lock or per-product lock while active.
-- Dispute/chargeback policy: automated subscription suspension vs manual review queue.
-- Price change notice policy defaults by schedule type and jurisdiction.
-- Receipt storage policy: signed URL lifetime and retention obligations.
+- Receipt storage policy: signed URL lifetime and whether immutable receipt binaries are stored inside platform-managed storage or delegated fully to the provider.
+- Sales-tax handling: requirements keep this out of scope, but production launch still needs a go/no-go decision on Stripe Tax or equivalent.
 

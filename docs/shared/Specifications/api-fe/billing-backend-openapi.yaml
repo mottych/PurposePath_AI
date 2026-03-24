@@ -1,21 +1,22 @@
 openapi: 3.0.3
 info:
   title: PurposePath Billing Backend Redesign API
-  version: 1.0.0
-  description: Backend contract draft for plans, subscriptions, billing, and provider webhooks.
+  version: 1.1.0
+  description: >-
+    Backend contract draft for plans, subscriptions, billing, entitlements,
+    admin catalog management, pricing controls, and provider webhooks.
 servers:
-  - url: https://api.dev.purposepath.app/account/api/v1
-    description: Account API
-  - url: https://api.dev.purposepath.app/admin/api/v1
-    description: Admin API
-  - url: https://api.dev.purposepath.app/billing
-    description: Billing provider webhook API
+  - url: https://api.dev.purposepath.app
+    description: Shared API host
 tags:
   - name: owner-billing
+    description: Tenant-owner billing and subscription management endpoints.
   - name: admin-billing
+    description: Admin billing catalog, pricing, override, audit, and settings endpoints.
   - name: provider-webhooks
+    description: Billing-provider webhook ingress endpoints.
 paths:
-  /billing/subscription/current:
+  /account/api/v1/billing/subscription/current:
     get:
       tags: [owner-billing]
       summary: Get current tenant subscription billing view
@@ -28,7 +29,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
-  /billing/plans/catalog:
+
+  /account/api/v1/billing/plans/catalog:
     get:
       tags: [owner-billing]
       summary: Get published billing catalog
@@ -50,18 +52,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlanCatalog"
-  /billing/subscription/preview-change:
+
+  /account/api/v1/billing/subscription/preview-change:
     post:
       tags: [owner-billing]
-      summary: Preview subscription change with proration
+      summary: Preview subscription change with proration and validation
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -75,18 +74,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionChangePreview"
-  /billing/subscription/confirm-change:
+
+  /account/api/v1/billing/subscription/confirm-change:
     post:
       tags: [owner-billing]
       summary: Confirm subscription change
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -100,18 +96,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionChangeResult"
-  /billing/subscription/cancel:
+
+  /account/api/v1/billing/subscription/cancel:
     post:
       tags: [owner-billing]
       summary: Cancel auto-renewal
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: false
         content:
@@ -125,18 +118,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
-  /billing/subscription/reactivate:
+
+  /account/api/v1/billing/subscription/reactivate:
     post:
       tags: [owner-billing]
-      summary: Reactivate subscription auto-renew
+      summary: Reactivate subscription auto-renew or recover during grace
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: false
         content:
@@ -150,7 +140,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSubscriptionCurrent"
-  /billing/subscription/extensions:
+
+  /account/api/v1/billing/subscription/extensions:
     get:
       tags: [owner-billing]
       summary: Get subscription extensions
@@ -169,11 +160,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -187,24 +174,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseExtensionMutationResult"
-  /billing/subscription/extensions/{extensionSelectionId}:
+
+  /account/api/v1/billing/subscription/extensions/{extensionSelectionId}:
     delete:
       tags: [owner-billing]
       summary: Schedule extension removal
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: extensionSelectionId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ExtensionSelectionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: Removal scheduled
@@ -212,7 +191,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseExtensionRemovalResult"
-  /billing/payment-method:
+
+  /account/api/v1/billing/payment-method:
     get:
       tags: [owner-billing]
       summary: Get masked payment method
@@ -225,18 +205,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePaymentMethod"
-  /billing/payment-method/setup-intent:
+
+  /account/api/v1/billing/payment-method/setup-intent:
     post:
       tags: [owner-billing]
-      summary: Create provider setup intent/session
+      summary: Create provider setup intent or setup session
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: Setup payload
@@ -244,18 +221,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseSetupIntent"
-  /billing/payment-method/confirm:
+
+  /account/api/v1/billing/payment-method/confirm:
     post:
       tags: [owner-billing]
       summary: Confirm payment method update
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -269,19 +243,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePaymentMethod"
-  /billing/payment-history:
+
+  /account/api/v1/billing/payment-history:
     get:
       tags: [owner-billing]
       summary: Get payment history
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
         - in: query
-          name: page
-          schema: { type: integer, minimum: 1, default: 1 }
+          name: from
+          schema:
+            type: string
+            format: date-time
         - in: query
-          name: limit
-          schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+          name: to
+          schema:
+            type: string
+            format: date-time
       responses:
         "200":
           description: Payment history
@@ -289,19 +270,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePaymentHistory"
-  /billing/payment-history/{paymentId}/receipt:
+
+  /account/api/v1/billing/payment-history/{paymentId}/receipt:
     get:
       tags: [owner-billing]
       summary: Get receipt download metadata
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: paymentId
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/PaymentId"
       responses:
         "200":
           description: Receipt metadata
@@ -309,7 +286,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseReceipt"
-  /billing/entitlements/effective:
+
+  /account/api/v1/billing/audit:
+    get:
+      tags: [owner-billing]
+      summary: Get tenant-visible billing audit history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: eventType
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseBillingAuditList"
+
+  /account/api/v1/billing/entitlements/effective:
     get:
       tags: [owner-billing]
       summary: Get effective feature and limit entitlements
@@ -322,182 +331,1269 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseEntitlements"
-  /admin/billing/feature-sets:
+
+  /admin/api/v1/billing/feature-sets:
     get:
       tags: [admin-billing]
+      summary: List feature sets
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Feature sets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSetList"
     post:
       tags: [admin-billing]
+      summary: Create feature set
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeatureSetRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/plans:
+          description: Feature set created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSet"
+
+  /admin/api/v1/billing/feature-sets/{featureSetId}:
     get:
       tags: [admin-billing]
+      summary: Get feature set
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FeatureSetId"
+      responses:
+        "200":
+          description: Feature set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSet"
+    patch:
+      tags: [admin-billing]
+      summary: Update feature set
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FeatureSetId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFeatureSetRequest"
+      responses:
+        "200":
+          description: Feature set updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSet"
+    delete:
+      tags: [admin-billing]
+      summary: Delete feature set
+      description: Hard delete is allowed only when the feature set is not referenced by any plan.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FeatureSetId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Feature set deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/feature-sets/{featureSetId}/deactivate:
+    post:
+      tags: [admin-billing]
+      summary: Deactivate feature set
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FeatureSetId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Feature set deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSet"
+
+  /admin/api/v1/billing/feature-sets/{featureSetId}/activate:
+    post:
+      tags: [admin-billing]
+      summary: Activate feature set
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FeatureSetId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Feature set activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureSet"
+
+  /admin/api/v1/billing/plans:
+    get:
+      tags: [admin-billing]
+      summary: List plans
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: visibility
+          schema:
+            $ref: "#/components/schemas/PlanVisibility"
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Plans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanList"
     post:
       tags: [admin-billing]
+      summary: Create plan
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/payment-schedules:
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/plans/{planId}:
     get:
       tags: [admin-billing]
+      summary: Get plan
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: Plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+    patch:
+      tags: [admin-billing]
+      summary: Update plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanRequest"
+      responses:
+        "200":
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+    delete:
+      tags: [admin-billing]
+      summary: Delete plan
+      description: Hard delete is allowed only before a plan has ever been subscribed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Plan deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/plans/{planId}/archive:
+    post:
+      tags: [admin-billing]
+      summary: Archive plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Plan archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/plans/{planId}/restore:
+    post:
+      tags: [admin-billing]
+      summary: Restore archived plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Plan restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/plans/{planId}/publish:
+    post:
+      tags: [admin-billing]
+      summary: Publish plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Plan published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/plans/{planId}/hide:
+    post:
+      tags: [admin-billing]
+      summary: Hide plan from self-service catalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Plan hidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/plans/{planId}/set-trial:
+    post:
+      tags: [admin-billing]
+      summary: Designate plan as the single active trial plan
+      description: >-
+        Replaces any existing trial designation. Validation fails if the plan is not
+        eligible for trial use.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Trial designation applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanDesignation"
+        "409":
+          description: Validation conflict
+
+  /admin/api/v1/billing/plans/trial-designation:
+    delete:
+      tags: [admin-billing]
+      summary: Remove current trial plan designation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Trial designation cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanDesignation"
+
+  /admin/api/v1/billing/plans/{planId}/set-fallback:
+    post:
+      tags: [admin-billing]
+      summary: Designate plan as the single active fallback plan
+      description: >-
+        Replaces any existing fallback designation. Validation fails if the plan is not
+        eligible for fallback use.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Fallback designation applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanDesignation"
+        "409":
+          description: Validation conflict
+
+  /admin/api/v1/billing/plans/fallback-designation:
+    delete:
+      tags: [admin-billing]
+      summary: Remove current fallback plan designation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Fallback designation cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlanDesignation"
+
+  /admin/api/v1/billing/plans/{planId}/schedules/{scheduleId}/price:
+    put:
+      tags: [admin-billing]
+      summary: Upsert effective-dated plan schedule price
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPlanSchedulePriceRequest"
+      responses:
+        "200":
+          description: Price updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlan"
+
+  /admin/api/v1/billing/payment-schedules:
+    get:
+      tags: [admin-billing]
+      summary: List payment schedules
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Schedules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentScheduleList"
     post:
       tags: [admin-billing]
+      summary: Create payment schedule
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentScheduleRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/extensions:
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentSchedule"
+
+  /admin/api/v1/billing/payment-schedules/{scheduleId}:
     get:
       tags: [admin-billing]
+      summary: Get payment schedule
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+      responses:
+        "200":
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentSchedule"
+    patch:
+      tags: [admin-billing]
+      summary: Update payment schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePaymentScheduleRequest"
+      responses:
+        "200":
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentSchedule"
+    delete:
+      tags: [admin-billing]
+      summary: Delete payment schedule
+      description: Hard delete is allowed only when the schedule is unused.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Schedule deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/payment-schedules/{scheduleId}/deactivate:
+    post:
+      tags: [admin-billing]
+      summary: Deactivate payment schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Schedule deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentSchedule"
+
+  /admin/api/v1/billing/payment-schedules/{scheduleId}/activate:
+    post:
+      tags: [admin-billing]
+      summary: Activate payment schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Schedule activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePaymentSchedule"
+
+  /admin/api/v1/billing/extensions:
+    get:
+      tags: [admin-billing]
+      summary: List extension definitions
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: planId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Extensions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinitionList"
     post:
       tags: [admin-billing]
+      summary: Create extension definition
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExtensionDefinitionRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/price-tiers:
+          description: Extension created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+
+  /admin/api/v1/billing/extensions/{extensionDefinitionId}:
     get:
       tags: [admin-billing]
+      summary: Get extension definition
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+      responses:
+        "200":
+          description: Extension definition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+    patch:
+      tags: [admin-billing]
+      summary: Update extension definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExtensionDefinitionRequest"
+      responses:
+        "200":
+          description: Extension updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+    delete:
+      tags: [admin-billing]
+      summary: Delete extension definition
+      description: Hard delete is allowed only when the definition has never been attached to a subscription.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Extension deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/extensions/{extensionDefinitionId}/deactivate:
+    post:
+      tags: [admin-billing]
+      summary: Deactivate extension definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Extension deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+
+  /admin/api/v1/billing/extensions/{extensionDefinitionId}/activate:
+    post:
+      tags: [admin-billing]
+      summary: Activate extension definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Extension activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+
+  /admin/api/v1/billing/extensions/{extensionDefinitionId}/plans/{planId}/schedules/{scheduleId}/price:
+    put:
+      tags: [admin-billing]
+      summary: Upsert extension price for a plan schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ExtensionDefinitionId"
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/ScheduleId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertExtensionPriceRequest"
+      responses:
+        "200":
+          description: Extension price updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseExtensionDefinition"
+
+  /admin/api/v1/billing/price-tiers:
+    get:
+      tags: [admin-billing]
+      summary: List price tiers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Price tiers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTierList"
     post:
       tags: [admin-billing]
+      summary: Create price tier
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePriceTierRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/discount-codes:
+          description: Price tier created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTier"
+
+  /admin/api/v1/billing/price-tiers/{priceTierId}:
     get:
       tags: [admin-billing]
+      summary: Get price tier
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PriceTierId"
+      responses:
+        "200":
+          description: Price tier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTier"
+    patch:
+      tags: [admin-billing]
+      summary: Update price tier
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PriceTierId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePriceTierRequest"
+      responses:
+        "200":
+          description: Price tier updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTier"
+    delete:
+      tags: [admin-billing]
+      summary: Delete price tier
+      description: Hard delete is allowed only when the tier has never been assigned or applied.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PriceTierId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Price tier deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/price-tiers/{priceTierId}/deactivate:
+    post:
+      tags: [admin-billing]
+      summary: Deactivate price tier
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PriceTierId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Price tier deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTier"
+
+  /admin/api/v1/billing/price-tiers/{priceTierId}/activate:
+    post:
+      tags: [admin-billing]
+      summary: Activate price tier
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PriceTierId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Price tier activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTier"
+
+  /admin/api/v1/billing/tenants/{tenantId}/price-tier-assignment:
+    get:
+      tags: [admin-billing]
+      summary: Get tenant price tier assignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Tenant price tier assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTierAssignment"
+    put:
+      tags: [admin-billing]
+      summary: Upsert tenant price tier assignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTenantPriceTierRequest"
+      responses:
+        "200":
+          description: Assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponsePriceTierAssignment"
+    delete:
+      tags: [admin-billing]
+      summary: Remove tenant price tier assignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Assignment removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/discount-codes:
+    get:
+      tags: [admin-billing]
+      summary: List discount codes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ResourceStatus"
+        - in: query
+          name: includeArchived
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Discount codes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCodeList"
     post:
       tags: [admin-billing]
+      summary: Create discount code
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDiscountCodeRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/tenants/{tenantId}/overrides:
+          description: Discount code created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCode"
+
+  /admin/api/v1/billing/discount-codes/{discountCodeId}:
+    get:
+      tags: [admin-billing]
+      summary: Get discount code
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DiscountCodeId"
+      responses:
+        "200":
+          description: Discount code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCode"
+    patch:
+      tags: [admin-billing]
+      summary: Update discount code
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DiscountCodeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDiscountCodeRequest"
+      responses:
+        "200":
+          description: Discount code updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCode"
+    delete:
+      tags: [admin-billing]
+      summary: Delete discount code
+      description: Hard delete is allowed only when the code has never been redeemed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DiscountCodeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Discount code deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/discount-codes/{discountCodeId}/deactivate:
+    post:
+      tags: [admin-billing]
+      summary: Deactivate discount code
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DiscountCodeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Discount code deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCode"
+
+  /admin/api/v1/billing/discount-codes/{discountCodeId}/activate:
+    post:
+      tags: [admin-billing]
+      summary: Activate discount code
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DiscountCodeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Discount code activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseDiscountCode"
+
+  /admin/api/v1/billing/tenants/{tenantId}/overrides:
+    get:
+      tags: [admin-billing]
+      summary: List tenant overrides
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - in: query
+          name: includeExpired
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Overrides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseTenantOverrideList"
     post:
       tags: [admin-billing]
       summary: Add tenant override
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: tenantId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantOverrideRequest"
       responses:
         "201":
-          description: Created
-  /admin/billing/tenants/{tenantId}/audit:
+          description: Override created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseTenantOverride"
+
+  /admin/api/v1/billing/tenants/{tenantId}/overrides/{overrideId}:
     get:
       tags: [admin-billing]
-      summary: Get tenant billing audit log
+      summary: Get tenant override
       security:
         - bearerAuth: []
       parameters:
-        - in: path
-          name: tenantId
-          required: true
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/OverrideId"
+      responses:
+        "200":
+          description: Override
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseTenantOverride"
+    patch:
+      tags: [admin-billing]
+      summary: Update tenant override
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/OverrideId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTenantOverrideRequest"
+      responses:
+        "200":
+          description: Override updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseTenantOverride"
+    delete:
+      tags: [admin-billing]
+      summary: Remove tenant override
+      description: Removes a future or immediately revocable override.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/OverrideId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Override removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseMutationAccepted"
+
+  /admin/api/v1/billing/tenants/{tenantId}/overrides/{overrideId}/end:
+    post:
+      tags: [admin-billing]
+      summary: End tenant override at a defined time
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/OverrideId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndTenantOverrideRequest"
+      responses:
+        "200":
+          description: Override end scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseTenantOverride"
+
+  /admin/api/v1/billing/tenants/{tenantId}/audit:
+    get:
+      tags: [admin-billing]
+      summary: Get tenant-scoped billing audit log
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: eventType
           schema:
             type: string
-            format: uuid
+        - in: query
+          name: actorType
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
       responses:
         "200":
           description: Audit entries
-  /admin/billing/settings:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseBillingAuditList"
+
+  /admin/api/v1/billing/audit:
     get:
       tags: [admin-billing]
+      summary: Query billing audit events across tenants
+      description: Support and admin workflow endpoint for cross-tenant filtering and search.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: tenantId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: eventType
+          schema:
+            type: string
+        - in: query
+          name: actorType
+          schema:
+            type: string
+        - in: query
+          name: actorId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: correlationId
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseBillingAuditList"
+
+  /admin/api/v1/billing/settings:
+    get:
+      tags: [admin-billing]
+      summary: Get billing settings
       security:
         - bearerAuth: []
       responses:
         "200":
           description: Billing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseBillingSettings"
     patch:
       tags: [admin-billing]
+      summary: Update billing settings
       security:
         - bearerAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBillingSettingsRequest"
       responses:
         "200":
-          description: Updated settings
+          description: Billing settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseBillingSettings"
+
   /billing/providers/stripe/webhooks:
     post:
       tags: [provider-webhooks]
@@ -506,7 +1602,8 @@ paths:
         - in: header
           name: Stripe-Signature
           required: true
-          schema: { type: string }
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -519,112 +1616,819 @@ paths:
           description: Accepted or already processed
         "400":
           description: Invalid signature or invalid payload
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+    Page:
+      in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+    TenantId:
+      in: path
+      name: tenantId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PlanId:
+      in: path
+      name: planId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FeatureSetId:
+      in: path
+      name: featureSetId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ScheduleId:
+      in: path
+      name: scheduleId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExtensionDefinitionId:
+      in: path
+      name: extensionDefinitionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PriceTierId:
+      in: path
+      name: priceTierId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DiscountCodeId:
+      in: path
+      name: discountCodeId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OverrideId:
+      in: path
+      name: overrideId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      in: path
+      name: paymentId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExtensionSelectionId:
+      in: path
+      name: extensionSelectionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   schemas:
     ApiError:
       type: object
       properties:
-        code: { type: string }
-        message: { type: string }
-        correlationId: { type: string }
+        code:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
         details:
           type: object
           additionalProperties: true
+
     ApiResponseBase:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string, nullable: true }
+        success:
+          type: boolean
+        message:
+          type: string
+          nullable: true
         error:
           $ref: "#/components/schemas/ApiError"
-    Money:
+
+    Pagination:
       type: object
       properties:
-        amount: { type: number, format: decimal }
-        currency: { type: string, example: USD }
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+
+    ResourceStatus:
+      type: string
+      enum: [draft, active, inactive, archived]
+
+    PlanVisibility:
+      type: string
+      enum: [published, hidden]
+
+    DurationType:
+      type: string
+      enum: [timed, perpetual]
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          example: USD
+
+    MoneyInput:
+      allOf:
+        - $ref: "#/components/schemas/Money"
+
+    FeatureValueType:
+      type: string
+      enum: [boolean, numeric, tier]
+
+    PriceAdjustmentType:
+      type: string
+      enum: [percent, amount, override]
+
+    PriceFallbackBehavior:
+      type: string
+      enum: [useBasePrice, rejectIfMissing]
+
+    OverrideValueType:
+      type: string
+      enum: [boolean, numeric, tier]
+
+    PriceTierApplicabilityMode:
+      type: string
+      enum: [tenantAssigned, discountDriven, both]
+
+    EffectiveDurationUnit:
+      type: string
+      enum: [days, months, billingCycles]
+
+    DiscountApplicabilityTargetType:
+      type: string
+      enum: [planSchedule, extensionPlanSchedule, category]
+
+    DiscountEligibilityType:
+      type: string
+      enum:
+        - newUsers
+        - renewals
+        - referrals
+        - specificDomain
+        - specificTenant
+        - listMatching
+
+    PlanDesignationType:
+      type: string
+      enum: [trial, fallback]
+
+    AccessState:
+      type: string
+      enum: [full, fallback, blocked]
+
+    PaymentResultStatus:
+      type: string
+      enum: [succeeded, requiresAction, failed]
+
+    FeatureComponentValue:
+      type: object
+      required: [featureKey, valueType]
+      properties:
+        featureKey:
+          type: string
+        valueType:
+          $ref: "#/components/schemas/FeatureValueType"
+        booleanValue:
+          type: boolean
+          nullable: true
+        numericValue:
+          type: number
+          nullable: true
+        tierValue:
+          type: string
+          nullable: true
+
+    FeatureSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureComponentValue"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    FeatureSetList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureSet"
+
+    PlanSchedulePrice:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+          format: uuid
+        scheduleCode:
+          type: string
+        monthsCovered:
+          type: integer
+        price:
+          $ref: "#/components/schemas/Money"
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        featureSetId:
+          type: string
+          format: uuid
+        durationType:
+          $ref: "#/components/schemas/DurationType"
+        visibility:
+          $ref: "#/components/schemas/PlanVisibility"
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        isTrialDesignated:
+          type: boolean
+        isFallbackDesignated:
+          type: boolean
+        gracePeriodDays:
+          type: integer
+          nullable: true
+        paymentSchedules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSchedulePrice"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    PlanList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plan"
+
+    PaymentSchedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        monthsCovered:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    PaymentScheduleList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentSchedule"
+
+    ExtensionPrice:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        price:
+          $ref: "#/components/schemas/Money"
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    ExtensionDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        featureKey:
+          type: string
+        unitValue:
+          type: number
+        unitLabel:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        schedulePrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionPrice"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    ExtensionDefinitionList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionDefinition"
+
+    PriceTierLine:
+      type: object
+      properties:
+        targetType:
+          $ref: "#/components/schemas/DiscountApplicabilityTargetType"
+        targetId:
+          type: string
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        adjustmentType:
+          $ref: "#/components/schemas/PriceAdjustmentType"
+        percentOff:
+          type: number
+          nullable: true
+        amountOff:
+          $ref: "#/components/schemas/Money"
+        overridePrice:
+          $ref: "#/components/schemas/Money"
+
+    PriceTier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        applicabilityMode:
+          $ref: "#/components/schemas/PriceTierApplicabilityMode"
+        fallbackBehavior:
+          $ref: "#/components/schemas/PriceFallbackBehavior"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceTierLine"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    PriceTierList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceTier"
+
+    PriceTierAssignment:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        priceTierId:
+          type: string
+          format: uuid
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    DiscountEligibilityRule:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/DiscountEligibilityType"
+        values:
+          type: array
+          items:
+            type: string
+
+    DiscountApplicabilityRule:
+      type: object
+      properties:
+        targetType:
+          $ref: "#/components/schemas/DiscountApplicabilityTargetType"
+        targetId:
+          type: string
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+
+    EffectiveDuration:
+      type: object
+      properties:
+        unit:
+          $ref: "#/components/schemas/EffectiveDurationUnit"
+        value:
+          type: integer
+
+    DiscountRepeatability:
+      type: object
+      properties:
+        maxRedemptionsPerTenant:
+          type: integer
+          nullable: true
+        canCombineWithOtherDiscounts:
+          type: boolean
+        blocksOtherDiscountsWhileActive:
+          type: boolean
+
+    DiscountCode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        validFromUtc:
+          type: string
+          format: date-time
+          nullable: true
+        validToUtc:
+          type: string
+          format: date-time
+          nullable: true
+        effectiveDuration:
+          $ref: "#/components/schemas/EffectiveDuration"
+        pricing:
+          $ref: "#/components/schemas/PriceTier"
+        eligibility:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountEligibilityRule"
+        applicability:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountApplicabilityRule"
+        repeatability:
+          $ref: "#/components/schemas/DiscountRepeatability"
+        createdAtUtc:
+          type: string
+          format: date-time
+        updatedAtUtc:
+          type: string
+          format: date-time
+
+    DiscountCodeList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountCode"
+
+    TenantOverride:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        featureKey:
+          type: string
+        valueType:
+          $ref: "#/components/schemas/OverrideValueType"
+        booleanValue:
+          type: boolean
+          nullable: true
+        numericValue:
+          type: number
+          nullable: true
+        tierValue:
+          type: string
+          nullable: true
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [active, scheduled, ended]
+        reason:
+          type: string
+          nullable: true
+
+    TenantOverrideList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantOverride"
+
+    BillingAuditRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestampUtc:
+          type: string
+          format: date-time
+        tenantId:
+          type: string
+          format: uuid
+        actorType:
+          type: string
+          enum: [tenant_owner, admin, system]
+        actorId:
+          type: string
+          format: uuid
+          nullable: true
+        eventType:
+          type: string
+        description:
+          type: string
+        beforeState:
+          type: object
+          nullable: true
+          additionalProperties: true
+        afterState:
+          type: object
+          nullable: true
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    BillingAuditList:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingAuditRecord"
+
+    BillingSettings:
+      type: object
+      properties:
+        retryDelayDays:
+          type: integer
+        maxAutomaticAttemptsPerCycle:
+          type: integer
+        cardExpiryWarningDays:
+          type: integer
+        priceChangeNoticeMinimumDays:
+          type: integer
+        annualRenewalReminderLeadWindowDays:
+          type: object
+          properties:
+            minimum:
+              type: integer
+            maximum:
+              type: integer
+        notificationPolicies:
+          type: object
+          additionalProperties:
+            type: boolean
+
     SubscriptionCurrent:
       type: object
       properties:
-        tenantId: { type: string, format: uuid }
-        subscriptionId: { type: string, format: uuid }
-        status: { type: string }
-        isTrial: { type: boolean }
-        autoRenew: { type: boolean }
-        effectiveDate: { type: string, format: date-time }
-        terminationDate: { type: string, format: date-time, nullable: true }
-        inGracePeriod: { type: boolean }
-        gracePeriodEndDate: { type: string, format: date-time, nullable: true }
-    SubscriptionChangeLineItem:
-      type: object
-      properties:
-        code: { type: string }
-        description: { type: string }
-        amount:
-          $ref: "#/components/schemas/Money"
-        kind: { type: string, enum: [charge, credit] }
-    PreviewSubscriptionChangeRequest:
-      type: object
-      required: [targetPlanId, targetScheduleId]
-      properties:
-        targetPlanId: { type: string, format: uuid }
-        targetScheduleId: { type: string, format: uuid }
-        discountCode: { type: string, nullable: true }
-        extensionSelections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExtensionSelectionRequest"
-    ConfirmSubscriptionChangeRequest:
-      type: object
-      required: [validationSnapshotId]
-      properties:
-        validationSnapshotId: { type: string }
-        confirmationToken: { type: string, nullable: true }
-        paymentMethodToken: { type: string, nullable: true }
-    CancelSubscriptionRequest:
-      type: object
-      properties:
-        reason: { type: string, nullable: true }
-    ReactivateSubscriptionRequest:
-      type: object
-      properties:
-        paymentMethodToken: { type: string, nullable: true }
-    ExtensionSelectionRequest:
-      type: object
-      required: [extensionDefinitionId, quantity]
-      properties:
-        extensionDefinitionId: { type: string, format: uuid }
-        quantity: { type: integer, minimum: 1 }
-    UpsertExtensionsRequest:
-      type: object
-      required: [extensionSelections]
-      properties:
-        extensionSelections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExtensionSelectionRequest"
-    ConfirmPaymentMethodRequest:
-      type: object
-      required: [providerToken]
-      properties:
-        providerToken: { type: string }
-    PlanCatalog:
-      type: object
-      properties:
-        plans:
+        tenantId:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: string
+          format: uuid
+        plan:
+          $ref: "#/components/schemas/Plan"
+        status:
+          type: string
+        isTrial:
+          type: boolean
+        autoRenew:
+          type: boolean
+        effectiveDate:
+          type: string
+          format: date-time
+        terminationDate:
+          type: string
+          format: date-time
+          nullable: true
+        inGracePeriod:
+          type: boolean
+        gracePeriodEndDate:
+          type: string
+          format: date-time
+          nullable: true
+        paymentSchedule:
+          $ref: "#/components/schemas/PaymentSchedule"
+        activeExtensions:
           type: array
           items:
             type: object
             additionalProperties: true
+        accessState:
+          $ref: "#/components/schemas/AccessState"
+        pendingChangeSummary:
+          type: object
+          nullable: true
+          additionalProperties: true
+        trialUpgradeBanner:
+          type: object
+          nullable: true
+          properties:
+            show:
+              type: boolean
+            message:
+              type: string
+            expiresAtUtc:
+              type: string
+              format: date-time
+              nullable: true
+
+    SubscriptionChangeLineItem:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        amount:
+          $ref: "#/components/schemas/Money"
+        kind:
+          type: string
+          enum: [charge, credit]
+
+    PreviewSubscriptionChangeRequest:
+      type: object
+      required: [targetPlanId, targetScheduleId]
+      properties:
+        targetPlanId:
+          type: string
+          format: uuid
+        targetScheduleId:
+          type: string
+          format: uuid
+        discountCode:
+          type: string
+          nullable: true
+        extensionSelections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionSelectionRequest"
+
     SubscriptionChangePreview:
       type: object
       properties:
-        effectiveMode: { type: string, enum: [immediate, nextCycle] }
-        validationSnapshotId: { type: string }
+        effectiveMode:
+          type: string
+          enum: [immediate, nextCycle]
+        validationSnapshotId:
+          type: string
         totalDueNow:
           $ref: "#/components/schemas/Money"
         lineItems:
@@ -633,10 +2437,39 @@ components:
             $ref: "#/components/schemas/SubscriptionChangeLineItem"
         downgradeWarnings:
           type: array
-          items: { type: string }
+          items:
+            type: object
+            additionalProperties: true
         blockingViolations:
           type: array
-          items: { type: string }
+          items:
+            type: object
+            additionalProperties: true
+        discountApplication:
+          type: string
+          enum: [none, tenantPriceTier, discountCode, discountCodeRejected]
+        effectivePriceTierId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduledStartDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    ConfirmSubscriptionChangeRequest:
+      type: object
+      required: [validationSnapshotId]
+      properties:
+        validationSnapshotId:
+          type: string
+        confirmationToken:
+          type: string
+          nullable: true
+        paymentMethodToken:
+          type: string
+          nullable: true
+
     SubscriptionChangeResult:
       type: object
       properties:
@@ -645,60 +2478,171 @@ components:
         paymentResult:
           type: object
           properties:
-            status: { type: string, enum: [succeeded, requiresAction, failed] }
-            receiptId: { type: string, format: uuid, nullable: true }
-            providerReference: { type: string, nullable: true }
+            status:
+              $ref: "#/components/schemas/PaymentResultStatus"
+            receiptId:
+              type: string
+              format: uuid
+              nullable: true
+            providerReference:
+              type: string
+              nullable: true
+
+    CancelSubscriptionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          nullable: true
+
+    ReactivateSubscriptionRequest:
+      type: object
+      properties:
+        paymentMethodToken:
+          type: string
+          nullable: true
+
+    ExtensionSelectionRequest:
+      type: object
+      required: [extensionDefinitionId, quantity]
+      properties:
+        extensionDefinitionId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+
+    UpsertExtensionsRequest:
+      type: object
+      required: [extensionSelections]
+      properties:
+        extensionSelections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionSelectionRequest"
+
     ExtensionState:
       type: object
       properties:
         activeExtensions:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            type: object
+            additionalProperties: true
         availableExtensions:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            $ref: "#/components/schemas/ExtensionDefinition"
+
     ExtensionMutationResult:
       type: object
       properties:
         activeExtensions:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            type: object
+            additionalProperties: true
         totalDueNow:
           $ref: "#/components/schemas/Money"
-        receiptId: { type: string, format: uuid, nullable: true }
+        receiptId:
+          type: string
+          format: uuid
+          nullable: true
+
     ExtensionRemovalResult:
       type: object
       properties:
-        extensionSelectionId: { type: string, format: uuid }
-        effectiveRemovalDate: { type: string, format: date-time }
+        extensionSelectionId:
+          type: string
+          format: uuid
+        effectiveRemovalDate:
+          type: string
+          format: date-time
+
     PaymentMethod:
       type: object
       properties:
-        brand: { type: string }
-        last4: { type: string }
-        expMonth: { type: integer }
-        expYear: { type: integer }
-        isExpiringSoon: { type: boolean }
+        brand:
+          type: string
+        last4:
+          type: string
+        expMonth:
+          type: integer
+        expYear:
+          type: integer
+        isExpiringSoon:
+          type: boolean
+
     SetupIntentResponse:
       type: object
       properties:
-        provider: { type: string, example: stripe }
-        clientToken: { type: string }
+        provider:
+          type: string
+          example: stripe
+        clientToken:
+          type: string
+
+    ConfirmPaymentMethodRequest:
+      type: object
+      required: [providerToken]
+      properties:
+        providerToken:
+          type: string
+
+    PaymentHistoryItem:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        paidAtUtc:
+          type: string
+          format: date-time
+        amount:
+          $ref: "#/components/schemas/Money"
+        planName:
+          type: string
+        billingPeriod:
+          type: string
+        cardLast4:
+          type: string
+        status:
+          type: string
+
     PaymentHistory:
       type: object
       properties:
-        page: { type: integer }
-        limit: { type: integer }
-        total: { type: integer }
+        pagination:
+          $ref: "#/components/schemas/Pagination"
         items:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            $ref: "#/components/schemas/PaymentHistoryItem"
+
     ReceiptResponse:
       type: object
       properties:
-        receiptId: { type: string, format: uuid }
-        downloadUrl: { type: string, format: uri }
-        expiresAtUtc: { type: string, format: date-time }
+        receiptId:
+          type: string
+          format: uuid
+        downloadUrl:
+          type: string
+          format: uri
+        expiresAtUtc:
+          type: string
+          format: date-time
+        planName:
+          type: string
+        billingPeriod:
+          type: string
+        cardLast4:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionChangeLineItem"
+
     EffectiveEntitlements:
       type: object
       properties:
@@ -708,6 +2652,436 @@ components:
         limits:
           type: object
           additionalProperties: true
+
+    PlanCatalogItem:
+      type: object
+      properties:
+        plan:
+          $ref: "#/components/schemas/Plan"
+        featureSummary:
+          type: object
+          additionalProperties: true
+        limitsSummary:
+          type: object
+          additionalProperties: true
+        availableSchedules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSchedulePrice"
+        availableExtensions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionDefinition"
+        trialRestrictions:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    PlanCatalog:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanCatalogItem"
+
+    PlanDesignation:
+      type: object
+      properties:
+        designationType:
+          $ref: "#/components/schemas/PlanDesignationType"
+        planId:
+          type: string
+          format: uuid
+          nullable: true
+        changedAtUtc:
+          type: string
+          format: date-time
+
+    MutationAccepted:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        resourceId:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    CreateFeatureSetRequest:
+      type: object
+      required: [name, components]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureComponentValue"
+
+    UpdateFeatureSetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureComponentValue"
+
+    CreatePlanRequest:
+      type: object
+      required: [name, description, featureSetId, durationType, visibility]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        featureSetId:
+          type: string
+          format: uuid
+        durationType:
+          $ref: "#/components/schemas/DurationType"
+        visibility:
+          $ref: "#/components/schemas/PlanVisibility"
+        gracePeriodDays:
+          type: integer
+          nullable: true
+        paymentSchedules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSchedulePrice"
+
+    UpdatePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        featureSetId:
+          type: string
+          format: uuid
+        visibility:
+          $ref: "#/components/schemas/PlanVisibility"
+        gracePeriodDays:
+          type: integer
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+
+    UpsertPlanSchedulePriceRequest:
+      type: object
+      required: [price, effectiveStartDateUtc]
+      properties:
+        price:
+          $ref: "#/components/schemas/MoneyInput"
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreatePaymentScheduleRequest:
+      type: object
+      required: [code, name, monthsCovered]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        monthsCovered:
+          type: integer
+          minimum: 1
+
+    UpdatePaymentScheduleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        monthsCovered:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+
+    CreateExtensionDefinitionRequest:
+      type: object
+      required: [planId, name, featureKey, unitValue, unitLabel]
+      properties:
+        planId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        featureKey:
+          type: string
+        unitValue:
+          type: number
+        unitLabel:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        schedulePrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionPrice"
+
+    UpdateExtensionDefinitionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        unitValue:
+          type: number
+        unitLabel:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+
+    UpsertExtensionPriceRequest:
+      type: object
+      required: [price, effectiveStartDateUtc]
+      properties:
+        price:
+          $ref: "#/components/schemas/MoneyInput"
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreatePriceTierRequest:
+      type: object
+      required: [code, name, applicabilityMode, fallbackBehavior, lines]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        applicabilityMode:
+          $ref: "#/components/schemas/PriceTierApplicabilityMode"
+        fallbackBehavior:
+          $ref: "#/components/schemas/PriceFallbackBehavior"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceTierLine"
+
+    UpdatePriceTierRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+        applicabilityMode:
+          $ref: "#/components/schemas/PriceTierApplicabilityMode"
+        fallbackBehavior:
+          $ref: "#/components/schemas/PriceFallbackBehavior"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceTierLine"
+
+    AssignTenantPriceTierRequest:
+      type: object
+      required: [priceTierId, effectiveStartDateUtc]
+      properties:
+        priceTierId:
+          type: string
+          format: uuid
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    CreateDiscountCodeRequest:
+      type: object
+      required: [code, name, pricing, repeatability]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        validFromUtc:
+          type: string
+          format: date-time
+          nullable: true
+        validToUtc:
+          type: string
+          format: date-time
+          nullable: true
+        effectiveDuration:
+          $ref: "#/components/schemas/EffectiveDuration"
+        pricing:
+          $ref: "#/components/schemas/PriceTier"
+        eligibility:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountEligibilityRule"
+        applicability:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountApplicabilityRule"
+        repeatability:
+          $ref: "#/components/schemas/DiscountRepeatability"
+
+    UpdateDiscountCodeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        validFromUtc:
+          type: string
+          format: date-time
+          nullable: true
+        validToUtc:
+          type: string
+          format: date-time
+          nullable: true
+        effectiveDuration:
+          $ref: "#/components/schemas/EffectiveDuration"
+        pricing:
+          $ref: "#/components/schemas/PriceTier"
+        eligibility:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountEligibilityRule"
+        applicability:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscountApplicabilityRule"
+        repeatability:
+          $ref: "#/components/schemas/DiscountRepeatability"
+        status:
+          $ref: "#/components/schemas/ResourceStatus"
+
+    CreateTenantOverrideRequest:
+      type: object
+      required: [featureKey, valueType, effectiveStartDateUtc]
+      properties:
+        featureKey:
+          type: string
+        valueType:
+          $ref: "#/components/schemas/OverrideValueType"
+        booleanValue:
+          type: boolean
+          nullable: true
+        numericValue:
+          type: number
+          nullable: true
+        tierValue:
+          type: string
+          nullable: true
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    UpdateTenantOverrideRequest:
+      type: object
+      properties:
+        booleanValue:
+          type: boolean
+          nullable: true
+        numericValue:
+          type: number
+          nullable: true
+        tierValue:
+          type: string
+          nullable: true
+        effectiveStartDateUtc:
+          type: string
+          format: date-time
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    EndTenantOverrideRequest:
+      type: object
+      required: [effectiveEndDateUtc]
+      properties:
+        effectiveEndDateUtc:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+
+    UpdateBillingSettingsRequest:
+      type: object
+      properties:
+        retryDelayDays:
+          type: integer
+        maxAutomaticAttemptsPerCycle:
+          type: integer
+        cardExpiryWarningDays:
+          type: integer
+        priceChangeNoticeMinimumDays:
+          type: integer
+        annualRenewalReminderLeadWindowDays:
+          type: object
+          properties:
+            minimum:
+              type: integer
+            maximum:
+              type: integer
+        notificationPolicies:
+          type: object
+          additionalProperties:
+            type: boolean
+
     ApiResponseSubscriptionCurrent:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -715,6 +3089,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/SubscriptionCurrent"
+
     ApiResponsePlanCatalog:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -722,6 +3097,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/PlanCatalog"
+
     ApiResponseSubscriptionChangePreview:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -729,6 +3105,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/SubscriptionChangePreview"
+
     ApiResponseSubscriptionChangeResult:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -736,6 +3113,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/SubscriptionChangeResult"
+
     ApiResponseExtensionState:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -743,6 +3121,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/ExtensionState"
+
     ApiResponseExtensionMutationResult:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -750,6 +3129,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/ExtensionMutationResult"
+
     ApiResponseExtensionRemovalResult:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -757,6 +3137,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/ExtensionRemovalResult"
+
     ApiResponsePaymentMethod:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -764,6 +3145,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/PaymentMethod"
+
     ApiResponseSetupIntent:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -771,6 +3153,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/SetupIntentResponse"
+
     ApiResponsePaymentHistory:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -778,6 +3161,7 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/PaymentHistory"
+
     ApiResponseReceipt:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -785,6 +3169,15 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/ReceiptResponse"
+
+    ApiResponseBillingAuditList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/BillingAuditList"
+
     ApiResponseEntitlements:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -792,3 +3185,147 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/EffectiveEntitlements"
+
+    ApiResponseFeatureSet:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/FeatureSet"
+
+    ApiResponseFeatureSetList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/FeatureSetList"
+
+    ApiResponsePlan:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Plan"
+
+    ApiResponsePlanList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PlanList"
+
+    ApiResponsePlanDesignation:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PlanDesignation"
+
+    ApiResponsePaymentSchedule:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PaymentSchedule"
+
+    ApiResponsePaymentScheduleList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PaymentScheduleList"
+
+    ApiResponseExtensionDefinition:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ExtensionDefinition"
+
+    ApiResponseExtensionDefinitionList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ExtensionDefinitionList"
+
+    ApiResponsePriceTier:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PriceTier"
+
+    ApiResponsePriceTierList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PriceTierList"
+
+    ApiResponsePriceTierAssignment:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PriceTierAssignment"
+
+    ApiResponseDiscountCode:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/DiscountCode"
+
+    ApiResponseDiscountCodeList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/DiscountCodeList"
+
+    ApiResponseTenantOverride:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/TenantOverride"
+
+    ApiResponseTenantOverrideList:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/TenantOverrideList"
+
+    ApiResponseBillingSettings:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/BillingSettings"
+
+    ApiResponseMutationAccepted:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/MutationAccepted"
