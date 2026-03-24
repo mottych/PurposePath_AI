@@ -455,3 +455,31 @@ Does **not** persist measure actuals/current measure value.
 - `TEST_FINGERPRINT_MISMATCH`
 - `CONNECTION_TEST_FAILED`
 - `EXECUTION_FAILED`
+
+---
+
+## QA/UAT Checklist (Frontend)
+
+Use this checklist before releasing measure-integration changes:
+
+- Verify integration settings state UX for all branches: loading, empty, error, and retry.
+- Validate both scheduling paths:
+  - Snapshot + aggregate modes
+  - Previous period + moving average calculation methods
+- Validate timezone edge handling:
+  - IANA timezone input accepted
+  - Save/update behavior remains stable across timezone changes
+- Validate frequency edge handling:
+  - Daily and monthly units
+  - Frequency value boundaries and validation behavior
+- Validate parameter lookup flow:
+  - Enable/disable parameter values
+  - Lookup search, paging, and selection
+- Validate activation gating:
+  - Draft save before activation is allowed
+  - Re-enable from inactive to active requires fresh successful test
+  - Template-affecting changes require retest fingerprint before save
+- Validate last-reading rendering in connected measure rows:
+  - `Success` and `Failed` badges
+  - Reason text shown when available
+  - Empty/no-reading state shown when no result exists
