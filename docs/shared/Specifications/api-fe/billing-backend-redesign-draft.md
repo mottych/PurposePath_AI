@@ -221,6 +221,9 @@ Shared conventions:
 
 ### 3.2 Admin Billing Endpoints (Admin API)
 
+#### Canonical feature metadata
+- `GET /admin/billing/feature-catalog`
+
 #### Feature sets
 - `GET /admin/billing/feature-sets`
 - `GET /admin/billing/feature-sets/{featureSetId}`
@@ -285,6 +288,7 @@ Shared conventions:
 - `POST /admin/billing/discount-codes/{discountCodeId}/activate`
 
 #### Tenant overrides and audit
+- `POST /admin/billing/tenants/{tenantId}/hidden-plan-assignment`
 - `GET /admin/billing/tenants/{tenantId}/overrides`
 - `POST /admin/billing/tenants/{tenantId}/overrides`
 - `GET /admin/billing/tenants/{tenantId}/overrides/{overrideId}`
@@ -295,8 +299,10 @@ Shared conventions:
 - `GET /admin/billing/audit`
 
 Admin endpoint expectations:
+- Feature metadata is exposed through a canonical feature catalog endpoint so admin clients can drive dropdowns, tier-option pickers, additive-only messaging, and server-aligned validation without hardcoding feature semantics.
 - Every admin-managed catalog resource supports collection list/create plus item read/update and explicit lifecycle controls where hard delete is unsafe.
 - Trial and fallback designation controls must enforce the single-designated-plan invariant and expose both set and unset operations.
+- Hidden plans remain excluded from self-service catalog responses but can still be assigned through an explicit admin-only mutation that requires a support/commercial reason and produces a first-class audit record.
 - Override management supports create, list, read, update, scheduled end, and removal semantics so support/admin operations do not depend on direct datastore edits.
 - Admin list endpoints support filtering by status and archived state; audit endpoints support date and event filtering.
 
@@ -330,6 +336,13 @@ Standard error payload:
 - `details` (field errors or business diagnostics)
 - `correlationId`
 
+HTTP semantics:
+- `409 Conflict` is returned when the request collides with current domain state or an effective-dated uniqueness rule, such as existing trial/fallback designation, overlapping effective periods, or idempotency-key payload mismatch.
+- `422 Unprocessable Entity` is returned when the request is well-formed but violates billing validation rules, such as non-additive overrides, invalid feature value shape, hidden-plan assignment without an admin reason, or assigning a hidden-plan endpoint to a published plan.
+- Both `409` and `422` continue to use the same `ApiResponse<T>` envelope; diagnostics are carried in `error.details`.
+- `error.details.conflicts[]` is the canonical structure for `409` responses.
+- `error.details.validationErrors[]` is the canonical structure for `422` responses.
+
 Billing-specific codes:
 - `BILLING_OWNER_REQUIRED`
 - `BILLING_PLAN_CHANGE_BLOCKED`
@@ -344,6 +357,10 @@ Billing-specific codes:
 - `BILLING_PRICE_CHANGE_NOTICE_REQUIRED`
 - `BILLING_DISCOUNT_COMBINATION_BLOCKED`
 - `BILLING_ACCESS_BLOCKED`
+- `BILLING_PLAN_DESIGNATION_CONFLICT`
+- `BILLING_EFFECTIVE_DATE_OVERLAP`
+- `BILLING_VALIDATION_FAILED`
+- `BILLING_OVERRIDE_NOT_ADDITIVE`
 
 ## 4. Domain Contexts, Aggregates, Invariants
 

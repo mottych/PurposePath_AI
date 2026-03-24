@@ -332,6 +332,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponseEntitlements"
 
+  /admin/api/v1/billing/feature-catalog:
+    get:
+      tags: [admin-billing]
+      summary: Get canonical feature metadata catalog
+      description: >-
+        Returns the canonical registry of feature keys, value types, allowed ranges,
+        tier options, and override constraints used to build and validate feature sets,
+        plans, extensions, and tenant overrides.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Feature catalog metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseFeatureCatalog"
+
   /admin/api/v1/billing/feature-sets:
     get:
       tags: [admin-billing]
@@ -377,6 +395,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseFeatureSet"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/feature-sets/{featureSetId}:
     get:
@@ -414,6 +434,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseFeatureSet"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Delete feature set
@@ -514,6 +536,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlan"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/plans/{planId}:
     get:
@@ -551,6 +575,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlan"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Delete plan
@@ -656,7 +682,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlanDesignation"
         "409":
-          description: Validation conflict
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/plans/trial-designation:
     delete:
@@ -694,7 +722,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlanDesignation"
         "409":
-          description: Validation conflict
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/plans/fallback-designation:
     delete:
@@ -735,6 +765,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePlan"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/payment-schedules:
     get:
@@ -1077,6 +1111,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePriceTier"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/price-tiers/{priceTierId}:
     get:
@@ -1114,6 +1150,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePriceTier"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Delete price tier
@@ -1201,6 +1239,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponsePriceTierAssignment"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
+
+  /admin/api/v1/billing/tenants/{tenantId}/hidden-plan-assignment:
+    post:
+      tags: [admin-billing]
+      summary: Assign hidden plan to tenant subscription
+      description: >-
+        Admin-only mutation for support, sales, migration, or negotiated-plan scenarios.
+        The target plan must be hidden from the self-service catalog and the request is
+        audited as a visibility-bypassing assignment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignHiddenPlanRequest"
+      responses:
+        "200":
+          description: Hidden plan assignment applied or scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseAdminTenantSubscriptionMutationResult"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Remove tenant price tier assignment
@@ -1262,6 +1335,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseDiscountCode"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/discount-codes/{discountCodeId}:
     get:
@@ -1299,6 +1374,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseDiscountCode"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Delete discount code
@@ -1393,6 +1470,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseTenantOverride"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/tenants/{tenantId}/overrides/{overrideId}:
     get:
@@ -1432,6 +1513,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseTenantOverride"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
     delete:
       tags: [admin-billing]
       summary: Remove tenant override
@@ -1473,6 +1558,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseTenantOverride"
+        "409":
+          $ref: "#/components/responses/BillingValidationConflict"
+        "422":
+          $ref: "#/components/responses/BillingValidationFailure"
 
   /admin/api/v1/billing/tenants/{tenantId}/audit:
     get:
@@ -1717,6 +1806,92 @@ components:
         type: string
         format: uuid
 
+  responses:
+    BillingValidationConflict:
+      description: >-
+        The request conflicts with the current billing state, a uniqueness invariant, or
+        an existing effective-dated record.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiResponseBase"
+          examples:
+            designationConflict:
+              value:
+                success: false
+                message: Validation conflict
+                error:
+                  code: BILLING_PLAN_DESIGNATION_CONFLICT
+                  message: Another plan is already designated for this lifecycle role.
+                  correlationId: 2fd3a229-a8bc-4ae1-8435-a8b7fcbac0c1
+                  details:
+                    category: conflict
+                    conflicts:
+                      - code: duplicateDesignation
+                        resourceType: planDesignation
+                        resourceId: 1ab2c3d4-1111-2222-3333-444455556666
+                        field: designationType
+                        message: Trial designation already exists.
+            effectiveDateOverlap:
+              value:
+                success: false
+                message: Validation conflict
+                error:
+                  code: BILLING_EFFECTIVE_DATE_OVERLAP
+                  message: The requested effective period overlaps an existing billing record.
+                  correlationId: 5fc6eb60-f2c8-4706-9c1b-1f8050d52011
+                  details:
+                    category: conflict
+                    conflicts:
+                      - code: overlappingEffectiveWindow
+                        field: effectiveStartDateUtc
+                        existingRange:
+                          start: 2025-01-01T00:00:00Z
+                          end: 2025-12-31T23:59:59Z
+                        requestedRange:
+                          start: 2025-06-01T00:00:00Z
+                          end: null
+    BillingValidationFailure:
+      description: >-
+        The request is syntactically valid but fails billing-specific validation rules.
+        The error wrapper is unchanged; diagnostics are carried in `error.details.validationErrors`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiResponseBase"
+          examples:
+            hiddenPlanAssignmentFailure:
+              value:
+                success: false
+                message: Validation failed
+                error:
+                  code: BILLING_VALIDATION_FAILED
+                  message: One or more billing validation rules were not satisfied.
+                  correlationId: 5344d8aa-f0c6-4230-91ce-26ab3f6bb512
+                  details:
+                    category: validation
+                    validationErrors:
+                      - field: planId
+                        code: hiddenPlanRequired
+                        message: The selected plan must remain hidden for this admin-only assignment endpoint.
+                      - field: reason
+                        code: required
+                        message: Reason is required when bypassing the catalog.
+            nonAdditiveOverride:
+              value:
+                success: false
+                message: Validation failed
+                error:
+                  code: BILLING_OVERRIDE_NOT_ADDITIVE
+                  message: Tenant overrides may only add to the base entitlement.
+                  correlationId: a6f97f2e-4173-44d6-a0b4-09dd87d4f83a
+                  details:
+                    category: validation
+                    validationErrors:
+                      - field: numericValue
+                        code: nonAdditiveValue
+                        message: Override cannot reduce the base limit.
+
   schemas:
     ApiError:
       type: object
@@ -1729,6 +1904,9 @@ components:
           type: string
         details:
           type: object
+          description: >-
+            Structured diagnostics. Conflict responses return `details.conflicts[]`; validation
+            failures return `details.validationErrors[]` so clients can render precise admin UX.
           additionalProperties: true
 
     ApiResponseBase:
@@ -1782,6 +1960,52 @@ components:
     FeatureValueType:
       type: string
       enum: [boolean, numeric, tier]
+
+    FeatureCatalogItem:
+      type: object
+      required: [featureKey, displayName, valueType, additiveOnly]
+      properties:
+        featureKey:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        valueType:
+          $ref: "#/components/schemas/FeatureValueType"
+        additiveOnly:
+          type: boolean
+        categories:
+          type: array
+          items:
+            type: string
+        unitLabel:
+          type: string
+          nullable: true
+        minNumericValue:
+          type: number
+          nullable: true
+        maxNumericValue:
+          type: number
+          nullable: true
+        tierOptions:
+          type: array
+          items:
+            type: string
+        allowedUsageScopes:
+          type: array
+          items:
+            type: string
+            enum: [featureSet, extension, tenantOverride]
+
+    FeatureCatalog:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureCatalogItem"
 
     PriceAdjustmentType:
       type: string
@@ -3059,6 +3283,60 @@ components:
           type: string
           nullable: true
 
+    AssignHiddenPlanRequest:
+      type: object
+      required: [planId, scheduleId, reason]
+      properties:
+        planId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        effectiveMode:
+          type: string
+          enum: [immediate, nextCycle]
+          default: immediate
+        extensionSelections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionSelectionRequest"
+        paymentBehavior:
+          type: string
+          enum: [chargeProratedDelta, preserveBillingAnchor, noImmediateCharge]
+          default: preserveBillingAnchor
+        reason:
+          type: string
+        internalNote:
+          type: string
+          nullable: true
+
+    AdminTenantSubscriptionMutationResult:
+      type: object
+      properties:
+        subscription:
+          $ref: "#/components/schemas/SubscriptionCurrent"
+        assignmentType:
+          type: string
+          enum: [hiddenPlan]
+        visibilityBypassApplied:
+          type: boolean
+        effectiveMode:
+          type: string
+          enum: [immediate, nextCycle]
+        paymentResult:
+          type: object
+          properties:
+            status:
+              $ref: "#/components/schemas/PaymentResultStatus"
+            receiptId:
+              type: string
+              format: uuid
+              nullable: true
+            providerReference:
+              type: string
+              nullable: true
+
     UpdateBillingSettingsRequest:
       type: object
       properties:
@@ -3194,6 +3472,14 @@ components:
             data:
               $ref: "#/components/schemas/FeatureSet"
 
+    ApiResponseFeatureCatalog:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/FeatureCatalog"
+
     ApiResponseFeatureSetList:
       allOf:
         - $ref: "#/components/schemas/ApiResponseBase"
@@ -3321,6 +3607,14 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/BillingSettings"
+
+    ApiResponseAdminTenantSubscriptionMutationResult:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/AdminTenantSubscriptionMutationResult"
 
     ApiResponseMutationAccepted:
       allOf:
