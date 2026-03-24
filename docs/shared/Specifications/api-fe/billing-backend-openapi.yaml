@@ -7,6 +7,8 @@ info:
     admin catalog management, pricing controls, and provider webhooks.
     Billing-related notification preference management remains in the existing
     notification settings API and is intentionally out of scope for this contract.
+    `x-roles` is the authoritative indicator of role visibility; tags are used for
+    documentation grouping only.
 servers:
   - url: https://api.dev.purposepath.app
     description: Shared API host
@@ -2108,6 +2110,14 @@ components:
       type: string
       enum: [succeeded, requiresAction, failed]
 
+    PaymentHistoryStatus:
+      type: string
+      enum: [succeeded, pending, failed, refunded, partiallyRefunded]
+
+    PaymentProviderStatus:
+      type: string
+      enum: [processing, succeeded, requiresAction, failed, canceled, refunded]
+
     PaymentNextActionType:
       type: string
       enum: [none, redirect, useStripeSdk, providerAction]
@@ -2631,13 +2641,10 @@ components:
         planId:
           type: string
           format: uuid
-          nullable: true
         planName:
           type: string
-          nullable: true
         planDisplayName:
           type: string
-          nullable: true
         accessState:
           $ref: "#/components/schemas/AccessState"
         isTrial:
@@ -2864,9 +2871,9 @@ components:
           format: date-time
           nullable: true
         status:
-          type: string
+          $ref: "#/components/schemas/PaymentHistoryStatus"
         providerStatus:
-          type: string
+          $ref: "#/components/schemas/PaymentProviderStatus"
           nullable: true
         providerFailureReason:
           type: string
