@@ -18,6 +18,12 @@ Use the canonical workflow guide:
 - `integration/`: Async and cross-system integration contracts.
 - `archive/`: Superseded historical specs kept for traceability.
 
+### Billing Specifications
+
+- Frontend billing contract: `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
+- Admin billing contract: `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
+- Machine-readable source contract: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
+
 ## Working Rules
 
 - Specs here are source of truth for API contracts.
