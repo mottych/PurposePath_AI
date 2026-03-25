@@ -7,6 +7,7 @@
 ## How to Add or Modify Specifications
 
 Use the canonical workflow guide:
+
 - `docs/shared/guides/specification-change-guide.md`
 
 ## Folder Map
@@ -14,6 +15,7 @@ Use the canonical workflow guide:
 - `api-fe/`: User-facing frontend API specifications.
 - `api-admin/`: Admin portal API specifications.
 - `ai-fe/`: AI/coaching integration specifications for frontend use.
+- `ai-api/`: AI service API contracts and payload specifications.
 - `ai-admin/`: AI/admin related specifications.
 - `integration/`: Async and cross-system integration contracts.
 - `archive/`: Superseded historical specs kept for traceability.
@@ -23,6 +25,10 @@ Use the canonical workflow guide:
 - Frontend billing contract: `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
 - Admin billing contract: `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
 - Machine-readable source contract: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
+
+### AI API Specifications
+
+- Email insights contract (v1 pilot): `docs/shared/Specifications/ai-api/email-insights-api-contract.md`
 
 ## Working Rules
 
