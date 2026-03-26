@@ -248,6 +248,20 @@ class TestGetTopic:
         # response_schema should be None by default
         assert data.get("response_schema") is None
 
+    async def test_get_email_insight_topic_from_registry(
+        self, client: TestClient, mock_repository: AsyncMock
+    ) -> None:
+        """Test getting the pilot email insight topic from registry fallback."""
+        mock_repository.get.return_value = None  # Not in DB
+
+        response = client.get("/admin/topics/goal_created_email_insight")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic_id"] == "goal_created_email_insight"
+        assert data["category"] == "email_insight"
+        assert data["from_database"] is False
+
     async def test_get_nonexistent_topic(
         self, client: TestClient, mock_repository: AsyncMock
     ) -> None:

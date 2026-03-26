@@ -456,5 +456,22 @@ class TestTopicsEndpoint:
         # Verify known topics exist
         topic_ids = [t["topic_id"] for t in topics]
         assert "website_scan" in topic_ids, "website_scan should be available"
+        assert "goal_created_email_insight" in topic_ids, (
+            "goal_created_email_insight should be available"
+        )
         # Coaching topics from COACHING_TOPIC_REGISTRY use simple IDs
         assert "core_values" in topic_ids, "core_values coaching topic should be available"
+
+    def test_topics_include_email_insight_category(self, client: TestClient) -> None:
+        """Test that the pilot topic is exposed with email_insight category."""
+        response = client.get("/api/v1/ai/topics")
+
+        assert response.status_code == status.HTTP_200_OK
+        topics = response.json()
+        pilot_topic = next(
+            (t for t in topics if t["topic_id"] == "goal_created_email_insight"), None
+        )
+
+        assert pilot_topic is not None
+        assert pilot_topic["topic_type"] == "single_shot"
+        assert pilot_topic["category"] == TopicCategory.EMAIL_INSIGHT.value
