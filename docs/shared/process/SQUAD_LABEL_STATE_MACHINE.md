@@ -451,6 +451,9 @@ If behavior changes and this document is not updated, workflow policy should fai
 
 ## Last Updated
 
+- 2026-03-27
+- Expanded `squad-copilot-delivery-loop.yml` failure recovery semantics: when watched PR validation workflows fail for a Copilot-authored PR, automation now clears requested reviewers, posts an explicit recovery note on the PR thread, applies `go:review-failed` to linked `squad:copilot` issues, and includes failing-check context in the issue comment so implementation resumes without a manual wake-up step.
+- Clarified non-terminal deploy-close behavior for delivery-loop automation: if a PR/issue reaches merge or deploy completion before the human deploy gate is satisfied, the issue is reopened with guidance that the required `go:review-ready` -> `human:deploy-validate` -> `go:deploy` path is still pending.
 - 2026-03-20
 - Simplified merge progression ownership: `squad-copilot-delivery-loop.yml` now uses check-run readiness (not combined status) and `github.token` for merge/recovery operations.
 - Added Ralph flow enforcement in `squad-heartbeat.yml`: scheduled monitor continuously normalizes open Copilot PRs by clearing requested reviewers and arming auto-merge when non-delivery checks are green, with retry handling for transient unstable status.
