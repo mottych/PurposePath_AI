@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from coaching.src.core.topic_seed_data import TopicSeedData
+from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.services.topic_seeding_service import (
     SeedingResult,
@@ -208,3 +208,30 @@ class TestTopicSeedingService:
             # Assert
             assert isinstance(report, ValidationReport)
             assert len(report.missing_topics) > 0
+
+    @pytest.mark.asyncio
+    async def test_seed_goal_created_email_insight_saves_prompts(
+        self, service: TopicSeedingService, mock_topic_repo: Mock, mock_s3_storage: Mock
+    ) -> None:
+        """Test that seeding pilot topic persists system/user prompts via S3 storage."""
+        # Arrange
+        mock_topic_repo.get.return_value = None
+        mock_topic_repo.create.return_value = Mock(spec=LLMTopic)
+        seed = get_seed_data_for_topic("goal_created_email_insight")
+        assert seed is not None
+
+        # Act
+        success = await service.seed_topic(topic_id="goal_created_email_insight")
+
+        # Assert
+        assert success is True
+        assert mock_topic_repo.create.called
+
+        saved_prompt_types = {
+            kwargs["prompt_type"] for _, kwargs in mock_s3_storage.save_prompt.await_args_list
+        }
+        assert saved_prompt_types == {"system", "user"}
+
+        for _, kwargs in mock_s3_storage.save_prompt.await_args_list:
+            assert kwargs["topic_id"] == "goal_created_email_insight"
+            assert kwargs["content"]

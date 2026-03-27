@@ -376,7 +376,7 @@ INSTRUCTIONS:
 Each suggestion should offer a different strategic positioning angle while remaining authentic to the business context.""",
         display_order=16,
     ),
-    # ========== Section 2: Insights Generation (1 topic) ==========
+    # ========== Section 2: Insights Generation (2 topics) ==========
     "insights_generation": TopicSeedData(
         topic_id="insights_generation",
         topic_name="Insights Generation",
@@ -424,6 +424,89 @@ Issues: {open_issues}
 
 Generate insights that assess current state based on measure data and provide KISS recommendations (Keep, Improve, Start, Stop) relevant to the business and its alignment with purpose and values.""",
         display_order=30,
+    ),
+    "goal_created_email_insight": TopicSeedData(
+        topic_id="goal_created_email_insight",
+        topic_name="Goal Created Email Insight",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.EMAIL_INSIGHT.value,
+        description=(
+            "Generate structured email insight content for goal-created activity events "
+            "using purposepath.email-insight.v1 contract"
+        ),
+        temperature=0.4,
+        max_tokens=1800,
+        default_system_prompt="""You are PurposePath's email insight generator for activity-driven coaching.
+
+Your job is to generate concise, supportive, actionable content for users right after they create a goal.
+
+HARD OUTPUT CONTRACT:
+1. Output exactly one valid JSON object.
+2. Do not include markdown, code fences, prose before/after JSON, HTML, or XML.
+3. Use this payload shape only:
+{
+  "schemaVersion": "1.0",
+  "title": "string",
+  "summary": "string",
+  "blocks": [
+    {"type": "paragraph", "text": "string"},
+    {"type": "list", "items": ["string"]},
+    {"type": "cta", "label": "string", "action": "string", "url": "https://..."}
+  ],
+  "confidence": 0.0,
+  "generationMeta": {
+    "modelId": "string",
+    "promptVersion": "goal_created_email_insight@v1",
+    "traceId": "string",
+    "generatedAtUtc": "ISO-8601 UTC timestamp"
+  }
+}
+
+FIELD AND LIMIT RULES:
+- schemaVersion must be "1.0"
+- title: 1..120 characters
+- summary: 1..500 characters
+- blocks: 1..6 items
+- allowed block types only: paragraph, list, cta
+- paragraph.text: 1..600
+- list.items: 1..6 items, each item 1..180
+- cta.label: 1..80
+- cta.action: 1..120
+- cta.url is optional, but if present it must be https
+- confidence is optional; when present use either:
+  - float in range 0.0..1.0
+  - one of: "low", "medium", "high"
+
+CONTENT GUIDELINES:
+- Tone: supportive, clear, and practical
+- Congratulate progress without exaggeration
+- Suggest next steps that are realistic and immediate
+- Do not invent facts not grounded in input context
+- Keep text ready for direct embedding into email templates
+- Avoid sensitive, risky, or policy-violating guidance""",
+        default_user_prompt="""Generate an email insight for the "goal created" trigger.
+
+Context:
+- Tenant business name: {business_name}
+- User display name: {user_name}
+- Goal id: {goal_id}
+- Goal title: {goal_title}
+- Goal description: {goal_description}
+- Locale hint: {locale}
+
+Required behavior:
+1. Return one JSON object only (no markdown/code fences).
+2. Use schemaVersion "1.0".
+3. Include 2-4 total blocks with at least:
+   - one paragraph block
+   - one list block with 2-4 short items
+4. Add one cta block when a safe and useful next action exists.
+5. Keep suggestions specific to this goal context.
+6. Do not output HTML or XML in any field.
+7. Do not add extra keys beyond the contract.
+
+Return only JSON.""",
+        display_order=31,
     ),
     # ========== Section 3: Strategic Planning AI (6 topics) ==========
     "goal_intent_review": TopicSeedData(

@@ -51,14 +51,39 @@ class TestTopicSeedData:
         """Test that all topics use valid TopicType enum values."""
         valid_types = {t.value for t in TopicType}
         for topic_id, seed in TOPIC_SEED_DATA.items():
-            assert (
-                seed.topic_type in valid_types
-            ), f"Topic '{topic_id}' has invalid type: {seed.topic_type}"
+            assert seed.topic_type in valid_types, (
+                f"Topic '{topic_id}' has invalid type: {seed.topic_type}"
+            )
 
     def test_all_topics_use_valid_categories(self) -> None:
         """Test that all topics use valid TopicCategory enum values."""
         valid_categories = {c.value for c in TopicCategory}
         for topic_id, seed in TOPIC_SEED_DATA.items():
-            assert (
-                seed.category in valid_categories
-            ), f"Topic '{topic_id}' has invalid category: {seed.category}"
+            assert seed.category in valid_categories, (
+                f"Topic '{topic_id}' has invalid category: {seed.category}"
+            )
+
+    def test_goal_created_email_insight_seed_exists(self) -> None:
+        """Test that goal_created_email_insight has seed configuration."""
+        seed = TOPIC_SEED_DATA.get("goal_created_email_insight")
+
+        assert seed is not None
+        assert seed.topic_id == "goal_created_email_insight"
+        assert seed.topic_type == TopicType.SINGLE_SHOT.value
+        assert seed.category == TopicCategory.EMAIL_INSIGHT.value
+        assert seed.default_system_prompt
+        assert seed.default_user_prompt
+
+    def test_goal_created_email_insight_prompt_contract_constraints(self) -> None:
+        """Test seed prompts encode JSON-only and safety constraints."""
+        seed = TOPIC_SEED_DATA["goal_created_email_insight"]
+
+        system_prompt = seed.default_system_prompt.lower()
+        user_prompt = seed.default_user_prompt.lower()
+
+        assert "exactly one valid json object" in system_prompt
+        assert "do not include markdown" in system_prompt
+        assert "do not include" in system_prompt and "html" in system_prompt
+        assert '"schemaversion": "1.0"' in system_prompt
+        assert "paragraph, list, cta" in system_prompt
+        assert "return one json object only" in user_prompt
