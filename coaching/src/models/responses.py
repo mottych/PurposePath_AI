@@ -2,10 +2,10 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def _default_notification_preferences() -> dict[str, bool]:
@@ -223,6 +223,102 @@ class InsightsGenerationResponse(BaseModel):
     insights: list[InsightLLMResponse] = Field(
         description="List of generated insights (typically 5-10)",
         min_length=1,
+    )
+
+
+class EmailInsightGenerationMeta(BaseModel):
+    """Metadata for email insight generation output."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    model_id: str = Field(
+        alias="modelId",
+        min_length=1,
+        description="Model identifier used to generate content",
+    )
+    prompt_version: str = Field(
+        alias="promptVersion",
+        min_length=1,
+        description="Prompt version used for generation",
+    )
+    trace_id: str = Field(
+        alias="traceId",
+        min_length=1,
+        description="Trace identifier for observability",
+    )
+    generated_at_utc: datetime = Field(
+        alias="generatedAtUtc",
+        description="UTC timestamp when content was generated",
+    )
+
+
+class EmailInsightParagraphBlock(BaseModel):
+    """Paragraph block in email insight payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["paragraph"] = "paragraph"
+    text: str = Field(min_length=1, max_length=600, description="Paragraph content")
+
+
+class EmailInsightListBlock(BaseModel):
+    """List block in email insight payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["list"] = "list"
+    items: list[str] = Field(
+        min_length=1,
+        max_length=6,
+        description="List items for actionable guidance",
+    )
+
+
+class EmailInsightCtaBlock(BaseModel):
+    """CTA block in email insight payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["cta"] = "cta"
+    label: str = Field(min_length=1, max_length=80, description="CTA label text")
+    action: str = Field(min_length=1, max_length=120, description="CTA action identifier")
+    url: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Optional URI link; https-only enforcement is handled by backend runtime policy",
+    )
+
+
+EmailInsightBlock = Annotated[
+    EmailInsightParagraphBlock | EmailInsightListBlock | EmailInsightCtaBlock,
+    Field(discriminator="type"),
+]
+
+
+class EmailInsightResponse(BaseModel):
+    """Structured response model for email insight content."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    schema_version: str = Field(
+        alias="schemaVersion",
+        pattern=r"^\d+\.\d+(?:\.\d+)?$",
+        description="Semantic version for the payload schema",
+    )
+    title: str = Field(min_length=1, max_length=120, description="Insight title")
+    summary: str = Field(min_length=1, max_length=500, description="Insight summary")
+    blocks: list[EmailInsightBlock] = Field(
+        min_length=1,
+        max_length=6,
+        description="Structured content blocks for email embedding",
+    )
+    confidence: Annotated[float, Field(ge=0.0, le=1.0)] | Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Optional confidence signal as 0-1 float or low/medium/high enum",
+    )
+    generation_meta: EmailInsightGenerationMeta = Field(
+        alias="generationMeta",
+        description="Generation metadata for traceability"
     )
 
 

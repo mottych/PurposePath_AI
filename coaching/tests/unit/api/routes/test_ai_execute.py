@@ -408,6 +408,7 @@ class TestSchemasEndpoint:
         assert isinstance(schemas, list)
         assert len(schemas) > 0
         assert "WebsiteScanResponse" in schemas
+        assert "EmailInsightResponse" in schemas
 
 
 class TestTopicsEndpoint:
@@ -475,3 +476,4 @@ class TestTopicsEndpoint:
         assert pilot_topic is not None
         assert pilot_topic["topic_type"] == "single_shot"
         assert pilot_topic["category"] == TopicCategory.EMAIL_INSIGHT.value
+        assert pilot_topic["response_model"] == "EmailInsightResponse"
