@@ -1,8 +1,8 @@
-# Email Insights - Business Requirements (v1 Pilot)
+# Email Insights - Business Requirements (v1 Pilot + Dispatch Cutover Controls)
 
-**Version:** 1.0  
-**Date:** March 25, 2026  
-**Status:** Approved for Pilot
+**Version:** 1.2  
+**Date:** March 27, 2026  
+**Status:** Proposed for Review (Generic AI Insight + Service Token Extension)
 
 ---
 
@@ -142,3 +142,107 @@ Pilot success should be evaluated with agreed business metrics, such as:
 ## 10. Approval Statement
 
 These requirements define the approved business scope and expected value for the v1 `goal_created_email_insight` pilot.
+
+---
+
+## 11. Generic AI Insight Template Merge Requirements (Any Eligible Template)
+
+These requirements extend the pilot model so any eligible email template can include AI-generated content using a topic-based runtime parameter.
+
+### 11.1 Generic Topic Model
+
+- The email enrichment system must support AI insights for any approved email topic, not only `goal_created_email_insight`.
+- A topic must be onboarded by:
+  - adding an email topic to the email topic registry;
+  - wiring the topic to a triggering business event;
+  - associating the topic with template/config metadata.
+- Topic onboarding should not require new merge-engine code per topic.
+
+### 11.2 Admin Template Authoring Model
+
+- Admin users must be able to embed a predefined AI-insight parameter in templates, similar to existing predefined merge parameters.
+- The predefined AI-insight parameter must include or resolve the target AI insight topic.
+- If a template does not include an AI-insight parameter, the existing non-AI template merge path remains unchanged.
+
+### 11.3 Runtime Merge Behavior
+
+- During template merge, when a template includes the predefined AI-insight parameter:
+  - backend must call AI execution via event-driven flow using tenant context, user context, and AI insight topic;
+  - backend must include a backend-issued short-lived service token in the payload;
+  - backend must merge the AI response payload into the template output through the existing render pipeline.
+- Backend remains responsible for final template rendering and delivery.
+
+### 11.4 AI Service Enrichment Responsibilities
+
+- AI service must resolve the requested insight topic and load the corresponding LLM prompt assets.
+- AI service must determine if prompt enrichment is needed for that topic.
+- When enrichment is required, AI service calls standard backend user-facing APIs using the provided service token.
+- AI service returns structured insight payload content for backend merge.
+
+### 11.5 Backward Compatibility
+
+- Existing `goal_created_email_insight` behavior must continue to function during rollout.
+- Existing templates without AI-insight parameters must continue to merge/send exactly as before.
+- Generic support must be additive and controlled through registry/configuration.
+
+---
+
+## 12. Service Token Requirements for AI Prompt Enrichment
+
+These requirements define how backend-issued service tokens are used for AI-initiated enrichment calls.
+
+### 12.1 Issuance and Ownership
+
+- Backend API issues the token and includes it in the AI request payload.
+- AI service does not mint, alter, or re-sign the token; it only forwards it when calling backend APIs.
+- Backend API validates the same token through standard API authentication/authorization components.
+
+### 12.2 Token Constraints
+
+- Token must be short-lived and scoped to enrichment use.
+- Token must carry tenant/user context required for authorized enrichment calls.
+- Token claims must be compatible with the standard backend token validation pipeline.
+
+### 12.3 Validation and Audit Expectations
+
+- Producer-side validation: backend must validate outbound AI request envelope completeness before publish/send.
+- Consumer-side validation: backend API endpoints must validate token and authorization through standard auth controls when AI calls for enrichment.
+- Correlation and idempotency identifiers must remain traceable across:
+  - event trigger;
+  - AI execution request;
+  - enrichment API calls;
+  - final email send/audit records.
+
+---
+
+## 13. Streamlined Email Dispatch Cutover Readiness Requirements
+
+These requirements define the minimum policy/documentation/validation evidence needed before retiring legacy runtime paths during the streamlined email cutover.
+
+### 13.1 Policy and Decision Transparency
+
+- Template resolution decisions must be auditable for direct-path sends, including source and fallback reason.
+- Insight processing decisions must be auditable for async sends using decision metadata fields in existing audit contracts.
+- Mandatory user communications must not depend on optional preference gates.
+
+### 13.2 Contract Alignment Requirements
+
+- Admin template analytics contracts must reflect repository-backed metrics and timeline responses.
+- Documentation must match implemented behavior for:
+  - DB-first template resolution with controlled inline fallback.
+  - Insight fallback/degradation metadata enrichment in async audit decision context.
+  - 30-day rolling analytics contract used by admin template analytics endpoint.
+
+### 13.3 Validation Evidence Requirements
+
+- A repository-persisted cutover validation artifact must exist and include:
+  - command-level validation evidence;
+  - impacted code/document references;
+  - explicit statement of contract impact (changed/unchanged) per endpoint.
+- Validation checklist references must be kept in-repo and linked from issue closure notes.
+
+### 13.4 Cutover Exit Criteria
+
+- Shared requirements, design, and API specification artifacts are aligned to implemented runtime behavior.
+- Focused validation commands for notification processor and streamlined email behavior are green.
+- Evidence links are posted in issue completion notes to support dev/staging gate decisions.
