@@ -1372,22 +1372,41 @@ Get template usage analytics.
 {
   "templateId": "990e8400-e29b-41d4-a716-446655440000",
   "templateName": "email_verification",
-  "totalSent": 15420,
-  "sentLast30Days": 1250,
-  "sentLast7Days": 310,
-  "sentToday": 45,
-  "averageOpenRate": 72.5,
-  "averageClickRate": 34.2,
-  "lastSent": "2026-02-04T10:00:00Z",
-  "mostRecentErrors": [
+  "period": {
+    "start": "2026-02-27T00:00:00Z",
+    "end": "2026-03-27T00:00:00Z"
+  },
+  "metrics": {
+    "sent": 1250,
+    "delivered": 1180,
+    "opened": 854,
+    "clicked": 291,
+    "bounced": 22,
+    "unsubscribed": 9
+  },
+  "rates": {
+    "deliveryRate": 94.4,
+    "openRate": 72.37,
+    "clickRate": 24.66,
+    "bounceRate": 1.76,
+    "unsubscribeRate": 0.76
+  },
+  "timeline": [
     {
-      "errorMessage": "Invalid recipient email",
-      "occurredAt": "2026-02-03T15:30:00Z",
-      "count": 2
+      "date": "2026-03-25T00:00:00Z",
+      "sent": 43,
+      "delivered": 41,
+      "opened": 30,
+      "clicked": 11,
+      "bounced": 1
     }
   ]
 }
 ```
+
+**Notes:**
+- The endpoint returns a rolling analytics window sourced from template analytics repositories.
+- `timeline` points include delivery funnel counts per day and are intended for trend visualization.
 
 **Status Codes:**
 - `200 OK` - Analytics retrieved successfully

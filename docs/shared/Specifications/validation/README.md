@@ -2,6 +2,10 @@
 
 Use this folder when contract-sensitive implementation files changed but API contracts did not.
 
+Current artifacts:
+- `2026-03-27-billing-epic-pr-781.md`
+- `2026-03-27-streamlined-email-cutover-readiness.md`
+
 Purpose:
 - Provide explicit evidence that request/response payloads, constraints, and error contracts still match specifications.
 - Prevent accidental drift when making bug fixes or internal refactors.
