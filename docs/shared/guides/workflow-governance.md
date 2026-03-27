@@ -6,9 +6,17 @@ Define how changes are planned, executed, reviewed, and closed.
 
 This guide is repository-agnostic. Repository-specific implementation rules (for example language/framework architecture constraints) must be defined in local guides under `docs/local/guides/`.
 
+## Branch Naming by Repository
+
+Use repository-specific branch names when applying this guide:
+
+- `PurposePath_API`: production=`main`, pre-production=`preview`, development=`dev`.
+- `PurposePath_Admin`: production=`master`, pre-production=`staging`, development=`dev`.
+- If a repository uses different names, define its mapping in local docs and use that mapping consistently in workflow commands and PR targets.
+
 ## Mandatory Control Rules
 
-- Never commit directly to `dev` or `main`.
+- Never commit directly to `dev` or the repository production branch (`main` or `master`).
 - Never use git stash in normal workflow (`git stash`, `pop`, `apply`, `clear`).
 - Keep one issue per branch; do not carry unrelated changes.
 - Before switching branches, working tree must be clean (`git status --short`).
@@ -35,7 +43,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 1. For standard development issues:
 	- `git checkout dev && git pull origin dev`
 2. For production issues/hotfixes:
-	- `git checkout main && git pull origin main`
+	- `git checkout <production-branch> && git pull origin <production-branch>`
 3. Resolve conflicts before continuing.
 4. Confirm clean state:
 	- `git stash list` is empty.
@@ -69,7 +77,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 5. If alignment/spec deviation is discovered, stop and raise correction path.
 
 ### Production Issue Path
-1. Create hotfix branch from `main`:
+1. Create hotfix branch from the production branch:
 	- `git checkout -b hotfix/issue-{NUMBER}-{description}`
 2. Push branch immediately:
 	- `git push -u origin hotfix/issue-{NUMBER}-{description}`
@@ -99,11 +107,13 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 3. Verify deployment workflow success.
 
 ### Production Issue Path
-1. Validate in preprod first (mandatory).
-2. Open PR `hotfix/* -> main` after successful preprod validation.
-3. Promote same validated commit/artifact to production.
-4. Complete merge-down sequence:
-	- `main -> preview -> dev`
+1. Create `hotfix/*` from the production branch and push to deploy preprod.
+2. Validate in preprod first (mandatory).
+3. Open PR `hotfix/* -> <production-branch>` after successful preprod validation.
+4. Merge to `<production-branch>` to deploy production and refresh preprod baseline parity.
+5. Complete merge-down sequence from production to pre-production to development.
+   - `PurposePath_API`: `main -> preview -> dev`
+   - `PurposePath_Admin`: `master -> staging -> dev`
 
 ## Step 5: Close Issue
 
