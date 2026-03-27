@@ -116,6 +116,9 @@ class AsyncAIExecutionService:
         topic_id: str,
         parameters: dict[str, Any],
         jwt_token: str | None = None,
+        correlation_id: str | None = None,
+        idempotency_key: str | None = None,
+        event_id: str | None = None,
     ) -> AIJob:
         """Create and validate a new async AI job.
 
@@ -186,6 +189,9 @@ class AsyncAIExecutionService:
             tenant_id=tenant_id,
             user_id=user_id,
             topic_id=topic_id,
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            event_id=event_id,
         )
 
         # Publish event to trigger async execution in separate Lambda invocation
@@ -198,6 +204,9 @@ class AsyncAIExecutionService:
                 topic_id=topic_id,
                 parameters=parameters,
                 estimated_duration_ms=estimated_duration,
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                event_id=event_id,
             )
             logger.info(
                 "async_job.execution_triggered",

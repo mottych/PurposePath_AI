@@ -33,6 +33,16 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/ai", tags=["AI Async Execute"])
 
 
+async def get_optional_current_user(authorization: str | None = Header(None)) -> UserContext | None:
+    """Best-effort user extraction for routes supporting backend-triggered calls."""
+    if not authorization:
+        return None
+    try:
+        return await get_current_user(authorization)
+    except HTTPException:
+        return None
+
+
 @router.post(
     "/execute-async",
     response_model=AsyncJobCreatedResponse,
@@ -104,7 +114,7 @@ happens asynchronously, and results are delivered via WebSocket events.
 )
 async def execute_async(
     request_body: AsyncAIRequest,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext | None = Depends(get_optional_current_user),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
     authorization: str | None = Header(None),
 ) -> AsyncJobCreatedResponse:
@@ -125,20 +135,35 @@ async def execute_async(
     Raises:
         HTTPException: Various status codes for validation errors
     """
-    # Extract tenant and user from authenticated context
-    tenant_id = user.tenant_id
-    user_id = user.user_id
+    contract_v2 = request_body.is_backend_contract_v2
 
-    # Extract JWT token for parameter enrichment during async execution
-    jwt_token: str | None = None
-    if authorization and authorization.startswith("Bearer "):
-        jwt_token = authorization.split(" ")[1]
+    if contract_v2:
+        tenant_id = str(request_body.tenant_id)
+        user_id = str(request_body.user_id)
+        parameters = request_body.activity_data or {}
+        jwt_token = request_body.auth_context.service_token if request_body.auth_context else None
+    else:
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid authorization header",
+            )
+        tenant_id = user.tenant_id
+        user_id = user.user_id
+        parameters = request_body.parameters
+        jwt_token = None
+        if authorization and authorization.startswith("Bearer "):
+            jwt_token = authorization.split(" ")[1]
 
     logger.info(
         "async_execute.started",
         topic_id=request_body.topic_id,
         tenant_id=tenant_id,
         user_id=user_id,
+        contract_version="v2" if contract_v2 else "legacy",
+        correlation_id=request_body.correlation_id if contract_v2 else None,
+        idempotency_key=request_body.idempotency_key if contract_v2 else None,
+        event_id=request_body.event_id if contract_v2 else None,
     )
 
     try:
@@ -146,8 +171,11 @@ async def execute_async(
             tenant_id=tenant_id,
             user_id=user_id,
             topic_id=request_body.topic_id,
-            parameters=request_body.parameters,
+            parameters=parameters,
             jwt_token=jwt_token,
+            correlation_id=request_body.correlation_id if contract_v2 else None,
+            idempotency_key=request_body.idempotency_key if contract_v2 else None,
+            event_id=request_body.event_id if contract_v2 else None,
         )
 
         logger.info(

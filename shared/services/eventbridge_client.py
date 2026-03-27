@@ -246,6 +246,9 @@ class EventBridgePublisher:
         topic_id: str,
         parameters: dict[str, Any],
         estimated_duration_ms: int = 30000,
+        correlation_id: str | None = None,
+        idempotency_key: str | None = None,
+        event_id: str | None = None,
     ) -> str:
         """Publish ai.job.created event to trigger async execution.
 
@@ -272,6 +275,9 @@ class EventBridgePublisher:
                 "topicId": topic_id,
                 "parameters": parameters,
                 "estimatedDurationMs": estimated_duration_ms,
+                "correlationId": correlation_id,
+                "idempotencyKey": idempotency_key,
+                "eventId": event_id,
             },
         )
         return self.publish(event)
