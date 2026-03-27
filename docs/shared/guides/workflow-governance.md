@@ -11,7 +11,7 @@ This guide is repository-agnostic. Repository-specific implementation rules (for
 Use repository-specific branch names when applying this guide:
 
 - `PurposePath_API`: production=`main`, pre-production=`preview`, development=`dev`.
-- All others (`PurposePath_Web`,`PurposePath_AI`,`PurposePath_Admin`): production=`master`, pre-production=`staging`, development=`dev`.
+- `PurposePath_Admin`: production=`master`, pre-production=`staging`, development=`dev`.
 - If a repository uses different names, define its mapping in local docs and use that mapping consistently in workflow commands and PR targets.
 
 ## Mandatory Control Rules
