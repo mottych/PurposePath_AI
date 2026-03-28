@@ -35,6 +35,7 @@ class TestEmailInsightResponse:
                 "modelId": "gpt-5",
                 "promptVersion": "goal_created_email_insight@v1",
                 "traceId": "trace-123",
+                "topicId": "goal_created_email_insight",
                 "generatedAtUtc": datetime.now(UTC),
             },
         )
@@ -57,6 +58,7 @@ class TestEmailInsightResponse:
                     "modelId": "gpt-5",
                     "promptVersion": "v1",
                     "traceId": "trace-1",
+                    "topicId": "goal_created_email_insight",
                     "generatedAtUtc": datetime.now(UTC),
                 },
             )
@@ -83,6 +85,7 @@ class TestEmailInsightResponse:
                     "modelId": "gpt-5",
                     "promptVersion": "v1",
                     "traceId": "trace-1",
+                    "topicId": "goal_created_email_insight",
                     "generatedAtUtc": datetime.now(UTC),
                 },
             )
@@ -99,8 +102,25 @@ class TestEmailInsightResponse:
                 "modelId": "gpt-5",
                 "promptVersion": "v1",
                 "traceId": "trace-1",
+                "topicId": "goal_created_email_insight",
                 "generatedAtUtc": datetime.now(UTC),
             },
         )
 
         assert payload.confidence == "high"
+
+    def test_missing_generation_meta_topic_id_fails_validation(self) -> None:
+        """Should enforce generationMeta.topicId contract field."""
+        with pytest.raises(ValidationError):
+            EmailInsightResponse(
+                schemaVersion="1.0",
+                title="Great start",
+                summary="Summary text",
+                blocks=[{"type": "paragraph", "text": "Body text"}],
+                generationMeta={
+                    "modelId": "gpt-5",
+                    "promptVersion": "v1",
+                    "traceId": "trace-1",
+                    "generatedAtUtc": datetime.now(UTC),
+                },
+            )

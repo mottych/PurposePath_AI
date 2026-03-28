@@ -1,6 +1,6 @@
 """Unit tests for async AI API models."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from coaching.src.api.models.async_ai import AsyncAIRequest
@@ -41,7 +41,7 @@ class TestAsyncAIRequest:
             activityData={"goal_id": "goal_1"},
             authContext={
                 "serviceToken": "service-token",
-                "expiresAtUtc": datetime.now(UTC),
+                "expiresAtUtc": datetime.now(UTC) + timedelta(minutes=5),
                 "issuer": "PurposePath_Api",
                 "tokenType": "service_enrichment",
             },
@@ -60,8 +60,88 @@ class TestAsyncAIRequest:
                 activityData={"goal_id": "goal_1"},
                 authContext={
                     "serviceToken": "service-token",
+                    "expiresAtUtc": datetime.now(UTC) + timedelta(minutes=5),
+                    "issuer": "PurposePath_Api",
+                    "tokenType": "service_enrichment",
+                },
+            )
+
+    def test_v2_missing_service_token_fails(self) -> None:
+        """V2 payload should fail when service token is missing."""
+        with pytest.raises(ValidationError):
+            AsyncAIRequest(
+                eventId="evt-1",
+                occurredAtUtc=datetime.now(UTC),
+                sourceService="PurposePath_Api",
+                schemaVersion="2.0",
+                correlationId="corr-1",
+                idempotencyKey="idem-1",
+                retryAttempt=0,
+                tenantId="tenant_1",
+                userId="user_1",
+                topicCategory="email_insight",
+                topicId="goal_created_email_insight",
+                eventSignal="goal_created",
+                locale="en-US",
+                timezone="UTC",
+                activityData={"goal_id": "goal_1"},
+                authContext={
                     "expiresAtUtc": datetime.now(UTC),
                     "issuer": "PurposePath_Api",
                     "tokenType": "service_enrichment",
+                },
+            )
+
+    def test_v2_expired_service_token_fails(self) -> None:
+        """V2 payload should fail when authContext token is expired."""
+        with pytest.raises(ValidationError, match="expired"):
+            AsyncAIRequest(
+                eventId="evt-1",
+                occurredAtUtc=datetime.now(UTC),
+                sourceService="PurposePath_Api",
+                schemaVersion="2.0",
+                correlationId="corr-1",
+                idempotencyKey="idem-1",
+                retryAttempt=0,
+                tenantId="tenant_1",
+                userId="user_1",
+                topicCategory="email_insight",
+                topicId="goal_created_email_insight",
+                eventSignal="goal_created",
+                locale="en-US",
+                timezone="UTC",
+                activityData={"goal_id": "goal_1"},
+                authContext={
+                    "serviceToken": "service-token",
+                    "expiresAtUtc": datetime(2000, 1, 1, tzinfo=UTC),
+                    "issuer": "PurposePath_Api",
+                    "tokenType": "service_enrichment",
+                },
+            )
+
+    def test_v2_invalid_token_type_fails(self) -> None:
+        """V2 payload should fail deterministic token type validation."""
+        with pytest.raises(ValidationError, match="service_enrichment"):
+            AsyncAIRequest(
+                eventId="evt-1",
+                occurredAtUtc=datetime.now(UTC),
+                sourceService="PurposePath_Api",
+                schemaVersion="2.0",
+                correlationId="corr-1",
+                idempotencyKey="idem-1",
+                retryAttempt=0,
+                tenantId="tenant_1",
+                userId="user_1",
+                topicCategory="email_insight",
+                topicId="goal_created_email_insight",
+                eventSignal="goal_created",
+                locale="en-US",
+                timezone="UTC",
+                activityData={"goal_id": "goal_1"},
+                authContext={
+                    "serviceToken": "service-token",
+                    "expiresAtUtc": datetime.now(UTC) + timedelta(minutes=5),
+                    "issuer": "PurposePath_Api",
+                    "tokenType": "wrong_scope",
                 },
             )

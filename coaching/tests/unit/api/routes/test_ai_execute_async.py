@@ -1,6 +1,6 @@
 """Unit tests for async AI execute routes."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -86,7 +86,7 @@ class TestAsyncExecuteRoute:
                     "activityData": {"goal_id": "goal_1"},
                     "authContext": {
                         "serviceToken": "backend-service-token",
-                        "expiresAtUtc": datetime.now(UTC).isoformat(),
+                        "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
                         "issuer": "PurposePath_Api",
                         "tokenType": "service_enrichment",
                     },
@@ -118,5 +118,43 @@ class TestAsyncExecuteRoute:
             )
 
             assert response.status_code == 401
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_v2_without_service_token_fails_validation(
+        self, client: TestClient, mock_service: AsyncMock
+    ) -> None:
+        """V2 request missing authContext.serviceToken should fail with 422."""
+        from coaching.src.api.dependencies.async_execution import get_async_execution_service
+
+        app.dependency_overrides[get_async_execution_service] = lambda: mock_service
+        try:
+            response = client.post(
+                "/api/v1/ai/execute-async",
+                json={
+                    "eventId": "evt-1",
+                    "occurredAtUtc": datetime.now(UTC).isoformat(),
+                    "sourceService": "PurposePath_Api",
+                    "schemaVersion": "2.0",
+                    "correlationId": "corr-1",
+                    "idempotencyKey": "idem-1",
+                    "retryAttempt": 0,
+                    "tenantId": "tenant_from_payload",
+                    "userId": "user_from_payload",
+                    "topicCategory": "email_insight",
+                    "topicId": "goal_created_email_insight",
+                    "eventSignal": "goal_created",
+                    "locale": "en-US",
+                    "timezone": "UTC",
+                    "activityData": {"goal_id": "goal_1"},
+                    "authContext": {
+                        "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
+                        "issuer": "PurposePath_Api",
+                        "tokenType": "service_enrichment",
+                    },
+                },
+            )
+            assert response.status_code == 422
+            mock_service.create_job.assert_not_awaited()
         finally:
             app.dependency_overrides.clear()

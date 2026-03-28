@@ -4,7 +4,7 @@ This module provides request and response models for the async AI
 execution endpoints (POST /ai/execute-async, GET /ai/jobs/{jobId}).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.domain.entities.ai_job import AIJob
@@ -34,6 +34,18 @@ class AuthContext(BaseModel):
         min_length=1,
         description="Token type, expected value: service_enrichment",
     )
+
+    @model_validator(mode="after")
+    def validate_token_expiry(self) -> "AuthContext":
+        """Require non-expired service tokens for enrichment calls."""
+        expires_at = (
+            self.expires_at_utc.replace(tzinfo=UTC)
+            if self.expires_at_utc.tzinfo is None
+            else self.expires_at_utc.astimezone(UTC)
+        )
+        if expires_at <= datetime.now(UTC):
+            raise ValueError("authContext.serviceToken is expired")
+        return self
 
 
 class AsyncAIRequest(BaseModel):

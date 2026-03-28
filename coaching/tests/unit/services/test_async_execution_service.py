@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from coaching.src.domain.entities.ai_job import AIJob, AIJobStatus
+from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.services.async_execution_service import (
     AsyncAIExecutionService,
     JobNotFoundError,
@@ -319,3 +319,62 @@ class TestAsyncAIExecutionService:
                 job_id="nonexistent",
                 tenant_id="tenant_456",
             )
+
+    @pytest.mark.asyncio
+    async def test_execute_job_from_event_email_insight_missing_service_token_fails_deterministically(
+        self,
+        service: AsyncAIExecutionService,
+        mock_job_repository: AsyncMock,
+        mock_ai_engine: AsyncMock,
+    ) -> None:
+        """Email insight jobs require service token for enrichment flows."""
+        job = AIJob(
+            user_id="user_123",
+            tenant_id="tenant_456",
+            topic_id="goal_created_email_insight",
+            parameters={"goal_id": "goal_1"},
+            status=AIJobStatus.PENDING,
+            jwt_token=None,
+        )
+        mock_job_repository.get_by_id_for_tenant.return_value = job
+
+        with patch(
+            "coaching.src.services.async_execution_service.get_topic_by_topic_id"
+        ) as mock_get_endpoint:
+            from coaching.src.core.constants import TopicCategory
+            from coaching.src.core.topic_registry import TopicDefinition
+
+            mock_endpoint = MagicMock(spec=TopicDefinition)
+            mock_endpoint.response_model = "EmailInsightResponse"
+            mock_endpoint.category = TopicCategory.EMAIL_INSIGHT
+            mock_get_endpoint.return_value = mock_endpoint
+
+            with patch(
+                "coaching.src.services.async_execution_service.get_response_model"
+            ) as mock_get_response:
+                mock_get_response.return_value = MagicMock()
+
+                await service.execute_job_from_event(job_id=job.job_id, tenant_id="tenant_456")
+
+        mock_ai_engine.execute_single_shot.assert_not_called()
+        last_update = mock_job_repository.update_status.await_args_list[-1].kwargs
+        assert last_update["status"] == AIJobStatus.FAILED
+        assert last_update["error_code"] == AIJobErrorCode.AUTH_MISSING_SERVICE_TOKEN
+
+    @pytest.mark.parametrize(
+        ("error_message", "expected_error_code"),
+        [
+            ("expired token", AIJobErrorCode.AUTH_SERVICE_TOKEN_EXPIRED),
+            ("invalid token", AIJobErrorCode.AUTH_SERVICE_TOKEN_INVALID),
+            ("insufficient scope", AIJobErrorCode.AUTH_SERVICE_TOKEN_INSUFFICIENT_SCOPE),
+            ("authorization failed", AIJobErrorCode.AUTH_ENRICHMENT_FORBIDDEN),
+        ],
+    )
+    def test_auth_failure_error_code_mapping(
+        self,
+        service: AsyncAIExecutionService,
+        error_message: str,
+        expected_error_code: AIJobErrorCode,
+    ) -> None:
+        """Auth/enrichment errors should map to deterministic taxonomy values."""
+        assert service._map_auth_failure_error_code(error_message) == expected_error_code

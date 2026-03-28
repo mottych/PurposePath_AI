@@ -246,6 +246,11 @@ class EmailInsightGenerationMeta(BaseModel):
         min_length=1,
         description="Trace identifier for observability",
     )
+    topic_id: str = Field(
+        alias="topicId",
+        min_length=1,
+        description="Topic identifier that produced this insight payload",
+    )
     generated_at_utc: datetime = Field(
         alias="generatedAtUtc",
         description="UTC timestamp when content was generated",
@@ -312,13 +317,14 @@ class EmailInsightResponse(BaseModel):
         max_length=6,
         description="Structured content blocks for email embedding",
     )
-    confidence: Annotated[float, Field(ge=0.0, le=1.0)] | Literal["low", "medium", "high"] | None = Field(
+    confidence: (
+        Annotated[float, Field(ge=0.0, le=1.0)] | Literal["low", "medium", "high"] | None
+    ) = Field(
         default=None,
         description="Optional confidence signal as 0-1 float or low/medium/high enum",
     )
     generation_meta: EmailInsightGenerationMeta = Field(
-        alias="generationMeta",
-        description="Generation metadata for traceability"
+        alias="generationMeta", description="Generation metadata for traceability"
     )
 
 
