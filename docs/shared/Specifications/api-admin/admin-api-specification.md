@@ -1028,25 +1028,28 @@ List all email templates with pagination and filtering.
 **Response:**
 ```json
 {
-  "templates": [
+  "items": [
     {
       "id": "990e8400-e29b-41d4-a716-446655440000",
       "name": "email_verification",
       "subject": "Verify Your Email Address - PurposePath",
       "description": "Default email verification template",
-      "category": "authentication",
+      "category": "verification",
       "language": "en",
       "isActive": true,
       "isDefault": false,
-      "createdBy": "system",
+      "usageCount": 42,
+      "lastUsed": "2026-02-03T17:10:00Z",
       "createdAt": "2025-01-15T10:30:00Z",
-      "updatedAt": "2025-01-20T14:45:00Z",
-      "version": 1
+      "updatedAt": "2025-01-20T14:45:00Z"
     }
   ],
-  "totalCount": 10,
-  "currentPage": 1,
-  "pageSize": 20
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 10,
+    "totalPages": 1
+  }
 }
 ```
 
@@ -1054,6 +1057,7 @@ List all email templates with pagination and filtering.
 - `200 OK` - Templates retrieved successfully
 - `400 Bad Request` - Invalid pagination or filter parameters
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
 
 ---
 
@@ -1071,7 +1075,7 @@ Get a specific email template by ID.
   "name": "email_verification",
   "subject": "Verify Your Email Address - PurposePath",
   "description": "Default email verification template",
-  "category": "authentication",
+  "category": "verification",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome to PurposePath!...",
   "variables": [
@@ -1088,23 +1092,31 @@ Get a specific email template by ID.
       "required": true
     }
   ],
-  "tags": ["verification", "onboarding"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "isSystem": false,
-  "version": 1,
-  "createdBy": "system",
+  "previewUrl": null,
+  "lastUsed": "2026-02-03T17:10:00Z",
+  "usageCount": 42,
   "createdAt": "2025-01-15T10:30:00Z",
-  "updatedAt": "2025-01-20T14:45:00Z"
+  "updatedAt": "2025-01-20T14:45:00Z",
+  "createdBy": "system",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["verification", "onboarding"],
+    "notes": null
+  }
 }
 ```
 
 **Status Codes:**
 - `200 OK` - Template retrieved successfully
-- `400 Bad Request` - Invalid ID format
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
 
 ---
 
@@ -1118,7 +1130,7 @@ Create a new email template.
   "name": "custom_welcome",
   "subject": "Welcome to Our Platform!",
   "description": "Custom welcome email for new users",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html><html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [
@@ -1131,17 +1143,19 @@ Create a new email template.
   ],
   "tags": ["welcome", "custom"],
   "language": "en",
-  "isActive": true
+  "isActive": true,
+  "isDefault": false,
+  "notes": "Optional notes"
 }
 ```
 
 **Validations:**
-- `name`: Required, unique, 1-100 characters, lowercase with underscores
+- `name`: Required, unique per category, 1-100 characters, letters/numbers/spaces/hyphens/underscores
 - `subject`: Required, 1-200 characters
-- `description`: Optional, max 500 characters
-- `category`: Required, valid category (authentication, onboarding, trial, payment, subscription)
+- `description`: Required, max 500 characters
+- `category`: Required, valid category enforced by current service (`welcome`, `verification`, `password-reset`, `trial`, `payment`, `subscription`)
 - `htmlContent`: Required, valid HTML
-- `textContent`: Optional, plain text version
+- `textContent`: Required, plain text version
 - `variables`: Required array, each with name, type, description, required flag
 - `language`: Optional, ISO 639-1 code (default: "en")
 
@@ -1152,18 +1166,27 @@ Create a new email template.
   "name": "custom_welcome",
   "subject": "Welcome to Our Platform!",
   "description": "Custom welcome email for new users",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html><html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "version": 1,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": null,
+  "usageCount": 0,
   "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T10:30:00Z"
+  "updatedAt": "2026-02-04T10:30:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "custom"],
+    "notes": null
+  }
 }
 ```
 
@@ -1171,6 +1194,11 @@ Create a new email template.
 - `201 Created` - Template created successfully
 - `400 Bad Request` - Invalid request data or duplicate name
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `subject`, `language`, `isActive`, `isDefault`, and `notes` are accepted by the request model but not applied when creating the domain entity.
+- Current implementation sets `subject = name`, `language = "en"`, `isActive = true`, and `isDefault = false`.
 
 ---
 
@@ -1184,10 +1212,12 @@ Update an existing email template (partial update).
 **Request:**
 ```json
 {
+  "name": "custom_welcome_v2",
   "subject": "Updated Subject Line",
   "description": "Updated description",
   "htmlContent": "<!DOCTYPE html>...",
-  "isActive": true
+  "category": "welcome",
+  "tags": ["welcome", "v2"]
 }
 ```
 
@@ -1199,21 +1229,30 @@ Update an existing email template (partial update).
 ```json
 {
   "id": "aa0e8400-e29b-41d4-a716-446655440000",
-  "name": "custom_welcome",
-  "subject": "Updated Subject Line",
+  "name": "custom_welcome_v2",
+  "subject": "custom_welcome",
   "description": "Updated description",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "version": 2,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": "2026-02-03T17:10:00Z",
+  "usageCount": 43,
   "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T11:00:00Z"
+  "updatedAt": "2026-02-04T11:00:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "v2"],
+    "notes": null
+  }
 }
 ```
 
@@ -1222,6 +1261,12 @@ Update an existing email template (partial update).
 - `400 Bad Request` - Invalid request data
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `subject`, `language`, `isActive`, `isDefault`, and `notes` are not applied by the update command path.
+- `name` and `description` are only applied when `category` or `tags` is also provided in the same request.
+- Subject remains unchanged on update.
 
 ---
 
@@ -1235,9 +1280,9 @@ Clone an existing email template.
 **Request:**
 ```json
 {
-  "newName": "custom_welcome_v2",
-  "newDescription": "Cloned welcome email template",
-  "newLanguage": "en"
+  "name": "custom_welcome_v2",
+  "description": "Optional description input (currently ignored)",
+  "language": "en"
 }
 ```
 
@@ -1247,19 +1292,28 @@ Clone an existing email template.
   "id": "bb0e8400-e29b-41d4-a716-446655440000",
   "name": "custom_welcome_v2",
   "subject": "Welcome to Our Platform!",
-  "description": "Cloned welcome email template",
-  "category": "onboarding",
+  "description": "Clone of Custom welcome email for new users",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": false,
   "isDefault": false,
-  "version": 1,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": null,
+  "usageCount": 0,
   "createdAt": "2026-02-04T11:00:00Z",
-  "updatedAt": "2026-02-04T11:00:00Z"
+  "updatedAt": "2026-02-04T11:00:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "custom"],
+    "notes": null
+  }
 }
 ```
 
@@ -1267,12 +1321,14 @@ Clone an existing email template.
 - `201 Created` - Template cloned successfully
 - `400 Bad Request` - Invalid source ID or duplicate new name
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Source template not found
+- `500 Internal Server Error` - Server error
 
 **Notes:**
 - Cloned templates start as inactive (isActive=false)
 - All content and variables copied from source
 - New template gets new ID and creation timestamp
+- Clone response `description` is generated as `Clone of {sourceDescription}`
+- Request `description` and `language` fields are currently ignored
 
 ---
 
@@ -1286,32 +1342,25 @@ Preview rendered email template with sample data.
 **Request:**
 ```json
 {
-  "previewData": {
+  "variables": {
     "FirstName": "John",
     "VerificationLink": "https://app.purposepath.com/verify?token=abc123"
   },
-  "renderFormat": "html"
+  "format": "html"
 }
 ```
 
 **Response:**
 ```json
 {
-  "renderedHtml": "<!DOCTYPE html><html>...<p>Hi John,</p>...",
-  "renderedText": "Hi John,\n\nThank you for registering...",
-  "subject": "Verify Your Email Address - PurposePath",
-  "variables": [
-    {
-      "name": "FirstName",
-      "value": "John",
-      "provided": true
-    },
-    {
-      "name": "VerificationLink",
-      "value": "https://app.purposepath.com/verify?token=abc123",
-      "provided": true
-    }
-  ]
+  "subject": "Preview",
+  "htmlContent": "<!DOCTYPE html><html>...<p>Hi John,</p>...",
+  "textContent": null,
+  "variables": {
+    "FirstName": "John",
+    "VerificationLink": "https://app.purposepath.com/verify?token=abc123"
+  },
+  "previewUrl": null
 }
 ```
 
@@ -1319,7 +1368,11 @@ Preview rendered email template with sample data.
 - `200 OK` - Preview rendered successfully
 - `400 Bad Request` - Invalid template ID or missing required variables
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- Subject rendering is not implemented yet; response `subject` is currently hardcoded to `"Preview"`.
+- `format` controls whether `htmlContent`, `textContent`, or both are returned.
 
 ---
 
@@ -1333,21 +1386,22 @@ Send test email using template.
 **Request:**
 ```json
 {
-  "testEmail": "admin@example.com",
-  "testData": {
+  "toEmail": "admin@example.com",
+  "variables": {
     "FirstName": "Test User",
     "VerificationLink": "https://app.purposepath.com/verify?token=test123"
-  }
+  },
+  "fromName": "Optional sender override (currently ignored)",
+  "fromEmail": "optional@example.com"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "messageId": "550e8400-e29b-41d4-a716-446655440000",
-  "sentTo": "admin@example.com",
-  "sentAt": "2026-02-04T11:30:00Z"
+  "sent": true,
+  "messageId": "test-message-id",
+  "to": "admin@example.com"
 }
 ```
 
@@ -1355,8 +1409,11 @@ Send test email using template.
 - `200 OK` - Test email sent successfully
 - `400 Bad Request` - Invalid request data or missing variables
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
 - `500 Internal Server Error` - Email delivery failure
+
+**Current Behavior Notes:**
+- `fromName` and `fromEmail` are currently accepted but not used.
+- Test send path currently uses the welcome-email sender path and returns a placeholder `messageId` (`"test-message-id"`).
 
 ---
 
@@ -1371,29 +1428,39 @@ Get template usage analytics.
 ```json
 {
   "templateId": "990e8400-e29b-41d4-a716-446655440000",
-  "templateName": "email_verification",
-  "totalSent": 15420,
-  "sentLast30Days": 1250,
-  "sentLast7Days": 310,
-  "sentToday": 45,
-  "averageOpenRate": 72.5,
-  "averageClickRate": 34.2,
-  "lastSent": "2026-02-04T10:00:00Z",
-  "mostRecentErrors": [
-    {
-      "errorMessage": "Invalid recipient email",
-      "occurredAt": "2026-02-03T15:30:00Z",
-      "count": 2
-    }
-  ]
+  "templateName": "Analytics Coming Soon",
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-31T23:59:59Z"
+  },
+  "metrics": {
+    "sent": 0,
+    "delivered": 0,
+    "opened": 0,
+    "clicked": 0,
+    "bounced": 0,
+    "unsubscribed": 0
+  },
+  "rates": {
+    "deliveryRate": 0,
+    "openRate": 0,
+    "clickRate": 0,
+    "bounceRate": 0,
+    "unsubscribeRate": 0
+  },
+  "timeline": []
 }
 ```
 
 **Status Codes:**
 - `200 OK` - Analytics retrieved successfully
-- `400 Bad Request` - Invalid template ID
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `period`, `startDate`, and `endDate` query parameters are accepted; only `startDate` and `endDate` are used to shape response period values.
+- Detailed analytics metrics are placeholders pending full analytics implementation.
 
 ---
 
@@ -1413,14 +1480,13 @@ Delete an email template (soft delete).
 
 **Status Codes:**
 - `204 No Content` - Template deleted successfully
-- `400 Bad Request` - Invalid ID or system template (cannot delete)
+- `400 Bad Request` - Delete failed (including template-not-found business failure)
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
 
 **Notes:**
-- Soft delete only (sets isActive=false, retains data)
-- System templates cannot be deleted
-- Templates with active email sends retained for audit
+- Soft delete only (sets `isActive=false`, retains data)
+- System-template delete blocking is not currently enforced in service logic
 
 ---
 
@@ -1435,24 +1501,18 @@ Get list of available template categories.
 {
   "categories": [
     {
-      "category": "authentication",
-      "description": "Email verification and confirmation",
-      "templateCount": 3
-    },
-    {
-      "category": "onboarding",
+      "name": "welcome",
       "description": "Welcome and onboarding emails",
-      "templateCount": 1
+      "templateCount": 3,
+      "defaultTemplate": null,
+      "requiredVariables": []
     },
     {
-      "category": "trial",
-      "description": "Trial period notifications",
-      "templateCount": 3
-    },
-    {
-      "category": "payment",
-      "description": "Payment and billing notifications",
-      "templateCount": 3
+      "name": "verification",
+      "description": "Email verification and confirmation",
+      "templateCount": 2,
+      "defaultTemplate": null,
+      "requiredVariables": []
     }
   ]
 }
@@ -1461,6 +1521,11 @@ Get list of available template categories.
 **Status Codes:**
 - `200 OK` - Categories retrieved successfully
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- Categories are generated from a predefined list in the application service: `welcome`, `verification`, `password-reset`, `trial`, `payment`, `subscription`.
+- `requiredVariables` is currently returned as an empty array.
 
 ---
 
