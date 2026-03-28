@@ -291,6 +291,12 @@ class DynamoDBJobRepository:
         # Note: DynamoDB has encryption at rest, but token should be short-lived
         if job.jwt_token is not None:
             item["jwt_token"] = job.jwt_token
+        if job.correlation_id is not None:
+            item["correlation_id"] = job.correlation_id
+        if job.idempotency_key is not None:
+            item["idempotency_key"] = job.idempotency_key
+        if job.event_id is not None:
+            item["event_id"] = job.event_id
 
         if job.result is not None:
             item["result"] = job.result
@@ -334,6 +340,9 @@ class DynamoDBJobRepository:
             user_message=item.get("user_message"),
             parameters=item.get("parameters", {}),
             jwt_token=item.get("jwt_token"),  # Retrieve token for enrichment
+            correlation_id=item.get("correlation_id"),
+            idempotency_key=item.get("idempotency_key"),
+            event_id=item.get("event_id"),
             status=AIJobStatus(item["status"]),
             result=item.get("result"),
             error=item.get("error"),

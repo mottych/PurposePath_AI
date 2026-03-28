@@ -154,6 +154,9 @@ class TestAsyncAIExecutionService:
                         user_id="user_123",
                         topic_id="niche_review",
                         parameters={"current_value": "Test value"},
+                        correlation_id="corr-123",
+                        idempotency_key="idem-123",
+                        event_id="evt-123",
                     )
 
         # Assert
@@ -168,6 +171,9 @@ class TestAsyncAIExecutionService:
         assert call_kwargs["user_id"] == "user_123"
         assert call_kwargs["topic_id"] == "niche_review"
         assert call_kwargs["parameters"] == {"current_value": "Test value"}
+        assert call_kwargs["correlation_id"] == "corr-123"
+        assert call_kwargs["idempotency_key"] == "idem-123"
+        assert call_kwargs["event_id"] == "evt-123"
 
     @pytest.mark.asyncio
     async def test_create_job_fails_on_event_publish_error(

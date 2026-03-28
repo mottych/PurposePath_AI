@@ -175,6 +175,9 @@ class AsyncAIExecutionService:
             topic_id=topic_id,
             parameters=parameters,
             jwt_token=jwt_token,  # Store for enrichment during execution
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            event_id=event_id,
             status=AIJobStatus.PENDING,
             estimated_duration_ms=estimated_duration,
         )
