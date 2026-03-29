@@ -518,6 +518,7 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Tightened PR closing-keyword sanitization pattern in `squad-copilot-delivery-loop.yml` to cover punctuation/parenthesis variants while preserving non-closing `Related to #...` wording.
 - Fixed `.squad/templates/ralph-triage.js` runtime compatibility for repositories using ESM (`"type": "module"`) by switching the script to ESM imports.
 - Hardened heartbeat resilience for smart-triage runtime errors: `squad-heartbeat.yml` now continues with downstream Ralph operations (assignment/queue/stall-watch) even if smart triage fails.
+- Adjusted design-gate timing in `squad-triage.yml` and `squad-state-transitions.yml`: `human:design-review` is no longer auto-applied during initial triage or immediately after requirements clarification. The design-review gate is applied only after a concrete design proposal is posted.
 
 - 2026-03-29
 - Added stage-cap queue controls:
