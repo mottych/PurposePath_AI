@@ -516,6 +516,8 @@ If behavior changes and this document is not updated, workflow policy should fai
   - Added duplicate-name guards (case-insensitive) for both configured validators and workflow-run allowlist entries.
   - Added reverse drift enforcement so workflow-declared `on.workflow_run.workflows` entries must also exist in `.squad/workflow-config.json` `workflowRunTriggerAllowlist`.
 - Tightened PR closing-keyword sanitization pattern in `squad-copilot-delivery-loop.yml` to cover punctuation/parenthesis variants while preserving non-closing `Related to #...` wording.
+- Fixed `.squad/templates/ralph-triage.js` runtime compatibility for repositories using ESM (`"type": "module"`) by switching the script to ESM imports.
+- Hardened heartbeat resilience for smart-triage runtime errors: `squad-heartbeat.yml` now continues with downstream Ralph operations (assignment/queue/stall-watch) even if smart triage fails.
 
 - 2026-03-29
 - Added stage-cap queue controls:
