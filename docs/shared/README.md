@@ -12,7 +12,7 @@
 
 ## Current Shared Canonical Guides
 
-- `docs/shared/guides/workflow-governance.md`
+- `docs/shared/process/squad/workflow-governance.md`
 - `docs/shared/guides/deployment-standards.md`
 - `docs/shared/guides/agent-operation-standard.md`
 - `docs/shared/guides/specification-change-guide.md`

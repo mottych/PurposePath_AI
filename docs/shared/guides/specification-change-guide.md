@@ -93,5 +93,5 @@ When retiring a spec document:
 
 - `docs/shared/Specifications/README.md`
 - `.github/COPILOT_RULES.md`
-- `docs/shared/guides/workflow-governance.md`
+- `docs/shared/process/squad/workflow-governance.md`
 - `docs/shared/guides/api-naming-conventions.md`

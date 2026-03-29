@@ -99,12 +99,13 @@ Use repository-specific branch names when applying this guide:
 1. Stage and commit:
 	- `git add -A`
 	- `{type}(#{issue}): {description}`
-2. Merge to `dev`:
-	- `git checkout dev`
-	- `git pull origin dev`
-	- `git merge --no-ff feature/issue-{NUMBER}-{description}`
-	- `git push origin dev`
-3. Verify deployment workflow success.
+2. Push feature branch and open PR to `dev`:
+	- `git push -u origin feature/issue-{NUMBER}-{description}`
+	- Open PR `feature/issue-{NUMBER}-{description} -> dev`
+	- Use non-closing reference in PR body: `Related to #{issue}`
+3. Enable autonomous merge on green checks (no manual merge step):
+	- `gh pr merge --auto --squash --delete-branch`
+4. Verify deployment workflow success after merge.
 
 ### Production Issue Path
 1. Create `hotfix/*` from the production branch and push to deploy preprod.
@@ -121,6 +122,24 @@ Use repository-specific branch names when applying this guide:
 2. Post issue summary including root cause, fix, and validation evidence.
 3. Remove `in-progress` label.
 4. Close issue with state reason `completed`.
+
+### Mandatory Final Cleanup Verification (No Leftovers)
+
+Before considering an issue fully complete, verify all of the following:
+
+1. No temporary implementation artifacts remain.
+	- No temporary code paths, feature flags added only for debugging, or commented fallback blocks.
+2. No temporary test/developer artifacts remain.
+	- No one-off test scripts, scratch files, debug notes, or transient local files created during implementation.
+3. No issue branch leftovers remain.
+	- Feature/hotfix branch used for the issue is deleted locally and remotely after merge.
+4. No stash leftovers remain.
+	- `git stash list` is empty.
+5. Working tree and branch state are clean.
+	- `git status --short` is clean.
+	- Active branch is returned to the expected long-lived branch (`dev` for development flow, `main` only for production hotfix flow as applicable).
+
+If any check fails, issue closure is blocked until cleanup is complete.
 
 ## Branching and PR
 
@@ -144,14 +163,15 @@ Use repository-specific branch names when applying this guide:
 
 ## Done Criteria
 
-- Code merged via reviewed PR.
+- Code merged via reviewed PR (manual merge or auto-merge).
 - Issue updated and closed with summary.
 - Temporary artifacts removed.
+- No leftover branches, stashes, or transient files remain after closure.
 - Relevant docs updated or linked.
 
 ## Cross References
 
 - Deployment release policy: `docs/shared/guides/deployment-standards.md`
 - Agent behavior and escalation: `docs/shared/guides/agent-operation-standard.md`
-- Squad SDK-first extension model: `docs/shared/guides/squad-extension-guide.md`
+- Squad SDK-first extension model: `docs/shared/process/squad/squad-extension-guide.md`
 - Repository local architecture and coding rules: `docs/local/guides/`
