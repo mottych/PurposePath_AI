@@ -522,6 +522,12 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Enforced non-stalling progression for lead-owned research issues:
   - `squad-triage.yml` now applies `human:design-review` with an initial design proposal for sufficiently detailed issues.
   - `squad-heartbeat.yml` now auto-progresses open issues in `squad:lead + go:needs-research` (with no `human:*` gate and not blocked) into `human:design-review` by posting an auto design proposal comment.
+- Hardened Copilot dispatch startup in `squad-issue-assign.yml`:
+  - Assignment now fails fast with explicit blocked escalation (`go:blocked`, `blocked`, `human:blocked`, `squad:lead`) and issue guidance comment when both primary and fallback assignment attempts fail.
+  - Added immediate post-assignment startup verification that checks for linked Copilot PR activity and triggers a one-time fast retry dispatch when startup is quiet, instead of waiting for stall timeout.
+  - Added forced reassignment handshake when Copilot is already an assignee: workflow now removes existing Copilot assignee first, then re-applies assignment to avoid idempotent no-op dispatches that can leave startup untriggered.
+  - Added assignment telemetry logs (`x-github-request-id`) for both initial assignment and fast-retry dispatch calls so startup failures can be traced in GitHub support investigations.
+- Applied the same forced reassignment handshake and assignment request-id telemetry in `squad-state-transitions.yml` `assignCopilot()` so `go:review-failed` and blocked-resume implementation redispatch paths also trigger fresh Copilot startup.
 
 - 2026-03-29
 - Added stage-cap queue controls:
