@@ -536,6 +536,9 @@ If behavior changes and this document is not updated, workflow policy should fai
   - `<!-- squad-copilot-completion:completed-no-code -->` routes to lead triage (`squad:lead`, `human:needs-info`) without waiting for code artifacts.
   - `<!-- squad-copilot-completion:blocked -->` routes to blocked state (`squad:lead`, `go:blocked`, `blocked`, `human:blocked`).
   - Completion markers are acknowledged idempotently using `<!-- squad-copilot-completion-ack:* -->` comments to prevent duplicate transitions.
+- Refined heartbeat completion handling and fallback progression in `squad-heartbeat.yml`:
+  - Completion-marker handling now runs before stall-alert cooldown suppression, so fresh completion markers are consumed immediately and not delayed by the 6-hour stall alert cooldown window.
+  - Added evidence fallback for stale linked PRs with commits but missing completion markers: after sustained inactivity, heartbeat promotes draft PRs to ready-for-review, removes `squad:copilot`, and routes to validation (`squad:reviewer`, `go:review-ready`) with idempotent marker `<!-- squad-copilot-completion-ack:evidence-with-code -->`.
 
 - 2026-03-29
 - Added stage-cap queue controls:
