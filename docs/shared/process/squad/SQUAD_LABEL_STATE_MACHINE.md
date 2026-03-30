@@ -539,6 +539,11 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Refined heartbeat completion handling and fallback progression in `squad-heartbeat.yml`:
   - Completion-marker handling now runs before stall-alert cooldown suppression, so fresh completion markers are consumed immediately and not delayed by the 6-hour stall alert cooldown window.
   - Added evidence fallback for stale linked PRs with commits but missing completion markers: after sustained inactivity, heartbeat promotes draft PRs to ready-for-review, removes `squad:copilot`, and routes to validation (`squad:reviewer`, `go:review-ready`) with idempotent marker `<!-- squad-copilot-completion-ack:evidence-with-code -->`.
+- Added deterministic Copilot session-state routing in `squad-heartbeat.yml` using GitHub CLI `gh agent-task view` on linked PR sessions:
+  - Session state `Ready for review` now immediately routes issue to validation (`squad:reviewer`, `go:review-ready`) and promotes draft PRs.
+  - Session state `Cancelled` now routes issue to blocked triage (`squad:lead`, `go:blocked`, `blocked`, `human:blocked`).
+  - Non-terminal active session states suppress stall retry/escalation while the agent is actively running.
+  - Session-state transitions are idempotently acknowledged with `<!-- squad-copilot-session-ack:* -->`.
 
 - 2026-03-29
 - Added stage-cap queue controls:
