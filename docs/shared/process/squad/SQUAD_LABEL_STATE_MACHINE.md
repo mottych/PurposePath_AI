@@ -531,6 +531,11 @@ If behavior changes and this document is not updated, workflow policy should fai
 - Fixed draft autopromotion stall in `squad-copilot-delivery-loop.yml`: Copilot/recovery automation PRs now auto-promote from draft when at least one commit is present (previously required more than one commit), preventing completed single-commit PRs from waiting indefinitely for manual ready-for-review.
 - Corrected draft auto-promotion API call in `squad-copilot-delivery-loop.yml` to use the explicit `ready_for_review` endpoint; this ensures automation PRs actually leave draft state when promotion conditions are met.
 - Expanded heartbeat startup-stall detection in `squad-heartbeat.yml`: an open linked PR that remains `draft` with zero commits is now treated as startup-stalled (same retry/escalation path as “no linked PR”), preventing non-code/no-output draft PRs from silently stalling issues.
+- Added implementation completion-marker handshake consumed by `squad-heartbeat.yml` for `squad:copilot` issues:
+  - `<!-- squad-copilot-completion:completed-with-code -->` routes to validation (`squad:reviewer`, `go:review-ready`) when linked PR evidence exists.
+  - `<!-- squad-copilot-completion:completed-no-code -->` routes to lead triage (`squad:lead`, `human:needs-info`) without waiting for code artifacts.
+  - `<!-- squad-copilot-completion:blocked -->` routes to blocked state (`squad:lead`, `go:blocked`, `blocked`, `human:blocked`).
+  - Completion markers are acknowledged idempotently using `<!-- squad-copilot-completion-ack:* -->` comments to prevent duplicate transitions.
 
 - 2026-03-29
 - Added stage-cap queue controls:
