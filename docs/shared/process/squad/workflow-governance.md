@@ -174,4 +174,5 @@ If any check fails, issue closure is blocked until cleanup is complete.
 - Deployment release policy: `docs/shared/guides/deployment-standards.md`
 - Agent behavior and escalation: `docs/shared/guides/agent-operation-standard.md`
 - Squad SDK-first extension model: `docs/shared/process/squad/squad-extension-guide.md`
+- Validator onboarding guide: `docs/shared/process/squad/validator-onboarding-guide.md`
 - Repository local architecture and coding rules: `docs/local/guides/`
