@@ -10,6 +10,8 @@ A drift guard in `squad-validator-chain.yml` now enforces alignment for:
 - `.github/workflows/squad-validator-chain.yml`
 - `.github/workflows/squad-copilot-delivery-loop.yml`
 
+Note: `.github/workflows/squad-copilot-delivery-loop.yml` intentionally also contains non-validator `workflow_run` triggers (`Deploy to Dev`, `Deploy to Preprod`). Those are allowed extras and are excluded from validator drift checks.
+
 If they drift, the validator-chain workflow fails with an explicit mismatch message.
 
 ## Add A New Validator
