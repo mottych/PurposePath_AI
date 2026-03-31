@@ -455,6 +455,26 @@ class TestLLMTopic:
         assert topic.display_order == 100  # default value
         assert topic.created_by is None
 
+    def test_get_extraction_model_code_defaults_to_haiku_4_5(self) -> None:
+        """Missing extraction config should default to Claude Haiku 4.5."""
+        topic = LLMTopic(
+            topic_id="extract_default",
+            topic_name="Extract Default",
+            topic_type="conversation_coaching",
+            category="coaching",
+            is_active=True,
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=2000,
+            prompts=[],
+            additional_config={},
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
+
+        assert topic.get_extraction_model_code() == "CLAUDE_HAIKU_4_5"
+
 
 class TestLLMTopicFactory:
     """Tests for LLMTopic factory methods."""
