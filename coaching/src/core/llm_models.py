@@ -92,7 +92,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         capabilities=["chat", "analysis", "streaming"],
         max_tokens=4096,
         cost_per_1k_tokens=0.00025,
-        is_active=True,
+        is_active=False,
     ),
     "CLAUDE_3_5_SONNET": SupportedModel(
         code="CLAUDE_3_5_SONNET",
@@ -105,7 +105,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.003,
         is_active=True,
     ),
-    # Claude 3.5 Haiku - Requires inference profile (auto-converted by provider)
+    # Claude 3.5 Haiku - Kept for compatibility, no longer active for selection
     "CLAUDE_3_5_HAIKU": SupportedModel(
         code="CLAUDE_3_5_HAIKU",
         provider=LLMProvider.BEDROCK,
@@ -121,6 +121,26 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=8192,
         cost_per_1k_tokens=0.0008,
+        is_active=False,
+    ),
+    # Claude Haiku 4.5 - Requires inference profile (auto-converted by provider)
+    "CLAUDE_HAIKU_4_5": SupportedModel(
+        code="CLAUDE_HAIKU_4_5",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-haiku-4-5-20251001-v1:0",
+        version="20251001",
+        provider_class="BedrockLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "extended_context",
+            "extended_thinking",
+            "priority_tier",
+        ],
+        max_tokens=200000,
+        cost_per_1k_tokens=0.001,
         is_active=True,
     ),
     # Claude 3.5 Sonnet v2 - Requires inference profile (auto-converted by provider)

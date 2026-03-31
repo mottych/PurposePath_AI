@@ -211,8 +211,9 @@ class LLMTopic:
     }
     LEGACY_MODEL_CODE_ALIASES: ClassVar[dict[str, str]] = {
         "claude-3-5-sonnet-20241022": "CLAUDE_3_5_SONNET_V2",
+        "claude-haiku-4-5-20251001": "CLAUDE_HAIKU_4_5",
         "claude-3-5-haiku-20241022": "CLAUDE_3_5_HAIKU",
-        "claude-haiku": "CLAUDE_3_5_HAIKU",
+        "claude-haiku": "CLAUDE_HAIKU_4_5",
         "gpt-4": "GPT_4O",
         "gpt-4-turbo": "GPT_4O",
         "gpt-4o": "GPT_4O",
@@ -688,19 +689,19 @@ class LLMTopic:
         """Get the model code for result extraction.
 
         Returns the configured extraction model from additional_config or defaults
-        to Claude Haiku (MODEL_REGISTRY code) for optimal speed and cost efficiency.
-        Haiku is 3-5x faster than Sonnet and 90% cheaper, making it ideal for
+        to Claude Haiku 4.5 (MODEL_REGISTRY code) for optimal speed and cost efficiency.
+        Haiku is generally faster than larger Sonnet/Opus models, making it ideal for
         structured data extraction.
 
         This is only applicable for conversation_coaching topics that use extraction.
-        The model code returned is a MODEL_REGISTRY friendly code (e.g., "CLAUDE_3_5_HAIKU")
+        The model code returned is a MODEL_REGISTRY-friendly code (e.g., "CLAUDE_HAIKU_4_5")
         that will be resolved to the actual provider-specific model name via the
         provider factory.
 
         Returns:
-            str: MODEL_REGISTRY code to use for extraction (defaults to CLAUDE_3_5_HAIKU)
+            str: MODEL_REGISTRY code to use for extraction (defaults to CLAUDE_HAIKU_4_5)
         """
-        return self.additional_config.get("extraction_model_code") or "CLAUDE_3_5_HAIKU"
+        return self.additional_config.get("extraction_model_code") or "CLAUDE_HAIKU_4_5"
 
 
 __all__ = ["LLMTopic", "ParameterDefinition", "PromptInfo"]
