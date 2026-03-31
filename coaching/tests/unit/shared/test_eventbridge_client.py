@@ -64,4 +64,4 @@ def test_publish_sends_stage_when_enabled(monkeypatch: Any) -> None:
 
     assert event_id == "evt-123"
     assert len(dummy.entries) == 1
-    assert "\"stage\": \"preprod\"" in dummy.entries[0]["Detail"]
+    assert '"stage": "preprod"' in dummy.entries[0]["Detail"]
