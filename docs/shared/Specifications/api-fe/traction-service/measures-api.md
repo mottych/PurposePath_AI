@@ -924,10 +924,26 @@ Soft delete a Measure (marks as deleted, preserves historical data).
 |-----------|------|----------|-------------|
 | `id` | string (GUID) | **Yes** | Measure identifier |
 
-#### Request Example
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `force` | boolean | No | `false` | When `true`, removes all existing Measure links before soft-deleting. When `false` (default), the delete is rejected if any links exist. |
+
+#### Request Examples
+
+**Without force (default behaviour — fails if links exist):**
 
 ```http
 DELETE /measures/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer {token}
+X-Tenant-Id: {tenantId}
+```
+
+**With force (removes links and deletes measure):**
+
+```http
+DELETE /measures/123e4567-e89b-12d3-a456-426614174000?force=true
 Authorization: Bearer {token}
 X-Tenant-Id: {tenantId}
 ```
@@ -949,6 +965,15 @@ X-Tenant-Id: {tenantId}
 }
 ```
 
+**Status:** `400 Bad Request` (when linked and `force` is not set)
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Cannot delete MEASURE <id> because it is linked to 2 goal(s). Please unlink the MEASURE from all goals before deleting."
+}
+```
+
 **Status:** `404 Not Found`
 ```json
 {
@@ -961,10 +986,11 @@ X-Tenant-Id: {tenantId}
 #### Business Rules
 
 - **Soft Delete:** Measure is marked as deleted (`isDeleted: true`) but not physically removed
-- **Historical Data:** All historical values and links are preserved
+- **Historical Data:** All historical values are preserved
 - **List Queries:** Deleted Measures are excluded from list results by default
 - **Restoration:** Can be restored by admin/support team
-- **Cascade:** Measure links to goals are also soft deleted
+- **Link Guard:** Delete is blocked when links exist unless `force=true` is supplied
+- **Force Delete:** When `force=true`, all Measure links for the tenant are removed before the soft-delete proceeds; audit/event behaviour is preserved
 
 ---
 
