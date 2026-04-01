@@ -3718,7 +3718,7 @@ Get list of all role templates with optional filtering.
 **Query Parameters:**
 
 - `search` (string, optional) - Search by template name
-- `category` (string, optional) - Filter by category ("STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING")
+- `category` (string, optional) - Filter by category ("leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other")
 - `is_active` (boolean, optional) - Filter by active status
 
 **Response (200 OK):**
@@ -3729,17 +3729,20 @@ Get list of all role templates with optional filtering.
   "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
+      "tenantId": null,
       "name": "Technology Startup",
       "description": "Basic organizational structure for tech startups",
-      "category": "STARTUP",
-      "roles_count": 8,
-      "is_active": true,
+      "category": "Leadership",
+      "scope": "platform",
+      "isActive": true,
+      "rolesCount": 8,
+      "usageCount": 0,
       "preview": {
-        "total_roles": 8,
-        "sample_roles": ["CEO", "CTO", "CFO"]
+        "totalRoles": 8,
+        "sampleRoles": ["Chief Executive Officer", "Chief Technology Officer", "Chief Financial Officer"]
       },
-      "created_at": "2026-01-15T10:00:00Z",
-      "updated_at": "2026-02-01T14:30:00Z"
+      "createdAt": "2026-01-15T10:00:00Z",
+      "updatedAt": "2026-02-01T14:30:00Z"
     }
   ]
 }
@@ -3756,8 +3759,8 @@ Get list of all role templates with optional filtering.
 **Implementation:**
 
 - Controller: `RoleTemplatesController.ListTemplates()`
-- Query: `ListRoleTemplatesQuery`
-- Handler: `ListRoleTemplatesQueryHandler`
+- Query: `GetFilteredPlatformTemplatesQuery`
+- Handler: `GetFilteredPlatformTemplatesQueryHandler`
 
 ---
 
@@ -3773,36 +3776,35 @@ Get a specific role template with all its roles.
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Technology Startup",
-    "description": "Complete organizational structure for tech startups",
-    "category": "STARTUP",
-    "is_active": true,
-    "roles": [
-      {
-        "id": "role-uuid",
-        "code": "CEO",
-        "name": "Chief Executive Officer",
-        "description": "Leads the company",
-        "responsibilities": "Set vision, manage executives...",
-        "reports_to_code": null,
-        "created_at": "2026-01-15T10:00:00Z"
-      },
-      {
-        "id": "role-uuid-2",
-        "code": "CTO",
-        "name": "Chief Technology Officer",
-        "description": "Oversees technology",
-        "responsibilities": "Manage tech stack, lead dev team...",
-        "reports_to_code": "CEO",
-        "created_at": "2026-01-15T10:05:00Z"
-      }
-    ],
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_at": "2026-02-01T14:30:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Technology Startup",
+  "description": "Complete organizational structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [
+    {
+      "id": "role-uuid",
+      "key": "ceo",
+      "title": "Chief Executive Officer",
+      "description": "Leads the company",
+      "responsibilities": ["Set vision", "Manage executives"],
+      "reportsToKey": null
+    },
+    {
+      "id": "role-uuid-2",
+      "key": "cto",
+      "title": "Chief Technology Officer",
+      "description": "Oversees technology",
+      "responsibilities": ["Manage tech stack", "Lead engineering"],
+      "reportsToKey": "ceo"
+    }
+  ],
+  "relationships": [],
+  "createdAt": "2026-01-15T10:00:00Z",
+  "updatedAt": "2026-02-01T14:30:00Z"
 }
 ```
 
@@ -3907,31 +3909,43 @@ Update an existing role template.
 {
   "name": "Updated Template Name",
   "description": "Updated description",
-  "category": "ENTERPRISE",
-  "is_active": false
+  "category": "leadership"
 }
 ```
 
-**Notes:**
+**Validation Rules:**
 
-- All fields are optional (partial update supported)
-- Cannot change template ID
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Not empty; API validator max 200 chars |
+| `description` | string | No | API validator max 1000 chars |
+| `category` | string | Yes | One of: "leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other" |
 
 **Response (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Updated Template Name",
-    "description": "Updated description",
-    "category": "ENTERPRISE",
-    "is_active": false,
-    "roles": [...],
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_at": "2026-02-05T15:30:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Updated Template Name",
+  "description": "Updated description",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [],
+  "relationships": [],
+  "createdAt": "2026-01-15T10:00:00Z",
+  "updatedAt": "2026-02-05T15:30:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "A template with name 'Updated Template Name' already exists",
+  "code": "DUPLICATE_NAME"
 }
 ```
 
@@ -3942,7 +3956,6 @@ Update an existing role template.
 - `401 Unauthorized` - Missing or invalid admin token
 - `403 Forbidden` - User lacks admin role
 - `404 Not Found` - Template not found
-- `409 Conflict` - Duplicate name
 - `500 Internal Server Error` - Server error
 
 **Implementation:**
