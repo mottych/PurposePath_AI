@@ -3832,9 +3832,10 @@ Create a new role template.
 ```json
 {
   "name": "Technology Startup",
-  "description": "Basic tech startup org structure",
-  "category": "STARTUP",
-  "is_active": true
+  "description": "Basic org structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "tenantId": null
 }
 ```
 
@@ -3842,26 +3843,37 @@ Create a new role template.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| `name` | string | Yes | 1-100 characters, unique |
-| `description` | string | No | Max 500 characters |
-| `category` | string | Yes | Enum: "STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING" |
-| `is_active` | boolean | No | Default: true |
+| `name` | string | Yes | Not empty; API validator max 200 chars; duplicate names rejected per scope |
+| `description` | string | No | API validator max 1000 chars |
+| `category` | string | Yes | One of: "leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other" |
+| `scope` | string | Yes | One of: "platform", "tenant" |
+| `tenantId` | string (GUID) | Conditional | Required when `scope = "tenant"`; must be empty when `scope = "platform"` |
 
 **Response (201 Created):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "new-uuid",
-    "name": "Technology Startup",
-    "description": "Basic tech startup org structure",
-    "category": "STARTUP",
-    "is_active": true,
-    "roles": [],
-    "created_at": "2026-02-05T15:00:00Z",
-    "updated_at": "2026-02-05T15:00:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Technology Startup",
+  "description": "Basic org structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [],
+  "relationships": [],
+  "createdAt": "2026-02-05T15:00:00Z",
+  "updatedAt": "2026-02-05T15:00:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "A template with name 'Technology Startup' already exists",
+  "code": "DUPLICATE_NAME"
 }
 ```
 
@@ -3871,7 +3883,6 @@ Create a new role template.
 - `400 Bad Request` - Validation error
 - `401 Unauthorized` - Missing or invalid admin token
 - `403 Forbidden` - User lacks admin role
-- `409 Conflict` - Template name already exists
 - `500 Internal Server Error` - Server error
 
 **Implementation:**
