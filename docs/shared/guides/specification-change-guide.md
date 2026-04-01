@@ -20,6 +20,13 @@ Use this guide for:
 - Implementation must match approved specifications.
 - If code and spec diverge, default action is to align code to spec.
 
+## Contract Strictness Principles
+
+- Do not add tolerant API variants for out-of-spec caller behavior (for example alias query keys or alternate payload field names) unless explicitly approved through a spec-change path.
+- Do not normalize malformed contract values into permissive defaults in API handlers (for example coercing invalid values to null to avoid contract-level failures) unless explicitly approved through a spec-change path.
+- When a caller request shape is out of spec, fix the caller/source system to match the published contract instead of expanding backend tolerance.
+- Do not introduce legacy or backward-compatibility branches by default for contract drift; use explicit approval and documented migration only when required.
+
 ## Change Types
 
 - Additive change: new endpoint or optional field.
