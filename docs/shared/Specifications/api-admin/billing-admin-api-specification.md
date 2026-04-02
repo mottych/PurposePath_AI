@@ -160,6 +160,7 @@ Validation diagnostics use:
 
 ### Tenant Assignments, Overrides, Settings, and Audit
 
+- `GET /tenants/{tenantId}/hidden-plan-assignment`
 - `POST /tenants/{tenantId}/hidden-plan-assignment`
 - `DELETE /tenants/{tenantId}/hidden-plan-assignment`
 - `GET /tenants/{tenantId}/overrides`
@@ -579,6 +580,19 @@ Toggles lifecycle state.
 ---
 
 ## Tenant Hidden Plan Assignments and Overrides
+
+### GET /tenants/{tenantId}/hidden-plan-assignment
+
+Returns the tenant hidden-plan assignment state for admin workflows.
+
+**Response:** `ApiResponse<HiddenPlanAssignmentResponse>`
+
+Key fields:
+
+- `subscription`
+- `hasActiveHiddenPlan`
+- `hasPendingHiddenPlan`
+- `assignmentState`: `active | pending | none`
 
 ### POST /tenants/{tenantId}/hidden-plan-assignment
 
