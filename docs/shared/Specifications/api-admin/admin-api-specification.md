@@ -1,6 +1,6 @@
 # Admin API Specification
 
-**Version:** 2.5  
+**Version:** 2.6  
 **Status:** Complete  
 **Last Updated:** April 1, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 3, 2026 | 2.6 | Added Notification Maintenance endpoint (`GET /notifications/{notificationId}`) for single notification retrieval by ID | System |
 | Apr 3, 2026 | 2.5 | Added Notification Maintenance endpoints (`PATCH /notifications/{notificationId}/status`, `PATCH /notifications/{notificationId}/overrides`) and documented override/status update contracts | System |
 | Apr 3, 2026 | 2.4 | Standardized Notifications Catalog response envelope, added email template key aliases (`GET/PATCH /email-templates/by-key/{templateKey}`), and corrected endpoint summary counts | System |
 | Apr 1, 2026 | 2.3 | Added Notifications Catalog endpoint (`GET /notifications/catalog`) for registry-first unified email visibility | System |
@@ -1696,6 +1697,37 @@ Update notification maintenance override values.
 - `403 Forbidden` - Authenticated user is not an admin
 - `404 Not Found` - Notification definition not found
 - `500 Internal Server Error` - Update failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
+
+---
+
+### GET /notifications/{notificationId}
+
+Get a single notification maintenance record by notification ID.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier (for example `payment.subscription.renewed`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success",
+    "reply_to_email": "support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": true
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Notification retrieved successfully
+- `400 Bad Request` - Invalid notification ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Retrieval failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
 
 ---
 
@@ -5032,7 +5064,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 94
+**Total Endpoints:** 95
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -5041,7 +5073,7 @@ Business rule violations return 400 Bad Request with context:
 - Issue Type Configuration: 7
 - Issue Status Configuration: 6
 - Email Template Management: 12
-- Notifications Catalog: 3
+- Notifications Catalog: 4
 - Subscriber Management: 2
 - Plan Management: 8
 - Feature Management: 8
