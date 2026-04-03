@@ -18,7 +18,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
 )
 from coaching.src.core.config import settings
-from coaching.src.core.constants import TopicType
+from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
     get_required_parameter_names_for_topic,
@@ -116,6 +116,9 @@ class AsyncAIExecutionService:
         topic_id: str,
         parameters: dict[str, Any],
         jwt_token: str | None = None,
+        correlation_id: str | None = None,
+        idempotency_key: str | None = None,
+        event_id: str | None = None,
     ) -> AIJob:
         """Create and validate a new async AI job.
 
@@ -172,6 +175,9 @@ class AsyncAIExecutionService:
             topic_id=topic_id,
             parameters=parameters,
             jwt_token=jwt_token,  # Store for enrichment during execution
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            event_id=event_id,
             status=AIJobStatus.PENDING,
             estimated_duration_ms=estimated_duration,
         )
@@ -186,6 +192,9 @@ class AsyncAIExecutionService:
             tenant_id=tenant_id,
             user_id=user_id,
             topic_id=topic_id,
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            event_id=event_id,
         )
 
         # Publish event to trigger async execution in separate Lambda invocation
@@ -198,6 +207,9 @@ class AsyncAIExecutionService:
                 topic_id=topic_id,
                 parameters=parameters,
                 estimated_duration_ms=estimated_duration,
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                event_id=event_id,
             )
             logger.info(
                 "async_job.execution_triggered",
@@ -335,6 +347,11 @@ class AsyncAIExecutionService:
                     "system",
                     f"Response model not configured: {endpoint.response_model}",
                 )
+            if (
+                getattr(endpoint, "category", None) == TopicCategory.EMAIL_INSIGHT
+                and not job.jwt_token
+            ):
+                raise PermissionError("missing service token")
 
             # Create template processor for parameter enrichment
             logger.info(
@@ -436,6 +453,15 @@ class AsyncAIExecutionService:
                 start_time=start_time,
             )
 
+        except PermissionError as e:
+            auth_error_code = self._map_auth_failure_error_code(str(e))
+            await self._handle_failure(
+                job=job,
+                error=str(e),
+                error_code=auth_error_code,
+                start_time=start_time,
+            )
+
         except Exception as e:
             logger.exception(
                 "async_job.execution_error",
@@ -500,6 +526,22 @@ class AsyncAIExecutionService:
             error_code=error_code.value,
             processing_time_ms=processing_time_ms,
         )
+
+    @staticmethod
+    def _map_auth_failure_error_code(error_message: str) -> AIJobErrorCode:
+        """Map auth/enrichment failures to deterministic error codes."""
+        normalized = error_message.lower()
+        if "missing service token" in normalized:
+            return AIJobErrorCode.AUTH_MISSING_SERVICE_TOKEN
+        if "expired token" in normalized:
+            return AIJobErrorCode.AUTH_SERVICE_TOKEN_EXPIRED
+        if "invalid token" in normalized:
+            return AIJobErrorCode.AUTH_SERVICE_TOKEN_INVALID
+        if "insufficient scope" in normalized or "insufficient claims" in normalized:
+            return AIJobErrorCode.AUTH_SERVICE_TOKEN_INSUFFICIENT_SCOPE
+        if "authorization failed" in normalized or "forbidden" in normalized:
+            return AIJobErrorCode.AUTH_ENRICHMENT_FORBIDDEN
+        return AIJobErrorCode.INTERNAL_ERROR
 
     def _create_template_processor(
         self,

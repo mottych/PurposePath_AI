@@ -1,9 +1,9 @@
 """Constants for the coaching module."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class CoachingTopic(str, Enum):
+class CoachingTopic(StrEnum):
     """Available coaching topics."""
 
     CORE_VALUES = "core_values"
@@ -12,7 +12,7 @@ class CoachingTopic(str, Enum):
     GOALS = "goals"
 
 
-class TopicType(str, Enum):
+class TopicType(StrEnum):
     """Type of topic determining conversation behavior.
 
     - conversation_coaching: Multi-turn coaching conversations with phases
@@ -25,7 +25,7 @@ class TopicType(str, Enum):
     MEASURE_SYSTEM = "measure_system"
 
 
-class TopicCategory(str, Enum):
+class TopicCategory(StrEnum):
     """Logical grouping of topics by functional area.
 
     Categories align with API route groupings and business domains.
@@ -34,13 +34,14 @@ class TopicCategory(str, Enum):
     ONBOARDING = "onboarding"
     CONVERSATION = "conversation"
     INSIGHTS = "insights"
+    EMAIL_INSIGHT = "email_insight"
     STRATEGIC_PLANNING = "strategic_planning"
     OPERATIONS_AI = "operations_ai"
     OPERATIONS_STRATEGIC_INTEGRATION = "operations_strategic_integration"
     ANALYSIS = "analysis"
 
 
-class PromptType(str, Enum):
+class PromptType(StrEnum):
     """Types of prompts in a prompt template.
 
     - system: System-level instructions for the LLM
@@ -62,7 +63,7 @@ class PromptType(str, Enum):
     EXTRACTION = "extraction"
 
 
-class ParameterType(str, Enum):
+class ParameterType(StrEnum):
     """Data types for parameters in prompt templates."""
 
     STRING = "string"
@@ -72,7 +73,7 @@ class ParameterType(str, Enum):
     OBJECT = "object"
 
 
-class ParameterSource(str, Enum):
+class ParameterSource(StrEnum):
     """Source of parameter data for prompt templates.
 
     Parameters are grouped by source to enable efficient batch retrieval.
@@ -116,7 +117,7 @@ class ParameterSource(str, Enum):
     COMPUTED = "computed"
 
 
-class ConversationStatus(str, Enum):
+class ConversationStatus(StrEnum):
     """Conversation status values."""
 
     ACTIVE = "active"
@@ -126,7 +127,7 @@ class ConversationStatus(str, Enum):
     ABANDONED = "abandoned"
 
 
-class ConversationPhase(str, Enum):
+class ConversationPhase(StrEnum):
     """Conversation phases."""
 
     INTRODUCTION = "introduction"
@@ -137,7 +138,7 @@ class ConversationPhase(str, Enum):
     COMPLETION = "completion"
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     """Message roles in conversation."""
 
     USER = "user"
@@ -145,7 +146,7 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
-class AnalysisType(str, Enum):
+class AnalysisType(StrEnum):
     """Types of analysis that can be performed."""
 
     ALIGNMENT = "alignment"
@@ -157,7 +158,7 @@ class AnalysisType(str, Enum):
     GOAL_BREAKDOWN = "goal_breakdown"
 
 
-class TierLevel(str, Enum):
+class TierLevel(StrEnum):
     """Subscription tier levels for topic and LLM access control.
 
     Determines:

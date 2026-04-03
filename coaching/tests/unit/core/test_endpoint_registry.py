@@ -75,6 +75,7 @@ class TestEndpointRegistry:
             "alignment_check",
             "alignment_analysis",
             "insights_generation",
+            "goal_created_email_insight",
         ]
         for topic_id in expected_topics:
             assert topic_id in TOPIC_REGISTRY, f"Missing topic: {topic_id}"
@@ -94,9 +95,9 @@ class TestEndpointRegistry:
         valid_methods = {"GET", "POST", "PUT", "DELETE", "PATCH"}
         for key, topic in TOPIC_REGISTRY.items():
             if topic.http_method is not None:  # Only check if http_method is set
-                assert (
-                    topic.http_method.upper() in valid_methods
-                ), f"Invalid method for {key}: {topic.http_method}"
+                assert topic.http_method.upper() in valid_methods, (
+                    f"Invalid method for {key}: {topic.http_method}"
+                )
 
 
 class TestGetTopicDefinition:
@@ -136,6 +137,14 @@ class TestListEndpointsByCategory:
         assert len(endpoints) > 0
         for endpoint in endpoints:
             assert endpoint.category == TopicCategory.STRATEGIC_PLANNING
+
+    def test_list_email_insight_category(self) -> None:
+        """Test listing EMAIL_INSIGHT category endpoints."""
+        endpoints = list_topics_by_category(TopicCategory.EMAIL_INSIGHT)
+        assert len(endpoints) > 0
+        assert any(endpoint.topic_id == "goal_created_email_insight" for endpoint in endpoints)
+        for endpoint in endpoints:
+            assert endpoint.category == TopicCategory.EMAIL_INSIGHT
 
 
 class TestListEndpointsByTopicType:

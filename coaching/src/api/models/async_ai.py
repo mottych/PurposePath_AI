@@ -4,11 +4,48 @@ This module provides request and response models for the async AI
 execution endpoints (POST /ai/execute-async, GET /ai/jobs/{jobId}).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from coaching.src.domain.entities.ai_job import AIJob
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class AuthContext(BaseModel):
+    """Authorization context for backend-triggered enrichment calls."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    service_token: str = Field(
+        alias="serviceToken",
+        min_length=1,
+        description="Backend-issued short-lived bearer token for enrichment APIs",
+    )
+    expires_at_utc: datetime = Field(
+        alias="expiresAtUtc",
+        description="Token expiration timestamp in UTC",
+    )
+    issuer: str = Field(
+        min_length=1,
+        description="Token issuer identifier",
+    )
+    token_type: str = Field(
+        alias="tokenType",
+        min_length=1,
+        description="Token type, expected value: service_enrichment",
+    )
+
+    @model_validator(mode="after")
+    def validate_token_expiry(self) -> "AuthContext":
+        """Require non-expired service tokens for enrichment calls."""
+        expires_at = (
+            self.expires_at_utc.replace(tzinfo=UTC)
+            if self.expires_at_utc.tzinfo is None
+            else self.expires_at_utc.astimezone(UTC)
+        )
+        if expires_at <= datetime.now(UTC):
+            raise ValueError("authContext.serviceToken is expired")
+        return self
 
 
 class AsyncAIRequest(BaseModel):
@@ -23,6 +60,7 @@ class AsyncAIRequest(BaseModel):
 
     topic_id: str = Field(
         ...,
+        alias="topicId",
         min_length=1,
         max_length=100,
         description="Topic identifier from endpoint registry",
@@ -34,16 +72,97 @@ class AsyncAIRequest(BaseModel):
         examples=[{"current_value": "We help small businesses grow"}],
     )
 
-    model_config = {
-        "json_schema_extra": {
+    # Generic v2 backend-triggered request envelope (optional for backwards compatibility)
+    event_id: str | None = Field(default=None, alias="eventId")
+    occurred_at_utc: datetime | None = Field(default=None, alias="occurredAtUtc")
+    source_service: str | None = Field(default=None, alias="sourceService")
+    schema_version: str | None = Field(default=None, alias="schemaVersion")
+    correlation_id: str | None = Field(default=None, alias="correlationId")
+    idempotency_key: str | None = Field(default=None, alias="idempotencyKey")
+    retry_attempt: int | None = Field(default=None, alias="retryAttempt")
+    tenant_id: str | None = Field(default=None, alias="tenantId")
+    user_id: str | None = Field(default=None, alias="userId")
+    topic_category: str | None = Field(default=None, alias="topicCategory")
+    event_signal: str | None = Field(default=None, alias="eventSignal")
+    locale: str | None = Field(default=None)
+    timezone: str | None = Field(default=None)
+    activity_data: dict[str, Any] | None = Field(default=None, alias="activityData")
+    auth_context: AuthContext | None = Field(default=None, alias="authContext")
+    causation_id: str | None = Field(default=None, alias="causationId")
+    metadata: dict[str, Any] | None = Field(default=None)
+
+    @property
+    def is_backend_contract_v2(self) -> bool:
+        """Whether this request uses the generic backend-triggered envelope."""
+        return self.auth_context is not None or self.activity_data is not None
+
+    @model_validator(mode="after")
+    def validate_v2_contract_requirements(self) -> "AsyncAIRequest":
+        """Enforce required fields only when v2 contract envelope is used."""
+        if not self.is_backend_contract_v2:
+            return self
+
+        required_fields = {
+            "eventId": self.event_id,
+            "occurredAtUtc": self.occurred_at_utc,
+            "sourceService": self.source_service,
+            "schemaVersion": self.schema_version,
+            "correlationId": self.correlation_id,
+            "idempotencyKey": self.idempotency_key,
+            "retryAttempt": self.retry_attempt,
+            "tenantId": self.tenant_id,
+            "userId": self.user_id,
+            "topicCategory": self.topic_category,
+            "topicId": self.topic_id,
+            "eventSignal": self.event_signal,
+            "locale": self.locale,
+            "timezone": self.timezone,
+            "activityData": self.activity_data,
+            "authContext": self.auth_context,
+        }
+        missing = [field_name for field_name, value in required_fields.items() if value is None]
+        if missing:
+            raise ValueError(f"Missing required v2 contract fields: {missing}")
+        if self.topic_category != "email_insight":
+            raise ValueError("topicCategory must be 'email_insight' for v2 backend contract")
+        if self.auth_context and self.auth_context.token_type != "service_enrichment":
+            raise ValueError("authContext.tokenType must be 'service_enrichment'")
+        return self
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_schema_extra={
             "examples": [
                 {
                     "topic_id": "niche_review",
                     "parameters": {"current_value": "We help small businesses grow"},
                 },
+                {
+                    "eventId": "evt-123",
+                    "occurredAtUtc": "2026-03-27T16:00:00Z",
+                    "sourceService": "PurposePath_Api",
+                    "schemaVersion": "2.0",
+                    "correlationId": "corr-123",
+                    "idempotencyKey": "idem-123",
+                    "retryAttempt": 0,
+                    "tenantId": "tenant_456",
+                    "userId": "user_123",
+                    "topicCategory": "email_insight",
+                    "topicId": "goal_created_email_insight",
+                    "eventSignal": "goal_created",
+                    "locale": "en-US",
+                    "timezone": "UTC",
+                    "activityData": {"goal_id": "goal_1"},
+                    "authContext": {
+                        "serviceToken": "token-value",
+                        "expiresAtUtc": "2026-03-27T16:15:00Z",
+                        "issuer": "PurposePath_Api",
+                        "tokenType": "service_enrichment",
+                    },
+                },
             ]
-        }
-    }
+        },
+    )
 
 
 class AsyncJobCreatedResponse(BaseModel):

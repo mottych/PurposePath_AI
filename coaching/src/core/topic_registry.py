@@ -12,7 +12,7 @@ For conversation coaching topics, use TemplateType to define the required templa
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TypedDict
 
 from coaching.src.core.constants import (
@@ -24,7 +24,7 @@ from coaching.src.core.constants import (
 )
 
 
-class TemplateType(str, Enum):
+class TemplateType(StrEnum):
     """Template types for coaching conversations.
 
     Templates are stored in S3 and loaded by the CoachingSessionService.
@@ -324,7 +324,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _onb("onboarding_business_name"),
         ),
     ),
-    # ========== Section 2: Insights Generation (1 endpoint) ==========
+    # ========== Section 2: Insights Generation (2 endpoints) ==========
     "insights_generation": TopicDefinition(
         topic_id="insights_generation",
         endpoint_path="/insights/generate",  # Legacy route
@@ -346,6 +346,24 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _opt_req("measures"),  # All measures/KPIs with progress
             _opt_req("actions"),  # All action items
             _opt_req("issues"),  # All open issues
+        ),
+    ),
+    "goal_created_email_insight": TopicDefinition(
+        topic_id="goal_created_email_insight",
+        endpoint_path=None,  # Uses unified /ai/execute and /ai/execute-async endpoints
+        http_method=None,  # Uses unified endpoints
+        response_model="EmailInsightResponse",
+        topic_type=TopicType.SINGLE_SHOT,
+        category=TopicCategory.EMAIL_INSIGHT,
+        description="Generate structured email insight content for the goal-created activity trigger",
+        is_active=True,
+        parameter_refs=(
+            _req("goal_id"),  # Required request parameter for goal context
+            _opt_req("locale"),  # Optional localization hint (default en-US)
+            _goal("goal_title"),  # Auto-enriched from goal service
+            _goal("goal_description"),  # Auto-enriched from goal service
+            _user("user_name"),  # User display name context
+            _onb("business_name"),  # Tenant/business display context
         ),
     ),
     # ========== Section 4: Strategic Planning AI (6 endpoints) ==========

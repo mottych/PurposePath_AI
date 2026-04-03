@@ -44,7 +44,11 @@ from coaching.src.api.models.strategic_planning import (
     MeasureRecommendationsResponse,
     StrategySuggestionsResponse,
 )
-from coaching.src.models.responses import InsightResponse, InsightsGenerationResponse
+from coaching.src.models.responses import (
+    EmailInsightResponse,
+    InsightResponse,
+    InsightsGenerationResponse,
+)
 from pydantic import BaseModel
 from shared.models.schemas import PaginatedResponse
 
@@ -82,6 +86,7 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "ActionSuggestionsResponse": ActionSuggestionsResponse,
     # === Insights ===
     "InsightsGenerationResponse": InsightsGenerationResponse,  # LLM generates list of insights
+    "EmailInsightResponse": EmailInsightResponse,  # Structured payload for email insight topics
     "PaginatedInsightResponse": PaginatedInsightResponse,  # For paginated API responses
     # === Operations AI (Active endpoints only) ===
     "OptimizedActionPlanResponse": OptimizedActionPlanResponse,

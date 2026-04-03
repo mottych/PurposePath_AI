@@ -43,6 +43,7 @@ class TestTopicCategory:
         assert TopicCategory.ONBOARDING.value == "onboarding"
         assert TopicCategory.CONVERSATION.value == "conversation"
         assert TopicCategory.INSIGHTS.value == "insights"
+        assert TopicCategory.EMAIL_INSIGHT.value == "email_insight"
         assert TopicCategory.STRATEGIC_PLANNING.value == "strategic_planning"
         assert TopicCategory.OPERATIONS_AI.value == "operations_ai"
         assert (
@@ -52,8 +53,8 @@ class TestTopicCategory:
         assert TopicCategory.ANALYSIS.value == "analysis"
 
     def test_topic_category_count(self) -> None:
-        """Test that TopicCategory has exactly 7 values."""
-        assert len(TopicCategory) == 7
+        """Test that TopicCategory has exactly 8 values."""
+        assert len(TopicCategory) == 8
 
 
 class TestPromptType:

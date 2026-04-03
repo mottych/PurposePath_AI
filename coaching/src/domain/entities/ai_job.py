@@ -7,14 +7,14 @@ execution, including job status, results, and error handling.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 
-class AIJobStatus(str, Enum):
+class AIJobStatus(StrEnum):
     """Status of an AI job.
 
     States:
@@ -30,7 +30,7 @@ class AIJobStatus(str, Enum):
     FAILED = "failed"
 
 
-class AIJobType(str, Enum):
+class AIJobType(StrEnum):
     """Type of AI job.
 
     Types:
@@ -42,7 +42,7 @@ class AIJobType(str, Enum):
     CONVERSATION_MESSAGE = "conversation_message"
 
 
-class AIJobErrorCode(str, Enum):
+class AIJobErrorCode(StrEnum):
     """Error codes for AI job failures.
 
     Provides categorization for different failure types to enable
@@ -52,6 +52,11 @@ class AIJobErrorCode(str, Enum):
     TOPIC_NOT_FOUND = "TOPIC_NOT_FOUND"
     PARAMETER_VALIDATION = "PARAMETER_VALIDATION"
     PROMPT_RENDER_ERROR = "PROMPT_RENDER_ERROR"
+    AUTH_MISSING_SERVICE_TOKEN = "AUTH_MISSING_SERVICE_TOKEN"
+    AUTH_SERVICE_TOKEN_EXPIRED = "AUTH_SERVICE_TOKEN_EXPIRED"
+    AUTH_SERVICE_TOKEN_INVALID = "AUTH_SERVICE_TOKEN_INVALID"
+    AUTH_SERVICE_TOKEN_INSUFFICIENT_SCOPE = "AUTH_SERVICE_TOKEN_INSUFFICIENT_SCOPE"
+    AUTH_ENRICHMENT_FORBIDDEN = "AUTH_ENRICHMENT_FORBIDDEN"
     LLM_TIMEOUT = "LLM_TIMEOUT"
     LLM_ERROR = "LLM_ERROR"
     INTERNAL_ERROR = "INTERNAL_ERROR"
@@ -121,6 +126,18 @@ class AIJob(BaseModel):
         default=None,
         description="JWT token for API calls during enrichment (stored encrypted at rest)",
         exclude=True,  # Exclude from serialization by default for security
+    )
+    correlation_id: str | None = Field(
+        default=None,
+        description="Correlation identifier propagated from upstream request",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        description="Idempotency key propagated from upstream request",
+    )
+    event_id: str | None = Field(
+        default=None,
+        description="Upstream event/request identifier",
     )
     status: AIJobStatus = Field(
         default=AIJobStatus.PENDING,

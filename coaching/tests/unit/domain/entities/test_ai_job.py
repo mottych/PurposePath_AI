@@ -58,6 +58,23 @@ class TestAIJob:
         assert job.completed_at is None
         assert job.result is None
         assert job.error is None
+        assert job.correlation_id is None
+        assert job.idempotency_key is None
+        assert job.event_id is None
+
+    def test_create_job_with_context_metadata(self) -> None:
+        """Test creating a job with propagated request metadata."""
+        job = AIJob(
+            user_id="user_123",
+            tenant_id="tenant_456",
+            topic_id="goal_created_email_insight",
+            correlation_id="corr-123",
+            idempotency_key="idem-123",
+            event_id="evt-123",
+        )
+        assert job.correlation_id == "corr-123"
+        assert job.idempotency_key == "idem-123"
+        assert job.event_id == "evt-123"
 
     def test_mark_processing(self, job: AIJob) -> None:
         """Test marking job as processing."""
