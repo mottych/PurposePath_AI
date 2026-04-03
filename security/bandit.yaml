@@ -1,0 +1,16 @@
+exclude_dirs:
+  - .venv
+  - .venv-security
+  - venv
+  - __pycache__
+  - .pytest_cache
+  - .mypy_cache
+  - .ruff_cache
+  - node_modules
+  - docs
+  - deployment
+  - coaching/tests
+  - tests
+
+skips:
+  - B101 # assert_used (allowed in test code; tests are excluded)

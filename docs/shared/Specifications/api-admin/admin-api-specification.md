@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 2.2  
+**Version:** 2.6  
 **Status:** Complete  
-**Last Updated:** February 5, 2026  
+**Last Updated:** April 1, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
 **Default (Localhost):** `http://localhost:8003/admin/api/v1`  
 **Production:** `https://api.purposepath.app/admin/api/v1`
@@ -13,6 +13,10 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 3, 2026 | 2.6 | Added Notification Maintenance endpoint (`GET /notifications/{notificationId}`) for single notification retrieval by ID | System |
+| Apr 3, 2026 | 2.5 | Added Notification Maintenance endpoints (`PATCH /notifications/{notificationId}/status`, `PATCH /notifications/{notificationId}/overrides`) and documented override/status update contracts | System |
+| Apr 3, 2026 | 2.4 | Standardized Notifications Catalog response envelope, added email template key aliases (`GET/PATCH /email-templates/by-key/{templateKey}`), and corrected endpoint summary counts | System |
+| Apr 1, 2026 | 2.3 | Added Notifications Catalog endpoint (`GET /notifications/catalog`) for registry-first unified email visibility | System |
 | Feb 5, 2026 | 2.2 | Added Discount Code Management (9 endpoints), User Management (5 endpoints), and Audit Log Management (4 endpoints) | System |
 | Feb 5, 2026 | 2.1 | Added System Settings Management (5 endpoints) and Role Template Management (8 endpoints) | System |
 | Feb 4, 2026 | 2.0 | Complete specification with all endpoints documented | System |
@@ -33,6 +37,7 @@
    - [Issue Type Configuration](#issue-type-configuration)
    - [Issue Status Configuration](#issue-status-configuration)
    - [Email Template Management](#email-template-management)
+    - [Notifications Catalog](#notifications-catalog)
    - [Subscriber Management](#subscriber-management)
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
@@ -1028,25 +1033,28 @@ List all email templates with pagination and filtering.
 **Response:**
 ```json
 {
-  "templates": [
+  "items": [
     {
       "id": "990e8400-e29b-41d4-a716-446655440000",
       "name": "email_verification",
       "subject": "Verify Your Email Address - PurposePath",
       "description": "Default email verification template",
-      "category": "authentication",
+      "category": "verification",
       "language": "en",
       "isActive": true,
       "isDefault": false,
-      "createdBy": "system",
+      "usageCount": 42,
+      "lastUsed": "2026-02-03T17:10:00Z",
       "createdAt": "2025-01-15T10:30:00Z",
-      "updatedAt": "2025-01-20T14:45:00Z",
-      "version": 1
+      "updatedAt": "2025-01-20T14:45:00Z"
     }
   ],
-  "totalCount": 10,
-  "currentPage": 1,
-  "pageSize": 20
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 10,
+    "totalPages": 1
+  }
 }
 ```
 
@@ -1054,6 +1062,7 @@ List all email templates with pagination and filtering.
 - `200 OK` - Templates retrieved successfully
 - `400 Bad Request` - Invalid pagination or filter parameters
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
 
 ---
 
@@ -1071,7 +1080,7 @@ Get a specific email template by ID.
   "name": "email_verification",
   "subject": "Verify Your Email Address - PurposePath",
   "description": "Default email verification template",
-  "category": "authentication",
+  "category": "verification",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome to PurposePath!...",
   "variables": [
@@ -1088,23 +1097,50 @@ Get a specific email template by ID.
       "required": true
     }
   ],
-  "tags": ["verification", "onboarding"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "isSystem": false,
-  "version": 1,
-  "createdBy": "system",
+  "previewUrl": null,
+  "lastUsed": "2026-02-03T17:10:00Z",
+  "usageCount": 42,
   "createdAt": "2025-01-15T10:30:00Z",
-  "updatedAt": "2025-01-20T14:45:00Z"
+  "updatedAt": "2025-01-20T14:45:00Z",
+  "createdBy": "system",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["verification", "onboarding"],
+    "notes": null
+  }
 }
 ```
 
 **Status Codes:**
 - `200 OK` - Template retrieved successfully
-- `400 Bad Request` - Invalid ID format
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+---
+
+### GET /email-templates/by-key/{templateKey}
+
+Get a specific email template by template key (`template_id` used by notification catalog entries).
+
+**Path Parameters:**
+- `templateKey` (string) - Template key (for example: `payment-renewal-success`)
+
+**Behavior:**
+- Normalizes key and template name to kebab-case for lookup.
+- Resolves template key to template ID, then returns the same payload contract as `GET /email-templates/{id}`.
+
+**Status Codes:**
+- `200 OK` - Template retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Template key not found
+- `500 Internal Server Error` - Template key resolution failed
 
 ---
 
@@ -1118,7 +1154,7 @@ Create a new email template.
   "name": "custom_welcome",
   "subject": "Welcome to Our Platform!",
   "description": "Custom welcome email for new users",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html><html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [
@@ -1131,17 +1167,19 @@ Create a new email template.
   ],
   "tags": ["welcome", "custom"],
   "language": "en",
-  "isActive": true
+  "isActive": true,
+  "isDefault": false,
+  "notes": "Optional notes"
 }
 ```
 
 **Validations:**
-- `name`: Required, unique, 1-100 characters, lowercase with underscores
+- `name`: Required, unique per category, 1-100 characters, letters/numbers/spaces/hyphens/underscores
 - `subject`: Required, 1-200 characters
-- `description`: Optional, max 500 characters
-- `category`: Required, valid category (authentication, onboarding, trial, payment, subscription)
+- `description`: Required, max 500 characters
+- `category`: Required, valid category enforced by current service (`welcome`, `verification`, `password-reset`, `trial`, `payment`, `subscription`)
 - `htmlContent`: Required, valid HTML
-- `textContent`: Optional, plain text version
+- `textContent`: Required, plain text version
 - `variables`: Required array, each with name, type, description, required flag
 - `language`: Optional, ISO 639-1 code (default: "en")
 
@@ -1152,18 +1190,27 @@ Create a new email template.
   "name": "custom_welcome",
   "subject": "Welcome to Our Platform!",
   "description": "Custom welcome email for new users",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html><html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "version": 1,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": null,
+  "usageCount": 0,
   "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T10:30:00Z"
+  "updatedAt": "2026-02-04T10:30:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "custom"],
+    "notes": null
+  }
 }
 ```
 
@@ -1171,6 +1218,11 @@ Create a new email template.
 - `201 Created` - Template created successfully
 - `400 Bad Request` - Invalid request data or duplicate name
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `subject`, `language`, `isActive`, `isDefault`, and `notes` are accepted by the request model but not applied when creating the domain entity.
+- Current implementation sets `subject = name`, `language = "en"`, `isActive = true`, and `isDefault = false`.
 
 ---
 
@@ -1184,10 +1236,12 @@ Update an existing email template (partial update).
 **Request:**
 ```json
 {
+  "name": "custom_welcome_v2",
   "subject": "Updated Subject Line",
   "description": "Updated description",
   "htmlContent": "<!DOCTYPE html>...",
-  "isActive": true
+  "category": "welcome",
+  "tags": ["welcome", "v2"]
 }
 ```
 
@@ -1199,21 +1253,30 @@ Update an existing email template (partial update).
 ```json
 {
   "id": "aa0e8400-e29b-41d4-a716-446655440000",
-  "name": "custom_welcome",
-  "subject": "Updated Subject Line",
+  "name": "custom_welcome_v2",
+  "subject": "custom_welcome",
   "description": "Updated description",
-  "category": "onboarding",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": true,
   "isDefault": false,
-  "version": 2,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": "2026-02-03T17:10:00Z",
+  "usageCount": 43,
   "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T11:00:00Z"
+  "updatedAt": "2026-02-04T11:00:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "v2"],
+    "notes": null
+  }
 }
 ```
 
@@ -1222,6 +1285,34 @@ Update an existing email template (partial update).
 - `400 Bad Request` - Invalid request data
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `subject`, `language`, `isActive`, `isDefault`, and `notes` are not applied by the update command path.
+- `name` and `description` are only applied when `category` or `tags` is also provided in the same request.
+- Subject remains unchanged on update.
+
+---
+
+### PATCH /email-templates/by-key/{templateKey}
+
+Update an existing email template by template key (`template_id` used by notification catalog entries).
+
+**Path Parameters:**
+- `templateKey` (string) - Template key (for example: `payment-renewal-success`)
+
+**Request:**
+- Same request body contract as `PATCH /email-templates/{id}`.
+
+**Behavior:**
+- Resolves template key to template ID, then executes the same update flow and validations as `PATCH /email-templates/{id}`.
+
+**Status Codes:**
+- `200 OK` - Template updated successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Template key not found
+- `500 Internal Server Error` - Template key resolution or update failed
 
 ---
 
@@ -1235,9 +1326,9 @@ Clone an existing email template.
 **Request:**
 ```json
 {
-  "newName": "custom_welcome_v2",
-  "newDescription": "Cloned welcome email template",
-  "newLanguage": "en"
+  "name": "custom_welcome_v2",
+  "description": "Optional description input (currently ignored)",
+  "language": "en"
 }
 ```
 
@@ -1247,19 +1338,28 @@ Clone an existing email template.
   "id": "bb0e8400-e29b-41d4-a716-446655440000",
   "name": "custom_welcome_v2",
   "subject": "Welcome to Our Platform!",
-  "description": "Cloned welcome email template",
-  "category": "onboarding",
+  "description": "Clone of Custom welcome email for new users",
+  "category": "welcome",
   "htmlContent": "<!DOCTYPE html>...",
   "textContent": "Welcome {{firstName}}!...",
   "variables": [...],
-  "tags": ["welcome", "custom"],
   "language": "en",
   "isActive": false,
   "isDefault": false,
-  "version": 1,
-  "createdBy": "admin-user-id",
+  "previewUrl": null,
+  "lastUsed": null,
+  "usageCount": 0,
   "createdAt": "2026-02-04T11:00:00Z",
-  "updatedAt": "2026-02-04T11:00:00Z"
+  "updatedAt": "2026-02-04T11:00:00Z",
+  "createdBy": "admin-user-id",
+  "metadata": {
+    "openRate": null,
+    "clickRate": null,
+    "bounceRate": null,
+    "lastPerformanceUpdate": null,
+    "tags": ["welcome", "custom"],
+    "notes": null
+  }
 }
 ```
 
@@ -1267,12 +1367,14 @@ Clone an existing email template.
 - `201 Created` - Template cloned successfully
 - `400 Bad Request` - Invalid source ID or duplicate new name
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Source template not found
+- `500 Internal Server Error` - Server error
 
 **Notes:**
 - Cloned templates start as inactive (isActive=false)
 - All content and variables copied from source
 - New template gets new ID and creation timestamp
+- Clone response `description` is generated as `Clone of {sourceDescription}`
+- Request `description` and `language` fields are currently ignored
 
 ---
 
@@ -1286,32 +1388,25 @@ Preview rendered email template with sample data.
 **Request:**
 ```json
 {
-  "previewData": {
+  "variables": {
     "FirstName": "John",
     "VerificationLink": "https://app.purposepath.com/verify?token=abc123"
   },
-  "renderFormat": "html"
+  "format": "html"
 }
 ```
 
 **Response:**
 ```json
 {
-  "renderedHtml": "<!DOCTYPE html><html>...<p>Hi John,</p>...",
-  "renderedText": "Hi John,\n\nThank you for registering...",
-  "subject": "Verify Your Email Address - PurposePath",
-  "variables": [
-    {
-      "name": "FirstName",
-      "value": "John",
-      "provided": true
-    },
-    {
-      "name": "VerificationLink",
-      "value": "https://app.purposepath.com/verify?token=abc123",
-      "provided": true
-    }
-  ]
+  "subject": "Preview",
+  "htmlContent": "<!DOCTYPE html><html>...<p>Hi John,</p>...",
+  "textContent": null,
+  "variables": {
+    "FirstName": "John",
+    "VerificationLink": "https://app.purposepath.com/verify?token=abc123"
+  },
+  "previewUrl": null
 }
 ```
 
@@ -1319,7 +1414,11 @@ Preview rendered email template with sample data.
 - `200 OK` - Preview rendered successfully
 - `400 Bad Request` - Invalid template ID or missing required variables
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- Subject rendering is not implemented yet; response `subject` is currently hardcoded to `"Preview"`.
+- `format` controls whether `htmlContent`, `textContent`, or both are returned.
 
 ---
 
@@ -1333,21 +1432,22 @@ Send test email using template.
 **Request:**
 ```json
 {
-  "testEmail": "admin@example.com",
-  "testData": {
+  "toEmail": "admin@example.com",
+  "variables": {
     "FirstName": "Test User",
     "VerificationLink": "https://app.purposepath.com/verify?token=test123"
-  }
+  },
+  "fromName": "Optional sender override (currently ignored)",
+  "fromEmail": "optional@example.com"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "messageId": "550e8400-e29b-41d4-a716-446655440000",
-  "sentTo": "admin@example.com",
-  "sentAt": "2026-02-04T11:30:00Z"
+  "sent": true,
+  "messageId": "test-message-id",
+  "to": "admin@example.com"
 }
 ```
 
@@ -1355,8 +1455,11 @@ Send test email using template.
 - `200 OK` - Test email sent successfully
 - `400 Bad Request` - Invalid request data or missing variables
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
 - `500 Internal Server Error` - Email delivery failure
+
+**Current Behavior Notes:**
+- `fromName` and `fromEmail` are currently accepted but not used.
+- Test send path currently uses the welcome-email sender path and returns a placeholder `messageId` (`"test-message-id"`).
 
 ---
 
@@ -1371,29 +1474,39 @@ Get template usage analytics.
 ```json
 {
   "templateId": "990e8400-e29b-41d4-a716-446655440000",
-  "templateName": "email_verification",
-  "totalSent": 15420,
-  "sentLast30Days": 1250,
-  "sentLast7Days": 310,
-  "sentToday": 45,
-  "averageOpenRate": 72.5,
-  "averageClickRate": 34.2,
-  "lastSent": "2026-02-04T10:00:00Z",
-  "mostRecentErrors": [
-    {
-      "errorMessage": "Invalid recipient email",
-      "occurredAt": "2026-02-03T15:30:00Z",
-      "count": 2
-    }
-  ]
+  "templateName": "Analytics Coming Soon",
+  "period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-31T23:59:59Z"
+  },
+  "metrics": {
+    "sent": 0,
+    "delivered": 0,
+    "opened": 0,
+    "clicked": 0,
+    "bounced": 0,
+    "unsubscribed": 0
+  },
+  "rates": {
+    "deliveryRate": 0,
+    "openRate": 0,
+    "clickRate": 0,
+    "bounceRate": 0,
+    "unsubscribeRate": 0
+  },
+  "timeline": []
 }
 ```
 
 **Status Codes:**
 - `200 OK` - Analytics retrieved successfully
-- `400 Bad Request` - Invalid template ID
 - `401 Unauthorized` - Missing or invalid admin token
 - `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- `period`, `startDate`, and `endDate` query parameters are accepted; only `startDate` and `endDate` are used to shape response period values.
+- Detailed analytics metrics are placeholders pending full analytics implementation.
 
 ---
 
@@ -1413,14 +1526,13 @@ Delete an email template (soft delete).
 
 **Status Codes:**
 - `204 No Content` - Template deleted successfully
-- `400 Bad Request` - Invalid ID or system template (cannot delete)
+- `400 Bad Request` - Delete failed (including template-not-found business failure)
 - `401 Unauthorized` - Missing or invalid admin token
-- `404 Not Found` - Template not found
+- `500 Internal Server Error` - Server error
 
 **Notes:**
-- Soft delete only (sets isActive=false, retains data)
-- System templates cannot be deleted
-- Templates with active email sends retained for audit
+- Soft delete only (sets `isActive=false`, retains data)
+- System-template delete blocking is not currently enforced in service logic
 
 ---
 
@@ -1435,24 +1547,18 @@ Get list of available template categories.
 {
   "categories": [
     {
-      "category": "authentication",
-      "description": "Email verification and confirmation",
-      "templateCount": 3
-    },
-    {
-      "category": "onboarding",
+      "name": "welcome",
       "description": "Welcome and onboarding emails",
-      "templateCount": 1
+      "templateCount": 3,
+      "defaultTemplate": null,
+      "requiredVariables": []
     },
     {
-      "category": "trial",
-      "description": "Trial period notifications",
-      "templateCount": 3
-    },
-    {
-      "category": "payment",
-      "description": "Payment and billing notifications",
-      "templateCount": 3
+      "name": "verification",
+      "description": "Email verification and confirmation",
+      "templateCount": 2,
+      "defaultTemplate": null,
+      "requiredVariables": []
     }
   ]
 }
@@ -1461,6 +1567,167 @@ Get list of available template categories.
 **Status Codes:**
 - `200 OK` - Categories retrieved successfully
 - `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Server error
+
+**Current Behavior Notes:**
+- Categories are generated from a predefined list in the application service: `welcome`, `verification`, `password-reset`, `trial`, `payment`, `subscription`.
+- `requiredVariables` is currently returned as an empty array.
+
+---
+
+## Notifications Catalog
+
+Registry-first notification catalog for admin visibility into notification contracts and template readiness.
+
+### GET /notifications/catalog
+
+List all registry notifications with effective active state and template existence.
+
+**No Query Parameters**
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "notification_id": "payment.subscription.renewed",
+        "name": "Payment Subscription Renewed",
+        "description": "Sent when a subscription renewal payment succeeds.",
+        "category": "billing",
+        "template_id": "payment-renewal-success",
+        "template_exists": true,
+        "effective_active_state": true
+      }
+    ]
+  }
+}
+```
+
+**Field Semantics:**
+- `notification_id`: Canonical identifier from code registry.
+- `template_exists`: Whether the registry template currently resolves in the template registry.
+- `effective_active_state`: Persisted `is_active` override when present; otherwise defaults to active (`true`) from registry contract behavior.
+
+**Status Codes:**
+- `200 OK` - Catalog retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `500 Internal Server Error` - Catalog retrieval failed (`code`: `NOTIFICATION_CATALOG_UNAVAILABLE`)
+
+---
+
+### PATCH /notifications/{notificationId}/status
+
+Update notification maintenance status (`active` / `inactive`) for a persisted notification definition.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier (for example `payment.subscription.renewed`)
+
+**Request:**
+```json
+{
+  "is_active": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success",
+    "reply_to_email": "support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": false
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Status updated successfully
+- `400 Bad Request` - Invalid notification ID or payload
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Update failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
+
+---
+
+### PATCH /notifications/{notificationId}/overrides
+
+Update notification maintenance override values.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier
+
+**Request:**
+```json
+{
+  "template_id": "payment-renewal-success-v2",
+  "reply_to_email": "billing-support@purposepath.ai",
+  "requires_reply_to": true
+}
+```
+
+**Rules:**
+- At least one of `template_id`, `reply_to_email`, or `requires_reply_to` is required.
+- `reply_to_email` must be a valid `@purposepath.ai` email when provided.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success-v2",
+    "reply_to_email": "billing-support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": true
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Overrides updated successfully
+- `400 Bad Request` - Invalid payload or override values
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Update failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
+
+---
+
+### GET /notifications/{notificationId}
+
+Get a single notification maintenance record by notification ID.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier (for example `payment.subscription.renewed`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success",
+    "reply_to_email": "support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": true
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Notification retrieved successfully
+- `400 Bad Request` - Invalid notification ID
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Retrieval failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
 
 ---
 
@@ -3653,7 +3920,7 @@ Get list of all role templates with optional filtering.
 **Query Parameters:**
 
 - `search` (string, optional) - Search by template name
-- `category` (string, optional) - Filter by category ("STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING")
+- `category` (string, optional) - Filter by category ("leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other")
 - `is_active` (boolean, optional) - Filter by active status
 
 **Response (200 OK):**
@@ -3664,17 +3931,20 @@ Get list of all role templates with optional filtering.
   "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
+      "tenantId": null,
       "name": "Technology Startup",
       "description": "Basic organizational structure for tech startups",
-      "category": "STARTUP",
-      "roles_count": 8,
-      "is_active": true,
+      "category": "Leadership",
+      "scope": "platform",
+      "isActive": true,
+      "rolesCount": 8,
+      "usageCount": 0,
       "preview": {
-        "total_roles": 8,
-        "sample_roles": ["CEO", "CTO", "CFO"]
+        "totalRoles": 8,
+        "sampleRoles": ["Chief Executive Officer", "Chief Technology Officer", "Chief Financial Officer"]
       },
-      "created_at": "2026-01-15T10:00:00Z",
-      "updated_at": "2026-02-01T14:30:00Z"
+      "createdAt": "2026-01-15T10:00:00Z",
+      "updatedAt": "2026-02-01T14:30:00Z"
     }
   ]
 }
@@ -3691,8 +3961,8 @@ Get list of all role templates with optional filtering.
 **Implementation:**
 
 - Controller: `RoleTemplatesController.ListTemplates()`
-- Query: `ListRoleTemplatesQuery`
-- Handler: `ListRoleTemplatesQueryHandler`
+- Query: `GetFilteredPlatformTemplatesQuery`
+- Handler: `GetFilteredPlatformTemplatesQueryHandler`
 
 ---
 
@@ -3708,36 +3978,35 @@ Get a specific role template with all its roles.
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Technology Startup",
-    "description": "Complete organizational structure for tech startups",
-    "category": "STARTUP",
-    "is_active": true,
-    "roles": [
-      {
-        "id": "role-uuid",
-        "code": "CEO",
-        "name": "Chief Executive Officer",
-        "description": "Leads the company",
-        "responsibilities": "Set vision, manage executives...",
-        "reports_to_code": null,
-        "created_at": "2026-01-15T10:00:00Z"
-      },
-      {
-        "id": "role-uuid-2",
-        "code": "CTO",
-        "name": "Chief Technology Officer",
-        "description": "Oversees technology",
-        "responsibilities": "Manage tech stack, lead dev team...",
-        "reports_to_code": "CEO",
-        "created_at": "2026-01-15T10:05:00Z"
-      }
-    ],
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_at": "2026-02-01T14:30:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Technology Startup",
+  "description": "Complete organizational structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [
+    {
+      "id": "role-uuid",
+      "key": "ceo",
+      "title": "Chief Executive Officer",
+      "description": "Leads the company",
+      "responsibilities": ["Set vision", "Manage executives"],
+      "reportsToKey": null
+    },
+    {
+      "id": "role-uuid-2",
+      "key": "cto",
+      "title": "Chief Technology Officer",
+      "description": "Oversees technology",
+      "responsibilities": ["Manage tech stack", "Lead engineering"],
+      "reportsToKey": "ceo"
+    }
+  ],
+  "relationships": [],
+  "createdAt": "2026-01-15T10:00:00Z",
+  "updatedAt": "2026-02-01T14:30:00Z"
 }
 ```
 
@@ -3767,9 +4036,10 @@ Create a new role template.
 ```json
 {
   "name": "Technology Startup",
-  "description": "Basic tech startup org structure",
-  "category": "STARTUP",
-  "is_active": true
+  "description": "Basic org structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "tenantId": null
 }
 ```
 
@@ -3777,26 +4047,37 @@ Create a new role template.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| `name` | string | Yes | 1-100 characters, unique |
-| `description` | string | No | Max 500 characters |
-| `category` | string | Yes | Enum: "STARTUP", "SMB", "ENTERPRISE", "EOS", "SCALING" |
-| `is_active` | boolean | No | Default: true |
+| `name` | string | Yes | Not empty; API validator max 200 chars; duplicate names rejected per scope |
+| `description` | string | No | API validator max 1000 chars |
+| `category` | string | Yes | One of: "leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other" |
+| `scope` | string | Yes | One of: "platform", "tenant" |
+| `tenantId` | string (GUID) | Conditional | Required when `scope = "tenant"`; must be empty when `scope = "platform"` |
 
 **Response (201 Created):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "new-uuid",
-    "name": "Technology Startup",
-    "description": "Basic tech startup org structure",
-    "category": "STARTUP",
-    "is_active": true,
-    "roles": [],
-    "created_at": "2026-02-05T15:00:00Z",
-    "updated_at": "2026-02-05T15:00:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Technology Startup",
+  "description": "Basic org structure for tech startups",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [],
+  "relationships": [],
+  "createdAt": "2026-02-05T15:00:00Z",
+  "updatedAt": "2026-02-05T15:00:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "A template with name 'Technology Startup' already exists",
+  "code": "DUPLICATE_NAME"
 }
 ```
 
@@ -3806,7 +4087,6 @@ Create a new role template.
 - `400 Bad Request` - Validation error
 - `401 Unauthorized` - Missing or invalid admin token
 - `403 Forbidden` - User lacks admin role
-- `409 Conflict` - Template name already exists
 - `500 Internal Server Error` - Server error
 
 **Implementation:**
@@ -3831,31 +4111,43 @@ Update an existing role template.
 {
   "name": "Updated Template Name",
   "description": "Updated description",
-  "category": "ENTERPRISE",
-  "is_active": false
+  "category": "leadership"
 }
 ```
 
-**Notes:**
+**Validation Rules:**
 
-- All fields are optional (partial update supported)
-- Cannot change template ID
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Not empty; API validator max 200 chars |
+| `description` | string | No | API validator max 1000 chars |
+| `category` | string | Yes | One of: "leadership", "operations", "sales", "marketing", "finance", "hr", "it", "other" |
 
 **Response (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Updated Template Name",
-    "description": "Updated description",
-    "category": "ENTERPRISE",
-    "is_active": false,
-    "roles": [...],
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_at": "2026-02-05T15:30:00Z"
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": null,
+  "name": "Updated Template Name",
+  "description": "Updated description",
+  "category": "Leadership",
+  "scope": "platform",
+  "isActive": true,
+  "usageCount": 0,
+  "roles": [],
+  "relationships": [],
+  "createdAt": "2026-01-15T10:00:00Z",
+  "updatedAt": "2026-02-05T15:30:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "A template with name 'Updated Template Name' already exists",
+  "code": "DUPLICATE_NAME"
 }
 ```
 
@@ -3866,7 +4158,6 @@ Update an existing role template.
 - `401 Unauthorized` - Missing or invalid admin token
 - `403 Forbidden` - User lacks admin role
 - `404 Not Found` - Template not found
-- `409 Conflict` - Duplicate name
 - `500 Internal Server Error` - Server error
 
 **Implementation:**
@@ -4773,7 +5064,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 119
+**Total Endpoints:** 95
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -4781,10 +5072,11 @@ Business rule violations return 400 Bad Request with context:
 - System Seeding: 7
 - Issue Type Configuration: 7
 - Issue Status Configuration: 6
-- Email Template Management: 9
+- Email Template Management: 12
+- Notifications Catalog: 4
 - Subscriber Management: 2
 - Plan Management: 8
-- Feature Management: 12
+- Feature Management: 8
 - Subscription Operations: 6
 - Discount Code Management: 9
 - System Settings Management: 5

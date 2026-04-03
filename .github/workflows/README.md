@@ -7,6 +7,11 @@
 **Purpose**: Run tests, linting, type checking, and security scans
 **Does NOT deploy** - only validates code quality
 
+### Security Scans (`security-scans.yml`)
+**Trigger**: Pull requests, pushes to key branches, weekly schedule, and manual dispatch
+**Purpose**: Run repository security scans and upload machine-readable artifacts from `.artifacts/security/`
+**Includes**: Bandit, pip-audit, detect-secrets baseline checks, Checkov, and AI-specific native pattern checks
+
 ### Deploy Dev (`deploy-dev.yml`)
 **Trigger**: Push to `dev`, or manual `workflow_dispatch`
 **Purpose**: Deploy coaching service to dev environment

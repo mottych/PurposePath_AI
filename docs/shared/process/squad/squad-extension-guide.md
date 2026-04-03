@@ -80,7 +80,7 @@ What does not belong here:
 3. Add transition semantics in:
    - `squad.config.ts`
    - `.squad/skills/*/SKILL.md`
-4. Update `docs/shared/process/SQUAD_LABEL_STATE_MACHINE.md`.
+4. Update `docs/shared/process/squad/SQUAD_LABEL_STATE_MACHINE.md`.
 5. Run `squad build` and `squad doctor`.
 
 ### Add a New Transition (Example: new go gate)
@@ -132,4 +132,4 @@ In this repo, the intended split is:
 
 - Squad README (SDK-first orchestration and tool model)
 - Squad docs (`docs/sdk-first-mode.md`, migration guide)
-- `docs/shared/process/SQUAD_LABEL_STATE_MACHINE.md`
+- `docs/shared/process/squad/SQUAD_LABEL_STATE_MACHINE.md`

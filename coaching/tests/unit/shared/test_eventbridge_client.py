@@ -64,7 +64,7 @@ def test_publish_sends_stage_when_enabled(monkeypatch: Any) -> None:
 
     assert event_id == "evt-123"
     assert len(dummy.entries) == 1
-    assert "\"stage\": \"preprod\"" in dummy.entries[0]["Detail"]
+    assert '"stage": "preprod"' in dummy.entries[0]["Detail"]
 
 
 def test_publish_ai_job_created_includes_trace_metadata(monkeypatch: Any) -> None:
@@ -89,6 +89,6 @@ def test_publish_ai_job_created_includes_trace_metadata(monkeypatch: Any) -> Non
 
     assert event_id == "evt-123"
     detail = dummy.entries[0]["Detail"]
-    assert "\"correlationId\": \"corr-1\"" in detail
-    assert "\"idempotencyKey\": \"idem-1\"" in detail
-    assert "\"eventId\": \"evt-1\"" in detail
+    assert '"correlationId": "corr-1"' in detail
+    assert '"idempotencyKey": "idem-1"' in detail
+    assert '"eventId": "evt-1"' in detail

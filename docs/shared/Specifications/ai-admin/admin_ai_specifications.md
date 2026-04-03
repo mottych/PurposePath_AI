@@ -318,7 +318,7 @@ For topics with `topic_type: "conversation_coaching"`, the response includes `co
 | `inactivity_timeout_minutes` | integer | 5-1440 | 30 | Minutes of inactivity before session auto-pauses |
 | `session_ttl_days` | integer | 1-90 | 14 | Days to keep paused/completed sessions before deletion |
 | `max_turns` | integer | 0-100 | 0 | Maximum conversation turns (0 means unlimited) |
-| `extraction_model_code` | string | - | CLAUDE_3_5_HAIKU | MODEL_REGISTRY code for extraction (e.g., CLAUDE_3_5_HAIKU, CLAUDE_3_5_SONNET_V2) |
+| `extraction_model_code` | string | - | CLAUDE_HAIKU_4_5 | MODEL_REGISTRY code for extraction (e.g., CLAUDE_HAIKU_4_5, CLAUDE_3_5_SONNET_V2) |
 
 **Compatibility Note:** Existing records may still contain `estimated_messages`. The API maps legacy `estimated_messages` to `max_turns` for backward compatibility.
 
@@ -327,8 +327,8 @@ For topics with `topic_type: "conversation_coaching"`, the response includes `co
 For `conversation_coaching` completion/extraction:
 
 - API uses `conversation_config.extraction_model_code` when provided
-- Default extraction model is `CLAUDE_3_5_HAIKU`
-- If configured extraction model code is not present in `MODEL_REGISTRY`, runtime falls back to `CLAUDE_3_HAIKU`
+- Default extraction model is `CLAUDE_HAIKU_4_5`
+- If configured extraction model code is not present in `MODEL_REGISTRY`, runtime falls back to `CLAUDE_HAIKU_4_5`
 - Extraction call runs with `temperature=0.3`
 - Extraction max tokens are capped to `min(8192, extraction_model.max_tokens)`
 

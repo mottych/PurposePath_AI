@@ -61,7 +61,7 @@ class TestBedrockProviderProperties:
         assert isinstance(models, list)
         assert len(models) > 0
         assert "anthropic.claude-3-sonnet-20240229-v1:0" in models
-        assert "anthropic.claude-3-haiku-20240307-v1:0" in models
+        assert "anthropic.claude-haiku-4-5-20251001-v1:0" in models
 
     def test_supported_models_returns_copy(self) -> None:
         """Test that supported_models returns a copy."""
@@ -173,7 +173,7 @@ class TestBedrockProviderModelSupport:
 
         # Act & Assert
         assert "anthropic.claude-3-sonnet-20240229-v1:0" in provider.supported_models
-        assert "anthropic.claude-3-haiku-20240307-v1:0" in provider.supported_models
+        assert "anthropic.claude-haiku-4-5-20251001-v1:0" in provider.supported_models
         assert "anthropic.claude-3-5-sonnet-20240620-v1:0" in provider.supported_models
 
     def test_supports_llama_models(self) -> None:
@@ -309,7 +309,7 @@ class TestBedrockProviderMultipleModels:
 
         claude_models = [
             "anthropic.claude-3-sonnet-20240229-v1:0",
-            "anthropic.claude-3-haiku-20240307-v1:0",
+            "anthropic.claude-haiku-4-5-20251001-v1:0",
             "anthropic.claude-v2:1",
         ]
 
@@ -389,6 +389,10 @@ class TestInferenceProfileResolution:
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
             ),
             (
+                "anthropic.claude-haiku-4-5-20251001-v1:0",
+                "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            ),
+            (
                 "anthropic.claude-sonnet-4-5-20250929-v1:0",
                 "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             ),
@@ -409,7 +413,6 @@ class TestInferenceProfileResolution:
         # Models that support direct invocation (should NOT be modified)
         direct_models = [
             "anthropic.claude-3-sonnet-20240229-v1:0",
-            "anthropic.claude-3-haiku-20240307-v1:0",
             "anthropic.claude-3-5-sonnet-20240620-v1:0",  # v1 supports direct
             "meta.llama3-70b-instruct-v1:0",
         ]

@@ -18,7 +18,7 @@ Use repository-specific branch names when applying this guide:
 
 - Never commit directly to `dev` or the repository production branch (`main` or `master`).
 - Never use git stash in normal workflow (`git stash`, `pop`, `apply`, `clear`).
-- Keep one issue per branch; do not carry unrelated changes.
+- Keep one issue per branch for standard flow; for epic flow, keep one epic branch and process its child issues as a single unit.
 - Before switching branches, working tree must be clean (`git status --short`).
 - Before starting a new issue, stash list must be empty.
 
@@ -36,6 +36,30 @@ Use repository-specific branch names when applying this guide:
 - Every implementation should be tied to a GitHub issue.
 - Use issue labels/states to reflect progress.
 - Keep status in issue comments instead of ad-hoc status documents.
+
+## Epic Implementation Workflow (Mandatory for Epic-Scoped Work)
+
+Treat an epic as one delivery unit with one long-lived epic branch.
+
+1. Create one branch for the entire epic:
+	- `git checkout dev && git pull origin dev`
+	- `git checkout -b epic/{epic-number}-{description}`
+	- `git push -u origin epic/{epic-number}-{description}`
+2. For each child issue in the epic, before starting implementation:
+	- `git checkout epic/{epic-number}-{description}`
+	- `git fetch origin`
+	- `git merge origin/dev`
+	- Resolve conflicts immediately if any are found, then continue.
+3. Complete each child issue on the epic branch, then:
+	- Post an issue summary comment (scope implemented, validation evidence, known follow-ups).
+	- Close the child issue with state reason `completed`.
+	- Update progress on the epic issue (status comment/checklist update).
+	- Do not delete the epic branch when closing child issues.
+4. After all child issues in the epic are complete:
+	- Post a final summary comment on the epic (implemented scope, validation summary, remaining risks if any).
+	- Close the epic issue.
+	- Merge epic branch to `dev` via PR.
+	- Delete the epic branch only after merge is complete.
 
 ## Step 1: Plan (Mandatory)
 
@@ -99,12 +123,13 @@ Use repository-specific branch names when applying this guide:
 1. Stage and commit:
 	- `git add -A`
 	- `{type}(#{issue}): {description}`
-2. Merge to `dev`:
-	- `git checkout dev`
-	- `git pull origin dev`
-	- `git merge --no-ff feature/issue-{NUMBER}-{description}`
-	- `git push origin dev`
-3. Verify deployment workflow success.
+2. Push feature branch and open PR to `dev`:
+	- `git push -u origin feature/issue-{NUMBER}-{description}`
+	- Open PR `feature/issue-{NUMBER}-{description} -> dev`
+	- Use non-closing reference in PR body: `Related to #{issue}`
+3. Enable autonomous merge on green checks (no manual merge step):
+	- `gh pr merge --auto --squash --delete-branch`
+4. Verify deployment workflow success after merge.
 
 ### Production Issue Path
 1. Create `hotfix/*` from the production branch and push to deploy preprod.
@@ -117,14 +142,34 @@ Use repository-specific branch names when applying this guide:
 
 ## Step 5: Close Issue
 
-1. Delete branch after successful deployment/merge.
+1. Delete branch after successful deployment/merge (standard feature/hotfix flow only; do not delete an active epic branch during child-issue closure).
 2. Post issue summary including root cause, fix, and validation evidence.
 3. Remove `in-progress` label.
 4. Close issue with state reason `completed`.
 
+### Mandatory Final Cleanup Verification (No Leftovers)
+
+Before considering an issue fully complete, verify all of the following:
+
+1. No temporary implementation artifacts remain.
+	- No temporary code paths, feature flags added only for debugging, or commented fallback blocks.
+2. No temporary test/developer artifacts remain.
+	- No one-off test scripts, scratch files, debug notes, or transient local files created during implementation.
+3. No issue branch leftovers remain.
+	- Feature/hotfix branch used for a standard issue is deleted locally and remotely after merge.
+	- Epic branch is retained until all child issues are complete and the epic is merged to `dev`.
+4. No stash leftovers remain.
+	- `git stash list` is empty.
+5. Working tree and branch state are clean.
+	- `git status --short` is clean.
+	- Active branch is returned to the expected long-lived branch (`dev` for development flow, `main` only for production hotfix flow as applicable).
+
+If any check fails, issue closure is blocked until cleanup is complete.
+
 ## Branching and PR
 
 - Start feature branches from `dev`.
+- For epic-scoped work, create and use one `epic/*` branch from `dev` for all child issues.
 - Use issue-linked commit messages (for example `feat(#123): add endpoint`).
 - Open PRs with clear scope, risks, and validation notes.
 
@@ -144,14 +189,17 @@ Use repository-specific branch names when applying this guide:
 
 ## Done Criteria
 
-- Code merged via reviewed PR.
+- Code merged via reviewed PR (manual merge or auto-merge).
 - Issue updated and closed with summary.
 - Temporary artifacts removed.
+- No leftover branches, stashes, or transient files remain after closure.
+- For epics: child issues are closed with progress updates on the epic, then the epic is closed after merge to `dev`, and only then is the epic branch deleted.
 - Relevant docs updated or linked.
 
 ## Cross References
 
 - Deployment release policy: `docs/shared/guides/deployment-standards.md`
 - Agent behavior and escalation: `docs/shared/guides/agent-operation-standard.md`
-- Squad SDK-first extension model: `docs/shared/guides/squad-extension-guide.md`
+- Squad SDK-first extension model: `docs/shared/process/squad/squad-extension-guide.md`
+- Validator onboarding guide: `docs/shared/process/squad/validator-onboarding-guide.md`
 - Repository local architecture and coding rules: `docs/local/guides/`

@@ -405,6 +405,10 @@ yarn.lock
 security-reports/
 vulnerability-reports/
 .snyk
+.artifacts/*
+!.artifacts/security/
+.artifacts/security/*
+!.artifacts/security/.gitignore
 
 # Bandit security linting
 .bandit

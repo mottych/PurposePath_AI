@@ -19,6 +19,9 @@ This directory contains helper scripts for local development and quality checks.
 
 # Run all quality checks
 .\scripts\pre-commit-check.ps1
+
+# Run full security scan suite
+.\scripts\security-scan.ps1
 ```
 
 ## Git Pre-Commit Hook
@@ -163,6 +166,7 @@ git commit -m "your message"
 | `quick-fix.ps1` | Auto-fix linting/formatting | No |
 | `format-code.ps1` | Format Python code | No |
 | `test_local.ps1` | Run tests quickly | No |
+| `security-scan.ps1` | Run security scanners and write findings to `.artifacts/security/` | No |
 
 ## CI/CD Pipeline
 

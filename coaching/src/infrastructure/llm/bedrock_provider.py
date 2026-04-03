@@ -15,14 +15,14 @@ Prompt Caching:
     by up to 80% on subsequent requests within the cache TTL.
 
     Cache requirements:
-    - Claude 3.5 Sonnet+ or Claude 3.5 Haiku+
-    - Minimum 1024 tokens (2048 for Claude 3.5 Haiku)
+    - Claude 3.5 Sonnet+ or Claude Haiku 4.5+
+    - Minimum 1024 tokens (2048 for Haiku variants)
     - Cache TTL: 5 minutes (extended on cache hit)
 
     See: https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
 
 Note on Inference Profiles:
-    Newer Claude models (Claude 3.5 Sonnet v2+, Claude Sonnet 4.5, Claude Opus 4.5)
+    Newer Claude models (Claude 3.5 Sonnet v2+, Claude Haiku 4.5, Claude Sonnet 4.5, Claude Opus 4.5)
     require inference profiles instead of direct model IDs. These are region-prefixed
     model identifiers (e.g., "us.anthropic.claude-3-5-sonnet-20241022-v2:0").
 
@@ -41,8 +41,8 @@ logger = structlog.get_logger()
 # Models that require inference profiles (region-prefixed identifiers)
 # These cannot be invoked with direct model IDs
 INFERENCE_PROFILE_MODELS: set[str] = {
-    "anthropic.claude-3-5-haiku-20241022-v1:0",  # Claude 3.5 Haiku
     "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Claude 3.5 Sonnet v2
+    "anthropic.claude-haiku-4-5-20251001-v1:0",  # Claude Haiku 4.5
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
     "anthropic.claude-opus-4-5-20251101-v1:0",  # Claude Opus 4.5
 }
@@ -55,11 +55,11 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
-    # Claude 3.5 Haiku (direct and inference profiles)
-    "anthropic.claude-3-5-haiku-20241022-v1:0",
-    "us.anthropic.claude-3-5-haiku-20241022-v1:0",
-    "eu.anthropic.claude-3-5-haiku-20241022-v1:0",
-    "apac.anthropic.claude-3-5-haiku-20241022-v1:0",
+    # Claude Haiku 4.5
+    "anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "apac.anthropic.claude-haiku-4-5-20251001-v1:0",
     # Claude Sonnet 4.5
     "anthropic.claude-sonnet-4-5-20250929-v1:0",
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -70,8 +70,6 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "us.anthropic.claude-opus-4-5-20251101-v1:0",
     "eu.anthropic.claude-opus-4-5-20251101-v1:0",
     "apac.anthropic.claude-opus-4-5-20251101-v1:0",
-    # Claude 3 Haiku (requires 2048+ tokens)
-    "anthropic.claude-3-haiku-20240307-v1:0",
 }
 
 # Minimum tokens required for caching (varies by model)
@@ -98,18 +96,17 @@ class BedrockLLMProvider:
     SUPPORTED_MODELS: ClassVar[list[str]] = [
         # Claude 3 models (direct invocation supported)
         "anthropic.claude-3-sonnet-20240229-v1:0",
-        "anthropic.claude-3-haiku-20240307-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
-        # Claude 3.5 Haiku (requires inference profile)
-        "anthropic.claude-3-5-haiku-20241022-v1:0",
-        "us.anthropic.claude-3-5-haiku-20241022-v1:0",
-        "eu.anthropic.claude-3-5-haiku-20241022-v1:0",
-        "apac.anthropic.claude-3-5-haiku-20241022-v1:0",
         # Claude 3.5 Sonnet v2 (requires inference profile)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
         "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
         "apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        # Claude Haiku 4.5 (requires inference profile)
+        "anthropic.claude-haiku-4-5-20251001-v1:0",
+        "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "apac.anthropic.claude-haiku-4-5-20251001-v1:0",
         # Claude Sonnet 4.5 (requires inference profile)
         "anthropic.claude-sonnet-4-5-20250929-v1:0",
         "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -162,7 +159,7 @@ class BedrockLLMProvider:
     def _resolve_model_id(self, model: str) -> str:
         """Resolve a model ID to the correct format for invocation.
 
-        Models that require inference profiles (Claude 3.5 Sonnet v2+, Sonnet 4.5, Opus 4.5)
+        Models that require inference profiles (Claude 3.5 Sonnet v2+, Haiku 4.5, Sonnet 4.5, Opus 4.5)
         need to be invoked with region-prefixed identifiers.
 
         Args:

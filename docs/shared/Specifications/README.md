@@ -41,4 +41,4 @@ Use the canonical workflow guide:
 - `docs/shared/guides/specification-change-guide.md`
 - `docs/shared/guides/api-naming-conventions.md`
 - `.github/COPILOT_RULES.md`
-- `docs/shared/guides/workflow-governance.md`
+- `docs/shared/process/squad/workflow-governance.md`

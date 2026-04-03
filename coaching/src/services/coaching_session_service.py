@@ -1287,7 +1287,7 @@ class CoachingSessionService:
         full_prompt = f"{extraction_prompt}\n\n## Conversation\n{conversation_text}"
 
         # Execute extraction LLM call (lower temperature)
-        # Use extraction_model_code (defaults to Haiku) - it's 3-5x faster than Sonnet
+        # Use extraction_model_code (defaults to Haiku 4.5) for fast, low-cost extraction
         # This optimization reduces extraction time from 15-20s to 3-5s, keeping total time under API Gateway's 30s limit
         from copy import copy
 
@@ -1297,7 +1297,7 @@ class CoachingSessionService:
         extraction_model = llm_topic.get_extraction_model_code()
 
         if extraction_model not in MODEL_REGISTRY:
-            fallback_model = "CLAUDE_3_HAIKU"
+            fallback_model = "CLAUDE_HAIKU_4_5"
             logger.warning(
                 "coaching_service.extraction_model_not_in_registry",
                 requested_model=extraction_model,

@@ -42,7 +42,7 @@ class ConversationConfig(BaseModel):
     )
     extraction_model_code: str | None = Field(
         default=None,
-        description="MODEL_REGISTRY code for extraction (e.g., CLAUDE_3_5_HAIKU). Defaults to CLAUDE_3_5_HAIKU if not specified.",
+        description="MODEL_REGISTRY code for extraction (e.g., CLAUDE_HAIKU_4_5). Defaults to CLAUDE_HAIKU_4_5 if not specified.",
     )
 
 

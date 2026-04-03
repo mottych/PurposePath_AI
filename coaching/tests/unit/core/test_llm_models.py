@@ -47,6 +47,19 @@ class TestModelRegistry:
         assert model.max_tokens > 0
         assert model.cost_per_1k_tokens > 0
 
+    def test_claude_haiku_4_5_is_registered_and_active(self) -> None:
+        """Claude Haiku 4.5 should be available for active selection."""
+        model = get_model("CLAUDE_HAIKU_4_5")
+
+        assert model.model_name == "anthropic.claude-haiku-4-5-20251001-v1:0"
+        assert model.provider == LLMProvider.BEDROCK
+        assert model.is_active is True
+
+    def test_legacy_haiku_models_are_not_active(self) -> None:
+        """Legacy Haiku families should remain in registry but not active."""
+        assert get_model("CLAUDE_3_HAIKU").is_active is False
+        assert get_model("CLAUDE_3_5_HAIKU").is_active is False
+
     def test_get_model_not_found(self) -> None:
         """Test helpful error when model not in registry."""
         with pytest.raises(ValueError) as exc_info:

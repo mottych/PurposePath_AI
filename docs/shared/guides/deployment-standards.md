@@ -61,5 +61,5 @@ This guide is repository-agnostic. Repository-specific deployment commands, stac
 
 ## Cross References
 
-- Delivery workflow and quality gates: `docs/shared/guides/workflow-governance.md`
+- Delivery workflow and quality gates: `docs/shared/process/squad/workflow-governance.md`
 - Repository-specific deployment details: local deployment docs under `docs/local/`
