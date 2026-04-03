@@ -1,0 +1,4 @@
+bandit[toml]==1.8.0
+checkov==3.2.32
+detect-secrets==1.5.0
+pip-audit==2.7.3

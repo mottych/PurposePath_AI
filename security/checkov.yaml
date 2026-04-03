@@ -1,0 +1,19 @@
+framework:
+  - cloudformation
+  - github_actions
+  - secrets
+
+quiet: true
+compact: true
+soft-fail: false
+
+skip-path:
+  - .venv
+  - .venv-security
+  - .pytest_cache
+  - .mypy_cache
+  - .ruff_cache
+  - node_modules
+  - docs
+  - coaching/tests
+  - tests
