@@ -1,6 +1,6 @@
 # Admin API Specification
 
-**Version:** 2.3  
+**Version:** 2.4  
 **Status:** Complete  
 **Last Updated:** April 1, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 3, 2026 | 2.4 | Standardized Notifications Catalog response envelope, added email template key aliases (`GET/PATCH /email-templates/by-key/{templateKey}`), and corrected endpoint summary counts | System |
 | Apr 1, 2026 | 2.3 | Added Notifications Catalog endpoint (`GET /notifications/catalog`) for registry-first unified email visibility | System |
 | Feb 5, 2026 | 2.2 | Added Discount Code Management (9 endpoints), User Management (5 endpoints), and Audit Log Management (4 endpoints) | System |
 | Feb 5, 2026 | 2.1 | Added System Settings Management (5 endpoints) and Role Template Management (8 endpoints) | System |
@@ -34,7 +35,7 @@
    - [Issue Type Configuration](#issue-type-configuration)
    - [Issue Status Configuration](#issue-status-configuration)
    - [Email Template Management](#email-template-management)
-  - [Notifications Catalog](#notifications-catalog)
+    - [Notifications Catalog](#notifications-catalog)
    - [Subscriber Management](#subscriber-management)
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
@@ -1122,6 +1123,25 @@ Get a specific email template by ID.
 
 ---
 
+### GET /email-templates/by-key/{templateKey}
+
+Get a specific email template by template key (`template_id` used by notification catalog entries).
+
+**Path Parameters:**
+- `templateKey` (string) - Template key (for example: `payment-renewal-success`)
+
+**Behavior:**
+- Normalizes key and template name to kebab-case for lookup.
+- Resolves template key to template ID, then returns the same payload contract as `GET /email-templates/{id}`.
+
+**Status Codes:**
+- `200 OK` - Template retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Template key not found
+- `500 Internal Server Error` - Template key resolution failed
+
+---
+
 ### POST /email-templates
 
 Create a new email template.
@@ -1269,6 +1289,28 @@ Update an existing email template (partial update).
 - `subject`, `language`, `isActive`, `isDefault`, and `notes` are not applied by the update command path.
 - `name` and `description` are only applied when `category` or `tags` is also provided in the same request.
 - Subject remains unchanged on update.
+
+---
+
+### PATCH /email-templates/by-key/{templateKey}
+
+Update an existing email template by template key (`template_id` used by notification catalog entries).
+
+**Path Parameters:**
+- `templateKey` (string) - Template key (for example: `payment-renewal-success`)
+
+**Request:**
+- Same request body contract as `PATCH /email-templates/{id}`.
+
+**Behavior:**
+- Resolves template key to template ID, then executes the same update flow and validations as `PATCH /email-templates/{id}`.
+
+**Status Codes:**
+- `200 OK` - Template updated successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Missing or invalid admin token
+- `404 Not Found` - Template key not found
+- `500 Internal Server Error` - Template key resolution or update failed
 
 ---
 
@@ -1531,8 +1573,6 @@ Get list of available template categories.
 
 ---
 
-## Subscriber Management
-
 ## Notifications Catalog
 
 Registry-first notification catalog for admin visibility into notification contracts and template readiness.
@@ -1546,17 +1586,20 @@ List all registry notifications with effective active state and template existen
 **Response:**
 ```json
 {
-  "items": [
-    {
-      "notification_id": "payment.subscription.renewed",
-      "name": "Payment Subscription Renewed",
-      "description": "Sent when a subscription renewal payment succeeds.",
-      "category": "billing",
-      "template_id": "payment-renewal-success",
-      "template_exists": true,
-      "effective_active_state": true
-    }
-  ]
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "notification_id": "payment.subscription.renewed",
+        "name": "Payment Subscription Renewed",
+        "description": "Sent when a subscription renewal payment succeeds.",
+        "category": "billing",
+        "template_id": "payment-renewal-success",
+        "template_exists": true,
+        "effective_active_state": true
+      }
+    ]
+  }
 }
 ```
 
@@ -1568,7 +1611,8 @@ List all registry notifications with effective active state and template existen
 **Status Codes:**
 - `200 OK` - Catalog retrieved successfully
 - `401 Unauthorized` - Missing or invalid admin token
-- `500 Internal Server Error` - Catalog retrieval failed
+- `403 Forbidden` - Authenticated user is not an admin
+- `500 Internal Server Error` - Catalog retrieval failed (`code`: `NOTIFICATION_CATALOG_UNAVAILABLE`)
 
 ---
 
@@ -4905,7 +4949,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 119
+**Total Endpoints:** 92
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -4913,10 +4957,11 @@ Business rule violations return 400 Bad Request with context:
 - System Seeding: 7
 - Issue Type Configuration: 7
 - Issue Status Configuration: 6
-- Email Template Management: 9
+- Email Template Management: 12
+- Notifications Catalog: 1
 - Subscriber Management: 2
 - Plan Management: 8
-- Feature Management: 12
+- Feature Management: 8
 - Subscription Operations: 6
 - Discount Code Management: 9
 - System Settings Management: 5
