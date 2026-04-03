@@ -24,7 +24,7 @@ This design is based on:
 
 - Code registry exists in PurposePath.Domain/Constants/NotificationEvents.cs.
 - Runtime also uses persisted notification event definitions via repository/table.
-- Missing definition is bootstrapped from registry into persisted store during enqueue.
+- Missing persisted definition is resolved from code registry at runtime without creating new persisted records.
 
 ### 2.2 Trigger and Processing
 
@@ -82,6 +82,14 @@ Rules:
 ## 4.2 Persisted Config Boundary
 
 Persisted data can exist only as override state for existing registry IDs.
+
+Effective configuration resolution order:
+
+1. Resolve notification_id in code registry (required).
+2. If no registry entry exists, reject before enqueue.
+3. Load persisted override state for that notification_id when available.
+4. If persisted state is absent, use registry defaults.
+5. Persisted state must not redefine identity/contract fields (event type, parameter contract, template ownership semantics).
 
 Allowed override classes:
 

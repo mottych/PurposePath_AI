@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 2.2  
+**Version:** 2.3  
 **Status:** Complete  
-**Last Updated:** February 5, 2026  
+**Last Updated:** April 1, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
 **Default (Localhost):** `http://localhost:8003/admin/api/v1`  
 **Production:** `https://api.purposepath.app/admin/api/v1`
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 1, 2026 | 2.3 | Added Notifications Catalog endpoint (`GET /notifications/catalog`) for registry-first unified email visibility | System |
 | Feb 5, 2026 | 2.2 | Added Discount Code Management (9 endpoints), User Management (5 endpoints), and Audit Log Management (4 endpoints) | System |
 | Feb 5, 2026 | 2.1 | Added System Settings Management (5 endpoints) and Role Template Management (8 endpoints) | System |
 | Feb 4, 2026 | 2.0 | Complete specification with all endpoints documented | System |
@@ -33,6 +34,7 @@
    - [Issue Type Configuration](#issue-type-configuration)
    - [Issue Status Configuration](#issue-status-configuration)
    - [Email Template Management](#email-template-management)
+  - [Notifications Catalog](#notifications-catalog)
    - [Subscriber Management](#subscriber-management)
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
@@ -1526,6 +1528,47 @@ Get list of available template categories.
 **Current Behavior Notes:**
 - Categories are generated from a predefined list in the application service: `welcome`, `verification`, `password-reset`, `trial`, `payment`, `subscription`.
 - `requiredVariables` is currently returned as an empty array.
+
+---
+
+## Subscriber Management
+
+## Notifications Catalog
+
+Registry-first notification catalog for admin visibility into notification contracts and template readiness.
+
+### GET /notifications/catalog
+
+List all registry notifications with effective active state and template existence.
+
+**No Query Parameters**
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "notification_id": "payment.subscription.renewed",
+      "name": "Payment Subscription Renewed",
+      "description": "Sent when a subscription renewal payment succeeds.",
+      "category": "billing",
+      "template_id": "payment-renewal-success",
+      "template_exists": true,
+      "effective_active_state": true
+    }
+  ]
+}
+```
+
+**Field Semantics:**
+- `notification_id`: Canonical identifier from code registry.
+- `template_exists`: Whether the registry template currently resolves in the template registry.
+- `effective_active_state`: Persisted `is_active` override when present; otherwise defaults to active (`true`) from registry contract behavior.
+
+**Status Codes:**
+- `200 OK` - Catalog retrieved successfully
+- `401 Unauthorized` - Missing or invalid admin token
+- `500 Internal Server Error` - Catalog retrieval failed
 
 ---
 
