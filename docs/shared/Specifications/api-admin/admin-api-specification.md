@@ -1,6 +1,6 @@
 # Admin API Specification
 
-**Version:** 2.4  
+**Version:** 2.5  
 **Status:** Complete  
 **Last Updated:** April 1, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 3, 2026 | 2.5 | Added Notification Maintenance endpoints (`PATCH /notifications/{notificationId}/status`, `PATCH /notifications/{notificationId}/overrides`) and documented override/status update contracts | System |
 | Apr 3, 2026 | 2.4 | Standardized Notifications Catalog response envelope, added email template key aliases (`GET/PATCH /email-templates/by-key/{templateKey}`), and corrected endpoint summary counts | System |
 | Apr 1, 2026 | 2.3 | Added Notifications Catalog endpoint (`GET /notifications/catalog`) for registry-first unified email visibility | System |
 | Feb 5, 2026 | 2.2 | Added Discount Code Management (9 endpoints), User Management (5 endpoints), and Audit Log Management (4 endpoints) | System |
@@ -1613,6 +1614,88 @@ List all registry notifications with effective active state and template existen
 - `401 Unauthorized` - Missing or invalid admin token
 - `403 Forbidden` - Authenticated user is not an admin
 - `500 Internal Server Error` - Catalog retrieval failed (`code`: `NOTIFICATION_CATALOG_UNAVAILABLE`)
+
+---
+
+### PATCH /notifications/{notificationId}/status
+
+Update notification maintenance status (`active` / `inactive`) for a persisted notification definition.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier (for example `payment.subscription.renewed`)
+
+**Request:**
+```json
+{
+  "is_active": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success",
+    "reply_to_email": "support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": false
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Status updated successfully
+- `400 Bad Request` - Invalid notification ID or payload
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Update failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
+
+---
+
+### PATCH /notifications/{notificationId}/overrides
+
+Update notification maintenance override values.
+
+**Path Parameters:**
+- `notificationId` (string): Notification event type identifier
+
+**Request:**
+```json
+{
+  "template_id": "payment-renewal-success-v2",
+  "reply_to_email": "billing-support@purposepath.ai",
+  "requires_reply_to": true
+}
+```
+
+**Rules:**
+- At least one of `template_id`, `reply_to_email`, or `requires_reply_to` is required.
+- `reply_to_email` must be a valid `@purposepath.ai` email when provided.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "notification_id": "payment.subscription.renewed",
+    "template_id": "payment-renewal-success-v2",
+    "reply_to_email": "billing-support@purposepath.ai",
+    "requires_reply_to": true,
+    "is_active": true
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Overrides updated successfully
+- `400 Bad Request` - Invalid payload or override values
+- `401 Unauthorized` - Missing or invalid admin token
+- `403 Forbidden` - Authenticated user is not an admin
+- `404 Not Found` - Notification definition not found
+- `500 Internal Server Error` - Update failed (`code`: `NOTIFICATION_MAINTENANCE_FAILED`)
 
 ---
 
@@ -4949,7 +5032,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 92
+**Total Endpoints:** 94
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -4958,7 +5041,7 @@ Business rule violations return 400 Bad Request with context:
 - Issue Type Configuration: 7
 - Issue Status Configuration: 6
 - Email Template Management: 12
-- Notifications Catalog: 1
+- Notifications Catalog: 3
 - Subscriber Management: 2
 - Plan Management: 8
 - Feature Management: 8
