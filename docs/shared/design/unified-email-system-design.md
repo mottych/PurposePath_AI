@@ -45,8 +45,9 @@ This design is based on:
 
 ### 2.5 Admin Capabilities
 
-- Admin template CRUD/test/preview/analytics endpoints exist.
-- No admin endpoint currently lists registry notifications with template mapping and template existence state.
+- Admin template CRUD/test/preview/analytics endpoints exist (see Admin API specification).
+- **Notifications catalog:** `GET /notifications/catalog` lists registry notifications with `template_id`, `template_exists`, and `effective_active_state` (Admin API v2.3+; response envelope standardized in v2.4).
+- **Template maintenance by catalog key:** `GET` and `PATCH /email-templates/by-key/{templateKey}` align catalog rows with template content without requiring opaque database IDs in the admin UI (v2.4).
 
 ## 3. Design Goals
 
@@ -208,6 +209,8 @@ Deliverables:
   - notification_id, name, description, category, template_id
   - template_exists
   - effective_active_state
+
+**Implementation note:** Delivered in the Admin API as `GET /notifications/catalog` (v2.3) with a standardized `{ success, data: { items } }` envelope (v2.4). Consumer: PurposePath Admin portal notification-first email templates workflow.
 
 Acceptance:
 

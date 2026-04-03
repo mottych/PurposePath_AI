@@ -137,6 +137,8 @@ Template processor MUST compute final merge parameters from three sources:
   - `template_id`
   - template existence status
 
+**Canonical contract:** `GET /notifications/catalog` on the Admin API (`docs/shared/Specifications/api-admin/admin-api-specification.md`, v2.4). Response shape: `{ "success": true, "data": { "items": [ ... ] } }` with `template_exists` and `effective_active_state` on each row.
+
 This requirement is mandatory for practical template maintenance.
 
 ---
@@ -199,8 +201,8 @@ This section captures capability-level gaps only. It does not prescribe implemen
 |---|---|---|---|
 | Notification source of truth | Single code registry defines notification catalog | Code registry exists, plus persisted event-definition store used at runtime | Partial |
 | Runtime creation of notification types | Not allowed | Runtime persisted records can exist outside pure code-only governance model | Gap |
-| Admin notification visibility | Admin can list all registry notifications with template mapping and existence status | No dedicated admin endpoint currently provides notification catalog view | Gap |
-| Template maintenance UX | Notification-first maintenance flow is possible without hidden IDs | Existing admin flow is template-centric | Partial |
+| Admin notification visibility | Admin can list all registry notifications with template mapping and existence status | Admin API exposes `GET /notifications/catalog`; Admin portal consumes it for the email templates page | Met (API + portal) |
+| Template maintenance UX | Notification-first maintenance flow is possible without hidden IDs | Admin portal lists catalog rows and opens `GET`/`PATCH /email-templates/by-key/{templateKey}` for edits | Met (portal) |
 | Trigger contract | Trigger by `notification_id` + context payload | Event-driven trigger exists, but capability is not yet documented as strict notification-id contract for all flows | Partial |
 | Mandatory vs preference gating | Mandatory bypass + optional preference suppression consistently enforced | Policy support exists for mandatory/preference categories, needs unified coverage confirmation across all notification types | Partial |
 | Parameter enrichment model | Deterministic enrichment from trigger + backend + AI | Enrichment exists in parts; unified end-to-end capability contract is not yet explicitly standardized | Partial |
@@ -209,7 +211,6 @@ This section captures capability-level gaps only. It does not prescribe implemen
 
 ### 13.2 In-Scope Gaps for Next Phase
 
-- Define and approve the canonical admin capability to list notifications from registry perspective.
 - Confirm the exact override boundary for persisted config associated with registry IDs.
 - Standardize unified trigger/enrichment/validation capability contract across all email notification types.
 
