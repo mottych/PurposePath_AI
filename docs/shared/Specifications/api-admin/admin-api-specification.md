@@ -350,9 +350,12 @@ Seed subscription tier reference data (Basic, Professional, Enterprise).
 **Response:**
 ```json
 {
-  "itemsCreated": 3,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 3,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
@@ -375,9 +378,12 @@ Seed issue status configurations (Open, In Progress, Resolved, Closed, etc.).
 **Response:**
 ```json
 {
-  "itemsCreated": 8,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 8,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
@@ -405,9 +411,12 @@ Seed system settings (auth, email, billing, maintenance configurations).
 **Response:**
 ```json
 {
-  "itemsCreated": 15,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 15,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
@@ -431,9 +440,12 @@ Seed email templates (verification, password reset, welcome, trial notifications
 **Response:**
 ```json
 {
-  "itemsCreated": 10,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 10,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
@@ -476,9 +488,12 @@ Seed issue type configurations (Bug, Feature Request, Task, etc.).
 **Response:**
 ```json
 {
-  "itemsCreated": 5,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 5,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
@@ -503,9 +518,12 @@ Seed dashboard templates (Default, Executive, Daily Operations).
 **Response:**
 ```json
 {
-  "itemsCreated": 3,
-  "itemsSkipped": 0,
-  "errors": []
+  "success": true,
+  "data": {
+    "itemsCreated": 3,
+    "itemsSkipped": 0,
+    "errors": []
+  }
 }
 ```
 
