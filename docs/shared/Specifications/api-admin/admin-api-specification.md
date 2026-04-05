@@ -1033,27 +1033,30 @@ List all email templates with pagination and filtering.
 **Response:**
 ```json
 {
-  "items": [
-    {
-      "id": "990e8400-e29b-41d4-a716-446655440000",
-      "name": "email_verification",
-      "subject": "Verify Your Email Address - PurposePath",
-      "description": "Default email verification template",
-      "category": "verification",
-      "language": "en",
-      "isActive": true,
-      "isDefault": false,
-      "usageCount": 42,
-      "lastUsed": "2026-02-03T17:10:00Z",
-      "createdAt": "2025-01-15T10:30:00Z",
-      "updatedAt": "2025-01-20T14:45:00Z"
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "990e8400-e29b-41d4-a716-446655440000",
+        "name": "email_verification",
+        "subject": "Verify Your Email Address - PurposePath",
+        "description": "Default email verification template",
+        "category": "verification",
+        "language": "en",
+        "isActive": true,
+        "isDefault": false,
+        "usageCount": 42,
+        "lastUsed": "2026-02-03T17:10:00Z",
+        "createdAt": "2025-01-15T10:30:00Z",
+        "updatedAt": "2025-01-20T14:45:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 10,
+      "totalPages": 1
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalCount": 10,
-    "totalPages": 1
   }
 }
 ```
@@ -1076,43 +1079,46 @@ Get a specific email template by ID.
 **Response:**
 ```json
 {
-  "id": "990e8400-e29b-41d4-a716-446655440000",
-  "name": "email_verification",
-  "subject": "Verify Your Email Address - PurposePath",
-  "description": "Default email verification template",
-  "category": "verification",
-  "htmlContent": "<!DOCTYPE html>...",
-  "textContent": "Welcome to PurposePath!...",
-  "variables": [
-    {
-      "name": "FirstName",
-      "type": "String",
-      "description": "Recipient first name",
-      "required": true
-    },
-    {
-      "name": "VerificationLink",
-      "type": "Url",
-      "description": "Email verification link",
-      "required": true
+  "success": true,
+  "data": {
+    "id": "990e8400-e29b-41d4-a716-446655440000",
+    "name": "email_verification",
+    "subject": "Verify Your Email Address - PurposePath",
+    "description": "Default email verification template",
+    "category": "verification",
+    "htmlContent": "<!DOCTYPE html>...",
+    "textContent": "Welcome to PurposePath!...",
+    "variables": [
+      {
+        "name": "FirstName",
+        "type": "String",
+        "description": "Recipient first name",
+        "required": true
+      },
+      {
+        "name": "VerificationLink",
+        "type": "Url",
+        "description": "Email verification link",
+        "required": true
+      }
+    ],
+    "language": "en",
+    "isActive": true,
+    "isDefault": false,
+    "previewUrl": null,
+    "lastUsed": "2026-02-03T17:10:00Z",
+    "usageCount": 42,
+    "createdAt": "2025-01-15T10:30:00Z",
+    "updatedAt": "2025-01-20T14:45:00Z",
+    "createdBy": "system",
+    "metadata": {
+      "openRate": null,
+      "clickRate": null,
+      "bounceRate": null,
+      "lastPerformanceUpdate": null,
+      "tags": ["verification", "onboarding"],
+      "notes": null
     }
-  ],
-  "language": "en",
-  "isActive": true,
-  "isDefault": false,
-  "previewUrl": null,
-  "lastUsed": "2026-02-03T17:10:00Z",
-  "usageCount": 42,
-  "createdAt": "2025-01-15T10:30:00Z",
-  "updatedAt": "2025-01-20T14:45:00Z",
-  "createdBy": "system",
-  "metadata": {
-    "openRate": null,
-    "clickRate": null,
-    "bounceRate": null,
-    "lastPerformanceUpdate": null,
-    "tags": ["verification", "onboarding"],
-    "notes": null
   }
 }
 ```
@@ -1135,6 +1141,40 @@ Get a specific email template by template key (`template_id` used by notificatio
 **Behavior:**
 - Normalizes key and template name to kebab-case for lookup.
 - Resolves template key to template ID, then returns the same payload contract as `GET /email-templates/{id}`.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "990e8400-e29b-41d4-a716-446655440000",
+    "name": "payment_renewal_success",
+    "subject": "Your payment was successful",
+    "description": "Sent after successful recurring payment",
+    "category": "payment",
+    "htmlContent": "<!DOCTYPE html>...",
+    "textContent": "Your payment was successful...",
+    "variables": [],
+    "language": "en",
+    "isActive": true,
+    "isDefault": false,
+    "previewUrl": null,
+    "lastUsed": null,
+    "usageCount": 0,
+    "createdAt": "2026-02-04T10:30:00Z",
+    "updatedAt": "2026-02-04T10:30:00Z",
+    "createdBy": "system",
+    "metadata": {
+      "openRate": null,
+      "clickRate": null,
+      "bounceRate": null,
+      "lastPerformanceUpdate": null,
+      "tags": [],
+      "notes": null
+    }
+  }
+}
+```
 
 **Status Codes:**
 - `200 OK` - Template retrieved successfully
@@ -1186,30 +1226,33 @@ Create a new email template.
 **Response:**
 ```json
 {
-  "id": "aa0e8400-e29b-41d4-a716-446655440000",
-  "name": "custom_welcome",
-  "subject": "Welcome to Our Platform!",
-  "description": "Custom welcome email for new users",
-  "category": "welcome",
-  "htmlContent": "<!DOCTYPE html><html>...",
-  "textContent": "Welcome {{firstName}}!...",
-  "variables": [...],
-  "language": "en",
-  "isActive": true,
-  "isDefault": false,
-  "previewUrl": null,
-  "lastUsed": null,
-  "usageCount": 0,
-  "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T10:30:00Z",
-  "createdBy": "admin-user-id",
-  "metadata": {
-    "openRate": null,
-    "clickRate": null,
-    "bounceRate": null,
-    "lastPerformanceUpdate": null,
-    "tags": ["welcome", "custom"],
-    "notes": null
+  "success": true,
+  "data": {
+    "id": "aa0e8400-e29b-41d4-a716-446655440000",
+    "name": "custom_welcome",
+    "subject": "Welcome to Our Platform!",
+    "description": "Custom welcome email for new users",
+    "category": "welcome",
+    "htmlContent": "<!DOCTYPE html><html>...",
+    "textContent": "Welcome {{firstName}}!...",
+    "variables": [...],
+    "language": "en",
+    "isActive": true,
+    "isDefault": false,
+    "previewUrl": null,
+    "lastUsed": null,
+    "usageCount": 0,
+    "createdAt": "2026-02-04T10:30:00Z",
+    "updatedAt": "2026-02-04T10:30:00Z",
+    "createdBy": "admin-user-id",
+    "metadata": {
+      "openRate": null,
+      "clickRate": null,
+      "bounceRate": null,
+      "lastPerformanceUpdate": null,
+      "tags": ["welcome", "custom"],
+      "notes": null
+    }
   }
 }
 ```
@@ -1252,30 +1295,33 @@ Update an existing email template (partial update).
 **Response:**
 ```json
 {
-  "id": "aa0e8400-e29b-41d4-a716-446655440000",
-  "name": "custom_welcome_v2",
-  "subject": "custom_welcome",
-  "description": "Updated description",
-  "category": "welcome",
-  "htmlContent": "<!DOCTYPE html>...",
-  "textContent": "Welcome {{firstName}}!...",
-  "variables": [...],
-  "language": "en",
-  "isActive": true,
-  "isDefault": false,
-  "previewUrl": null,
-  "lastUsed": "2026-02-03T17:10:00Z",
-  "usageCount": 43,
-  "createdAt": "2026-02-04T10:30:00Z",
-  "updatedAt": "2026-02-04T11:00:00Z",
-  "createdBy": "admin-user-id",
-  "metadata": {
-    "openRate": null,
-    "clickRate": null,
-    "bounceRate": null,
-    "lastPerformanceUpdate": null,
-    "tags": ["welcome", "v2"],
-    "notes": null
+  "success": true,
+  "data": {
+    "id": "aa0e8400-e29b-41d4-a716-446655440000",
+    "name": "custom_welcome_v2",
+    "subject": "custom_welcome",
+    "description": "Updated description",
+    "category": "welcome",
+    "htmlContent": "<!DOCTYPE html>...",
+    "textContent": "Welcome {{firstName}}!...",
+    "variables": [...],
+    "language": "en",
+    "isActive": true,
+    "isDefault": false,
+    "previewUrl": null,
+    "lastUsed": "2026-02-03T17:10:00Z",
+    "usageCount": 43,
+    "createdAt": "2026-02-04T10:30:00Z",
+    "updatedAt": "2026-02-04T11:00:00Z",
+    "createdBy": "admin-user-id",
+    "metadata": {
+      "openRate": null,
+      "clickRate": null,
+      "bounceRate": null,
+      "lastPerformanceUpdate": null,
+      "tags": ["welcome", "v2"],
+      "notes": null
+    }
   }
 }
 ```
