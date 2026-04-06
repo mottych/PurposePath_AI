@@ -17,7 +17,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SECURITY_DIR = REPO_ROOT / "security"
 FINDINGS_DIR = REPO_ROOT / ".artifacts" / "security"
@@ -513,7 +512,8 @@ def run_detect_secrets() -> tuple[ScanResult, int]:
         "scan",
         "--exclude-files",
         DETECT_SECRETS_EXCLUDE_REGEX,
-    ] + scan_targets
+        *scan_targets,
+    ]
 
     start = time.time()
     try:
