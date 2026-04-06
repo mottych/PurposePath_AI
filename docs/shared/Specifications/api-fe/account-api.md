@@ -251,59 +251,62 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ## Subscription Tiers
 
 ### GET /subscription/tiers (public)
-- Response: list of `TierResponse` items:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "name": "Starter",
-      "description": "...",
-      "features": ["goals", "operations"],
-      "limits": {"goals": 10, "measures": 50, "actions": null},
-      "pricing": {"monthly": 29.99, "yearly": 299.99},
-      "supportedFrequencies": ["monthly", "yearly"],
-      "isActive": true
-    }
-  ]
-}
-```
+- Deleted.
 
 ## User Subscription (self-serve)
 
 ### GET /user/subscription
-- Returns current tenant subscription with embedded tier, or `data: null` if none.
+- Deleted.
 
 ### POST /user/subscription
-- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null", "paymentMethodId": "string|null" }`.
-- Response `CreateUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "requiresPaymentConfirmation": true|false, "clientSecret": "string|null" }`.
+- Deleted.
 
 ### PUT /user/subscription
-- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null" }`.
-- Response `UpdateUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "effectiveDate": "ISO-8601" }` (changes take effect end of period).
+- Deleted.
 
 ### DELETE /user/subscription
-- Body: `{ "reason": "string|null", "cancelAtPeriodEnd": true|false }`.
-- Response `CancelUserSubscriptionResponse`: `{ "subscription": UserSubscriptionResponse, "cancelEffectiveDate": "ISO-8601" }`.
+- Deleted.
 
 ### PUT /user/subscription/auto-renewal
-- Body: `{ "autoRenewal": true|false }`.
-- Response: updated `UserSubscriptionResponse`.
+- Deleted.
 
 ## Billing (tenant-scoped)
 
 ### PUT /billing/subscription
-- Body: `{ "newTier": "Starter|Professional|Enterprise", "effectiveDate": "ISO-8601|null", "prorateBilling": true|false }`.
-- Response: `SubscriptionResponse`.
+- Deleted.
 
 ### POST /billing/payment-intent
-- Body: `{ "tierId": "uuid", "frequency": "monthly|yearly", "promoCode": "string|null" }`.
-- Response: `{ "success": true, "data": { "clientSecret": "string", "amount": 2999, "currency": "usd" } }`.
+- Deleted.
 
 ### POST /billing/portal
-- Body: `{ "returnUrl": "string|null" }` (defaults to frontend base URL when omitted).
-- Response: `{ "success": true, "data": { "url": "https://billing.stripe.com/..." } }`.
+- Deleted.
+
+### GET /billing/subscription/current
+- Active endpoint. Returns the current tenant subscription projection.
+
+### GET /billing/subscription/summary
+- Active endpoint. Returns the billing summary for current tenant.
+
+### POST /billing/subscription/preview-change
+- Active endpoint. Previews plan/schedule/extension mutation before confirmation.
+
+### POST /billing/subscription/confirm-change
+- Active endpoint. Commits a previously previewed billing change.
+
+### GET /billing/subscription/extensions
+- Active endpoint. Lists current extension selections.
+
+### POST /billing/subscription/extensions
+- Active endpoint. Adds or updates extension selections.
+
+### DELETE /billing/subscription/extensions/{extensionSelectionId}
+- Active endpoint. Removes an extension selection.
+
+### POST /billing/subscription/cancel
+- Active endpoint. Cancels subscription lifecycle.
+
+### POST /billing/subscription/reactivate
+- Active endpoint. Reactivates a cancelled subscription.
 
 ## Subscriptions (admin/ops)
 
@@ -318,7 +321,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Path: tenant ID (GUID). Response: `ApiResponse<SubscriptionResponse>`.
 
 ### POST /subscriptions
-- Body: `{ "tenantId": "uuid", "ownerId": "uuid", "tier": "Starter|Professional|Enterprise", "currentPeriodStart": "ISO-8601|null", "currentPeriodEnd": "ISO-8601|null", "startTrial": true|false, "trialEndsAt": "ISO-8601|null" }`.
+- Body: `{ "tenantId": "uuid", "ownerId": "uuid", "tier": "Starter|Professional|Enterprise", "currentPeriodStart": "ISO-8601|null", "currentPeriodEnd": "ISO-8601|null" }`.
 - Response: `ApiResponse<SubscriptionResponse>` (201 Created on success).
 
 ### PUT /subscriptions/{id}/tier
@@ -329,7 +332,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Response: `ApiResponse<SubscriptionResponse>` (subscription cancelled immediately).
 
 ### POST /subscriptions/{id}/trial
-- Body: `{ "trialEndsAt": "ISO-8601" }`. Response: updated `SubscriptionResponse`.
+- Deleted.
 
 ### PUT /subscriptions/{id}/billing-provider
 - Body: `{ "billingProviderId": "string", "providerSubscriptionId": "string", "providerCustomerId": "string" }`.
@@ -346,10 +349,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ## Billing Webhook
 
 ### POST /billing/webhook/{providerId}
-- Path: `providerId` (e.g., `stripe`, `paypal`).
-- Headers: signature header varies by provider (`Stripe-Signature`, `PayPal-Signature`, or `X-Webhook-Signature`).
-- Body: raw webhook payload from provider.
-- Response: `{ "success": true, "data": { "received": true } }` (400 on signature/body validation failure).
+- Deleted.
 
 ## User Invitations (Multi-User System)
 

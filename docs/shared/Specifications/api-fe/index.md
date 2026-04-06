@@ -239,7 +239,7 @@ All service clients (accountClient, coachingClient, traction) implement:
 |-----------|----------|---------|
 | Login | `POST /auth/login` | Account |
 | Get User Profile | `GET /user/profile` | Account |
-| Get User Subscription | `GET /user/subscription` | Account |
+| Get Current Subscription | `GET /billing/subscription/current` | Account |
 | List Goals | `GET /goals` | Traction |
 | Create Goal | `POST /goals` | Traction |
 | Calculate Alignment | `POST /api/coaching/alignment-check` | Coaching |

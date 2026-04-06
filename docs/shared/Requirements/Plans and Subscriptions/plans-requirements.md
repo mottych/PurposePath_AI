@@ -34,7 +34,8 @@
 | Payment Schedule | The billing frequency chosen by the tenant owner (e.g., monthly, quarterly, annually). Determines the number of months covered per payment and affects pricing. |
 | Grace Period | A plan-defined period (in days) after subscription termination during which the plan remains in effect. The intent is to avoid blocking access due to an occasional late payment. Applies to the entire subscription including extensions. |
 | Fallback Plan | An admin-designated free plan that a subscription transitions to after the grace period elapses without payment resolution. If no fallback plan is defined, access is blocked. |
-| Trial Plan | A specific plan designated by the admin as the default trial. It is free, has a defined feature set, grace period, and expiration. It cannot be extended by the user. Assigned automatically to new tenants at registration. |
+| Trial Plan | A specific plan designated by the admin as the default registration trial. It is free, hidden from self-service plan selection, and non-renewable for tenant owners. Assigned automatically to new tenants at registration. If trial duration is not explicitly configured, default trial length is 14 days. |
+| Paid Plan Trial Mode | A paid plan can optionally define a trial duration (in days). During this period, no charge is made. At trial end, the system attempts to charge the card on file unless the tenant owner cancelled beforehand. |
 | Admin Override | A tenant-specific modification that adds features or increases limits beyond what the plan's feature set provides. Overrides can only expand capabilities, never restrict them. An override can have a termination date or persist for the life of the subscription. |
 
 ### 1.1 Time & Timezone Policy
@@ -98,9 +99,12 @@ A plan is the product offering that tenants subscribe to. Plans are created and 
 | Visibility | Published (visible to users for self-service selection) or Hidden (assignable only by admin or automation) | Yes |
 | Trial Designation | Whether this plan is the default trial plan for new registrations. Only one plan can be designated as the trial at any time. | No (default: false) |
 | Fallback Designation | Whether this plan serves as the fallback (free) plan after grace period expiration. Only one plan can be designated as the fallback. | No (default: false) |
+| Paid Trial Duration (days) | Optional trial length for paid-plan trial mode. When set, first charge is deferred until trial end. If missing and tenant owner starts paid-plan trial mode, system defaults to 14 days. | No (default: null; runtime fallback: 14 days when trial mode is started) |
 | Payment Schedules | List of available billing periods with pricing (see 3.2) | Yes, for paid plans |
 | Grace Period (days) | Number of days after termination before fallback/blocking occurs | Yes, for paid plans |
 | Extensions | Available add-ons with per-schedule pricing (see 3.3) | Optional |
+
+For any trial mode (registration trial plan or paid-plan trial mode), if the applicable trial duration is not defined, the runtime fallback is 14 days.
 
 ### 3.2 Price Definition & Price Tiers
 **Note:** For a full explanation of price tier logic—including all tier types, how they are applied, and fallback rules—see the [Price Tiers](http:///price-tiers) sub-page.
@@ -141,7 +145,7 @@ A subscription is the binding between a tenant and a plan. It is the central rec
 | Termination Date | The date the subscription expires. Determined by plan type and payment schedule. Extended on each successful payment. May be null for perpetual plans. |
 | Status | Active or Inactive (see 4.2) |
 | Auto-Renew | Whether the subscription will automatically renew at the end of the current period (true/false) |
-| Is Trial | Whether this subscription is on the designated trial plan (true/false) |
+| Is Trial | Whether this subscription is currently in trial mode (designated trial plan or paid-plan trial mode) (true/false) |
 | In Grace Period | Whether the subscription is currently in its grace period (true/false; only applicable when status is Inactive) This could be a computed value derived from expiration date and plan grace period. |
 | Grace Period End Date | The date the grace period expires (termination date + plan's grace period days) This property is calculated and not persisted. |
 | Payment Schedule | The selected billing frequency (monthly, quarterly, annual, etc.) |
@@ -153,10 +157,11 @@ The subscription uses a two-state model with supplementary flags that provide ad
 | Status | Flags | Description | Tenant Access |
 | ---| ---| ---| --- |
 | Active | is\_trial=true, auto\_renew=false | New registration. Default trial plan is in effect. Tenant has full access per the trial plan's feature set. | Full access per trial plan features |
+| Active | is\_trial=true, auto\_renew=true | Paid plan trial mode is in effect. Tenant has full access per the paid plan's feature set during trial; no charge has occurred yet. | Full access per plan features |
 | Active | is\_trial=false, auto\_renew=true | Paid subscription is current and auto-renewing. Normal operating state. | Full access per plan features |
 | Active | is\_trial=false, auto\_renew=false | Tenant owner cancelled auto-renewal. Subscription remains active until termination date. | Full access until termination date |
-| Inactive | is\_trial=false, auto\_renew=false | Tenant owner has cancelled the plan. | Fallback plan features, or access is blocked |
-| Inactive | auto\_renew=true, in\_grace=true | Termination date has passed (payment failed or trial expired) but grace period is still in effect. The plan's feature set remains available. | Full access per plan features (grace period active) |
+| Inactive | is\_trial=false, auto\_renew=false | Subscription ended due to cancellation or trial expiration without renewal. | Fallback plan features, or access is blocked |
+| Inactive | auto\_renew=true, in\_grace=true | Termination date has passed after unresolved payment failure, but grace period is still in effect. The plan's feature set remains available. | Full access per plan features (grace period active) |
 | Inactive | in\_grace=false | Grace period has elapsed without resolution. If a fallback plan is defined, it is now active. If no fallback plan exists, access is blocked. | Fallback plan features, or access blocked |
 
 ### 4.3 Lifecycle Transitions
@@ -164,9 +169,12 @@ The following table defines every valid state transition in the subscription lif
 
 | From State | To State | Trigger | System Action |
 | ---| ---| ---| --- |
-| (New Registration) | Active (trial) | User completes registration | Create subscription with trial plan, set effective date to today, set termination per trial plan duration |
+| (New Registration) | Active (trial) | User completes registration | Create subscription with trial plan, set effective date to today, set termination per trial plan duration (or 14-day fallback if undefined) |
+| Active (trial) | Inactive (expired) | Trial termination date passes without paid plan selection | End trial; do not enter grace; switch to fallback plan (if defined) or block access |
 | Active (trial) | Active (paid) | User selects a paid plan and payment succeeds | Create new subscription with selected plan; charge prorated amount for remainder of billing cycle |
-| Active (trial) | Inactive (grace) | Trial termination date passes without plan selection | Set status to Inactive, begin grace period countdown |
+| Active (paid trial mode) | Active (paid) | Paid-plan trial ends and initial charge succeeds | Clear trial flag; set/extend paid termination date; record payment; send receipt (paid trial uses 14-day fallback when duration is undefined) |
+| Active (paid trial mode) | Inactive (grace) | Paid-plan trial ends, charge attempts fail, and termination date passes | Set status to Inactive; grace period in effect; notify tenant owner |
+| Active (paid trial mode) | Inactive (expired) | Tenant owner cancels before trial ends | End subscription at trial end; do not charge; do not enter grace; switch to fallback/block |
 | Active (paid) | Active (paid) | Successful billing payment received | Extend termination date by payment schedule duration; record payment; send receipt |
 | Active (paid) | Active (cancelled) | Tenant owner cancels auto-renewal | Set auto\_renew=false; subscription remains active until termination date; send cancellation confirmation |
 | Active (cancelled) | Active (paid) | Tenant owner reactivates before termination date | Set auto\_renew=true; resume normal billing |
@@ -200,6 +208,13 @@ Users can enroll in a paid plan at any time during the month. On first enrollmen
 2. The user is charged the prorated amount immediately.
 3. The subscription termination date is set to the end of the billing cycle covered by the payment schedule (e.g., for monthly: end of the current month; for quarterly: end of the month 3 months out).
 4. Starting the next billing cycle, normal full-period billing applies on the 1st of the month.
+If the selected paid plan has Paid Trial Duration configured, first-time enrollment uses paid-plan trial mode instead:
+1. No charge is made at enrollment.
+2. The trial end date is set to enrollment date + paid trial duration.
+3. At trial end, the system attempts the first charge automatically unless cancelled by the tenant owner.
+4. If payment fails, the standard retry + grace flow applies for paid subscriptions.
+If tenant owner explicitly starts paid-plan trial mode on a paid plan that does not define Paid Trial Duration, the system applies a fallback trial length of 14 days.
+For the designated registration trial plan, if trial duration is not defined, the same 14-day fallback applies.
 > **Example: Mid-Month Enrollment**  
 > User enrolls in Premium Plan ($100/mo, monthly schedule) on January 15.  
 > Prorated charge: $100 × (17 days / 31 days) = $54.84 for Jan 15–31.  
@@ -211,6 +226,7 @@ On the billing date (1st of each applicable month), the system performs the foll
 3. On first failure: send a notification to the tenant owner immediately. Schedule a retry after a configurable number of days (admin system setting; default: 3 days).
 4. On second failure: send a notification to the tenant owner. The subscription enters the grace period once the termination date passes. The status becomes Inactive, but the plan's features remain available during the grace period.
 5. Grace period expiration: if a fallback (free) plan is defined, the subscription switches to it. If no fallback is defined, access is blocked. The tenant owner is notified.
+Grace period is a payment-failure protection for paid subscriptions. Trial expiration or trial cancellation does not by itself trigger grace period.
 > **Design Note: Retry Configuration** The retry delay (days between first and second attempt) is a system-level setting managed by the admin. Default value: 3 days. The admin can update this at any time via the admin portal. Only two automatic attempts are made per billing cycle. Additional retries are not performed.
 ### 5.5 Refund Policy
 The system does not support automated refunds. Specifically:
@@ -328,7 +344,7 @@ The following notifications are required. Items marked with ★ are recommended 
 | Enrollment Confirmation ★ | Immediately after first enrollment | Plan name, price, billing frequency, renewal terms, cancellation instructions | FTC / State ARLs |
 | Subscription Expiration Reminder | 7 days and 1 day before termination date | Plan name, termination date, renewal information, link to subscription page | Best practice |
 | Renewal Reminder ★ | 15–45 days before annual renewal; annually for shorter schedules | Upcoming charge amount, renewal date, billing frequency, how to cancel (with direct link) | CA/CO/NY ARLs |
-| Trial Expiration Warning ★ | 7 days and 1 day before trial ends | Trial end date, what happens next (fallback or access blocked), link to select a plan, how to cancel | FTC (free-to-paid) |
+| Trial Expiration Warning ★ | 7 days and 1 day before trial ends | Trial end date, what happens next (default trial: fallback/block; paid-plan trial mode: first charge attempt), link to select a plan, how to cancel | FTC (free-to-paid) |
 | Payment Success | Immediately after successful charge | Amount charged, plan name, period covered, receipt download link | Best practice |
 | Payment Failed | Immediately after each failed attempt | Failure reason (if available from Stripe), next retry date, link to update payment method | Best practice |
 | Grace Period Started | Immediately when grace period begins | Grace period end date, what happens at expiration, link to update payment method | Best practice |
@@ -425,6 +441,7 @@ The following items are identified as areas that may warrant further discussion 
 | 5 | Downgrade | Should disabled items be prioritized differently (e.g., most recently created, or user-selected) instead of the default creation-date order? | Start with creation-date ordering (first N active); add user selection in a future iteration. |
 | 6 | Extensions | Should the system allow the same extension type to be stacked (e.g., two blocks of additional users)? | Recommend against stacking. Extensions adjust a specific limit; use a single extension with quantity if needed. |
 | 7 | Security | PCI DSS compliance documentation for the integration architecture. | Document Stripe integration pattern (tokenization, no raw card storage) as part of security architecture. |
+| 8 | API Contract | Paid-plan trial duration exists in requirements but is not currently exposed in active admin plan create/update request models. | Extend admin plan APIs and domain contract with an explicit paid trial duration field and validation rules. |
 
 # Price Tiers
 
