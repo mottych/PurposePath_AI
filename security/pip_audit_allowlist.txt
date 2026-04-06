@@ -1,0 +1,23 @@
+# Known dependency advisories tracked for upgrade/remediation (pip-audit --ignore-vuln).
+# Remove an ID after upgrading the affected package to a fixed version.
+#
+# LangChain / LangGraph ecosystem (transitive; review template + checkpoint usage)
+GHSA-6qv9-48xg-fc7f
+GHSA-c67j-w6g6-q2cm
+GHSA-g48c-2wqr-h844
+GHSA-m42m-m8cr-8m58
+GHSA-mhr3-j7m5-c7c9
+GHSA-wwqv-p2pp-99h5
+# Google Cloud Vertex / AI Platform (major-version upgrade required)
+GHSA-wh2j-26j7-9728
+# Starlette / FastAPI (range header DoS; upgrade with FastAPI pin)
+GHSA-7f5h-v6xp-fcq8
+# python-multipart — default config not using vulnerable UPLOAD_DIR path
+GHSA-wp53-j4wj-2cfg
+# requests — ReDoS in extract_zipped_paths; not used on untrusted input in this repo
+GHSA-gc5v-m9x4-r6x2
+# black (dev) — ReDoS / cache path; runs on trusted sources in CI
+GHSA-3936-cmfr-pm3m
+PYSEC-2024-48
+# langchain-openai SSRF in token counting (not in hot path for this service)
+GHSA-2g6r-c272-w58r

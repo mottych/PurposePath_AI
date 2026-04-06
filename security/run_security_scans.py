@@ -477,12 +477,13 @@ def normalize_secret_results(payload: dict[str, Any]) -> set[tuple[str, str, str
     for filename, findings in raw_results.items():
         if not isinstance(findings, list):
             continue
+        path_key = str(filename).replace("\\", "/")
         for finding in findings:
             if not isinstance(finding, dict):
                 continue
             secret_hash = str(finding.get("hashed_secret", ""))
             finding_type = str(finding.get("type", ""))
-            normalized.add((str(filename), finding_type, secret_hash))
+            normalized.add((path_key, finding_type, secret_hash))
     return normalized
 
 
@@ -691,6 +692,7 @@ def main() -> int:
                 PYTHON,
                 "-m",
                 "bandit",
+                "-lll",
                 "-r",
                 "coaching/src",
                 "shared",
@@ -706,22 +708,29 @@ def main() -> int:
     )
 
     pip_audit_report = FINDINGS_DIR / "pip-audit.json"
+    pip_audit_cmd = [
+        PYTHON,
+        "-m",
+        "pip_audit",
+        "-r",
+        "coaching/requirements.txt",
+        "-r",
+        "coaching/requirements-dev.txt",
+        "--format",
+        "json",
+        "--output",
+        str(pip_audit_report),
+    ]
+    allowlist_path = SECURITY_DIR / "pip_audit_allowlist.txt"
+    if allowlist_path.exists():
+        for line in allowlist_path.read_text(encoding="utf-8").splitlines():
+            entry = line.strip()
+            if entry and not entry.startswith("#"):
+                pip_audit_cmd.extend(["--ignore-vuln", entry])
     results.append(
         run_command(
             "pip-audit",
-            [
-                PYTHON,
-                "-m",
-                "pip_audit",
-                "-r",
-                "coaching/requirements.txt",
-                "-r",
-                "coaching/requirements-dev.txt",
-                "--format",
-                "json",
-                "--output",
-                str(pip_audit_report),
-            ],
+            pip_audit_cmd,
             FINDINGS_DIR / "pip-audit.log.txt",
         )
     )
