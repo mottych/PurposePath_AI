@@ -7,6 +7,7 @@ job service used in async message processing.
 import boto3
 import structlog
 from coaching.src.api.dependencies.ai_engine import (
+    get_llm_usage_recording_service,
     get_provider_factory,
     get_s3_prompt_storage,
     get_topic_repository,
@@ -67,6 +68,7 @@ async def get_coaching_session_service() -> CoachingSessionService:
         topic_repo = await get_topic_repository()
         s3_storage = await get_s3_prompt_storage()
         provider_factory = await get_provider_factory()
+        usage_recorder = await get_llm_usage_recording_service()
 
         _coaching_session_service = CoachingSessionService(
             session_repository=session_repo,
@@ -74,6 +76,7 @@ async def get_coaching_session_service() -> CoachingSessionService:
             s3_prompt_storage=s3_storage,
             template_processor=None,  # Worker doesn't need enrichment
             provider_factory=provider_factory,
+            usage_recording_service=usage_recorder,
         )
         logger.info("CoachingSessionService initialized (worker mode)")
 

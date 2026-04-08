@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter
 
-from .analytics import router as analytics_router
 from .health import router as health_router
 from .interactions import router as interactions_router
+from .llm_usage import router as llm_usage_router
 from .models import router as models_router
 from .system_config import router as system_config_router
 from .topics import router as topics_router
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 router.include_router(health_router)
 router.include_router(interactions_router)
 router.include_router(models_router)
-router.include_router(analytics_router)
+router.include_router(llm_usage_router)
 router.include_router(topics_router)
 router.include_router(system_config_router)
 

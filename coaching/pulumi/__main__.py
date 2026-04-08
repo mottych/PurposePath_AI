@@ -165,6 +165,35 @@ ai_jobs_dynamodb_table = aws.dynamodb.Table(
     tags={"Environment": stack, "Service": "coaching-ai"},
 )
 
+# DynamoDB table for per-call LLM usage (admin analytics, quota-oriented roll-ups)
+llm_usage_table_name = f"purposepath-llm-usage-{stack}"
+llm_usage_dynamodb_table = aws.dynamodb.Table(
+    "llm-usage-table",
+    name=llm_usage_table_name,
+    billing_mode="PAY_PER_REQUEST",
+    hash_key="pk",
+    range_key="sk",
+    attributes=[
+        aws.dynamodb.TableAttributeArgs(name="pk", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="sk", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="gsi1_pk", type="S"),
+        aws.dynamodb.TableAttributeArgs(name="gsi1_sk", type="S"),
+    ],
+    global_secondary_indexes=[
+        aws.dynamodb.TableGlobalSecondaryIndexArgs(
+            name="billing-tenant-time-index",
+            hash_key="gsi1_pk",
+            range_key="gsi1_sk",
+            projection_type="ALL",
+        ),
+    ],
+    ttl=aws.dynamodb.TableTtlArgs(
+        attribute_name="ttl",
+        enabled=True,
+    ),
+    tags={"Environment": stack, "Service": "coaching-ai"},
+)
+
 # DynamoDB access for all purposepath tables
 # Table naming convention: purposepath-{table}-{stage}
 aws.iam.RolePolicy(
@@ -557,6 +586,8 @@ pulumi.export(
 pulumi.export("lambdaArn", coaching_lambda.arn)
 pulumi.export("aiJobsTable", ai_jobs_dynamodb_table.name)
 pulumi.export("aiJobsTableArn", ai_jobs_dynamodb_table.arn)
+pulumi.export("llmUsageTable", llm_usage_dynamodb_table.name)
+pulumi.export("llmUsageTableArn", llm_usage_dynamodb_table.arn)
 pulumi.export("defaultBasicModelParam", default_basic_model_param.name)
 pulumi.export("defaultPremiumModelParam", default_premium_model_param.name)
 pulumi.export("deployedImageUri", resolved_image_uri)

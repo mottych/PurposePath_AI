@@ -19,6 +19,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
+from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
 from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.core.structured_output import (
@@ -246,6 +248,7 @@ class CoachingSessionService:
         s3_prompt_storage: S3PromptStorage,
         template_processor: TemplateParameterProcessor | None,
         provider_factory: LLMProviderFactory,
+        usage_recording_service: LlmUsageRecordingService | None = None,
     ) -> None:
         """Initialize the coaching session service.
 
@@ -255,12 +258,14 @@ class CoachingSessionService:
             s3_prompt_storage: Storage for loading templates from S3
             template_processor: Processor for resolving parameters (None in worker mode)
             provider_factory: Factory for LLM provider/model resolution
+            usage_recording_service: Optional LLM usage persistence for observability
         """
         self.session_repository = session_repository
         self.topic_repository = topic_repository
         self.s3_prompt_storage = s3_prompt_storage
         self.template_processor = template_processor
         self.provider_factory = provider_factory
+        self._usage_recording_service = usage_recording_service
 
         # Build topic index for quick lookup
         self._topic_index: dict[str, TopicDefinition] = {}
@@ -641,6 +646,12 @@ class CoachingSessionService:
         llm_response, response_metadata = await self._execute_llm_call(
             messages=messages,
             llm_topic=llm_topic,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            invocation=LlmInvocationContext(
+                entry_source="coaching_session",
+                session_id=str(session.session_id),
+            ),
         )
 
         # Add messages to session (system message not stored in session, just used for LLM context)
@@ -825,6 +836,12 @@ class CoachingSessionService:
         llm_response, response_metadata = await self._execute_llm_call(
             messages=messages,
             llm_topic=llm_topic,
+            tenant_id=str(session.tenant_id),
+            user_id=str(session.user_id),
+            invocation=LlmInvocationContext(
+                entry_source="coaching_session",
+                session_id=str(session.session_id),
+            ),
         )
 
         # Update session status if it was paused (must happen before adding messages)
@@ -964,6 +981,12 @@ class CoachingSessionService:
         llm_response, response_metadata = await self._execute_llm_call(
             messages=messages,
             llm_topic=llm_topic,
+            tenant_id=str(session.tenant_id),
+            user_id=str(session.user_id),
+            invocation=LlmInvocationContext(
+                entry_source="coaching_session",
+                session_id=str(session.session_id),
+            ),
         )
 
         # Parse response for completion signal
@@ -1329,6 +1352,12 @@ class CoachingSessionService:
             messages=messages,
             llm_topic=extraction_topic,
             temperature_override=0.3,
+            tenant_id=str(session.tenant_id),
+            user_id=str(session.user_id),
+            invocation=LlmInvocationContext(
+                entry_source="coaching_session",
+                session_id=str(session.session_id),
+            ),
         )
 
         # Parse extraction result
@@ -1722,6 +1751,9 @@ class CoachingSessionService:
         llm_topic: LLMTopic,
         temperature_override: float | None = None,
         user_tier: TierLevel | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+        invocation: LlmInvocationContext | None = None,
     ) -> tuple[str, ResponseMetadata]:
         """Execute LLM call through provider factory with dynamic model resolution.
 
@@ -1741,6 +1773,8 @@ class CoachingSessionService:
 
         from coaching.src.core.constants import TierLevel
         from coaching.src.domain.ports.llm_provider_port import LLMMessage
+
+        inv = invocation or LlmInvocationContext(entry_source="coaching_session")
 
         temperature = temperature_override or llm_topic.temperature
         start_time = time.perf_counter()
@@ -1800,13 +1834,31 @@ class CoachingSessionService:
                 model_limit=model_config.max_tokens,
             )
 
-        response = await provider.generate(
-            messages=llm_messages,
-            model=model_name,
-            temperature=temperature,
-            max_tokens=effective_max_tokens,
-            system_prompt=system_prompt,
-        )
+        try:
+            response = await provider.generate(
+                messages=llm_messages,
+                model=model_name,
+                temperature=temperature,
+                max_tokens=effective_max_tokens,
+                system_prompt=system_prompt,
+            )
+        except Exception:
+            processing_time_ms = int((time.perf_counter() - start_time) * 1000)
+            if self._usage_recording_service and tenant_id:
+                await self._usage_recording_service.record(
+                    topic=llm_topic,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    model_code=model_code,
+                    max_tokens_topic_config=requested_max_tokens,
+                    max_tokens_effective=effective_max_tokens,
+                    wall_time_ms=processing_time_ms,
+                    llm_response=None,
+                    invocation=inv,
+                    pipeline_success=False,
+                    error_kind="provider_error",
+                )
+            raise
 
         processing_time_ms = int((time.perf_counter() - start_time) * 1000)
 
@@ -1817,6 +1869,20 @@ class CoachingSessionService:
             tokens_used=response.usage.get("total_tokens", 0),
             processing_time_ms=processing_time_ms,
         )
+
+        if self._usage_recording_service and tenant_id:
+            await self._usage_recording_service.record(
+                topic=llm_topic,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                model_code=model_code,
+                max_tokens_topic_config=requested_max_tokens,
+                max_tokens_effective=effective_max_tokens,
+                wall_time_ms=processing_time_ms,
+                llm_response=response,
+                invocation=inv,
+                pipeline_success=True,
+            )
 
         metadata = ResponseMetadata(
             model=response.model,

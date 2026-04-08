@@ -13,11 +13,15 @@ import structlog
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
+from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.config_multitenant import get_settings, settings
 from coaching.src.domain.ports.llm_provider_port import LLMProviderPort
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
+from coaching.src.infrastructure.repositories.dynamodb_llm_usage_repository import (
+    DynamoDBLlmUsageRepository,
+)
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
@@ -35,6 +39,8 @@ _llm_provider: LLMProviderPort | None = None
 _provider_factory: LLMProviderFactory | None = None
 _unified_engine: UnifiedAIEngine | None = None
 _generic_handler: GenericAIHandler | None = None
+_llm_usage_repo: DynamoDBLlmUsageRepository | None = None
+_llm_usage_recording: LlmUsageRecordingService | None = None
 
 
 async def get_topic_repository() -> TopicRepository:
@@ -124,6 +130,29 @@ async def get_provider_factory() -> LLMProviderFactory:
     return _provider_factory
 
 
+async def get_llm_usage_repository() -> DynamoDBLlmUsageRepository:
+    """DynamoDB repository for LLM usage rows (singleton)."""
+    global _llm_usage_repo
+    if _llm_usage_repo is None:
+        dynamodb_resource = boto3.resource("dynamodb", region_name=settings.aws_region)
+        _llm_usage_repo = DynamoDBLlmUsageRepository(
+            dynamodb_resource=dynamodb_resource,
+            table_name=settings.llm_usage_table,
+        )
+        logger.info("DynamoDBLlmUsageRepository initialized", table=settings.llm_usage_table)
+    return _llm_usage_repo
+
+
+async def get_llm_usage_recording_service() -> LlmUsageRecordingService:
+    """Recording service that appends usage rows (singleton)."""
+    global _llm_usage_recording
+    if _llm_usage_recording is None:
+        repo = await get_llm_usage_repository()
+        _llm_usage_recording = LlmUsageRecordingService(repository=repo)
+        logger.info("LlmUsageRecordingService initialized")
+    return _llm_usage_recording
+
+
 async def get_unified_ai_engine() -> UnifiedAIEngine:
     """Get or create UnifiedAIEngine singleton.
 
@@ -136,12 +165,14 @@ async def get_unified_ai_engine() -> UnifiedAIEngine:
         s3_storage = await get_s3_prompt_storage()
         provider_factory = await get_provider_factory()
         response_serializer = await get_response_serializer()
+        usage_recorder = await get_llm_usage_recording_service()
 
         _unified_engine = UnifiedAIEngine(
             topic_repo=topic_repo,
             s3_storage=s3_storage,
             provider_factory=provider_factory,
             response_serializer=response_serializer,
+            usage_recorder=usage_recorder,
         )
         logger.info("UnifiedAIEngine initialized with provider factory")
 
@@ -243,6 +274,7 @@ def reset_singletons() -> None:
     """
     global _topic_repo, _s3_storage, _response_serializer, _llm_provider
     global _provider_factory, _unified_engine, _generic_handler
+    global _llm_usage_repo, _llm_usage_recording
 
     _topic_repo = None
     _s3_storage = None
@@ -251,6 +283,8 @@ def reset_singletons() -> None:
     _provider_factory = None
     _unified_engine = None
     _generic_handler = None
+    _llm_usage_repo = None
+    _llm_usage_recording = None
 
     logger.info("All singleton dependencies reset")
 
@@ -260,6 +294,8 @@ __all__ = [
     "get_generic_handler",
     "get_jwt_token",
     "get_llm_provider",
+    "get_llm_usage_recording_service",
+    "get_llm_usage_repository",
     "get_provider_factory",
     "get_response_serializer",
     "get_s3_prompt_storage",

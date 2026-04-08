@@ -17,6 +17,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     TopicNotFoundError,
     UnifiedAIEngine,
 )
+from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.core.config import settings
 from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.response_model_registry import get_response_model
@@ -375,6 +376,12 @@ class AsyncAIExecutionService:
                 user_id=job.user_id,
                 tenant_id=job.tenant_id,
                 template_processor=template_processor,
+                invocation_context=LlmInvocationContext(
+                    entry_source="async_job",
+                    job_id=job.job_id,
+                    correlation_id=job.correlation_id,
+                    estimated_duration_ms=job.estimated_duration_ms,
+                ),
             )
             logger.info(
                 "async_job.ai_execution_completed",

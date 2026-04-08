@@ -74,6 +74,11 @@ class Settings(BaseSettings):
         return f"purposepath-ai-jobs-{self.stage}"
 
     @property
+    def llm_usage_table(self) -> str:
+        """Get per-call LLM usage table name."""
+        return f"purposepath-llm-usage-{self.stage}"
+
+    @property
     def sql_generation_idempotency_table(self) -> str:
         """Get SQL generation idempotency table name."""
         return f"purposepath-sql-generation-idempotency-{self.stage}"

@@ -178,6 +178,7 @@ async def get_coaching_session_service(
     parameter enrichment via Business API calls.
     """
     from coaching.src.api.dependencies.ai_engine import (
+        get_llm_usage_recording_service,
         get_provider_factory,
         get_s3_prompt_storage,
         get_topic_repository,
@@ -197,6 +198,7 @@ async def get_coaching_session_service(
     topic_repository = await get_topic_repository()
     s3_prompt_storage = await get_s3_prompt_storage()
     provider_factory = await get_provider_factory()
+    usage_recorder = await get_llm_usage_recording_service()
 
     return CoachingSessionService(
         session_repository=session_repository,
@@ -204,6 +206,7 @@ async def get_coaching_session_service(
         s3_prompt_storage=s3_prompt_storage,
         template_processor=template_processor,
         provider_factory=provider_factory,
+        usage_recording_service=usage_recorder,
     )
 
 
