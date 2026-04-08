@@ -35,6 +35,64 @@ from coaching.src.infrastructure.external.business_api_client import BusinessApi
 logger = structlog.get_logger()
 
 
+def _strategies_linked_to_goal(
+    strategies: list[dict[str, Any]],
+    goal_id: str | None,
+) -> list[dict[str, Any]]:
+    """Return strategies whose goalId matches the payload goal (if any)."""
+    if not goal_id:
+        return []
+    gid = str(goal_id)
+    return [s for s in strategies if str(s.get("goalId", "")) == gid]
+
+
+def _format_strategy_lines(strategies: list[dict[str, Any]]) -> str:
+    """Human-readable bullet list for prompts (email / coaching)."""
+    if not strategies:
+        return "No strategies linked to this goal yet."
+    lines: list[str] = []
+    for s in strategies:
+        name = s.get("name") or "Unnamed strategy"
+        status = s.get("status") or ""
+        desc = (s.get("description") or "").strip()
+        head = f"- {name}" + (f" ({status})" if status else "")
+        if desc:
+            head += f": {desc[:280]}"
+        lines.append(head)
+    return "\n".join(lines)
+
+
+def _measures_linked_to_goal(
+    measures: list[dict[str, Any]],
+    goal_id: str | None,
+) -> list[dict[str, Any]]:
+    """Return measures linked to the goal via goalId or connections.goalIds."""
+    if not goal_id:
+        return []
+    gid = str(goal_id)
+    out: list[dict[str, Any]] = []
+    for m in measures:
+        if str(m.get("goalId", "")) == gid:
+            out.append(m)
+            continue
+        conns = m.get("connections") or {}
+        raw_goal_ids = conns.get("goalIds") or []
+        if gid in {str(x) for x in raw_goal_ids}:
+            out.append(m)
+    return out
+
+
+def _format_measure_lines(measures: list[dict[str, Any]]) -> str:
+    if not measures:
+        return "No measures linked to this goal yet."
+    lines: list[str] = []
+    for m in measures:
+        name = m.get("name") or "Unnamed measure"
+        status = m.get("status") or ""
+        lines.append(f"- {name}" + (f" ({status})" if status else ""))
+    return "\n".join(lines)
+
+
 @dataclass
 class RetrievalContext:
     """Context passed to retrieval methods.
@@ -789,6 +847,7 @@ async def get_strategy_by_id(context: RetrievalContext) -> dict[str, Any]:
         "strategies_count",
         "strategies_by_status",
         "strategies_by_type",
+        "strategies_formatted",
     ),
 )
 async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
@@ -817,11 +876,16 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
                 by_type[stype] = []
             by_type[stype].append(s)
 
+        goal_id = context.payload.get("goal_id")
+        linked = _strategies_linked_to_goal(strategies_list, goal_id if goal_id else None)
+        strategies_formatted = _format_strategy_lines(linked)
+
         return {
             "strategies": strategies_list,
             "strategies_count": len(strategies_list),
             "strategies_by_status": by_status,
             "strategies_by_type": by_type,
+            "strategies_formatted": strategies_formatted,
         }
     except Exception as e:
         logger.error(
@@ -834,6 +898,7 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
             "strategies_count": 0,
             "strategies_by_status": {},
             "strategies_by_type": {},
+            "strategies_formatted": "No strategies linked to this goal yet.",
         }
 
 
@@ -850,6 +915,8 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
         "measures_owner_breakdown",
         "measures_by_status",
         "at_risk_measures",
+        "measures_for_goal",
+        "measures_formatted_for_goal",
     ),
 )
 async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
@@ -883,6 +950,13 @@ async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
             if status in ("at_risk", "behind"):
                 at_risk.append(m)
 
+        goal_id = context.payload.get("goal_id")
+        measures_for_goal = _measures_linked_to_goal(
+            measures,
+            goal_id if goal_id else None,
+        )
+        measures_formatted_for_goal = _format_measure_lines(measures_for_goal)
+
         return {
             "measures_summary": data,
             "measures": measures,
@@ -893,6 +967,8 @@ async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
             "measures_owner_breakdown": summary.get("byOwner", []),
             "measures_by_status": by_status,
             "at_risk_measures": at_risk,
+            "measures_for_goal": measures_for_goal,
+            "measures_formatted_for_goal": measures_formatted_for_goal,
         }
     except Exception as e:
         logger.error(
@@ -910,6 +986,8 @@ async def get_measures_summary(context: RetrievalContext) -> dict[str, Any]:
             "measures_owner_breakdown": [],
             "measures_by_status": {},
             "at_risk_measures": [],
+            "measures_for_goal": [],
+            "measures_formatted_for_goal": "No measures linked to this goal yet.",
         }
 
 

@@ -1,7 +1,7 @@
 # Email Insights AI API Contract Specification
 
-**Version:** 2.0  
-**Last Updated:** March 27, 2026  
+**Version:** 2.1  
+**Last Updated:** April 8, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
 
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-08 - v2.1 - Document server-side enrichment parameters for `goal_created_email_insight` (foundation + goal-scoped strategies/measures)
 - 2026-03-27 - v2.0 - Full-cutover generic topic contract with required service token for enrichment API calls
 - 2026-03-25 - v1.0 - Initial approved contract for activity-driven email insights v1 pilot
 
@@ -93,6 +94,17 @@ Cross-system request/response naming between PurposePath_Api and PurposePath_AI 
 - AI service must not mint, mutate, or re-sign the token.
 - AI service forwards token to standard backend user-facing API endpoints for enrichment.
 - Backend user-facing endpoints validate token through standard authentication/authorization components.
+
+### 4.5 Server-side enrichment (`goal_created_email_insight`)
+
+Orchestrators still supply topic input primarily via `goal_id` (and standard user/tenant context) plus `authContext` for enrichment API calls. The AI coaching service resolves additional **template parameters** (not required in the trigger `activityData` payload) using the same retrieval stack as other single-shot topics, including:
+
+- Business foundation: `vision`, `purpose`, `core_values`, `business_name`
+- Goal: full `goal` record plus `goal_title`, `goal_description`, `goal_intent` where available
+- Goal-scoped strategies: `existing_strategies_for_goal` (formatted list of strategies whose `goalId` matches `goal_id`)
+- Goal-scoped measures: `measures_formatted_for_goal` (formatted list of measures linked via `goalId` or `connections.goalIds`)
+
+Exact placeholder names and prompt wording live in topic seed data and deployed prompts; this section records **contractual expectation** that enrichment uses `goal_id` to scope strategies and measures.
 
 ---
 

@@ -51,3 +51,5 @@ CONTENT GUIDELINES:
 - Do not invent facts not grounded in input context
 - Keep text ready for direct embedding into email templates
 - Avoid sensitive, risky, or policy-violating guidance
+- When vision, purpose, core values, goal-linked strategies, or measures are provided, you may briefly
+  connect the goal to that context (alignment or a gentle gap); keep it concise and appropriate for email

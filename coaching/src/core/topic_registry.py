@@ -360,10 +360,19 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
         parameter_refs=(
             _req("goal_id"),  # Required request parameter for goal context
             _opt_req("locale"),  # Optional localization hint (default en-US)
+            _onb("vision"),  # Business foundation — alignment to vision
+            _onb("purpose"),  # Business foundation — alignment to purpose
+            _onb("core_values"),  # Business foundation — alignment to values
+            _onb("business_name"),  # Tenant/business display context
+            _goal("goal"),  # Full goal record (get_goal_by_id / template enrichment)
             _goal("goal_title"),  # Auto-enriched from goal service
             _goal("goal_description"),  # Auto-enriched from goal service
+            _goal("goal_intent"),  # Goal intent / WHY for alignment framing
+            _strategies(
+                "existing_strategies_for_goal"
+            ),  # Goal-scoped strategies (strategies_formatted when goal_id set)
+            _measures("measures_formatted_for_goal"),  # Goal-scoped measures summary
             _user("user_name"),  # User display name context
-            _onb("business_name"),  # Tenant/business display context
         ),
     ),
     # ========== Section 4: Strategic Planning AI (6 endpoints) ==========

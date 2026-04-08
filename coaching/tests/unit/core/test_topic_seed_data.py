@@ -87,3 +87,7 @@ class TestTopicSeedData:
         assert '"schemaversion": "1.0"' in system_prompt
         assert "paragraph, list, cta" in system_prompt
         assert "return one json object only" in user_prompt
+        assert "{vision}" in seed.default_user_prompt
+        assert "{goal_intent}" in seed.default_user_prompt
+        assert "{existing_strategies_for_goal}" in seed.default_user_prompt
+        assert "{measures_formatted_for_goal}" in seed.default_user_prompt
