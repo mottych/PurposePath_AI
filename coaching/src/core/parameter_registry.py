@@ -1003,6 +1003,28 @@ _register(
     )
 )
 
+_register(
+    ParameterDefinition(
+        name="measures_for_goal",
+        param_type=ParameterType.LIST,
+        description="Measures linked to the goal from payload goal_id (goalId or connections.goalIds).",
+        default=[],
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_for_goal",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="measures_formatted_for_goal",
+        param_type=ParameterType.STRING,
+        description="Formatted bullet list of measures linked to payload goal_id.",
+        default="No measures linked to this goal yet.",
+        retrieval_method="get_measures_summary",
+        extraction_path="measures_formatted_for_goal",
+    )
+)
+
 # -----------------------------------------------------------------------------
 # Action Parameters (from get_action_by_id)
 # -----------------------------------------------------------------------------
