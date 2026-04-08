@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -155,9 +156,9 @@ class DynamoDBLlmUsageRepository:
             "Limit": min(max(limit, 1), 2000),
         }
         if tenant_id_prefix:
-            kwargs["KeyConditionExpression"] = Key("gsi1_pk").eq(gsi1_pk) & Key("gsi1_sk").begins_with(
-                f"{tenant_id_prefix}#"
-            )
+            kwargs["KeyConditionExpression"] = Key("gsi1_pk").eq(gsi1_pk) & Key(
+                "gsi1_sk"
+            ).begins_with(f"{tenant_id_prefix}#")
 
         filter_parts: list[Any] = []
         if topic_id is not None:
@@ -194,3 +195,67 @@ class DynamoDBLlmUsageRepository:
             items.extend(r for r in batch if in_time_window(r))
 
         return items[:limit]
+
+    async def query_topic_usage_across_periods(
+        self,
+        *,
+        topic_id: str,
+        billing_periods: list[str],
+        time_from: datetime | None,
+        time_to: datetime | None,
+        max_items_total: int,
+    ) -> list[LlmUsageRecord]:
+        """Paginate GSI per month; filter by topic_id; cap total rows (admin topic stats)."""
+
+        def in_time_window(r: LlmUsageRecord) -> bool:
+            return not (
+                (time_from is not None and r.occurred_at < time_from.astimezone(UTC))
+                or (time_to is not None and r.occurred_at > time_to.astimezone(UTC))
+            )
+
+        cap = max(1, min(max_items_total, 100_000))
+        out: list[LlmUsageRecord] = []
+        for bp in billing_periods:
+            if len(out) >= cap:
+                break
+            remaining = cap - len(out)
+            page_out = self._query_gsi_month_topic_paginated(
+                billing_period=bp,
+                topic_id=topic_id,
+                time_filter=in_time_window,
+                max_items=remaining,
+            )
+            out.extend(page_out)
+        return out
+
+    def _query_gsi_month_topic_paginated(
+        self,
+        *,
+        billing_period: str,
+        topic_id: str,
+        time_filter: Callable[[LlmUsageRecord], bool],
+        max_items: int,
+    ) -> list[LlmUsageRecord]:
+        gsi1_pk = f"BP#{billing_period}"
+        base_kwargs: dict[str, Any] = {
+            "IndexName": _GSI_NAME,
+            "KeyConditionExpression": Key("gsi1_pk").eq(gsi1_pk),
+            "FilterExpression": Attr("topic_id").eq(topic_id),
+        }
+        collected: list[LlmUsageRecord] = []
+        exclusive_key: dict[str, Any] | None = None
+        while len(collected) < max_items:
+            kwargs = {**base_kwargs, "Limit": 1000}
+            if exclusive_key is not None:
+                kwargs["ExclusiveStartKey"] = exclusive_key
+            response = self._table.query(**kwargs)
+            for raw in response.get("Items", []):
+                rec = self._from_item(raw)
+                if time_filter(rec):
+                    collected.append(rec)
+                    if len(collected) >= max_items:
+                        break
+            exclusive_key = response.get("LastEvaluatedKey")
+            if not exclusive_key:
+                break
+        return collected
