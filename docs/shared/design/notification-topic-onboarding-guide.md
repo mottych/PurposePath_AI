@@ -1,7 +1,7 @@
 # Notification Topic Onboarding Guide
 
-Version: 1.0
-Date: April 7, 2026
+Version: 1.1
+Date: April 8, 2026
 Status: Developer Guide
 
 ## 1. Purpose
@@ -19,22 +19,25 @@ This is an implementation guide for developers and assumes the canonical require
 
 ## 2. Architecture Summary
 
-The email notification system uses three registries plus runtime resolver implementations:
+The email notification system uses canonical domain registries plus runtime resolver implementations:
 
 1. Notification registry:
 - File: PurposePath.Domain/Constants/NotificationEvents.cs
-- Defines event metadata and split contracts:
-  - RequiredPublisherParameters
-  - RequiredTemplateParameters
-  - OptionalTemplateParameters
+- Defines canonical NotificationEvent contracts using typed parameter objects:
+  - PublisherParameters (IReadOnlyList<NotificationEventParameter>)
+  - TemplateParameters (IReadOnlyList<NotificationEventParameter>)
 
 2. Parameter registry:
-- File: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateParameterRegistry.cs
-- Defines parameter to resolver-method mapping.
+- Canonical file: PurposePath.Domain/Constants/NotificationParameters.cs
+- Defines NotificationParameter objects with ResolutionMethod and the authoritative All collection.
+- Runtime projection file: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateParameterRegistry.cs
+- Runtime registry auto-registers from NotificationParameters.All.
 
 3. Retrieval method registry:
-- File: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodRegistry.cs
-- Defines resolver method to required business inputs mapping.
+- Canonical file: PurposePath.Domain/Constants/NotificationResolutionMethods.cs
+- Defines NotificationResolutionMethod objects and required publisher inputs.
+- Runtime projection file: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodRegistry.cs
+- Runtime registry must remain aligned with NotificationResolutionMethods.
 
 4. Resolver implementations:
 - Folder: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters
@@ -52,31 +55,38 @@ The email notification system uses three registries plus runtime resolver implem
 Edit:
 - PurposePath.Domain/Constants/NotificationEvents.cs
 
-Add a new NotificationEventDefinition with:
+Add a new NotificationEvent with:
 - EventType
 - DisplayName
 - Description
 - Category
 - TemplateId
-- RequiredPublisherParameters
-- RequiredTemplateParameters
-- OptionalTemplateParameters
+- PublisherParameters
+- TemplateParameters
 - Optional policy fields where applicable:
   - PreferenceCategory
   - IsMandatory
   - RecipientStrategy
 
+Implementation pattern:
+- Use CreatePublisherParameters(...) and CreateTemplateParameters(...) helpers.
+- Use NotificationParameters.<ParameterName> references instead of raw string keys.
+
 Rules:
-- RequiredTemplateParameters and OptionalTemplateParameters must only include parameters defined in NotificationParameters.
-- RequiredPublisherParameters must include all business inputs needed by resolver methods for all required and optional template parameters.
-- Do not rely on legacy RequiredParameters or OptionalParameters fallback behavior.
+- TemplateParameters must only include parameters defined in NotificationParameters.
+- PublisherParameters should include explicit business inputs for readability, but canonicalization (EnsureSplitContract) will enforce method-derived required publisher inputs.
+- Do not introduce legacy RequiredParameters or OptionalParameters fallback fields.
 
 ### Step 2: Add any new template parameters
 
 Edit:
 - PurposePath.Domain/Constants/NotificationParameters.cs
 
-Add constants for every new template variable.
+Add NotificationParameter entries for every new template variable.
+
+Implementation pattern:
+- Create a static readonly NotificationParameter using Create("parameter_name", NotificationResolutionMethods.<Method>)
+- Add the parameter to NotificationParameters.All
 
 Naming rules:
 - Keep names consistent with existing template variable naming conventions.
@@ -85,30 +95,33 @@ Naming rules:
 ### Step 3: Register parameter to resolver-method mapping
 
 Edit:
-- Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateParameterRegistry.cs
+- PurposePath.Domain/Constants/NotificationParameters.cs
 
-For each new parameter, decide one resolver method:
+For each new parameter, decide one resolution method:
 - payload_passthrough when publisher must provide value directly
 - existing DB resolver method where available
 - new resolver method key if enrichment source is new
 - email_insight_payload for AI-generated template content
 
 Rules:
-- Every template parameter used by notifications must be registered.
+- Every template parameter used by notifications must exist in NotificationParameters.All.
 - Enriched parameters must not be mapped to payload_passthrough unless intentionally approved.
+
+Note:
+- TemplateParameterRegistry is generated from NotificationParameters.All and should not require manual parameter registration.
 
 ### Step 4: Register resolver method required business inputs
 
 Edit:
-- Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodRegistry.cs
+- Canonical: PurposePath.Domain/Constants/NotificationResolutionMethods.cs
+- Runtime projection: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodRegistry.cs
 
 If reusing an existing method key:
 - Verify required input list still matches real business inputs.
 
 If adding a new method key:
-- Add method name constant in:
-  - Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodDefinition.cs
-- Add method definition in TemplateRetrievalMethodRegistry with required business inputs only.
+- Add method definition in NotificationResolutionMethods with required business inputs only.
+- Add corresponding method mapping in TemplateRetrievalMethodRegistry to keep runtime registry aligned.
 
 Important:
 - Keep method required inputs limited to business inputs.
@@ -138,7 +151,7 @@ If the new notification relies on AI-generated email insight content, follow thi
 - Map AI output template parameters to email_insight_payload in TemplateParameterRegistry.
 
 2. Method inputs:
-- In TemplateRetrievalMethodRegistry, keep email_insight_payload inputs business-only.
+- In NotificationResolutionMethods (and matching runtime method registry), keep email_insight_payload inputs business-only.
 - Example inputs: tenantId, userId, topicId.
 
 3. Intermediate topic method behavior:
@@ -163,7 +176,9 @@ If the new notification relies on AI-generated email insight content, follow thi
 Edit or verify in:
 - PurposePath.Domain/Constants/NotificationEvents.cs
 
-Update derived publisher input mapping table for new enriched parameters if needed so required business inputs are propagated consistently.
+No manual mapping table is required.
+
+EnsureSplitContract in NotificationEvents automatically derives required publisher inputs from each template parameter's ResolutionMethod.RequiredPublisherParameters.
 
 ### Step 8: Add or update tests
 
@@ -211,12 +226,12 @@ Note:
 Use this checklist before opening PR:
 
 - Added notification contract with explicit split fields.
-- Added all new template parameter constants.
-- Registered every new parameter in parameter registry.
-- Registered method required business inputs in retrieval method registry.
+- Added all new NotificationParameter definitions and included them in NotificationParameters.All.
+- Assigned ResolutionMethod on each new NotificationParameter.
+- Registered method required business inputs in NotificationResolutionMethods and synchronized runtime method registry.
 - Implemented and DI-wired any new non-passthrough resolver.
 - For AI topic: updated orchestrator topic mapping and activity data shaping.
-- Ensured notification required publisher inputs cover method-derived business inputs.
+- Verified notification required publisher inputs cover method-derived business inputs via contract tests.
 - Updated or added contract and resolver tests.
 - Ran required test projects and confirmed green.
 - Updated requirements/design docs when behavior contracts changed.
@@ -225,8 +240,10 @@ Use this checklist before opening PR:
 
 - Putting orchestrator metadata fields into parameter contracts.
 - Using template parameters that do not exist in NotificationParameters.
+- Forgetting to add a new NotificationParameter into NotificationParameters.All.
 - Adding a retrieval method key without a concrete resolver implementation.
 - Forgetting to register new resolver in Function DI.
+- Manually editing TemplateParameterRegistry for parameter mappings instead of assigning ResolutionMethod in NotificationParameters.
 - Updating mappings without updating contract tests.
 - Introducing compatibility aliases that violate approved contract rules.
 

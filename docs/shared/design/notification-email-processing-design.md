@@ -1,7 +1,7 @@
 # Notification Email Processing - Design and Implementation Plan
 
-Version: 1.0
-Date: April 7, 2026
+Version: 1.1
+Date: April 8, 2026
 Status: Design Baseline
 
 ## 1. Design Goals
@@ -39,14 +39,18 @@ Defines notification-level contract and behavior.
 
 Responsibilities:
 - notification identity and metadata
-- required publisher input parameters
-- mandatory template parameters
-- optional template parameters
+- canonical publisher parameters (typed NotificationEventParameter)
+- canonical template parameters (typed NotificationEventParameter)
 - delivery/policy metadata required at notification level
 
 Non-responsibilities:
 - no resolver implementation
 - no parameter extraction behavior
+
+Current implementation notes:
+- Notification contracts are defined as NotificationEvent records in PurposePath.Domain/Constants/NotificationEvent.cs.
+- NotificationEvents.GetAll() returns canonicalized contracts from static definitions through EnsureSplitContract.
+- EnsureSplitContract derives required publisher inputs from template-parameter resolution method requirements.
 
 ### 2.3 Parameter Registry
 
@@ -55,12 +59,16 @@ Defines parameter-level contract.
 
 Responsibilities:
 - parameter name
-- resolver method binding
+- resolver method binding (NotificationResolutionMethod)
 
 Non-responsibilities:
 - no notification-specific mandatory/optional assignment
 - no resolver execution
 - no method input requirement definitions
+
+Current implementation notes:
+- Canonical parameter definitions live in PurposePath.Domain/Constants/NotificationParameters.cs as NotificationParameter objects.
+- NotificationParameters.All is the canonical source and is projected into runtime TemplateParameterRegistry.
 
 ### 2.4 Resolver Methods Registry
 
@@ -95,7 +103,8 @@ Mapping policy:
  - Contract normalization is applied once into a canonical in-memory catalog of ensured split contracts, and both `GetAll` and `GetByEventType` query that same catalog.
  - Runtime split-contract accessors and catalog normalization are strict (no compatibility fallback).
  - Static notification definitions must declare split contract fields at source, and normalization consumes those split fields directly.
- - Parameter-to-method bindings are owned by parameter registry; method input requirements are owned only by retrieval method registry.
+ - Parameter-to-method bindings are owned by canonical parameter registry; method input requirements are owned by canonical resolution methods registry.
+ - Lambda runtime registries (TemplateParameterRegistry and TemplateRetrievalMethodRegistry) must remain aligned with canonical domain registries.
  - Non-passthrough method keys must have concrete runtime resolver implementations.
 
 Current reusable retrieval sources:
@@ -214,6 +223,10 @@ Required dimensions:
 - finalize parameter registry schema
 - finalize retrieval method registry schema (method key + required inputs)
 - validate all existing notifications against new schemas
+
+Implementation status note:
+- Canonical object-based contracts are in place (NotificationEvent, NotificationParameter, NotificationResolutionMethod).
+- Topic onboarding must now update domain registries first; runtime registries are projection/alignment layers.
 
 ### Phase 2: Registry Infrastructure
 - implement registry access and startup validation
