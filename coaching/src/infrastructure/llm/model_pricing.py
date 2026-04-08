@@ -6,24 +6,26 @@ and utilities to calculate costs based on token usage.
 
 from typing import Any
 
-# Pricing per 1,000 tokens in USD (as of October 2024)
-# Source: https://aws.amazon.com/bedrock/pricing/
+# Pricing per 1,000 tokens in USD — Amazon Bedrock on-demand (US regions), reviewed April 2026.
+# Primary source: https://aws.amazon.com/bedrock/pricing/ (Anthropic tables; e.g. Claude 3.5 Sonnet
+# public extended access effective Dec 2025: $6.00 / $30.00 per 1M input/output tokens).
+# Haiku 4.5 and Claude 3 Haiku/Opus/Sonnet (non-3.5) rates cross-checked on the same page / model list.
 MODEL_PRICING: dict[str, dict[str, float]] = {
     "anthropic.claude-haiku-4-5-20251001-v1:0": {
         "input": 0.001,  # $1.00 per 1M tokens
         "output": 0.005,  # $5.00 per 1M tokens
     },
     "anthropic.claude-3-5-haiku-20241022-v1:0": {
-        "input": 0.0008,  # $0.80 per 1M tokens
+        "input": 0.0008,  # $0.80 per 1M tokens (Anthropic list; confirm in Bedrock console for your region)
         "output": 0.004,  # $4.00 per 1M tokens
     },
     "anthropic.claude-3-5-sonnet-20241022-v2:0": {
-        "input": 0.003,  # $3.00 per 1M tokens
-        "output": 0.015,  # $15.00 per 1M tokens
+        "input": 0.006,  # $6.00 per 1M tokens (Bedrock on-demand, extended access Dec 2025)
+        "output": 0.030,  # $30.00 per 1M tokens
     },
     "anthropic.claude-3-5-sonnet-20240620-v1:0": {
-        "input": 0.003,  # $3.00 per 1M tokens
-        "output": 0.015,  # $15.00 per 1M tokens
+        "input": 0.006,  # Same Sonnet 3.5 family on-demand band as v2 in common regions
+        "output": 0.030,
     },
     "anthropic.claude-3-haiku-20240307-v1:0": {
         "input": 0.00025,  # $0.25 per 1M tokens

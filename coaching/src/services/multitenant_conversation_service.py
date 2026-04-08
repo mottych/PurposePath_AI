@@ -1,5 +1,6 @@
 """Multitenant conversation service with shared business data integration."""
 
+import time
 import uuid
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -7,12 +8,20 @@ from typing import Any, cast
 import structlog
 
 # Enhanced with shared types for better type safety
+from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
+from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
+from coaching.src.application.llm_usage.multitenant_usage import (
+    build_llm_topic_for_usage,
+    coaching_llm_response_to_domain,
+)
 from coaching.src.core.config_multitenant import settings
 from coaching.src.core.exceptions import ConversationNotFoundCompatError
+from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
 from coaching.src.infrastructure.llm.model_pricing import calculate_cost
 from coaching.src.models.conversation import Conversation
 
 # Import LLM models for better type safety
+from coaching.src.models.llm_models import LLMResponse as CoachingLLMResponse
 from coaching.src.models.llm_models import SessionOutcomes
 from coaching.src.models.responses import (
     AIResponseData,
@@ -63,6 +72,7 @@ class MultitenantConversationService:
         llm_service: LLMService,
         cache_service: CacheService,
         prompt_service: PromptService,
+        usage_recording_service: LlmUsageRecordingService | None = None,
     ):
         """Initialize multitenant conversation service.
 
@@ -72,12 +82,14 @@ class MultitenantConversationService:
             llm_service: LLM service for AI interactions
             cache_service: Cache service for session management
             prompt_service: Service for prompt templates
+            usage_recording_service: Optional per-call usage persistence (Issue #299)
         """
         self.context = context  # Service dependency boundary
         self.conversation_repo = conversation_repository
         self.llm_service = llm_service
         self.cache_service = cache_service
         self.prompt_service = prompt_service
+        self._usage_recording_service = usage_recording_service
 
         # Initialize shared data repositories with tenant context
         self.coaching_session_repo = CoachingSessionRepository(context)
@@ -293,16 +305,33 @@ class MultitenantConversationService:
 
         # Get max_turns from conversation's llm_config or use default of 0 (unlimited)
         max_turns = conversation.llm_config.get("max_turns", 0)
+        max_tokens_topic_config = int(conversation.llm_config.get("max_tokens", 2000))
 
-        # Generate AI response with business context (pass dict)
-        ai_response_raw = await self.llm_service.generate_coaching_response(
-            conversation_id=conversation_id,
-            topic=conversation.topic,
-            user_message=user_message,
-            conversation_history=conversation.get_conversation_history(),
-            business_context=current_business_context_dict,
-            max_turns=max_turns,
-        )
+        llm_start = time.perf_counter()
+        try:
+            ai_response_raw = await self.llm_service.generate_coaching_response(
+                conversation_id=conversation_id,
+                topic=conversation.topic,
+                user_message=user_message,
+                conversation_history=conversation.get_conversation_history(),
+                business_context=current_business_context_dict,
+                max_turns=max_turns,
+            )
+        except Exception:
+            wall_ms = int((time.perf_counter() - llm_start) * 1000)
+            await self._record_multitenant_llm_usage(
+                conversation_id=conversation_id,
+                conversation_topic=conversation.topic,
+                max_tokens_topic_config=max_tokens_topic_config,
+                wall_time_ms=wall_ms,
+                coaching_response=None,
+                session_id=session_id,
+                pipeline_success=False,
+                error_kind="provider_error",
+            )
+            raise
+
+        wall_ms = int((time.perf_counter() - llm_start) * 1000)
 
         ai_response = AIResponseData(
             response=ai_response_raw.response,
@@ -341,6 +370,16 @@ class MultitenantConversationService:
             tokens=tokens_dict,
             cost=cost,
             model_id=ai_response_raw.model_id,
+        )
+
+        await self._record_multitenant_llm_usage(
+            conversation_id=conversation_id,
+            conversation_topic=conversation.topic,
+            max_tokens_topic_config=max_tokens_topic_config,
+            wall_time_ms=wall_ms,
+            coaching_response=ai_response_raw,
+            session_id=session_id,
+            pipeline_success=True,
         )
 
         # Update session metrics
@@ -521,6 +560,49 @@ class MultitenantConversationService:
             "version": business_data.get("version", "1.0"),
         }
         return summary
+
+    async def _record_multitenant_llm_usage(
+        self,
+        *,
+        conversation_id: str,
+        conversation_topic: str,
+        max_tokens_topic_config: int,
+        wall_time_ms: int,
+        coaching_response: CoachingLLMResponse | None,
+        session_id: str | None,
+        pipeline_success: bool,
+        error_kind: str | None = None,
+    ) -> None:
+        """Append unified LLM usage row (does not replace conversation message persistence)."""
+        if self._usage_recording_service is None:
+            return
+        topic_entity = build_llm_topic_for_usage(
+            topic_id=conversation_topic,
+            max_tokens_topic_config=max_tokens_topic_config,
+        )
+        inv = LlmInvocationContext(
+            entry_source="multitenant_conversation",
+            conversation_id=conversation_id,
+            session_id=session_id,
+        )
+        domain = (
+            coaching_llm_response_to_domain(coaching_response)
+            if coaching_response is not None
+            else None
+        )
+        await self._usage_recording_service.record(
+            topic=topic_entity,
+            tenant_id=self.context.tenant_id,
+            user_id=self.context.user_id,
+            model_code=DEFAULT_MODEL_CODE,
+            max_tokens_topic_config=max_tokens_topic_config,
+            max_tokens_effective=max_tokens_topic_config,
+            wall_time_ms=wall_time_ms,
+            llm_response=domain,
+            invocation=inv,
+            pipeline_success=pipeline_success,
+            error_kind=error_kind,
+        )
 
     async def _check_session_limits(self, topic: SharedCoachingTopic) -> None:
         """Check if user has reached session limits for the topic."""
