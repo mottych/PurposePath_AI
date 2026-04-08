@@ -9,5 +9,11 @@ This package provides middleware for:
 from coaching.src.api.middleware.error_handling import ErrorHandlingMiddleware
 from coaching.src.api.middleware.logging import LoggingMiddleware
 from coaching.src.api.middleware.rate_limiting import RateLimitingMiddleware
+from coaching.src.api.middleware.strip_path_prefix import StripPathPrefixMiddleware
 
-__all__ = ["ErrorHandlingMiddleware", "LoggingMiddleware", "RateLimitingMiddleware"]
+__all__ = [
+    "ErrorHandlingMiddleware",
+    "LoggingMiddleware",
+    "RateLimitingMiddleware",
+    "StripPathPrefixMiddleware",
+]

@@ -425,6 +425,8 @@ coaching_lambda = aws.lambda_.Function(
                 "ai_debug_logging", "false"
             ),  # Optional, defaults to false
             "AI_ASYNC_JOBS_ENABLED": stack_config.get("ai_async_jobs_enabled", "true"),
+            # Custom domain maps this API at /coaching; Lambda may receive full path prefix
+            "HTTP_PATH_STRIP_PREFIX": "/coaching",
         }
     ),
 )
