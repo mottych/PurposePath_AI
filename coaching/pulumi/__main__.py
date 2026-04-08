@@ -19,8 +19,9 @@ config = {
         "api_domain": "api.dev.purposepath.app",
         "certificate_output": "apiDev",
         "jwt_secret": "purposepath-jwt-secret-dev",
-        "openai_api_key_secret": "purposepath/dev/openai-api-key",
-        "google_vertex_credentials_secret": "purposepath/dev/google-vertex-credentials",
+        # Legacy secret names in AWS (no /dev/ segment); matches coaching-infrastructure stack
+        "openai_api_key_secret": "purposepath/openai-api-key",
+        "google_vertex_credentials_secret": "purposepath/google-vertex-credentials",
         "jwt_issuer": "https://api.dev.purposepath.app",
         "jwt_audience": "https://dev.purposepath.app",
         "account_api_url": "https://api.dev.purposepath.app",

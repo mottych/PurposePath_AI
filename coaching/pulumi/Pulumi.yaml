@@ -1,3 +1,6 @@
 name: purposepath-coaching-api
-runtime: python
+runtime:
+  name: python
+  options:
+    virtualenv: .venv
 description: PurposePath Coaching API Lambda (Docker)

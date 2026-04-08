@@ -1,3 +1,6 @@
 name: purposepath-coaching-infrastructure
-runtime: python
+runtime:
+  name: python
+  options:
+    virtualenv: .venv
 description: PurposePath Coaching Infrastructure (DynamoDB + S3)

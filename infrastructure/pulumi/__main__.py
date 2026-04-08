@@ -104,6 +104,7 @@ topics_table = aws.dynamodb.Table(
 )
 
 # S3 Bucket for LLM Prompts
+# Ignore legacy ACL/grant drift: bucket uses BucketOwnerEnforced (no ACLs).
 prompts_bucket = aws.s3.Bucket(
     "coaching-prompts-bucket",
     bucket=f"purposepath-coaching-prompts-380276784420-{stack}",
@@ -116,6 +117,7 @@ prompts_bucket = aws.s3.Bucket(
         ),
     ),
     tags={**common_tags, "Name": "coaching_prompts", "Purpose": "LLM-Prompt-Storage"},
+    opts=pulumi.ResourceOptions(ignore_changes=["acl", "grant"]),
 )
 
 # Configure bucket ownership controls
@@ -143,13 +145,28 @@ aws.s3.BucketPublicAccessBlock(
 # These secrets store API keys for external LLM providers.
 # Secret names are environment-agnostic (accessed by name, not ARN).
 # Values should be updated manually or via Pulumi config for each environment.
+#
+# Dev stack still uses legacy secret names (no /dev/ segment) to avoid replacing
+# protected resources; newer stacks use purposepath/<stack>/...
+
+def _openai_secret_name(s: str) -> str:
+    if s == "dev":
+        return "purposepath/openai-api-key"
+    return f"purposepath/{s}/openai-api-key"
+
+
+def _google_vertex_secret_name(s: str) -> str:
+    if s == "dev":
+        return "purposepath/google-vertex-credentials"
+    return f"purposepath/{s}/google-vertex-credentials"
+
 
 # OpenAI API Key Secret
 # NOTE: This secret was created externally and imported into Pulumi state.
 # Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 openai_api_key_secret = aws.secretsmanager.Secret(
     "openai-api-key-secret",
-    name=f"purposepath/{stack}/openai-api-key",
+    name=_openai_secret_name(stack),
     description="OpenAI API key for PurposePath AI features",
     tags={**common_tags, "Name": "openai-api-key", "Purpose": "LLM-API-Key"},
     opts=pulumi.ResourceOptions(protect=True),
@@ -160,7 +177,7 @@ openai_api_key_secret = aws.secretsmanager.Secret(
 # Secret values are managed manually via AWS Console or CLI, not via Pulumi.
 google_vertex_credentials_secret = aws.secretsmanager.Secret(
     "google-vertex-credentials-secret",
-    name=f"purposepath/{stack}/google-vertex-credentials",
+    name=_google_vertex_secret_name(stack),
     description="Google Vertex AI service account credentials",
     tags={**common_tags, "Name": "google-vertex-credentials", "Purpose": "LLM-API-Key"},
     opts=pulumi.ResourceOptions(protect=True),
