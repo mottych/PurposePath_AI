@@ -1,12 +1,13 @@
 # Admin AI Specifications - LLM Topic Management
 
 - Last Updated: April 8, 2026
-- Version: 3.3
+- Version: 3.4
 
 ## Revision History
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-04-08 | 3.4 | **Issue #299:** Implemented `GET /api/v1/admin/topics/{topic_id}/stats` — topic-scoped roll-ups from persisted LLM usage (`purposepath-llm-usage-{stage}`). Shared `months_in_range` helper in `application/llm_usage/billing_periods.py`. |
 | 2026-04-08 | 3.3 | **Issue #299 (follow-up):** Multitenant coaching (`/multitenant` conversation flow) now also appends rows to `purposepath-llm-usage-{stage}` (`entry_source=multitenant_conversation`) alongside existing conversation-store token fields. Bedrock pricing table in `model_pricing.py` aligned to AWS published Sonnet 3.5 on-demand rates ($6/$30 per 1M tokens). |
 | 2026-04-08 | 3.2 | **Issue #299:** Documented `GET /api/v1/admin/llm-usage` (persisted per-call LLM metrics from DynamoDB `purposepath-llm-usage-{stage}`). Removed deprecated `GET /api/v1/admin/usage` and `GET /api/v1/admin/models/{model_id}/metrics` (conversation-derived analytics). |
 | 2026-02-13 | 3.1 | Synced spec to implementation for admin model responses, topic auth, topic type terminology, and conversation extraction config. Updated `/models` response shape (`ApiResponse[LLMModelsResponse]`), enforced admin role on topics routes, standardized `measure_system`, updated `conversation_config.max_turns`, and documented extraction model behavior/defaults. |
@@ -60,7 +61,7 @@ Each topic has a `tier_level` that controls:
 | POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
 | GET /topics/stats | ✅ Implemented | Dashboard metrics endpoint used by LLM dashboard |
 | GET /llm-usage | ✅ Implemented | Persisted per-call LLM usage (tokens, cost, topic category/type, model, tenant, time); quota-style roll-ups via `include_summary` (Issue #299) |
-| GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
+| GET /topics/{topic_id}/stats | ✅ Implemented | Topic-scoped roll-ups from same usage table as `/llm-usage` (Issue #299, v3.4) |
 
 **Removed (deprecated, Issue #299):**
 
@@ -1080,11 +1081,11 @@ GET /api/v1/admin/llm-usage
 
 ---
 
-### 15. Get Topic Usage Statistics (Planned)
+### 15. Get topic LLM usage statistics (persisted rows)
 
-**Status:** ⏳ Not yet implemented
+**Status:** ✅ Implemented (Issue #299)
 
-**Purpose:** View usage metrics for a topic
+**Purpose:** **Topic drill-down** for the same per-call usage store as §14 (`purposepath-llm-usage-{stage}`). Returns roll-ups over up to `max_rows` matching rows in the requested time range. Use **`GET /api/v1/admin/llm-usage`** with `topic_id` for raw rows; use this endpoint for a **single summary card** per topic.
 
 **Endpoint:**
 
@@ -1096,25 +1097,51 @@ GET /api/v1/admin/topics/{topic_id}/stats
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `start_date` | string | No | 30 days ago | ISO 8601 date |
-| `end_date` | string | No | now | ISO 8601 date |
+| `start_date` | string (ISO 8601) | No | `end_date` minus 30 days | Inclusive range start (UTC if no offset) |
+| `end_date` | string (ISO 8601) | No | now (UTC) | Inclusive range end |
+| `max_rows` | integer | No | `25000` | Max usage rows scanned (100–100000). If the cap is reached, `capped` is `true` and totals may be incomplete. |
 
-**Response:**
+**404** if the topic is not in the database **or** endpoint registry. **400** if `start_date` > `end_date`.
+
+**Response envelope:** `ApiResponse[TopicLlmUsageStatsData]`:
 
 ```json
 {
-  "topic_id": "core_values_coaching",
-  "period": {
-    "start": "2024-10-14T00:00:00Z",
-    "end": "2024-11-13T23:59:59Z"
-  },
-  "usage": {
-    "total_conversations": 1247,
-    "total_tokens_used": 1850000,
-    "estimated_cost": 27.75
+  "success": true,
+  "data": {
+    "topic_id": "core_values_coaching",
+    "period": {
+      "start": "2026-03-09T00:00:00+00:00",
+      "end": "2026-04-08T12:00:00+00:00"
+    },
+    "usage": {
+      "llm_invocation_count": 1247,
+      "total_conversations": 89,
+      "distinct_session_count": 92,
+      "distinct_tenant_count": 12,
+      "total_tokens_used": 1850000,
+      "total_input_tokens": 900000,
+      "total_output_tokens": 950000,
+      "estimated_cost": 27.75,
+      "success_count": 1200,
+      "failure_count": 47,
+      "truncation_count": 15,
+      "avg_wall_time_ms": 842.5
+    },
+    "max_rows": 25000,
+    "rows_returned": 1247,
+    "capped": false
   }
 }
 ```
+
+**Field notes:**
+
+- `total_conversations`: count of **distinct non-null `conversation_id`** in the returned rows (not coaching “conversations” from another store).
+- `estimated_cost`: sum of row `cost_usd` (same pricing caveats as §14).
+- `capped` / `rows_returned`: when `rows_returned >= max_rows`, more rows may exist in DynamoDB for that topic/range.
+
+**Status codes:** `200`, `400`, `401`, `403`, `404`, `500`.
 
 ---
 

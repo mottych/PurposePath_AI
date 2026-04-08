@@ -484,3 +484,72 @@ class AdminStatsResponse(BaseModel):
     models: ModelStats = Field(..., description="Model statistics")
     system_health: AdminHealthResponse = Field(..., description="System health status")
     last_updated: str = Field(..., description="Last update timestamp (ISO 8601)")
+
+
+# Per-topic LLM usage (persisted usage table; Issue #299)
+
+
+class TopicLlmUsageStatsPeriod(BaseModel):
+    """Query window actually used for aggregation (UTC, ISO 8601)."""
+
+    start: str = Field(..., description="Inclusive lower bound")
+    end: str = Field(..., description="Inclusive upper bound")
+
+
+class TopicLlmUsageStatsUsage(BaseModel):
+    """Roll-ups from persisted per-call rows for a single topic_id."""
+
+    llm_invocation_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of usage rows included (LLM calls / failed attempts recorded)",
+    )
+    total_conversations: int = Field(
+        ...,
+        ge=0,
+        description="Distinct non-null conversation_id values in the included rows",
+    )
+    distinct_session_count: int = Field(
+        ...,
+        ge=0,
+        description="Distinct non-null session_id values in the included rows",
+    )
+    distinct_tenant_count: int = Field(
+        ...,
+        ge=0,
+        description="Distinct tenant_id values in the included rows",
+    )
+    total_tokens_used: int = Field(..., ge=0, description="Sum of total_tokens")
+    total_input_tokens: int = Field(..., ge=0)
+    total_output_tokens: int = Field(..., ge=0)
+    estimated_cost: float = Field(
+        ...,
+        ge=0.0,
+        description="Sum of cost_usd (USD); missing model pricing contributes 0 per row",
+    )
+    success_count: int = Field(..., ge=0)
+    failure_count: int = Field(..., ge=0)
+    truncation_count: int = Field(
+        ...,
+        ge=0,
+        description="Rows with finish_reason == length",
+    )
+    avg_wall_time_ms: float = Field(..., ge=0.0)
+
+
+class TopicLlmUsageStatsData(BaseModel):
+    """Payload for GET /admin/topics/{topic_id}/stats."""
+
+    topic_id: str
+    period: TopicLlmUsageStatsPeriod
+    usage: TopicLlmUsageStatsUsage
+    max_rows: int = Field(..., ge=1, description="Server cap passed or defaulted for this query")
+    rows_returned: int = Field(
+        ...,
+        ge=0,
+        description="Rows used for usage.* (may be less than invocations in AWS if capped)",
+    )
+    capped: bool = Field(
+        ...,
+        description="True if more matching rows may exist beyond max_rows",
+    )

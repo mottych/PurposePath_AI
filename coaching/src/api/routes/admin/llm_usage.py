@@ -6,6 +6,7 @@ import structlog
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import get_llm_usage_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
+from coaching.src.application.llm_usage.billing_periods import months_in_range
 from coaching.src.application.llm_usage.llm_usage_summary import (
     LlmUsageSummary,
     summarize_usage_rows,
@@ -61,20 +62,6 @@ class LlmUsageQueryResponse(BaseModel):
     summary: LlmUsageSummary | None = None
 
 
-def _months_in_range(start: datetime, end: datetime) -> list[str]:
-    months: list[str] = []
-    y, m = start.year, start.month
-    end_y, end_m = end.year, end.month
-    while (y, m) <= (end_y, end_m):
-        months.append(f"{y:04d}-{m:02d}")
-        if m == 12:
-            m = 1
-            y += 1
-        else:
-            m += 1
-    return months
-
-
 def _record_to_response(r: LlmUsageRecord) -> LlmUsageRecordResponse:
     return LlmUsageRecordResponse(
         usage_id=r.usage_id,
@@ -120,7 +107,9 @@ async def query_llm_usage(
     topic_type: str | None = None,
     model: str | None = Query(None, description="Substring match on resolved model_name"),
     limit: int = Query(500, ge=1, le=2000),
-    include_summary: bool = Query(True, description="Include on-the-fly aggregates over returned rows"),
+    include_summary: bool = Query(
+        True, description="Include on-the-fly aggregates over returned rows"
+    ),
     context: RequestContext = Depends(get_current_context),
     _admin: RequestContext = Depends(require_admin_access),
     repo: DynamoDBLlmUsageRepository = Depends(get_llm_usage_repository),
@@ -142,7 +131,7 @@ async def query_llm_usage(
     elif time_from is not None and time_to is not None:
         tf = time_from.astimezone(UTC) if time_from.tzinfo else time_from.replace(tzinfo=UTC)
         tt = time_to.astimezone(UTC) if time_to.tzinfo else time_to.replace(tzinfo=UTC)
-        periods = _months_in_range(tf, tt)
+        periods = months_in_range(tf, tt)
     else:
         now = datetime.now(UTC)
         periods = [f"{now.year:04d}-{now.month:02d}"]

@@ -9,9 +9,11 @@ from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
 )
+from coaching.src.api.dependencies.ai_engine import get_llm_usage_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.api.routes.admin.topics import router
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
+from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from shared.models.multitenant import RequestContext, UserRole
@@ -103,6 +105,30 @@ def client(
     app.dependency_overrides[require_admin_access] = lambda: mock_user
     app.dependency_overrides[get_topic_repository] = lambda: mock_repository
     app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
+    return TestClient(app)
+
+
+@pytest.fixture
+def mock_llm_usage_repository() -> AsyncMock:
+    """Mock DynamoDB LLM usage repository for topic stats."""
+    mock = AsyncMock()
+    mock.query_topic_usage_across_periods = AsyncMock(return_value=[])
+    return mock
+
+
+@pytest.fixture
+def client_with_llm_usage(
+    app: FastAPI,
+    mock_user: RequestContext,
+    mock_repository: AsyncMock,
+    mock_s3_storage: AsyncMock,
+    mock_llm_usage_repository: AsyncMock,
+) -> TestClient:
+    """Client with LLM usage repo override (topic stats)."""
+    app.dependency_overrides[require_admin_access] = lambda: mock_user
+    app.dependency_overrides[get_topic_repository] = lambda: mock_repository
+    app.dependency_overrides[get_s3_prompt_storage] = lambda: mock_s3_storage
+    app.dependency_overrides[get_llm_usage_repository] = lambda: mock_llm_usage_repository
     return TestClient(app)
 
 
@@ -948,3 +974,94 @@ class TestValidation:
         data = response.json()
         assert data["valid"] is True
         assert len(data["warnings"]) > 0
+
+
+class TestTopicLlmUsageStats:
+    """GET /admin/topics/{topic_id}/stats"""
+
+    def test_stats_topic_not_found(
+        self, client_with_llm_usage: TestClient, mock_llm_usage_repository: AsyncMock
+    ) -> None:
+        response = client_with_llm_usage.get("/admin/topics/completely_nonexistent_topic_xyz/stats")
+        assert response.status_code == 404
+        mock_llm_usage_repository.query_topic_usage_across_periods.assert_not_called()
+
+    def test_stats_empty_usage(
+        self,
+        client_with_llm_usage: TestClient,
+        mock_repository: AsyncMock,
+        mock_llm_usage_repository: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
+        mock_repository.get = AsyncMock(return_value=sample_topic)
+        response = client_with_llm_usage.get("/admin/topics/test_topic/stats")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["success"] is True
+        data = body["data"]
+        assert data["topic_id"] == "test_topic"
+        assert data["usage"]["llm_invocation_count"] == 0
+        assert data["usage"]["total_tokens_used"] == 0
+        assert data["capped"] is False
+        mock_llm_usage_repository.query_topic_usage_across_periods.assert_called_once()
+
+    def test_stats_invalid_date_range(
+        self,
+        client_with_llm_usage: TestClient,
+        mock_repository: AsyncMock,
+        mock_llm_usage_repository: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
+        mock_repository.get = AsyncMock(return_value=sample_topic)
+        response = client_with_llm_usage.get(
+            "/admin/topics/test_topic/stats",
+            params={
+                "start_date": "2026-04-10T00:00:00Z",
+                "end_date": "2026-04-01T00:00:00Z",
+            },
+        )
+        assert response.status_code == 400
+        mock_llm_usage_repository.query_topic_usage_across_periods.assert_not_called()
+
+    def test_stats_with_rows(
+        self,
+        client_with_llm_usage: TestClient,
+        mock_repository: AsyncMock,
+        mock_llm_usage_repository: AsyncMock,
+        sample_topic: LLMTopic,
+    ) -> None:
+        mock_repository.get = AsyncMock(return_value=sample_topic)
+        row = LlmUsageRecord(
+            usage_id="u1",
+            occurred_at=datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC),
+            billing_period="2026-04",
+            tenant_id="t1",
+            user_id="u1",
+            topic_id="test_topic",
+            topic_category="test",
+            topic_type="conversation_coaching",
+            model_code="X",
+            model_name="m",
+            input_tokens=10,
+            output_tokens=20,
+            total_tokens=30,
+            max_tokens_topic_config=2000,
+            max_tokens_effective=2000,
+            wall_time_ms=100,
+            finish_reason="stop",
+            cost_usd=0.01,
+            session_id="s1",
+            conversation_id="c1",
+            entry_source="multitenant_conversation",
+            success=True,
+        )
+        mock_llm_usage_repository.query_topic_usage_across_periods = AsyncMock(return_value=[row])
+        response = client_with_llm_usage.get("/admin/topics/test_topic/stats")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["usage"]["llm_invocation_count"] == 1
+        assert data["usage"]["total_tokens_used"] == 30
+        assert data["usage"]["total_conversations"] == 1
+        assert data["usage"]["distinct_session_count"] == 1
+        assert data["usage"]["distinct_tenant_count"] == 1
+        assert data["usage"]["estimated_cost"] == pytest.approx(0.01)

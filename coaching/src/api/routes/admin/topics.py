@@ -2,6 +2,7 @@
 
 Endpoint Usage Status:
 - GET /topics: USED BY Admin - TopicList, TopicFilters
+- GET /topics/{topic_id}/stats: persisted LLM usage roll-ups for one topic (Issue #299)
 - GET /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
 - PUT /topics/{topic_id}: USED BY Admin - TopicMetadataEditor, ParameterManager
 - GET /topics/{topic_id}/prompts/{prompt_type}: USED BY Admin - PromptEditorDialog
@@ -18,7 +19,7 @@ DEPRECATED (defined but not called by Admin UI):
 
 import time
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 import structlog
@@ -29,6 +30,7 @@ from coaching.src.api.dependencies import (
 from coaching.src.api.dependencies.ai_engine import (
     create_template_processor,
     get_jwt_token,
+    get_llm_usage_repository,
     get_unified_ai_engine,
 )
 from coaching.src.api.middleware.admin_auth import require_admin_access
@@ -40,7 +42,9 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
     UnifiedAIEngineError,
 )
+from coaching.src.application.llm_usage.billing_periods import months_in_range
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
+from coaching.src.application.llm_usage.llm_usage_summary import summarize_usage_rows
 from coaching.src.core.constants import TopicType
 from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
 from coaching.src.core.response_model_registry import get_response_model
@@ -51,8 +55,12 @@ from coaching.src.core.topic_registry import (
 )
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.entities.llm_topic import PromptInfo as DomainPromptInfo
+from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
+)
+from coaching.src.infrastructure.repositories.dynamodb_llm_usage_repository import (
+    DynamoDBLlmUsageRepository,
 )
 from coaching.src.models.admin_topics import (
     ConversationConfig,
@@ -69,6 +77,9 @@ from coaching.src.models.admin_topics import (
     TemplateSummary,
     TopicDetail,
     TopicListResponse,
+    TopicLlmUsageStatsData,
+    TopicLlmUsageStatsPeriod,
+    TopicLlmUsageStatsUsage,
     TopicSummary,
     UpdatePromptRequest,
     UpdatePromptResponse,
@@ -82,6 +93,7 @@ from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from pydantic import BaseModel, Field
 from shared.models.multitenant import RequestContext
+from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()
 
@@ -582,6 +594,118 @@ async def get_topics_stats(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve statistics: {e!s}",
         ) from e
+
+
+def _topic_llm_usage_stats_payload(
+    *,
+    topic_id: str,
+    rows: list[LlmUsageRecord],
+    range_start: datetime,
+    range_end: datetime,
+    max_rows: int,
+) -> TopicLlmUsageStatsData:
+    summary = summarize_usage_rows(rows)
+    conversations = {r.conversation_id for r in rows if r.conversation_id}
+    sessions = {r.session_id for r in rows if r.session_id}
+    tenants = {r.tenant_id for r in rows if r.tenant_id}
+    capped = len(rows) >= max_rows
+    usage = TopicLlmUsageStatsUsage(
+        llm_invocation_count=summary.row_count,
+        total_conversations=len(conversations),
+        distinct_session_count=len(sessions),
+        distinct_tenant_count=len(tenants),
+        total_tokens_used=summary.total_tokens,
+        total_input_tokens=summary.total_input_tokens,
+        total_output_tokens=summary.total_output_tokens,
+        estimated_cost=summary.total_cost_usd,
+        success_count=summary.success_count,
+        failure_count=summary.failure_count,
+        truncation_count=summary.truncation_count,
+        avg_wall_time_ms=summary.avg_wall_time_ms,
+    )
+    period = TopicLlmUsageStatsPeriod(
+        start=range_start.astimezone(UTC).isoformat(),
+        end=range_end.astimezone(UTC).isoformat(),
+    )
+    return TopicLlmUsageStatsData(
+        topic_id=topic_id,
+        period=period,
+        usage=usage,
+        max_rows=max_rows,
+        rows_returned=len(rows),
+        capped=capped,
+    )
+
+
+@router.get(
+    "/{topic_id}/stats",
+    response_model=ApiResponse[TopicLlmUsageStatsData],
+)
+async def get_topic_llm_usage_stats(
+    topic_id: Annotated[str, Path(description="Topic identifier")],
+    start_date: Annotated[
+        datetime | None,
+        Query(description="Inclusive range start (ISO 8601); default end minus 30 days"),
+    ] = None,
+    end_date: Annotated[
+        datetime | None,
+        Query(description="Inclusive range end (ISO 8601); default now (UTC)"),
+    ] = None,
+    max_rows: Annotated[
+        int,
+        Query(ge=100, le=100_000, description="Max usage rows scanned for this request"),
+    ] = 25_000,
+    repository: TopicRepository = Depends(get_topic_repository),
+    _user: RequestContext = Depends(require_admin_access),
+    usage_repo: DynamoDBLlmUsageRepository = Depends(get_llm_usage_repository),
+) -> ApiResponse[TopicLlmUsageStatsData]:
+    """Aggregated LLM usage for one topic from `purposepath-llm-usage-{stage}`.
+
+    Complements `GET /admin/llm-usage` with a topic-first drill-down. Totals are computed
+    over up to `max_rows` matching rows; `capped` indicates the cap may have truncated data.
+    """
+    _ = _user
+    db_topic = await repository.get(topic_id=topic_id)
+    endpoint_def = get_topic_by_topic_id(topic_id)
+    if not db_topic and not endpoint_def:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic '{topic_id}' not found in database or registry",
+        )
+
+    now = datetime.now(UTC)
+    end = (
+        end_date.astimezone(UTC)
+        if end_date and end_date.tzinfo
+        else (end_date.replace(tzinfo=UTC) if end_date else now)
+    )
+    if start_date is None:
+        start = end - timedelta(days=30)
+    else:
+        start = start_date.astimezone(UTC) if start_date.tzinfo else start_date.replace(tzinfo=UTC)
+
+    if start > end:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start_date must be on or before end_date",
+        )
+
+    periods = months_in_range(start, end)
+    rows = await usage_repo.query_topic_usage_across_periods(
+        topic_id=topic_id,
+        billing_periods=periods,
+        time_from=start,
+        time_to=end,
+        max_items_total=max_rows,
+    )
+    payload = _topic_llm_usage_stats_payload(
+        topic_id=topic_id,
+        rows=rows,
+        range_start=start,
+        range_end=end,
+        max_rows=max_rows,
+    )
+    return ApiResponse(success=True, data=payload)
 
 
 @router.get("/{topic_id}", response_model=TopicDetail)
