@@ -9,6 +9,7 @@ EntrySource = Literal[
     "coaching_session",
     "unified_conversation",
     "admin_topic_test",
+    "multitenant_conversation",
 ]
 
 

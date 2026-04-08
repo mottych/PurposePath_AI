@@ -1,12 +1,13 @@
 # Admin AI Specifications - LLM Topic Management
 
 - Last Updated: April 8, 2026
-- Version: 3.2
+- Version: 3.3
 
 ## Revision History
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-04-08 | 3.3 | **Issue #299 (follow-up):** Multitenant coaching (`/multitenant` conversation flow) now also appends rows to `purposepath-llm-usage-{stage}` (`entry_source=multitenant_conversation`) alongside existing conversation-store token fields. Bedrock pricing table in `model_pricing.py` aligned to AWS published Sonnet 3.5 on-demand rates ($6/$30 per 1M tokens). |
 | 2026-04-08 | 3.2 | **Issue #299:** Documented `GET /api/v1/admin/llm-usage` (persisted per-call LLM metrics from DynamoDB `purposepath-llm-usage-{stage}`). Removed deprecated `GET /api/v1/admin/usage` and `GET /api/v1/admin/models/{model_id}/metrics` (conversation-derived analytics). |
 | 2026-02-13 | 3.1 | Synced spec to implementation for admin model responses, topic auth, topic type terminology, and conversation extraction config. Updated `/models` response shape (`ApiResponse[LLMModelsResponse]`), enforced admin role on topics routes, standardized `measure_system`, updated `conversation_config.max_turns`, and documented extraction model behavior/defaults. |
 | 2026-01-30 | 3.0 | **Issue #158 Completion:** Added tier-based LLM model selection and topic access control. Replaced `model_code` with `basic_model_code` and `premium_model_code`. Added `tier_level` field (FREE, BASIC, PREMIUM, ULTIMATE). |
@@ -1045,6 +1046,8 @@ GET /api/v1/admin/topics/stats
 **Purpose:** Operational visibility and **quota-oriented** roll-ups over **every** recorded LLM invocation (single-shot, async jobs, coaching sessions, unified conversations, admin topic tests). Rows are written at completion of the provider call (or on provider failure) with `topic_category` and `topic_type` copied from topic metadata as **strings** (no closed enum in storage).
 
 **Data store:** DynamoDB table `purposepath-llm-usage-{stage}` (PK `TENANT#{tenant_id}#BP#{YYYY-MM}`, SK time-ordered; GSI `billing-tenant-time-index` on `BP#{YYYY-MM}` for month-scoped admin queries). **TTL:** 90 days on the `ttl` attribute.
+
+**Write sources (non-exhaustive `entry_source` values):** `single_shot`, `async_job`, `coaching_session` (session table flow), `unified_conversation`, `admin_topic_test`, `multitenant_conversation` (legacy multitenant coaching API — **in addition to** existing per-message token fields on the conversation store).
 
 **Cost field:** Estimated USD using `coaching/src/infrastructure/llm/model_pricing.py` (AWS Bedrock–listed prices per 1K tokens). Models missing from that table contribute `0` until pricing is added.
 

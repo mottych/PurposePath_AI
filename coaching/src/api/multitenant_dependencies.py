@@ -19,6 +19,7 @@ from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
 )
+from coaching.src.api.dependencies.ai_engine import get_llm_usage_recording_service
 from coaching.src.core.config_multitenant import settings
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.repositories.conversation_repository import ConversationRepository
@@ -268,6 +269,7 @@ async def get_multitenant_conversation_service(
     llm_service = await get_llm_service(context)
     cache_service = await get_cache_service(context)
     prompt_service = await get_prompt_service()
+    usage_recorder = await get_llm_usage_recording_service()
 
     return MultitenantConversationService(
         context=context,
@@ -275,6 +277,7 @@ async def get_multitenant_conversation_service(
         llm_service=llm_service,
         cache_service=cache_service,
         prompt_service=prompt_service,
+        usage_recording_service=usage_recorder,
     )
 
 
