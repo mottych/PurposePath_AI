@@ -1,12 +1,13 @@
 # Admin AI Specifications - LLM Topic Management
 
-- Last Updated: February 13, 2026
-- Version: 3.1
+- Last Updated: April 8, 2026
+- Version: 3.2
 
 ## Revision History
 
 | Date | Version | Description |
 |------|---------|-------------|
+| 2026-04-08 | 3.2 | **Issue #299:** Documented `GET /api/v1/admin/llm-usage` (persisted per-call LLM metrics from DynamoDB `purposepath-llm-usage-{stage}`). Removed deprecated `GET /api/v1/admin/usage` and `GET /api/v1/admin/models/{model_id}/metrics` (conversation-derived analytics). |
 | 2026-02-13 | 3.1 | Synced spec to implementation for admin model responses, topic auth, topic type terminology, and conversation extraction config. Updated `/models` response shape (`ApiResponse[LLMModelsResponse]`), enforced admin role on topics routes, standardized `measure_system`, updated `conversation_config.max_turns`, and documented extraction model behavior/defaults. |
 | 2026-01-30 | 3.0 | **Issue #158 Completion:** Added tier-based LLM model selection and topic access control. Replaced `model_code` with `basic_model_code` and `premium_model_code`. Added `tier_level` field (FREE, BASIC, PREMIUM, ULTIMATE). |
 | 2026-01-25 | 2.0 | **Issue #196 Completion:** Fixed category enum values to match actual TopicCategory implementation, verified all field values match constants.py |
@@ -57,7 +58,13 @@ Each topic has a `tier_level` that controls:
 | POST /topics/validate | ✅ Implemented | |
 | POST /topics/{topic_id}/test | ✅ Implemented | **New** - Test with auto-enrichment |
 | GET /topics/stats | ✅ Implemented | Dashboard metrics endpoint used by LLM dashboard |
+| GET /llm-usage | ✅ Implemented | Persisted per-call LLM usage (tokens, cost, topic category/type, model, tenant, time); quota-style roll-ups via `include_summary` (Issue #299) |
 | GET /topics/{topic_id}/stats | ⏳ Planned | Usage statistics |
+
+**Removed (deprecated, Issue #299):**
+
+- `GET /api/v1/admin/usage` — previously aggregated from conversation messages; not used by Admin UI.
+- `GET /api/v1/admin/models/{model_id}/metrics` — same source; removed in favor of `/llm-usage`.
 
 ---
 
@@ -69,6 +76,7 @@ All endpoints in this document require a bearer token:
 - **Authorization (current implementation)**:
   - `/api/v1/admin/models*` endpoints enforce admin access (`ADMIN` or `OWNER`) via `require_admin_access`
   - `/api/v1/admin/topics*` endpoints enforce admin access (`ADMIN` or `OWNER`) via `require_admin_access`
+  - `/api/v1/admin/llm-usage` enforces admin access via `require_admin_access`
 - **Headers**:
   - `Authorization: Bearer {token}`
   - `Content-Type: application/json`
@@ -1032,7 +1040,44 @@ GET /api/v1/admin/topics/stats
 
 ---
 
-### 14. Get Topic Usage Statistics (Planned)
+### 14. Query persisted LLM usage (per-call)
+
+**Purpose:** Operational visibility and **quota-oriented** roll-ups over **every** recorded LLM invocation (single-shot, async jobs, coaching sessions, unified conversations, admin topic tests). Rows are written at completion of the provider call (or on provider failure) with `topic_category` and `topic_type` copied from topic metadata as **strings** (no closed enum in storage).
+
+**Data store:** DynamoDB table `purposepath-llm-usage-{stage}` (PK `TENANT#{tenant_id}#BP#{YYYY-MM}`, SK time-ordered; GSI `billing-tenant-time-index` on `BP#{YYYY-MM}` for month-scoped admin queries). **TTL:** 90 days on the `ttl` attribute.
+
+**Cost field:** Estimated USD using `coaching/src/infrastructure/llm/model_pricing.py` (AWS Bedrock–listed prices per 1K tokens). Models missing from that table contribute `0` until pricing is added.
+
+**Quota reads:** Prefer query parameter `billing_period=YYYY-MM` so the API hits a single GSI partition per month. Set `include_summary=true` (default) to return on-the-fly totals (`total_tokens`, `total_cost_usd`, success/failure counts, truncation count where `finish_reason=length`, average LLM wall time) **over the rows returned** (respecting `limit`). For ranges spanning multiple months, pass `time_from` and `time_to` (ISO 8601, UTC); the service expands to consecutive billing months and queries each (up to `limit` total rows).
+
+**Endpoint:**
+
+```http
+GET /api/v1/admin/llm-usage
+```
+
+**Query parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `billing_period` | string (`YYYY-MM`) | No | — | Preferred filter; one month per value |
+| `time_from` | string (ISO 8601) | No | — | Used with `time_to` to derive months to query |
+| `time_to` | string (ISO 8601) | No | — | Used with `time_from` |
+| `tenant_id` | string | No | — | Restrict to one tenant (GSI sort key prefix) |
+| `topic_id` | string | No | — | Exact match |
+| `topic_category` | string | No | — | Exact match (free-form string as stored) |
+| `topic_type` | string | No | — | Exact match (free-form string as stored) |
+| `model` | string | No | — | Substring match on resolved provider model id |
+| `limit` | integer | No | `500` | Max rows (1–2000) |
+| `include_summary` | boolean | No | `true` | Include aggregate block over returned rows |
+
+**Response envelope:** `ApiResponse[LlmUsageQueryResponse]` where `data.records` is a list of usage rows and `data.summary` (if enabled) contains roll-up fields: `row_count`, `total_input_tokens`, `total_output_tokens`, `total_tokens`, `total_cost_usd`, `success_count`, `failure_count`, `truncation_count`, `avg_wall_time_ms`.
+
+**Status codes:** `200`, `401`, `403`, `500`.
+
+---
+
+### 15. Get Topic Usage Statistics (Planned)
 
 **Status:** ⏳ Not yet implemented
 

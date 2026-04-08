@@ -40,6 +40,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
     UnifiedAIEngineError,
 )
+from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.core.constants import TopicType
 from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
 from coaching.src.core.response_model_registry import get_response_model
@@ -1517,6 +1518,7 @@ async def test_topic(
             tenant_id=user.tenant_id,
             template_processor=template_processor,
             allow_inactive=request.allow_inactive,
+            invocation_context=LlmInvocationContext(entry_source="admin_topic_test"),
         )
 
         execution_time = (time.time() - start_time) * 1000

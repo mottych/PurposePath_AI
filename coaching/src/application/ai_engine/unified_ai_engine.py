@@ -7,11 +7,14 @@ topic-driven configuration, supporting both single-shot and conversation flows.
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
+from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
+from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.constants import CoachingTopic, MessageRole, TierLevel
 from coaching.src.core.topic_registry import get_required_parameter_names_for_topic
 from coaching.src.core.types import ConversationId, TenantId, UserId
@@ -244,6 +247,7 @@ class UnifiedAIEngine:
         response_serializer: ResponseSerializer,
         conversation_repo: ConversationRepositoryPort | None = None,
         llm_provider: LLMProviderPort | None = None,  # Deprecated, use provider_factory
+        usage_recorder: LlmUsageRecordingService | None = None,
     ) -> None:
         """Initialize unified AI engine.
 
@@ -262,6 +266,7 @@ class UnifiedAIEngine:
         self.conversation_repo = conversation_repo
         # Support legacy llm_provider parameter for backward compatibility
         self._legacy_provider = llm_provider
+        self._usage_recorder = usage_recorder
         self.logger = logger.bind(service="unified_ai_engine")
 
     async def execute_single_shot(
@@ -275,6 +280,7 @@ class UnifiedAIEngine:
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
         user_tier: TierLevel = TierLevel.ULTIMATE,
+        invocation_context: LlmInvocationContext | None = None,
     ) -> BaseModel:
         """Execute single-shot AI request using topic configuration.
 
@@ -319,6 +325,7 @@ class UnifiedAIEngine:
             template_processor=template_processor,
             allow_inactive=allow_inactive,
             user_tier=user_tier,
+            invocation_context=invocation_context,
         )
 
         return context.serialized_response
@@ -334,6 +341,7 @@ class UnifiedAIEngine:
         template_processor: "TemplateParameterProcessor | None" = None,
         allow_inactive: bool = False,
         user_tier: TierLevel = TierLevel.ULTIMATE,
+        invocation_context: LlmInvocationContext | None = None,
     ) -> SingleShotExecutionContext:
         """Execute single-shot and return debug context with prompts and metadata.
 
@@ -360,6 +368,7 @@ class UnifiedAIEngine:
             template_processor=template_processor,
             allow_inactive=allow_inactive,
             user_tier=user_tier,
+            invocation_context=invocation_context,
         )
 
     async def _build_single_shot_context(
@@ -373,8 +382,11 @@ class UnifiedAIEngine:
         template_processor: "TemplateParameterProcessor | None",
         allow_inactive: bool,
         user_tier: TierLevel,
+        invocation_context: LlmInvocationContext | None = None,
     ) -> SingleShotExecutionContext:
         """Execute single-shot flow and return full context for debugging."""
+
+        inv = invocation_context or LlmInvocationContext()
 
         self.logger.info(
             "Executing single-shot AI request",
@@ -566,14 +578,40 @@ class UnifiedAIEngine:
             system_prompt_length=len(rendered_system),
             user_prompt_length=len(rendered_user),
         )
-        llm_response = await provider.generate(
-            messages=messages,
-            model=model_name,  # Use resolved model name, not model code
-            temperature=topic.temperature,
-            max_tokens=topic.max_tokens,
-            system_prompt=rendered_system,
-            response_schema=response_schema,  # Pass schema for structured output
-        )
+        max_tokens_topic_config = topic.max_tokens
+        max_tokens_effective = topic.max_tokens
+
+        llm_start = time.perf_counter()
+        llm_response: LLMResponse | None = None
+        try:
+            llm_response = await provider.generate(
+                messages=messages,
+                model=model_name,  # Use resolved model name, not model code
+                temperature=topic.temperature,
+                max_tokens=topic.max_tokens,
+                system_prompt=rendered_system,
+                response_schema=response_schema,  # Pass schema for structured output
+            )
+        except Exception:
+            wall_ms = int((time.perf_counter() - llm_start) * 1000)
+            if self._usage_recorder:
+                await self._usage_recorder.record(
+                    topic=topic,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    model_code=model_code,
+                    max_tokens_topic_config=max_tokens_topic_config,
+                    max_tokens_effective=max_tokens_effective,
+                    wall_time_ms=wall_ms,
+                    llm_response=None,
+                    invocation=inv,
+                    pipeline_success=False,
+                    error_kind="provider_error",
+                )
+            raise
+
+        assert llm_response is not None
+        wall_ms = int((time.perf_counter() - llm_start) * 1000)
 
         self.logger.info(
             "LLM generation completed",
@@ -595,11 +633,42 @@ class UnifiedAIEngine:
         )
 
         # Step 8: Serialize response
-        serialized = await self.response_serializer.serialize(
-            ai_response=llm_response.content,
-            response_model=response_model,
-            topic_id=topic_id,
-        )
+        try:
+            serialized = await self.response_serializer.serialize(
+                ai_response=llm_response.content,
+                response_model=response_model,
+                topic_id=topic_id,
+            )
+        except Exception:
+            if self._usage_recorder:
+                await self._usage_recorder.record(
+                    topic=topic,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    model_code=model_code,
+                    max_tokens_topic_config=max_tokens_topic_config,
+                    max_tokens_effective=max_tokens_effective,
+                    wall_time_ms=wall_ms,
+                    llm_response=llm_response,
+                    invocation=inv,
+                    pipeline_success=False,
+                    error_kind="serialization",
+                )
+            raise
+
+        if self._usage_recorder:
+            await self._usage_recorder.record(
+                topic=topic,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                model_code=model_code,
+                max_tokens_topic_config=max_tokens_topic_config,
+                max_tokens_effective=max_tokens_effective,
+                wall_time_ms=wall_ms,
+                llm_response=llm_response,
+                invocation=inv,
+                pipeline_success=True,
+            )
 
         self.logger.info(
             "Single-shot execution completed",
@@ -1311,20 +1380,82 @@ class UnifiedAIEngine:
         )
         provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
-        # Call LLM with resolved model name
-        llm_response = await provider.generate(
-            messages=messages,
-            model=model_name,  # Use resolved model name, not model code
-            temperature=topic.temperature,
-            max_tokens=topic.max_tokens,
-            system_prompt=rendered_system,
+        inv = LlmInvocationContext(
+            entry_source="unified_conversation",
+            conversation_id=str(conversation_id),
         )
+        max_tokens_topic_config = topic.max_tokens
+        max_tokens_effective = topic.max_tokens
+        tenant_s = str(tenant_id)
+        user_s = str(conversation.user_id)
+
+        llm_start = time.perf_counter()
+        llm_response: LLMResponse | None = None
+        try:
+            llm_response = await provider.generate(
+                messages=messages,
+                model=model_name,  # Use resolved model name, not model code
+                temperature=topic.temperature,
+                max_tokens=topic.max_tokens,
+                system_prompt=rendered_system,
+            )
+        except Exception:
+            wall_ms = int((time.perf_counter() - llm_start) * 1000)
+            if self._usage_recorder:
+                await self._usage_recorder.record(
+                    topic=topic,
+                    tenant_id=tenant_s,
+                    user_id=user_s,
+                    model_code=model_code,
+                    max_tokens_topic_config=max_tokens_topic_config,
+                    max_tokens_effective=max_tokens_effective,
+                    wall_time_ms=wall_ms,
+                    llm_response=None,
+                    invocation=inv,
+                    pipeline_success=False,
+                    error_kind="provider_error",
+                )
+            raise
+
+        assert llm_response is not None
+        wall_ms = int((time.perf_counter() - llm_start) * 1000)
 
         # Serialize conversation response
-        response_data = await self.response_serializer.serialize_conversation(
-            ai_response=llm_response.content,
-            topic=topic,
-        )
+        try:
+            response_data = await self.response_serializer.serialize_conversation(
+                ai_response=llm_response.content,
+                topic=topic,
+            )
+        except Exception:
+            if self._usage_recorder:
+                await self._usage_recorder.record(
+                    topic=topic,
+                    tenant_id=tenant_s,
+                    user_id=user_s,
+                    model_code=model_code,
+                    max_tokens_topic_config=max_tokens_topic_config,
+                    max_tokens_effective=max_tokens_effective,
+                    wall_time_ms=wall_ms,
+                    llm_response=llm_response,
+                    invocation=inv,
+                    pipeline_success=False,
+                    error_kind="serialization",
+                )
+            raise
+
+        if self._usage_recorder:
+            await self._usage_recorder.record(
+                topic=topic,
+                tenant_id=tenant_s,
+                user_id=user_s,
+                model_code=model_code,
+                max_tokens_topic_config=max_tokens_topic_config,
+                max_tokens_effective=max_tokens_effective,
+                wall_time_ms=wall_ms,
+                llm_response=llm_response,
+                invocation=inv,
+                pipeline_success=True,
+            )
 
         # Update conversation with messages
         conversation.add_message(role=MessageRole.USER, content=user_message)
