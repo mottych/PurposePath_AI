@@ -11,7 +11,6 @@ from coaching.src.api.middleware import (
     ErrorHandlingMiddleware,
     LoggingMiddleware,
     RateLimitingMiddleware,
-    StripPathPrefixMiddleware,
 )
 from coaching.src.api.routes import (
     admin,
@@ -131,8 +130,6 @@ _cors_config: dict[str, Any] = {
     "max_age": 3600,
 }
 app.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
-# After CORS: strip custom-domain mapping prefix (e.g. /coaching) before routing
-app.add_middleware(StripPathPrefixMiddleware)  # type: ignore[arg-type,call-arg]
 
 # Include routers
 app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=["health"])

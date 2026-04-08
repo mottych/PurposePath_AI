@@ -7,7 +7,7 @@
 
 | Date | Version | Description |
 |------|---------|-------------|
-| 2026-04-08 | 3.5 | **Issue #299:** Lambda sets `HTTP_PATH_STRIP_PREFIX=/coaching` (Pulumi) and `StripPathPrefixMiddleware` strips it before routing so URLs like `https://api.*.purposepath.app/coaching/api/v1/...` match FastAPI routes under `/api/v1/...`. |
+| 2026-04-08 | 3.5 | **Revert:** Removed `HTTP_PATH_STRIP_PREFIX` / path-strip middleware from the coaching API; callers must use the URL shape API Gateway forwards to Lambda (admin SPA / gateway config). §14 note on base URL. |
 | 2026-04-08 | 3.4 | **Issue #299:** Implemented `GET /api/v1/admin/topics/{topic_id}/stats` — topic-scoped roll-ups from persisted LLM usage (`purposepath-llm-usage-{stage}`). Shared `months_in_range` helper in `application/llm_usage/billing_periods.py`. |
 | 2026-04-08 | 3.3 | **Issue #299 (follow-up):** Multitenant coaching (`/multitenant` conversation flow) now also appends rows to `purposepath-llm-usage-{stage}` (`entry_source=multitenant_conversation`) alongside existing conversation-store token fields. Bedrock pricing table in `model_pricing.py` aligned to AWS published Sonnet 3.5 on-demand rates ($6/$30 per 1M tokens). |
 | 2026-04-08 | 3.2 | **Issue #299:** Documented `GET /api/v1/admin/llm-usage` (persisted per-call LLM metrics from DynamoDB `purposepath-llm-usage-{stage}`). Removed deprecated `GET /api/v1/admin/usage` and `GET /api/v1/admin/models/{model_id}/metrics` (conversation-derived analytics). |
@@ -1049,7 +1049,7 @@ GET /api/v1/admin/topics/stats
 
 **Data store:** DynamoDB table `purposepath-llm-usage-{stage}` (PK `TENANT#{tenant_id}#BP#{YYYY-MM}`, SK time-ordered; GSI `billing-tenant-time-index` on `BP#{YYYY-MM}` for month-scoped admin queries). **TTL:** 90 days on the `ttl` attribute.
 
-**Public URL (coaching Lambda):** Coaching API Gateway is mapped under **`/coaching`** on the shared API domain (e.g. `https://api.dev.purposepath.app/coaching/api/v1/...`). The Lambda strips the `/coaching` prefix via **`HTTP_PATH_STRIP_PREFIX`** before routing; admin paths are still **`/api/v1/admin/...`** after the strip.
+**Client base URL:** The admin portal must use the coaching **root URL** from deployment (e.g. Pulumi output `customDomainUrl` for the coaching stack). Request paths must match what HTTP API + custom domain mapping forward to Lambda (typically **`/api/v1/admin/...`** relative to that root, without duplicating segments). A wrong composite URL produces **404 Not Found** from FastAPI.
 
 **Write sources (non-exhaustive `entry_source` values):** `single_shot`, `async_job`, `coaching_session` (session table flow), `unified_conversation`, `admin_topic_test`, `multitenant_conversation` (legacy multitenant coaching API — **in addition to** existing per-message token fields on the conversation store).
 

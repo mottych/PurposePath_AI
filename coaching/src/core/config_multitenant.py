@@ -114,8 +114,6 @@ class Settings(BaseSettings):
 
     # API Configuration
     api_prefix: str = "/api/v1"
-    #: Leading path removed before routing when set (e.g. /coaching for custom-domain mapping)
-    http_path_strip_prefix: str = Field(default="", validation_alias="HTTP_PATH_STRIP_PREFIX")
     business_api_base_url: str = Field(
         default="https://api.dev.purposepath.app/account/api/v1",
         validation_alias="BUSINESS_API_BASE_URL",
