@@ -1,8 +1,10 @@
 """Unit tests for async execution service."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.services.async_execution_service import (
     AsyncAIExecutionService,
@@ -19,6 +21,8 @@ class TestAsyncAIExecutionService:
     def mock_job_repository(self) -> AsyncMock:
         """Create mock job repository."""
         repo = AsyncMock()
+        repo.put_if_absent = AsyncMock(return_value=True)
+        repo.claim_pending_job = AsyncMock(return_value=True)
         return repo
 
     @pytest.fixture
@@ -241,7 +245,10 @@ class TestAsyncAIExecutionService:
             parameters={"current_value": "Test value"},
             status=AIJobStatus.PENDING,
         )
-        mock_job_repository.get_by_id_for_tenant.return_value = job
+        job_processing = job.model_copy(
+            update={"status": AIJobStatus.PROCESSING, "started_at": datetime.now(UTC)}
+        )
+        mock_job_repository.get_by_id_for_tenant.side_effect = [job, job_processing]
         mock_job_repository.update_status.return_value = None
 
         # Mock the endpoint registry
@@ -272,7 +279,8 @@ class TestAsyncAIExecutionService:
                 )
 
         # Assert
-        mock_job_repository.get_by_id_for_tenant.assert_called_once_with(job.job_id, "tenant_456")
+        assert mock_job_repository.get_by_id_for_tenant.await_count >= 2
+        mock_job_repository.claim_pending_job.assert_awaited_once_with(job.job_id)
         mock_ai_engine.execute_single_shot.assert_called_once()
         mock_eventbridge.publish_ai_job_completed.assert_called_once()
 
@@ -336,7 +344,10 @@ class TestAsyncAIExecutionService:
             status=AIJobStatus.PENDING,
             jwt_token=None,
         )
-        mock_job_repository.get_by_id_for_tenant.return_value = job
+        job_processing = job.model_copy(
+            update={"status": AIJobStatus.PROCESSING, "started_at": datetime.now(UTC)}
+        )
+        mock_job_repository.get_by_id_for_tenant.side_effect = [job, job_processing]
 
         with patch(
             "coaching.src.services.async_execution_service.get_topic_by_topic_id"
@@ -378,3 +389,77 @@ class TestAsyncAIExecutionService:
     ) -> None:
         """Auth/enrichment errors should map to deterministic taxonomy values."""
         assert service._map_auth_failure_error_code(error_message) == expected_error_code
+
+    @pytest.mark.asyncio
+    async def test_execute_job_from_event_claim_lost_skips_execution(
+        self,
+        service: AsyncAIExecutionService,
+        mock_job_repository: AsyncMock,
+        mock_ai_engine: AsyncMock,
+    ) -> None:
+        """If another worker claimed the job, this invocation should not run AI."""
+        job = AIJob(
+            user_id="user_123",
+            tenant_id="tenant_456",
+            topic_id="niche_review",
+            parameters={"current_value": "x"},
+            status=AIJobStatus.PENDING,
+        )
+        mock_job_repository.get_by_id_for_tenant.return_value = job
+        mock_job_repository.claim_pending_job.return_value = False
+
+        await service.execute_job_from_event(job_id=job.job_id, tenant_id="tenant_456")
+
+        mock_ai_engine.execute_single_shot.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ingest_api_job_requested_inserts_and_publishes(
+        self,
+        service: AsyncAIExecutionService,
+        mock_job_repository: AsyncMock,
+        mock_eventbridge: MagicMock,
+    ) -> None:
+        """EventBridge kickoff should persist with backend job id and publish ai.job.created."""
+        from coaching.src.api.models.async_ai import AuthContext
+
+        mock_job_repository.put_if_absent.return_value = True
+        mock_eventbridge.publish_ai_job_created.return_value = "evt-1"
+
+        detail = ApiAiJobRequestedDetail(
+            event_id="evt-1",
+            occurred_at_utc=datetime.now(UTC),
+            source_service="PurposePath.NotificationProcessor.Lambda",
+            schema_version="2.0",
+            correlation_id="corr-1",
+            idempotency_key="idem-1",
+            retry_attempt=0,
+            tenant_id="tenant_456",
+            user_id="user_123",
+            topic_category="email_insight",
+            topic_id="goal_created_email_insight",
+            event_signal="goal_created_email_insight",
+            locale="en-US",
+            timezone="UTC",
+            activity_data={"goal_id": "goal_1"},
+            auth_context=AuthContext(
+                service_token="svc",
+                expires_at_utc=datetime.now(UTC) + timedelta(minutes=5),
+                issuer="purposepath-api",
+                token_type="service_enrichment",
+            ),
+            job_id="backend-job-id-1",
+            event_type="goal_created_email_insight",
+            kickoff_transport="eventbridge",
+        )
+
+        await service.ingest_api_job_requested_event(detail)
+
+        mock_job_repository.put_if_absent.assert_awaited_once()
+        written = mock_job_repository.put_if_absent.await_args.args[0]
+        assert written.job_id == "backend-job-id-1"
+        assert written.correlation_id == "corr-1"
+        assert written.idempotency_key == "idem-1"
+        assert written.event_id == "evt-1"
+        assert written.jwt_token == "svc"
+        mock_eventbridge.publish_ai_job_created.assert_called_once()
+        assert mock_eventbridge.publish_ai_job_created.call_args.kwargs["job_id"] == "backend-job-id-1"

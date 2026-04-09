@@ -166,6 +166,13 @@ class Settings(BaseSettings):
     session_ttl_hours: int = 24
     conversation_ttl_days: int = 30
     ai_async_jobs_enabled: bool = Field(default=True, validation_alias="AI_ASYNC_JOBS_ENABLED")
+    # EventBridge kickoff from PurposePath_Api (email_insight / issue #302); defaults per email-insights spec §3.3.1
+    ai_kickoff_event_source: str = Field(
+        default="purposepath.api", validation_alias="AI_KICKOFF_EVENT_SOURCE"
+    )
+    ai_kickoff_detail_type: str = Field(
+        default="ai.job.requested", validation_alias="AI_KICKOFF_DETAIL_TYPE"
+    )
 
     # LLM Configuration
     llm_temperature: float = 0.7

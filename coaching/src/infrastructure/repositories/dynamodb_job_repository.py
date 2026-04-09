@@ -72,6 +72,71 @@ class DynamoDBJobRepository:
             )
             raise
 
+    async def put_if_absent(self, job: AIJob) -> bool:
+        """Insert job only if job_id does not exist (idempotent kickoff).
+
+        Returns:
+            True if a new item was written, False if job_id already existed.
+        """
+        try:
+            item = self._to_dynamodb_item(job)
+            self.table.put_item(
+                Item=item,
+                ConditionExpression="attribute_not_exists(job_id)",
+            )
+            logger.info(
+                "ai_job.put_if_absent_inserted",
+                job_id=job.job_id,
+                tenant_id=job.tenant_id,
+            )
+            return True
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            logger.info(
+                "ai_job.put_if_absent_exists",
+                job_id=job.job_id,
+                tenant_id=job.tenant_id,
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                "ai_job.put_if_absent_failed",
+                job_id=job.job_id,
+                error=str(e),
+            )
+            raise
+
+    async def claim_pending_job(self, job_id: str) -> bool:
+        """Atomically transition job from pending to processing.
+
+        Returns:
+            True if this caller claimed the job, False if status was not pending.
+        """
+        try:
+            now = datetime.now(UTC).isoformat()
+            self.table.update_item(
+                Key={"job_id": job_id},
+                UpdateExpression="SET #st = :proc, started_at = :now",
+                ExpressionAttributeNames={"#st": "status"},
+                ExpressionAttributeValues={
+                    ":proc": AIJobStatus.PROCESSING.value,
+                    ":pending": AIJobStatus.PENDING.value,
+                    ":now": now,
+                },
+                ConditionExpression="#st = :pending",
+            )
+            logger.info("ai_job.claimed_for_processing", job_id=job_id)
+            return True
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            logger.debug("ai_job.claim_skipped_not_pending", job_id=job_id)
+            return False
+        except Exception as e:
+            logger.error(
+                "ai_job.claim_failed",
+                job_id=job_id,
+                error=str(e),
+            )
+            raise
+
     async def get_by_id(self, job_id: str) -> AIJob | None:
         """Retrieve an AI job by ID.
 

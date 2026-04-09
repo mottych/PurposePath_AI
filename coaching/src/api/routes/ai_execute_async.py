@@ -21,6 +21,7 @@ from coaching.src.api.models.async_ai import (
     JobStatusResponse,
 )
 from coaching.src.api.models.auth import UserContext
+from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
 from coaching.src.services.async_execution_service import (
     AsyncAIExecutionService,
     JobNotFoundError,
@@ -46,6 +47,7 @@ async def get_optional_current_user(authorization: str | None = Header(None)) ->
 @router.post(
     "/execute-async",
     response_model=AsyncJobCreatedResponse,
+    response_model_by_alias=True,
     summary="Start an async AI job",
     description="""
 Start an asynchronous AI job for long-running operations.
@@ -188,7 +190,7 @@ async def execute_async(
             success=True,
             data=AsyncJobData(
                 job_id=job.job_id,
-                status=job.status.value,
+                status=api_contract_status_for_job_status(job.status),
                 topic_id=job.topic_id,
                 estimated_duration_ms=job.estimated_duration_ms,
             ),
@@ -227,6 +229,7 @@ async def execute_async(
 @router.get(
     "/jobs/{job_id}",
     response_model=JobStatusResponse,
+    response_model_by_alias=True,
     summary="Get job status",
     description="""
 Get the current status of an async AI job.
