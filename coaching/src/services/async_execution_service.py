@@ -9,8 +9,10 @@ from __future__ import annotations
 import time
 from decimal import Decimal
 from typing import Any
+from uuid import uuid4
 
 import structlog
+from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
 from coaching.src.application.ai_engine.unified_ai_engine import (
     ParameterValidationError,
     PromptRenderError,
@@ -18,7 +20,7 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngine,
 )
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
-from coaching.src.core.config import settings
+from coaching.src.core.config_multitenant import settings
 from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
@@ -110,6 +112,142 @@ class AsyncAIExecutionService:
         self._engine = ai_engine
         self._publisher = event_publisher
 
+    def _validate_and_build_pending_job(
+        self,
+        *,
+        job_id: str,
+        tenant_id: str,
+        user_id: str,
+        topic_id: str,
+        parameters: dict[str, Any],
+        jwt_token: str | None,
+        correlation_id: str | None,
+        idempotency_key: str | None,
+        event_id: str | None,
+    ) -> AIJob:
+        """Validate topic/params and build a pending AIJob (no persistence)."""
+        endpoint = get_topic_by_topic_id(topic_id)
+        if endpoint is None:
+            raise JobValidationError(f"Topic not found: {topic_id}")
+
+        if not endpoint.is_active:
+            raise JobValidationError(f"Topic is not active: {topic_id}")
+
+        if endpoint.topic_type != TopicType.SINGLE_SHOT:
+            raise JobValidationError(
+                f"Topic {topic_id} is type {endpoint.topic_type.value}, "
+                "only single-shot topics are supported for async execution"
+            )
+
+        required_params = get_required_parameter_names_for_topic(topic_id)
+        missing = [p for p in required_params if p not in parameters]
+        if missing:
+            raise JobValidationError(f"Missing required parameters for topic {topic_id}: {missing}")
+
+        response_model = get_response_model(endpoint.response_model)
+        if response_model is None:
+            raise JobValidationError(f"Response model not configured: {endpoint.response_model}")
+
+        estimated_duration = self._estimate_duration(topic_id)
+        job = AIJob(
+            job_id=job_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            topic_id=topic_id,
+            parameters=parameters,
+            jwt_token=jwt_token,
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            event_id=event_id,
+            status=AIJobStatus.PENDING,
+            estimated_duration_ms=estimated_duration,
+        )
+        job.set_ttl(hours=24)
+        return job
+
+    def _publish_job_created_trigger(self, job: AIJob) -> None:
+        """Publish `ai.job.created` so a separate Lambda invocation runs the worker."""
+        self._publisher.publish_ai_job_created(
+            job_id=job.job_id,
+            tenant_id=job.tenant_id,
+            user_id=job.user_id,
+            topic_id=job.topic_id,
+            parameters=job.parameters,
+            estimated_duration_ms=job.estimated_duration_ms,
+            correlation_id=job.correlation_id,
+            idempotency_key=job.idempotency_key,
+            event_id=job.event_id,
+        )
+
+    async def ingest_api_job_requested_event(self, detail: ApiAiJobRequestedDetail) -> None:
+        """Persist job from PurposePath_Api EventBridge kickoff and trigger async execution (#302)."""
+        if detail.stage is not None and detail.stage != settings.stage:
+            raise JobValidationError(
+                f"Event stage {detail.stage!r} does not match AI service stage {settings.stage!r}"
+            )
+
+        parameters = dict(detail.activity_data)
+        parameters.setdefault("locale", detail.locale)
+        parameters.setdefault("timezone", detail.timezone)
+
+        job = self._validate_and_build_pending_job(
+            job_id=detail.job_id,
+            tenant_id=detail.tenant_id,
+            user_id=detail.user_id,
+            topic_id=detail.topic_id,
+            parameters=parameters,
+            jwt_token=detail.auth_context.service_token,
+            correlation_id=detail.correlation_id,
+            idempotency_key=detail.idempotency_key,
+            event_id=detail.event_id,
+        )
+
+        inserted = await self._repository.put_if_absent(job)
+        if inserted:
+            logger.info(
+                "async_job.api_kickoff_inserted",
+                job_id=job.job_id,
+                tenant_id=job.tenant_id,
+                topic_id=job.topic_id,
+                correlation_id=job.correlation_id,
+                idempotency_key=job.idempotency_key,
+                event_id=job.event_id,
+            )
+            try:
+                self._publish_job_created_trigger(job)
+                logger.info(
+                    "async_job.api_kickoff_execution_triggered",
+                    job_id=job.job_id,
+                    topic_id=job.topic_id,
+                )
+            except EventBridgePublishError as e:
+                logger.error(
+                    "async_job.api_kickoff_trigger_failed",
+                    job_id=job.job_id,
+                    error=str(e),
+                )
+                await self._repository.update_status(
+                    job_id=job.job_id,
+                    status=AIJobStatus.FAILED,
+                    error=f"Failed to trigger execution: {e}",
+                    error_code=AIJobErrorCode.INTERNAL_ERROR,
+                )
+                raise JobValidationError(f"Failed to trigger job execution: {e}") from e
+            return
+
+        existing = await self._repository.get_by_id_for_tenant(job.job_id, job.tenant_id)
+        if existing is None:
+            raise JobValidationError(
+                f"Job id {job.job_id} already exists for a different tenant (isolation violation)"
+            )
+        if existing.status == AIJobStatus.PENDING:
+            logger.info(
+                "async_job.api_kickoff_idempotent_pending",
+                job_id=job.job_id,
+                tenant_id=job.tenant_id,
+            )
+            await self.execute_job_from_event(job_id=job.job_id, tenant_id=job.tenant_id)
+
     async def create_job(
         self,
         tenant_id: str,
@@ -142,49 +280,18 @@ class AsyncAIExecutionService:
         Raises:
             JobValidationError: If topic or parameters are invalid
         """
-        # Validate topic exists and is active
-        endpoint = get_topic_by_topic_id(topic_id)
-        if endpoint is None:
-            raise JobValidationError(f"Topic not found: {topic_id}")
-
-        if not endpoint.is_active:
-            raise JobValidationError(f"Topic is not active: {topic_id}")
-
-        # Validate topic is single-shot
-        if endpoint.topic_type != TopicType.SINGLE_SHOT:
-            raise JobValidationError(
-                f"Topic {topic_id} is type {endpoint.topic_type.value}, "
-                "only single-shot topics are supported for async execution"
-            )
-
-        # Validate required parameters
-        required_params = get_required_parameter_names_for_topic(topic_id)
-        missing = [p for p in required_params if p not in parameters]
-        if missing:
-            raise JobValidationError(f"Missing required parameters for topic {topic_id}: {missing}")
-
-        # Validate response model exists
-        response_model = get_response_model(endpoint.response_model)
-        if response_model is None:
-            raise JobValidationError(f"Response model not configured: {endpoint.response_model}")
-
-        # Create job
-        estimated_duration = self._estimate_duration(topic_id)
-        job = AIJob(
+        job = self._validate_and_build_pending_job(
+            job_id=str(uuid4()),
             tenant_id=tenant_id,
             user_id=user_id,
             topic_id=topic_id,
             parameters=parameters,
-            jwt_token=jwt_token,  # Store for enrichment during execution
+            jwt_token=jwt_token,
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
             event_id=event_id,
-            status=AIJobStatus.PENDING,
-            estimated_duration_ms=estimated_duration,
         )
-        job.set_ttl(hours=24)  # Auto-cleanup after 24 hours
 
-        # Save job
         await self._repository.save(job)
 
         logger.info(
@@ -198,27 +305,14 @@ class AsyncAIExecutionService:
             event_id=event_id,
         )
 
-        # Publish event to trigger async execution in separate Lambda invocation
-        # This ensures execution survives the current Lambda handler returning
         try:
-            self._publisher.publish_ai_job_created(
-                job_id=job.job_id,
-                tenant_id=tenant_id,
-                user_id=user_id,
-                topic_id=topic_id,
-                parameters=parameters,
-                estimated_duration_ms=estimated_duration,
-                correlation_id=correlation_id,
-                idempotency_key=idempotency_key,
-                event_id=event_id,
-            )
+            self._publish_job_created_trigger(job)
             logger.info(
                 "async_job.execution_triggered",
                 job_id=job.job_id,
                 topic_id=topic_id,
             )
         except EventBridgePublishError as e:
-            # If we can't publish, mark job as failed immediately
             logger.error(
                 "async_job.trigger_failed",
                 job_id=job.job_id,
@@ -261,12 +355,29 @@ class AsyncAIExecutionService:
             )
             raise JobNotFoundError(job_id)
 
-        # Check if job is still pending (not already processed)
         if job.status != AIJobStatus.PENDING:
             logger.warning(
                 "async_job.execute_from_event.already_processed",
                 job_id=job_id,
                 current_status=job.status.value,
+            )
+            return
+
+        if not await self._repository.claim_pending_job(job_id):
+            logger.info(
+                "async_job.execute_from_event.claim_lost",
+                job_id=job_id,
+                tenant_id=tenant_id,
+            )
+            return
+
+        job = await self._repository.get_by_id_for_tenant(job_id, tenant_id)
+        if job is None or job.status != AIJobStatus.PROCESSING:
+            logger.warning(
+                "async_job.execute_from_event.unexpected_after_claim",
+                job_id=job_id,
+                has_job=job is not None,
+                status=job.status.value if job else None,
             )
             return
 
@@ -277,8 +388,7 @@ class AsyncAIExecutionService:
             topic_id=job.topic_id,
         )
 
-        # Execute the job
-        await self._execute_job(job)
+        await self._execute_job(job, already_processing=True)
 
     async def get_job(
         self,
@@ -302,7 +412,7 @@ class AsyncAIExecutionService:
             raise JobNotFoundError(job_id)
         return job
 
-    async def _execute_job(self, job: AIJob) -> None:
+    async def _execute_job(self, job: AIJob, *, already_processing: bool = False) -> None:
         """Execute an AI job asynchronously.
 
         This method:
@@ -313,12 +423,13 @@ class AsyncAIExecutionService:
 
         Args:
             job: The job to execute
+            already_processing: When True, skip transition to processing (claim already applied)
         """
         start_time = time.time()
 
         try:
-            # Update status to processing
-            await self._repository.update_status(job.job_id, AIJobStatus.PROCESSING)
+            if not already_processing:
+                await self._repository.update_status(job.job_id, AIJobStatus.PROCESSING)
 
             # Publish started event
             try:

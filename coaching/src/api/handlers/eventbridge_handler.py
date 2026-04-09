@@ -9,9 +9,13 @@ Supports:
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 import structlog
+from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
+from coaching.src.core.config_multitenant import settings
+from pydantic import ValidationError
 
 logger = structlog.get_logger()
 
@@ -99,6 +103,57 @@ async def handle_ai_job_created_event(event: dict[str, Any]) -> dict[str, Any]:
             "statusCode": 500,
             "body": f"Job execution failed: {e!s}",
         }
+
+
+async def handle_api_ai_job_requested_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Handle PurposePath_Api EventBridge kickoff for email_insight async jobs (#302)."""
+    raw_detail = event.get("detail", {})
+    if isinstance(raw_detail, str):
+        try:
+            detail_payload = json.loads(raw_detail)
+        except json.JSONDecodeError as e:
+            logger.error("eventbridge.api_kickoff.invalid_detail_json", error=str(e))
+            return {"statusCode": 400, "body": f"Invalid EventBridge detail JSON: {e!s}"}
+    elif isinstance(raw_detail, dict):
+        detail_payload = raw_detail
+    else:
+        return {"statusCode": 400, "body": "EventBridge detail must be object or JSON string"}
+
+    try:
+        parsed = ApiAiJobRequestedDetail.model_validate(detail_payload)
+    except ValidationError as e:
+        logger.warning("eventbridge.api_kickoff.validation_failed", errors=e.errors())
+        return {"statusCode": 400, "body": e.json()}
+
+    from coaching.src.api.dependencies.async_execution import get_async_execution_service
+    from coaching.src.services.async_execution_service import JobValidationError
+
+    try:
+        service = await get_async_execution_service()
+        await service.ingest_api_job_requested_event(parsed)
+        logger.info(
+            "eventbridge.api_kickoff.accepted",
+            job_id=parsed.job_id,
+            tenant_id=parsed.tenant_id,
+            topic_id=parsed.topic_id,
+        )
+        return {"statusCode": 200, "body": f"Job {parsed.job_id} kickoff accepted"}
+
+    except JobValidationError as e:
+        logger.warning(
+            "eventbridge.api_kickoff.validation_rejected",
+            job_id=parsed.job_id,
+            error=str(e),
+        )
+        return {"statusCode": 400, "body": str(e)}
+
+    except Exception as e:
+        logger.exception(
+            "eventbridge.api_kickoff.failed",
+            job_id=parsed.job_id,
+            error=str(e),
+        )
+        return {"statusCode": 500, "body": f"Kickoff processing failed: {e!s}"}
 
 
 async def handle_ai_message_created_event(event: dict[str, Any]) -> dict[str, Any]:
@@ -263,6 +318,12 @@ def handle_eventbridge_event(event: dict[str, Any], _context: Any) -> dict[str, 
         asyncio.set_event_loop(loop)
 
     # Route based on event type
+    if (
+        source == settings.ai_kickoff_event_source
+        and detail_type == settings.ai_kickoff_detail_type
+    ):
+        return loop.run_until_complete(handle_api_ai_job_requested_event(event))
+
     if source == "purposepath.ai" and detail_type == "ai.job.created":
         return loop.run_until_complete(handle_ai_job_created_event(event))
 

@@ -7,6 +7,7 @@ execution endpoints (POST /ai/execute-async, GET /ai/jobs/{jobId}).
 from datetime import UTC, datetime
 from typing import Any
 
+from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
 from coaching.src.domain.entities.ai_job import AIJob
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -175,6 +176,8 @@ class AsyncJobCreatedResponse(BaseModel):
         data: Job details
     """
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     success: bool = Field(default=True, description="Whether job creation succeeded")
     data: "AsyncJobData" = Field(..., description="Created job details")
 
@@ -189,23 +192,31 @@ class AsyncJobData(BaseModel):
         estimated_duration_ms: Estimated processing time
     """
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     job_id: str = Field(
         ...,
+        alias="jobId",
+        serialization_alias="jobId",
         description="Unique job identifier for tracking",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     status: str = Field(
         ...,
         description="Current job status",
-        examples=["pending"],
+        examples=["queued"],
     )
     topic_id: str = Field(
         ...,
+        alias="topicId",
+        serialization_alias="topicId",
         description="AI topic being executed",
         examples=["niche_review"],
     )
     estimated_duration_ms: int = Field(
         ...,
+        alias="estimatedDurationMs",
+        serialization_alias="estimatedDurationMs",
         description="Estimated processing time in milliseconds",
         examples=[30000],
     )
@@ -220,6 +231,8 @@ class JobStatusResponse(BaseModel):
         success: Always True for successful query
         data: Job status details
     """
+
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     success: bool = Field(default=True, description="Whether query succeeded")
     data: "JobStatusData" = Field(..., description="Job status details")
@@ -243,16 +256,53 @@ class JobStatusData(BaseModel):
         estimated_duration_ms: Estimated processing time
     """
 
-    job_id: str = Field(..., description="Unique job identifier")
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    job_id: str = Field(
+        ...,
+        alias="jobId",
+        serialization_alias="jobId",
+        description="Unique job identifier",
+    )
     status: str = Field(..., description="Current job status")
-    topic_id: str = Field(..., description="AI topic being executed")
-    created_at: datetime = Field(..., description="Job creation timestamp")
-    completed_at: datetime | None = Field(None, description="Completion timestamp")
+    topic_id: str = Field(
+        ...,
+        alias="topicId",
+        serialization_alias="topicId",
+        description="AI topic being executed",
+    )
+    created_at: datetime = Field(
+        ...,
+        alias="createdAt",
+        serialization_alias="createdAt",
+        description="Job creation timestamp",
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        alias="completedAt",
+        serialization_alias="completedAt",
+        description="Completion timestamp",
+    )
     result: dict[str, Any] | None = Field(None, description="AI result (if completed)")
     error: str | None = Field(None, description="Error message (if failed)")
-    error_code: str | None = Field(None, description="Error code (if failed)")
-    processing_time_ms: int | None = Field(None, description="Actual processing time")
-    estimated_duration_ms: int = Field(30000, description="Estimated processing time")
+    error_code: str | None = Field(
+        default=None,
+        alias="errorCode",
+        serialization_alias="errorCode",
+        description="Error code (if failed)",
+    )
+    processing_time_ms: int | None = Field(
+        default=None,
+        alias="processingTimeMs",
+        serialization_alias="processingTimeMs",
+        description="Actual processing time",
+    )
+    estimated_duration_ms: int = Field(
+        default=30000,
+        alias="estimatedDurationMs",
+        serialization_alias="estimatedDurationMs",
+        description="Estimated processing time",
+    )
 
     @classmethod
     def from_job(cls, job: AIJob) -> "JobStatusData":
@@ -264,17 +314,19 @@ class JobStatusData(BaseModel):
         Returns:
             JobStatusData for API response
         """
-        return cls(
-            job_id=job.job_id,
-            status=job.status.value,
-            topic_id=job.topic_id,
-            created_at=job.created_at,
-            completed_at=job.completed_at,
-            result=job.result,
-            error=job.error,
-            error_code=job.error_code.value if job.error_code else None,
-            processing_time_ms=job.processing_time_ms,
-            estimated_duration_ms=job.estimated_duration_ms,
+        return cls.model_validate(
+            {
+                "jobId": job.job_id,
+                "status": api_contract_status_for_job_status(job.status),
+                "topicId": job.topic_id,
+                "createdAt": job.created_at,
+                "completedAt": job.completed_at,
+                "result": job.result,
+                "error": job.error,
+                "errorCode": job.error_code.value if job.error_code else None,
+                "processingTimeMs": job.processing_time_ms,
+                "estimatedDurationMs": job.estimated_duration_ms,
+            }
         )
 
 

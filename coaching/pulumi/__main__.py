@@ -534,6 +534,36 @@ if stack_config.get("ai_async_jobs_enabled", "true").lower() == "true":
         source_arn=ai_job_executor_rule.arn,
     )
 
+    # PurposePath_Api → AI email_insight async kickoff (issue #302 / email-insights spec §3.3.1)
+    api_ai_job_requested_rule = aws.cloudwatch.EventRule(
+        "api-ai-job-requested-rule",
+        name=f"api-ai-job-requested-{stack}",
+        description="Triggers coaching Lambda when Api publishes ai.job.requested (email_insight kickoff)",
+        event_bus_name="default",
+        event_pattern=json.dumps(
+            {
+                "source": ["purposepath.api"],
+                "detail-type": ["ai.job.requested"],
+            }
+        ),
+        tags={"Environment": stack, "Service": "coaching-ai"},
+    )
+
+    aws.cloudwatch.EventTarget(
+        "api-ai-job-requested-target",
+        rule=api_ai_job_requested_rule.name,
+        arn=coaching_lambda.arn,
+        event_bus_name="default",
+    )
+
+    aws.lambda_.Permission(
+        "eventbridge-api-ai-kickoff-invoke-permission",
+        action="lambda:InvokeFunction",
+        function=coaching_lambda.name,
+        principal="events.amazonaws.com",
+        source_arn=api_ai_job_requested_rule.arn,
+    )
+
 # Parameter Store - Default Model Configuration
 # These parameters control default model codes for topic creation fallback
 default_basic_model_param = aws.ssm.Parameter(

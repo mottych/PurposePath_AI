@@ -1,5 +1,6 @@
 """Unit tests for EventBridge handler."""
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -180,6 +181,53 @@ class TestHandleEventBridgeEvent:
             result = handle_eventbridge_event(event, None)
 
         assert result["statusCode"] == 200
+
+    def test_routes_api_ai_job_requested(self) -> None:
+        """Api-published ai.job.requested should route to ingest handler."""
+        exp = (datetime.now(UTC) + timedelta(minutes=5)).isoformat()
+        now = datetime.now(UTC).isoformat()
+        event: dict[str, Any] = {
+            "source": "purposepath.api",
+            "detail-type": "ai.job.requested",
+            "detail": {
+                "eventId": "e1",
+                "occurredAtUtc": now,
+                "sourceService": "PurposePath.NotificationProcessor.Lambda",
+                "schemaVersion": "2.0",
+                "correlationId": "c1",
+                "idempotencyKey": "i1",
+                "retryAttempt": 0,
+                "tenantId": "tenant-456",
+                "userId": "user-123",
+                "topicCategory": "email_insight",
+                "topicId": "goal_created_email_insight",
+                "eventSignal": "goal_created_email_insight",
+                "locale": "en-US",
+                "timezone": "UTC",
+                "activityData": {"goal_id": "goal-1"},
+                "authContext": {
+                    "serviceToken": "tok",
+                    "expiresAtUtc": exp,
+                    "issuer": "purposepath-api",
+                    "tokenType": "service_enrichment",
+                },
+                "jobId": "job-from-api",
+                "eventType": "goal_created_email_insight",
+                "kickoffTransport": "eventbridge",
+            },
+        }
+
+        mock_service = AsyncMock()
+        mock_service.ingest_api_job_requested_event.return_value = None
+
+        with patch(
+            "coaching.src.api.dependencies.async_execution.get_async_execution_service",
+            return_value=mock_service,
+        ):
+            result = handle_eventbridge_event(event, None)
+
+        assert result["statusCode"] == 200
+        mock_service.ingest_api_job_requested_event.assert_awaited_once()
 
     def test_unknown_event_type(self) -> None:
         """Test handling of unknown event types."""
