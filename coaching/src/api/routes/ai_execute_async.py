@@ -188,11 +188,13 @@ async def execute_async(
 
         return AsyncJobCreatedResponse(
             success=True,
-            data=AsyncJobData(
-                job_id=job.job_id,
-                status=api_contract_status_for_job_status(job.status),
-                topic_id=job.topic_id,
-                estimated_duration_ms=job.estimated_duration_ms,
+            data=AsyncJobData.model_validate(
+                {
+                    "jobId": job.job_id,
+                    "status": api_contract_status_for_job_status(job.status),
+                    "topicId": job.topic_id,
+                    "estimatedDurationMs": job.estimated_duration_ms,
+                }
             ),
         )
 
