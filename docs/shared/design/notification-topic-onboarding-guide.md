@@ -1,6 +1,6 @@
 # Notification Topic Onboarding Guide
 
-Version: 1.1
+Version: 1.2
 Date: April 8, 2026
 Status: Developer Guide
 
@@ -12,7 +12,7 @@ It covers:
 - Notification contract registration
 - Parameter registration
 - Resolver method mapping and implementation
-- AI topic integration through the intermediate AI orchestrator pattern
+- AI topic integration through the intermediate AI orchestrator pattern (EventBridge-first with API fallback)
 - Test and validation requirements
 
 This is an implementation guide for developers and assumes the canonical requirements and design are already approved.
@@ -36,6 +36,7 @@ The email notification system uses canonical domain registries plus runtime reso
 3. Retrieval method registry:
 - Canonical file: PurposePath.Domain/Constants/NotificationResolutionMethods.cs
 - Defines NotificationResolutionMethod objects and required publisher inputs.
+- NotificationResolutionMethod owns `IsAsync` metadata (`true` for async enrichment methods such as AI).
 - Runtime projection file: Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/TemplateRetrievalMethodRegistry.cs
 - Runtime registry must remain aligned with NotificationResolutionMethods.
 
@@ -121,11 +122,13 @@ If reusing an existing method key:
 
 If adding a new method key:
 - Add method definition in NotificationResolutionMethods with required business inputs only.
+- Set `IsAsync` on NotificationResolutionMethod when the method requires asynchronous external orchestration.
 - Add corresponding method mapping in TemplateRetrievalMethodRegistry to keep runtime registry aligned.
 
 Important:
 - Keep method required inputs limited to business inputs.
 - Do not include orchestrator metadata fields if those are generated internally by runtime orchestration.
+- Do not encode sync/async behavior in template variables. Sync/async is owned by NotificationResolutionMethod (`IsAsync`).
 
 ### Step 5: Implement or update resolver method runtime
 
@@ -138,6 +141,12 @@ Resolver implementation requirements:
 - Resolve only parameters requested in the grouped call
 - Return normalized parameter dictionary
 - Log enrichment miss/failure as warnings where appropriate
+
+Resolution ordering requirement:
+- Processor resolves methods in two phases:
+  1. Sync phase (`IsAsync == false`)
+  2. Async phase (`IsAsync == true`)
+- Final merge/render executes once after both phases complete.
 
 If adding new resolver class:
 - Register it in DI:
@@ -153,6 +162,7 @@ If the new notification relies on AI-generated email insight content, follow thi
 2. Method inputs:
 - In NotificationResolutionMethods (and matching runtime method registry), keep email_insight_payload inputs business-only.
 - Example inputs: tenantId, userId, topicId.
+- Mark email_insight_payload as async (`IsAsync = true`).
 
 3. Intermediate topic method behavior:
 - Update AI topic routing and activity-data shaping in:
@@ -161,11 +171,17 @@ If the new notification relies on AI-generated email insight content, follow thi
   - ResolveAiTopicId for event-to-topic mapping
   - BuildActivityData for topic-specific business context packaging
 
-4. Metadata envelope handling:
+4. Dual transport behavior (final design):
+- Primary transport: EventBridge kickoff from backend resolver into AI async execution contract.
+- Fallback transport: HTTP `POST /ai/execute-async` using the same canonical request payload contract.
+- Contract rule: transport is interchangeable; payload semantics, validation rules, and response mapping remain unchanged.
+- Network rule: API fallback requires outbound HTTPS access on port 443 from backend runtime to AI API host.
+
+5. Metadata envelope handling:
 - Keep event and tracing metadata generation inside EmailInsightOrchestrator.
 - Do not move envelope metadata requirements into template parameter definitions.
 
-5. AI response mapping:
+6. AI response mapping:
 - Ensure output payload is parsed and mapped through:
   - EmailInsightTemplateParameterResolverMethod
   - EmailInsightTemplateVariableResolver
@@ -231,6 +247,8 @@ Use this checklist before opening PR:
 - Registered method required business inputs in NotificationResolutionMethods and synchronized runtime method registry.
 - Implemented and DI-wired any new non-passthrough resolver.
 - For AI topic: updated orchestrator topic mapping and activity data shaping.
+- For AI topic: verified EventBridge-first kickoff and API fallback behavior use the same contract payload.
+- For API fallback: verified outbound HTTPS 443 requirement is documented and reflected in runtime/network policy.
 - Verified notification required publisher inputs cover method-derived business inputs via contract tests.
 - Updated or added contract and resolver tests.
 - Ran required test projects and confirmed green.

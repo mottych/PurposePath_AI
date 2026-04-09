@@ -1,6 +1,6 @@
 # Email Insights AI API Contract Specification
 
-**Version:** 2.1  
+**Version:** 2.2  
 **Last Updated:** April 8, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-08 - v2.2 - Added dual transport contract (EventBridge-first kickoff with API fallback) while keeping payload schema unchanged
 - 2026-04-08 - v2.1 - Document server-side enrichment parameters for `goal_created_email_insight` (foundation + goal-scoped strategies/measures)
 - 2026-03-27 - v2.0 - Full-cutover generic topic contract with required service token for enrichment API calls
 - 2026-03-25 - v1.0 - Initial approved contract for activity-driven email insights v1 pilot
@@ -24,6 +25,7 @@ This specification defines the contract between backend orchestration and AI top
 It covers:
 
 - Generic trigger request contract
+- Transport contract (EventBridge-first with API fallback)
 - Cross-system naming contract
 - Service token and enrichment authorization contract
 - AI payload schema contract
@@ -53,9 +55,29 @@ It covers:
 
 Cross-system request/response naming between PurposePath_Api and PurposePath_AI is fixed to this specification. Deprecated aliases are out of scope for v2.0.
 
+### 3.2 Transport Contract (Dual Method)
+
+This specification supports two kickoff transports for the same logical request contract:
+
+1. EventBridge-first kickoff (primary)
+- Backend publishes the canonical request envelope to EventBridge for AI async execution kickoff.
+
+2. API kickoff (fallback)
+- Backend calls `POST /ai/execute-async` with the same canonical request envelope.
+
+Transport invariants:
+- Contract fields and semantics are identical across both methods.
+- Validation, idempotency, correlation, and payload mapping behavior are identical across both methods.
+- Response/result handling into template variables is identical across both methods.
+
+Network requirement for fallback:
+- API fallback requires outbound HTTPS connectivity on port 443 from backend runtime to the AI API host.
+
 ---
 
 ## 4. Trigger Request Contract
+
+The trigger request payload defined below is canonical and transport-agnostic. It applies equally to EventBridge-first and API-fallback kickoff paths.
 
 ### 4.1 Required Fields
 

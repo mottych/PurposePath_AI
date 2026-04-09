@@ -1,6 +1,6 @@
 # Notification Email Processing - Design and Implementation Plan
 
-Version: 1.1
+Version: 1.2
 Date: April 8, 2026
 Status: Design Baseline
 
@@ -77,6 +77,7 @@ Catalogs and executes resolver methods.
 
 Responsibilities:
 - resolver method metadata (method key + required input parameters)
+- resolver method execution mode metadata (`IsAsync`)
 - grouped resolver invocation orchestration support
 - normalized resolver output contract
 - method-level failure classification for fallback decisions
@@ -98,6 +99,11 @@ Current baseline method keys:
 - topicId (business topic reference)
 
 AI orchestration metadata and envelope generation are handled by an intermediate AI orchestration service that receives business inputs + resolved AI topic id, calls AI execution, waits for completion, and returns normalized LLM payload for template-variable mapping.
+
+Execution mode policy:
+- `NotificationResolutionMethod.IsAsync = false` means method executes in sync resolution phase.
+- `NotificationResolutionMethod.IsAsync = true` means method executes in async resolution phase.
+- `email_insight_payload` is async.
 
 Mapping policy:
  - Contract normalization is applied once into a canonical in-memory catalog of ensured split contracts, and both `GetAll` and `GetByEventType` query that same catalog.
@@ -172,12 +178,13 @@ Non-responsibilities:
 5. processor calls template resolver
 6. template resolver extracts placeholders and validates mandatory template parameter contract
 7. template resolver computes unresolved used parameters
-8. template resolver groups unresolved parameters by resolver method
-9. resolver methods registry provides method input requirements and executes grouped methods
-10. template resolver maps method outputs to parameters and returns final parameter set
-11. processor calls template merge to render final subject/body
-12. processor calls send and audit to deliver and record outcomes
-13. processor emits completion telemetry and returns terminal status
+8. template resolver groups unresolved parameters by resolver method and method async mode
+9. template resolver executes sync resolver groups first (`IsAsync == false`)
+10. template resolver executes async resolver groups second (`IsAsync == true`)
+11. template resolver maps method outputs to parameters and returns final parameter set
+12. processor calls template merge to render final subject/body exactly once
+13. processor calls send and audit to deliver and record outcomes
+14. processor emits completion telemetry and returns terminal status
 
 ## 4. AI Integration Design
 
@@ -186,10 +193,25 @@ AI is implemented as a resolver method.
 Rules:
 - template resolver does not branch on AI specifics
 - AI resolver encapsulates AI request/response handling
-- existing backend AI event bridge contract handling is reused
+- existing backend AI contract payload is reused for all AI transports
 - resolver returns values in common parameter-resolution output shape
 
 This keeps AI as a plug-in enrichment mechanism, not a special-case pipeline.
+
+### 4.1 AI Handshake and Transport
+
+Final transport behavior:
+- Primary: EventBridge-first kickoff for AI execution.
+- Fallback: API kickoff through `POST /ai/execute-async`.
+
+Contract behavior:
+- The request/response contract stays the same regardless of transport.
+- `tenantId`, `userId`, `topicId`, `activityData`, `authContext`, `correlationId`, and `idempotencyKey` semantics remain unchanged.
+- Resolver normalization and template-variable mapping remain unchanged.
+
+Network behavior:
+- EventBridge-first path does not require backend-to-AI API network access.
+- API fallback path requires outbound HTTPS connectivity on port 443 from backend runtime to AI API host.
 
 ## 5. Error Handling and Fault Tolerance
 
@@ -216,55 +238,14 @@ Required dimensions:
 - resolver method name
 - decision/fallback reason code
 
-## 7. Implementation Plan
+## 7. Final-State Design Rules
 
-### Phase 1: Canonical Contracts
-- finalize notification registry schema
-- finalize parameter registry schema
-- finalize retrieval method registry schema (method key + required inputs)
-- validate all existing notifications against new schemas
-
-Implementation status note:
-- Canonical object-based contracts are in place (NotificationEvent, NotificationParameter, NotificationResolutionMethod).
-- Topic onboarding must now update domain registries first; runtime registries are projection/alignment layers.
-
-### Phase 2: Registry Infrastructure
-- implement registry access and startup validation
-- enforce unknown-notification hard rejection
-- enforce parameter-definition integrity checks
-- enforce method-definition integrity checks
-- enforce notification required publisher inputs include method-derived required inputs
-
-### Phase 3: Template Resolver Engine
-- implement placeholder extraction and mandatory checks
-- implement missing-parameter detection
-- implement grouped resolver execution
-- implement extraction-path mapping and defaults
-
-### Phase 4: Resolver Method Implementations
-- implement DB/application resolvers using handlers/services directly
-- implement AI resolver adapter over existing AI interaction path
-- implement resolver-level resilience policies
-
-### Phase 5: Pipeline Integration
-- wire processor -> template resolver -> merge -> send/audit
-- remove obsolete branching paths
-- keep one canonical orchestration path
-
-### Phase 6: Robustness and Observability
-- add full structured telemetry and metrics
-- add fault-injection tests for fallback and retry behavior
-- validate deterministic outcomes under failure scenarios
-
-### Phase 7: Cleanup and Cutover
-- remove deprecated/backward-compat code paths
-- remove stale contracts and unreachable logic
-- update documentation references to canonical docs only
-
-### Phase 8: Verification and Deployment
-- run full test suite (unit + integration + targeted scenario tests)
-- execute goal insight email scenario as representative AI test case
-- deploy per environment gates with rollback readiness
+- Notification resolution is strictly two-phase: sync, then async.
+- `NotificationResolutionMethod.IsAsync` is the only source of truth for phase placement.
+- Merge/render runs once after both phases complete.
+- AI resolver uses EventBridge-first handshake and API fallback without changing contract payload semantics.
+- API fallback requires outbound HTTPS port 443 reachability to AI API host.
+- Non-AI notifications bypass async AI work and proceed directly after sync phase.
 
 ## 8. Test Strategy (Minimum)
 
