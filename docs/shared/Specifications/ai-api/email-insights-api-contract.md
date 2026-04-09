@@ -84,6 +84,28 @@ Event routing identity contract for EventBridge kickoff events:
 - `detail-type` (string, required): backend-configured AI kickoff detail type.
 - `eventBusName` (string, required): backend-configured EventBridge bus name.
 
+### 3.3.1 Routing Identity Defaults and Source of Truth (Normative)
+
+To prevent cross-repo drift, the routing identity values below are normative defaults for PurposePath_Api and PurposePath_AI:
+
+- `source`: `purposepath.api`
+- `detail-type`: `ai.job.requested`
+- `eventBusName`: `default`
+
+Environment baseline (current contract default):
+
+| Environment | source | detail-type | eventBusName |
+|-------------|--------|-------------|--------------|
+| dev | `purposepath.api` | `ai.job.requested` | `default` |
+| staging | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `default` (unless jointly overridden) |
+| prod | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `default` (unless jointly overridden) |
+
+Override rule (normative):
+
+- Any environment-specific override must be defined in shared deployment configuration used by both API and AI infrastructure.
+- API publisher configuration and AI EventBridge rule configuration must be changed together in the same release plan.
+- If an override is introduced, this specification must be updated in the same change set to keep this document authoritative.
+
 AI-side EventBridge consumers must treat `source` + `detail-type` as routing keys and `detail` as the canonical request envelope (plus transport metadata above).
 
 Correlation and idempotency handshake contract:
@@ -97,6 +119,103 @@ Status expectation contract:
 - `jobId` is the status lookup identity for asynchronous completion checks.
 - Terminal status semantics (`completed`, `failed`, `cancelled`, `timed_out`) remain identical across transport methods.
 - Insight payload extraction semantics remain identical across transport methods.
+
+### 3.4 EventBridge Kickoff Wire Format (Normative)
+
+The backend publishes one EventBridge entry per kickoff request.
+
+EventBridge entry identity fields:
+
+- `source` maps to configured `AiService:EventBridgeSource`.
+- `detail-type` maps to configured `AiService:EventBridgeDetailType`.
+- `eventBusName` maps to configured `AiService:EventBridgeEventBusName`.
+
+Default runtime values in current NotificationProcessor implementation:
+
+- `AiService:EventBridgeSource = purposepath.api`
+- `AiService:EventBridgeDetailType = ai.job.requested`
+- `AiService:EventBridgeEventBusName = default`
+
+EventBridge `detail` JSON is the canonical trigger envelope from Section 4 plus transport fields from Section 3.3. Minimum required shape:
+
+```json
+{
+   "eventId": "uuid",
+   "occurredAtUtc": "2026-04-09T13:00:00.0000000Z",
+   "sourceService": "PurposePath.NotificationProcessor.Lambda",
+   "schemaVersion": "2.0",
+   "correlationId": "corr-123",
+   "idempotencyKey": "req-123:goal_created_email_insight:uuid",
+   "retryAttempt": 0,
+   "tenantId": "tenant-1",
+   "userId": "user-1",
+   "topicCategory": "email_insight",
+   "topicId": "goal_created_email_insight",
+   "eventSignal": "goal_created_email_insight",
+   "locale": "en-US",
+   "timezone": "UTC",
+   "activityData": {
+      "goal_id": "goal-1"
+   },
+   "authContext": {
+      "serviceToken": "opaque-token",
+      "expiresAtUtc": "2026-04-09T13:05:00Z",
+      "issuer": "purposepath-api",
+      "tokenType": "service_enrichment"
+   },
+   "jobId": "job-uuid",
+   "eventType": "goal_created_email_insight",
+   "kickoffTransport": "eventbridge"
+}
+```
+
+AI-side consumer requirements:
+
+- Treat `detail.topicCategory`, `detail.topicId`, and `detail.eventSignal` as authoritative routing context.
+- Use `detail.jobId` as the async status identity for terminal completion updates.
+- Preserve `correlationId`, `idempotencyKey`, and `eventId` in AI-side telemetry and status lifecycle records.
+
+### 3.5 API Kickoff Wire Format (Fallback Contract)
+
+Fallback kickoff request body is byte-for-byte the same canonical trigger envelope (Section 4) without EventBridge transport identity fields (`source`, `detail-type`, `eventBusName`).
+
+API kickoff response contract (minimum):
+
+```json
+{
+   "data": {
+      "jobId": "job-uuid"
+   }
+}
+```
+
+The backend also accepts `data.job_id` as an implementation-tolerant alias, but AI service contract output should use canonical `data.jobId`.
+
+### 3.6 Job Status Wire Contract (Required)
+
+For both kickoff methods, backend status polling expects:
+
+```json
+{
+   "data": {
+      "status": "completed|failed|cancelled|timed_out|running|queued",
+      "result": {
+         "schemaVersion": "1.0.0",
+         "title": "...",
+         "summary": "...",
+         "blocks": [],
+         "generationMeta": {}
+      }
+   }
+}
+```
+
+Status contract notes:
+
+- `data.status` is required.
+- `data.result` is required only when `status=completed`.
+- On `completed`, missing or empty `result` is treated as non-recoverable completion without payload (no API fallback).
+- On status request HTTP failure or missing `data.status` during EventBridge-first polling window, backend is allowed to execute API fallback.
 
 Fallback trigger contract:
 
