@@ -70,6 +70,39 @@ Transport invariants:
 - Validation, idempotency, correlation, and payload mapping behavior are identical across both methods.
 - Response/result handling into template variables is identical across both methods.
 
+### 3.3 EventBridge Kickoff Handshake (Normative Fields)
+
+For EventBridge-first kickoff, the event detail payload must carry the canonical trigger contract fields from Section 4 plus the following transport metadata:
+
+- `jobId` (string, required): requested async job identifier used for downstream status tracking.
+- `eventType` (string, required): business event type associated with the request.
+- `kickoffTransport` (string, required): `eventbridge`.
+
+Event routing identity contract for EventBridge kickoff events:
+
+- `source` (string, required): backend-configured source identity.
+- `detail-type` (string, required): backend-configured AI kickoff detail type.
+- `eventBusName` (string, required): backend-configured EventBridge bus name.
+
+AI-side EventBridge consumers must treat `source` + `detail-type` as routing keys and `detail` as the canonical request envelope (plus transport metadata above).
+
+Correlation and idempotency handshake contract:
+
+- `correlationId` is end-to-end trace identity and must propagate unchanged through job lifecycle events.
+- `idempotencyKey` is duplicate-protection identity and must be honored across kickoff methods.
+- `eventId` remains request identity for audit lineage and must be preserved in AI-side telemetry/audit correlation.
+
+Status expectation contract:
+
+- `jobId` is the status lookup identity for asynchronous completion checks.
+- Terminal status semantics (`completed`, `failed`, `cancelled`, `timed_out`) remain identical across transport methods.
+- Insight payload extraction semantics remain identical across transport methods.
+
+Fallback trigger contract:
+
+- API fallback may be activated when EventBridge kickoff publish fails, status lookup fails, or status does not reach terminal completion within configured fallback window.
+- API fallback must reuse canonical request semantics and preserve correlation/idempotency lineage.
+
 Network requirement for fallback:
 - API fallback requires outbound HTTPS connectivity on port 443 from backend runtime to the AI API host.
 
