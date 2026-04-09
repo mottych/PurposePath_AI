@@ -36,9 +36,9 @@ class TestGetModelPricing:
         # Act
         pricing = get_model_pricing(model_id)
 
-        # Assert
-        assert pricing["input"] == 0.003
-        assert pricing["output"] == 0.015
+        # Assert (Bedrock on-demand Sonnet 3.5: $6 / $30 per 1M tokens)
+        assert pricing["input"] == 0.006
+        assert pricing["output"] == 0.030
 
     def test_get_pricing_for_unknown_model_returns_zero(self) -> None:
         """Test that unknown models return zero pricing."""
@@ -84,10 +84,10 @@ class TestCalculateCost:
         cost = calculate_cost(input_tokens, output_tokens, model_id)
 
         # Assert
-        # Input: 2000/1000 * 0.003 = 0.006
-        # Output: 1000/1000 * 0.015 = 0.015
-        # Total: 0.021
-        assert cost == pytest.approx(0.021, rel=1e-9)
+        # Input: 2000/1000 * 0.006 = 0.012
+        # Output: 1000/1000 * 0.030 = 0.030
+        # Total: 0.042
+        assert cost == pytest.approx(0.042, rel=1e-9)
 
     def test_calculate_cost_with_opus(self) -> None:
         """Test cost calculation for Opus model (most expensive)."""
@@ -242,10 +242,10 @@ class TestModelPricingIntegration:
         cost = calculate_cost(input_tokens, output_tokens, model_id)
 
         # Assert
-        # Input: 1.5K * $0.003 = $0.0045
-        # Output: 0.8K * $0.015 = $0.012
-        # Total: $0.0165
-        expected_cost = 0.0165
+        # Input: 1.5K * $0.006 = $0.009
+        # Output: 0.8K * $0.030 = $0.024
+        # Total: $0.033
+        expected_cost = 0.033
         assert cost == pytest.approx(expected_cost, rel=1e-9)
 
     def test_high_volume_cost_calculation(self) -> None:
@@ -259,8 +259,8 @@ class TestModelPricingIntegration:
         cost = calculate_cost(input_tokens, output_tokens, model_id)
 
         # Assert
-        # Input: 10K * $0.003 = $0.030
-        # Output: 5K * $0.015 = $0.075
-        # Total: $0.105
-        expected_cost = 0.105
+        # Input: 10K * $0.006 = $0.060
+        # Output: 5K * $0.030 = $0.150
+        # Total: $0.210
+        expected_cost = 0.210
         assert cost == pytest.approx(expected_cost, rel=1e-9)
