@@ -330,6 +330,12 @@ paths:
     get:
       tags: [owner-billing]
       summary: Get receipt download metadata
+      description: >-
+        Returns provider-hosted receipt download metadata for a payment.
+        PurposePath stores receipt identifiers and references, but does not persist
+        receipt binary files. The `downloadUrl` is an ephemeral provider URL and
+        should be used immediately by clients. URL validity is provider-defined and
+        represented by `expiresAtUtc` when available.
       security:
         - bearerAuth: []
       parameters:
@@ -2224,6 +2230,9 @@ components:
         gracePeriodDays:
           type: integer
           nullable: true
+        trialDurationDays:
+          type: integer
+          nullable: true
         paymentSchedules:
           type: array
           items:
@@ -2613,23 +2622,37 @@ components:
       properties:
         retryDelayDays:
           type: integer
+          minimum: 1
         maxAutomaticAttemptsPerCycle:
           type: integer
+          minimum: 1
         cardExpiryWarningDays:
           type: integer
+          minimum: 1
         priceChangeNoticeMinimumDays:
           type: integer
+          minimum: 30
         annualRenewalReminderLeadWindowDays:
           type: object
           properties:
             minimum:
               type: integer
+              minimum: 30
             maximum:
               type: integer
+              minimum: 30
         notificationPolicies:
           type: object
-          additionalProperties:
-            type: boolean
+          properties:
+            paymentFailure:
+              type: boolean
+            cardExpiryWarning:
+              type: boolean
+            priceChangeNotice:
+              type: boolean
+            annualRenewalReminder:
+              type: boolean
+          additionalProperties: false
 
     SubscriptionSummary:
       type: object
@@ -3182,9 +3205,11 @@ components:
         downloadUrl:
           type: string
           format: uri
+          description: Ephemeral provider-hosted receipt URL. Not persisted as a durable file by PurposePath.
         expiresAtUtc:
           type: string
           format: date-time
+          description: Provider-reported expiration timestamp for `downloadUrl`.
         planName:
           type: string
         billingPeriod:
@@ -3308,6 +3333,9 @@ components:
         gracePeriodDays:
           type: integer
           nullable: true
+        trialDurationDays:
+          type: integer
+          nullable: true
         paymentSchedules:
           type: array
           items:
@@ -3326,6 +3354,9 @@ components:
         visibility:
           $ref: "#/components/schemas/PlanVisibility"
         gracePeriodDays:
+          type: integer
+          nullable: true
+        trialDurationDays:
           type: integer
           nullable: true
         status:
@@ -3671,23 +3702,37 @@ components:
       properties:
         retryDelayDays:
           type: integer
+          minimum: 1
         maxAutomaticAttemptsPerCycle:
           type: integer
+          minimum: 1
         cardExpiryWarningDays:
           type: integer
+          minimum: 1
         priceChangeNoticeMinimumDays:
           type: integer
+          minimum: 30
         annualRenewalReminderLeadWindowDays:
           type: object
           properties:
             minimum:
               type: integer
+              minimum: 30
             maximum:
               type: integer
+              minimum: 30
         notificationPolicies:
           type: object
-          additionalProperties:
-            type: boolean
+          properties:
+            paymentFailure:
+              type: boolean
+            cardExpiryWarning:
+              type: boolean
+            priceChangeNotice:
+              type: boolean
+            annualRenewalReminder:
+              type: boolean
+          additionalProperties: false
 
     ApiResponseSubscriptionCurrent:
       allOf:

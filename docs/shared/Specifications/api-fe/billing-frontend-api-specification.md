@@ -585,6 +585,13 @@ Optional fields:
 
 Returns the receipt download metadata for a specific payment.
 
+Receipt storage and lifetime policy:
+
+- PurposePath stores receipt metadata and provider references, not receipt binary files.
+- `downloadUrl` is provider-hosted and ephemeral.
+- `expiresAtUtc` indicates provider-reported URL expiration when available.
+- Clients should download immediately and request fresh metadata if the URL expires.
+
 **Role:** `tenant_owner`
 
 **Response:** `ApiResponse<ReceiptResponse>`

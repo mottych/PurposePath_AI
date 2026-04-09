@@ -280,6 +280,7 @@ Creates a plan.
   "durationType": "timed",
   "visibility": "published",
   "gracePeriodDays": 7,
+  "trialDurationDays": 14,
   "paymentSchedules": [
     {
       "scheduleId": "uuid",
@@ -309,6 +310,7 @@ Updatable fields:
 - `featureSetId`
 - `visibility`
 - `gracePeriodDays`
+- `trialDurationDays`
 - `status`
 
 ### DELETE /plans/{planId}
@@ -329,8 +331,8 @@ Designates the single global trial plan.
 
 **Validation:**
 
-- returns `409` if another active trial designation exists and conflicts
 - returns `422` if the plan is not eligible for trial use
+- if another trial designation exists, it is replaced with the new plan designation
 
 ### DELETE /plans/trial-designation
 
@@ -710,6 +712,16 @@ Fields:
 - `annualRenewalReminderLeadWindowDays.minimum`
 - `annualRenewalReminderLeadWindowDays.maximum`
 - `notificationPolicies`
+
+Validation floors and policy constraints:
+
+- `retryDelayDays`: minimum `1`
+- `maxAutomaticAttemptsPerCycle`: minimum `1`
+- `cardExpiryWarningDays`: minimum `1`
+- `priceChangeNoticeMinimumDays`: minimum `30`
+- `annualRenewalReminderLeadWindowDays.minimum`: minimum `30`
+- `annualRenewalReminderLeadWindowDays.maximum`: must be greater than or equal to `minimum`
+- `notificationPolicies`: supports only `paymentFailure`, `cardExpiryWarning`, `priceChangeNotice`, `annualRenewalReminder`
 
 ---
 

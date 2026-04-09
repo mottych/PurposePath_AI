@@ -335,10 +335,10 @@ Admin endpoint expectations:
 - `PATCH /admin/billing/settings`
 - Fields:
   - `retryDelayDays` (default 3)
-  - `maxAutomaticAttemptsPerCycle` (fixed to 2 for this phase)
-  - `cardExpiryWarningDays` (default 14)
-  - `priceChangeNoticeMinimumDays` (default 7)
-  - `annualRenewalReminderLeadWindowDays` (range 15-45)
+  - `maxAutomaticAttemptsPerCycle` (default 2, configurable, minimum 1)
+  - `cardExpiryWarningDays` (default 30, minimum 1)
+  - `priceChangeNoticeMinimumDays` (default 30, minimum 30)
+  - `annualRenewalReminderLeadWindowDays` (default range 30-45, minimum start 30)
   - notification policy toggles required by legal/compliance
 
 ### 3.3 Provider Webhook Endpoints (Billing Service)
