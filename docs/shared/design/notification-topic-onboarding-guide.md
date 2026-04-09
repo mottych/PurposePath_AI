@@ -175,6 +175,8 @@ If the new notification relies on AI-generated email insight content, follow thi
 - Primary transport: EventBridge kickoff from backend resolver into AI async execution contract.
 - Fallback transport: HTTP `POST /ai/execute-async` using the same canonical request payload contract.
 - Contract rule: transport is interchangeable; payload semantics, validation rules, and response mapping remain unchanged.
+- Mode isolation rule: EventBridge path is terminal-event-driven and must not API-poll. API polling is allowed only in API fallback mode.
+- Fallback transition rule: API fallback starts as a new API-mode attempt when EventBridge publish fails or terminal SLA expires.
 - Network rule: API fallback requires outbound HTTPS access on port 443 from backend runtime to AI API host.
 
 5. Metadata envelope handling:
@@ -248,6 +250,7 @@ Use this checklist before opening PR:
 - Implemented and DI-wired any new non-passthrough resolver.
 - For AI topic: updated orchestrator topic mapping and activity data shaping.
 - For AI topic: verified EventBridge-first kickoff and API fallback behavior use the same contract payload.
+- For AI topic: verified transport-mode isolation (no API polling in EventBridge mode; API polling only in API fallback mode).
 - For API fallback: verified outbound HTTPS 443 requirement is documented and reflected in runtime/network policy.
 - Verified notification required publisher inputs cover method-derived business inputs via contract tests.
 - Updated or added contract and resolver tests.

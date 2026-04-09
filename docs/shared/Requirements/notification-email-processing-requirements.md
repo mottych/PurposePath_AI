@@ -145,6 +145,10 @@ Required behavior:
 - AI integration details stay inside AI resolver and existing backend AI orchestration components
 - AI results are returned in the same parameter-value contract used by all resolver methods
 - if AI enrichment fails for optional content, fallback behavior must still support safe email delivery
+- EventBridge primary mode must remain transport-pure: no API polling while in EventBridge mode
+- API fallback mode must remain transport-pure: API kickoff + API polling only after explicit mode transition
+- Mode transition to API fallback must create a new fallback attempt with preserved correlation/idempotency lineage
+- EventBridge terminal SLA timeout values and API polling timeout values must be independently configurable
 
 ## 5. New Notification Onboarding Requirements
 
@@ -166,6 +170,8 @@ The system must:
 - allow controlled fallback for optional enrichment failures
 - use deterministic decision outcomes with explicit reason codes
 - preserve processing continuity where business-safe
+- isolate transport control paths so EventBridge and API status/control logic are not mixed within a single attempt
+- handle duplicate and delayed terminal outcomes deterministically across modes
 
 ## 7. Observability and Audit Requirements
 

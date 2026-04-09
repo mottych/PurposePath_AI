@@ -1,7 +1,7 @@
 # Email Insights AI API Contract Specification
 
-**Version:** 2.2  
-**Last Updated:** April 8, 2026  
+**Version:** 2.3  
+**Last Updated:** April 9, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
 
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-09 - v2.3 - Enforced transport-mode isolation: EventBridge mode is terminal-event-driven only; API polling is allowed only in API fallback mode
 - 2026-04-08 - v2.2 - Added dual transport contract (EventBridge-first kickoff with API fallback) while keeping payload schema unchanged
 - 2026-04-08 - v2.1 - Document server-side enrichment parameters for `goal_created_email_insight` (foundation + goal-scoped strategies/measures)
 - 2026-03-27 - v2.0 - Full-cutover generic topic contract with required service token for enrichment API calls
@@ -69,6 +70,12 @@ Transport invariants:
 - Contract fields and semantics are identical across both methods.
 - Validation, idempotency, correlation, and payload mapping behavior are identical across both methods.
 - Response/result handling into template variables is identical across both methods.
+
+Transport-mode isolation rules (normative):
+- EventBridge mode and API mode are distinct execution modes and must not be mixed in a single attempt.
+- If EventBridge kickoff publish succeeds, backend remains in EventBridge mode and waits for terminal completion through EventBridge terminal events.
+- API job-status polling is disallowed in EventBridge mode.
+- API fallback mode starts with API kickoff (`POST /ai/execute-async`) and owns API polling for that fallback attempt only.
 
 ### 3.3 EventBridge Kickoff Handshake (Normative Fields)
 
@@ -191,9 +198,9 @@ API kickoff response contract (minimum):
 
 The backend also accepts `data.job_id` as an implementation-tolerant alias, but AI service contract output should use canonical `data.jobId`.
 
-### 3.6 Job Status Wire Contract (Required)
+### 3.6 Job Status Wire Contract (API Fallback Mode)
 
-For both kickoff methods, backend status polling expects:
+For API fallback mode, backend status polling expects:
 
 ```json
 {
@@ -210,17 +217,20 @@ For both kickoff methods, backend status polling expects:
 }
 ```
 
-Status contract notes:
+Status contract notes (API fallback mode):
 
 - `data.status` is required.
 - `data.result` is required only when `status=completed`.
 - On `completed`, missing or empty `result` is treated as non-recoverable completion without payload (no API fallback).
-- On status request HTTP failure or missing `data.status` during EventBridge-first polling window, backend is allowed to execute API fallback.
+- On status request HTTP failure or missing `data.status`, backend handles failure according to API fallback retry/timeout policy.
 
 Fallback trigger contract:
 
-- API fallback may be activated when EventBridge kickoff publish fails, status lookup fails, or status does not reach terminal completion within configured fallback window.
+- API fallback may be activated when EventBridge kickoff publish fails, or when EventBridge terminal SLA expires according to backend policy.
 - API fallback must reuse canonical request semantics and preserve correlation/idempotency lineage.
+
+Mode transition rule:
+- API fallback activation must create a new attempt in API mode. API-mode polling must not execute while backend is in EventBridge mode.
 
 Network requirement for fallback:
 - API fallback requires outbound HTTPS connectivity on port 443 from backend runtime to the AI API host.
@@ -354,6 +364,12 @@ Token and enrichment execution behavior is also normative:
 2. AI treats token as opaque bearer value.
 3. If enrichment API auth fails, AI returns deterministic execution failure path (Section 8.4).
 
+Transport execution behavior is also normative:
+
+1. EventBridge mode is terminal-event-driven and does not perform API polling.
+2. API polling behavior is exclusive to API fallback mode.
+3. Duplicate or delayed terminal outcomes across modes must be handled idempotently by backend.
+
 ---
 
 ## 7. Normalization and Limit Enforcement
@@ -446,6 +462,8 @@ Variable semantics are topic-agnostic and apply to any approved `email_insight` 
 - Canonical naming in this spec is used consistently across PurposePath_Api and PurposePath_AI.
 - Service token is required in request and used for enrichment API calls.
 - AI does not mint or alter tokens; backend remains auth authority.
+- EventBridge primary path remains transport-pure (no API polling in EventBridge attempts).
+- API fallback path remains transport-pure (API kickoff + API polling within API attempts).
 - Processing order implemented exactly as specified.
 - Strict validation occurs only after pre-sanitization and pre-filtering.
 - Confidence invalid/missing does not fail send.

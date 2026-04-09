@@ -204,6 +204,12 @@ Final transport behavior:
 - Primary: EventBridge-first kickoff for AI execution.
 - Fallback: API kickoff through `POST /ai/execute-async`.
 
+Transport-mode isolation (required):
+- EventBridge primary path is terminal-event-driven and remains transport-pure.
+- EventBridge path must not call API status endpoints.
+- API fallback runs as a separate API-mode attempt and is also transport-pure (`execute-async` + API polling).
+- Mode transitions are explicit and one-way per attempt.
+
 Contract behavior:
 - The request/response contract stays the same regardless of transport.
 - `tenantId`, `userId`, `topicId`, `activityData`, `authContext`, `correlationId`, and `idempotencyKey` semantics remain unchanged.
@@ -212,6 +218,10 @@ Contract behavior:
 Network behavior:
 - EventBridge-first path does not require backend-to-AI API network access.
 - API fallback path requires outbound HTTPS connectivity on port 443 from backend runtime to AI API host.
+
+Timeout behavior:
+- If EventBridge terminal message does not arrive within configured SLA, backend may enter API fallback mode as a new attempt.
+- SLA and API polling timeouts are independent configuration values.
 
 ## 5. Error Handling and Fault Tolerance
 
@@ -244,6 +254,7 @@ Required dimensions:
 - `NotificationResolutionMethod.IsAsync` is the only source of truth for phase placement.
 - Merge/render runs once after both phases complete.
 - AI resolver uses EventBridge-first handshake and API fallback without changing contract payload semantics.
+- EventBridge mode and API mode are isolated per attempt; no mixed polling/control flow inside a single attempt.
 - API fallback requires outbound HTTPS port 443 reachability to AI API host.
 - Non-AI notifications bypass async AI work and proceed directly after sync phase.
 
