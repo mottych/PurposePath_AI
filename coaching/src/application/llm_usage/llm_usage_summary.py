@@ -20,21 +20,19 @@ class LlmUsageSummary(BaseModel):
 
 def summarize_usage_rows(rows: list[LlmUsageRecord]) -> LlmUsageSummary:
     """Compute aggregates for admin / quota previews."""
-    if not rows:
-        return LlmUsageSummary()
-
+    n = len(rows)
     total_in = sum(r.input_tokens for r in rows)
     total_out = sum(r.output_tokens for r in rows)
     total_tok = sum(r.total_tokens for r in rows)
     total_cost = sum((r.cost_usd or 0.0) for r in rows)
     success = sum(1 for r in rows if r.success)
-    failure = len(rows) - success
+    failure = n - success
     trunc = sum(1 for r in rows if r.finish_reason == "length")
     wall_sum = sum(r.wall_time_ms for r in rows)
-    avg_wall = wall_sum / len(rows)
+    avg_wall = wall_sum / n if n else 0.0
 
     return LlmUsageSummary(
-        row_count=len(rows),
+        row_count=n,
         total_input_tokens=total_in,
         total_output_tokens=total_out,
         total_tokens=total_tok,
