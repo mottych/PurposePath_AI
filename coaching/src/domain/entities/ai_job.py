@@ -137,7 +137,23 @@ class AIJob(BaseModel):
     )
     event_id: str | None = Field(
         default=None,
-        description="Upstream event/request identifier",
+        description="Kickoff message identity (event lineage); maps to terminal kickoffEventId",
+    )
+    request_id: str | None = Field(
+        default=None,
+        description="Notification request identity for terminal correlation (spec v2.4)",
+    )
+    topic_category: str | None = Field(
+        default=None,
+        description="Topic category from kickoff/API contract (e.g. email_insight)",
+    )
+    event_signal: str | None = Field(
+        default=None,
+        description="Business event signal from kickoff/API contract",
+    )
+    kickoff_transport: str | None = Field(
+        default=None,
+        description="eventbridge (Api EB kickoff) vs api (POST execute-async); domain terminals only for eventbridge",
     )
     status: AIJobStatus = Field(
         default=AIJobStatus.PENDING,

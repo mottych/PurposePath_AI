@@ -92,3 +92,45 @@ def test_publish_ai_job_created_includes_trace_metadata(monkeypatch: Any) -> Non
     assert '"correlationId": "corr-1"' in detail
     assert '"idempotencyKey": "idem-1"' in detail
     assert '"eventId": "evt-1"' in detail
+
+
+def test_publish_email_insight_terminal_v24_uses_domain_bus(monkeypatch: Any) -> None:
+    """v2.4 terminal events must use flat detail JSON on the domain bus."""
+    from datetime import UTC, datetime
+
+    dummy = _DummyClient()
+    monkeypatch.setattr(
+        "shared.services.eventbridge_client.get_eventbridge_client",
+        lambda *_args, **_kwargs: dummy,
+    )
+
+    publisher = EventBridgePublisher(
+        enabled=True,
+        stage="dev",
+        event_bus_name="default",
+        domain_event_bus_name="purposepath-domain-events-dev",
+    )
+    publisher.publish_email_insight_terminal_v24(
+        terminal_status="completed",
+        terminal_event_id="term-1",
+        occurred_at_utc=datetime.now(UTC),
+        job_id="job-1",
+        request_id="req-1",
+        kickoff_event_id="kick-1",
+        tenant_id="t1",
+        user_id="u1",
+        correlation_id="c1",
+        idempotency_key="i1",
+        topic_category="email_insight",
+        topic_id="goal_created_email_insight",
+        event_signal="goal_created_email_insight",
+        data={"result": {"schemaVersion": "1.0.0"}},
+    )
+
+    assert len(dummy.entries) == 1
+    assert dummy.entries[0]["EventBusName"] == "purposepath-domain-events-dev"
+    assert dummy.entries[0]["DetailType"] == "ai.job.completed"
+    detail_json = dummy.entries[0]["Detail"]
+    assert '"schemaVersion": "2.4"' in detail_json
+    assert '"executionMode": "eventbridge_terminal"' in detail_json
+    assert '"requestId": "req-1"' in detail_json

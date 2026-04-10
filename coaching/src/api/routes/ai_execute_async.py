@@ -11,7 +11,7 @@ API Gateway's 30-second timeout limit.
 """
 
 import structlog
-from coaching.src.api.auth import get_current_user
+from coaching.src.api.auth import get_current_user, get_tenant_for_async_job_access
 from coaching.src.api.dependencies.async_execution import get_async_execution_service
 from coaching.src.api.models.async_ai import (
     AsyncAIRequest,
@@ -144,6 +144,8 @@ async def execute_async(
         user_id = str(request_body.user_id)
         parameters = request_body.activity_data or {}
         jwt_token = request_body.auth_context.service_token if request_body.auth_context else None
+        if jwt_token is None and authorization and authorization.startswith("Bearer "):
+            jwt_token = authorization.split(" ", 1)[1].strip()
     else:
         if user is None:
             raise HTTPException(
@@ -178,6 +180,10 @@ async def execute_async(
             correlation_id=request_body.correlation_id if contract_v2 else None,
             idempotency_key=request_body.idempotency_key if contract_v2 else None,
             event_id=request_body.event_id if contract_v2 else None,
+            request_id=request_body.request_id if contract_v2 else None,
+            topic_category=request_body.topic_category if contract_v2 else None,
+            event_signal=request_body.event_signal if contract_v2 else None,
+            kickoff_transport="api" if contract_v2 else None,
         )
 
         logger.info(
@@ -288,7 +294,7 @@ async def get_job_status(
         description="Unique job identifier",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     ),
-    user: UserContext = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_for_async_job_access),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
 ) -> JobStatusResponse:
     """Get job status by ID.
@@ -298,7 +304,7 @@ async def get_job_status(
 
     Args:
         job_id: Unique job identifier
-        user: Authenticated user context from JWT
+        tenant_id: Tenant from user JWT or service token (v2.4 §4.6)
         service: Async execution service from DI
 
     Returns:
@@ -307,9 +313,6 @@ async def get_job_status(
     Raises:
         HTTPException: 404 if job not found or tenant mismatch
     """
-    # Extract tenant from authenticated context
-    tenant_id = user.tenant_id
-
     try:
         job = await service.get_job(job_id=job_id, tenant_id=tenant_id)
 

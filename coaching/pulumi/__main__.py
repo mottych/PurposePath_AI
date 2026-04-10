@@ -255,21 +255,26 @@ aws.iam.RolePolicy(
     ),
 )
 
-# EventBridge access for publishing AI job events
+# EventBridge access for publishing AI job events (default + shared domain bus for v2.4 terminals)
 aws.iam.RolePolicy(
     "coaching-eventbridge-policy",
     role=lambda_role.id,
-    policy=json.dumps(
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Action": ["events:PutEvents"],
-                    "Resource": ["arn:aws:events:us-east-1:*:event-bus/default"],
-                }
-            ],
-        }
+    policy=pulumi.Output.all(aws.get_caller_identity().account_id).apply(
+        lambda args: json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": ["events:PutEvents"],
+                        "Resource": [
+                            f"arn:aws:events:us-east-1:{args[0]}:event-bus/default",
+                            f"arn:aws:events:us-east-1:{args[0]}:event-bus/purposepath-domain-events-{stack}",
+                        ],
+                    }
+                ],
+            }
+        )
     ),
 )
 
@@ -539,7 +544,7 @@ if stack_config.get("ai_async_jobs_enabled", "true").lower() == "true":
         "api-ai-job-requested-rule",
         name=f"api-ai-job-requested-{stack}",
         description="Triggers coaching Lambda when Api publishes ai.job.requested (email_insight kickoff)",
-        event_bus_name="default",
+        event_bus_name=f"purposepath-domain-events-{stack}",
         event_pattern=json.dumps(
             {
                 "source": ["purposepath.api"],
@@ -553,7 +558,7 @@ if stack_config.get("ai_async_jobs_enabled", "true").lower() == "true":
         "api-ai-job-requested-target",
         rule=api_ai_job_requested_rule.name,
         arn=coaching_lambda.arn,
-        event_bus_name="default",
+        event_bus_name=f"purposepath-domain-events-{stack}",
     )
 
     aws.lambda_.Permission(

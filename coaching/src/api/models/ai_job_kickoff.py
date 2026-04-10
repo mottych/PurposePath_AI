@@ -18,6 +18,7 @@ class ApiAiJobRequestedDetail(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     event_id: str = Field(alias="eventId")
+    request_id: str = Field(alias="requestId", min_length=1)
     occurred_at_utc: datetime = Field(alias="occurredAtUtc")
     source_service: str = Field(alias="sourceService")
     schema_version: str = Field(alias="schemaVersion")

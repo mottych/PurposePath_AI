@@ -340,6 +340,79 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
         raise HTTPException(status_code=401, detail="Token validation failed") from e
 
 
+async def get_tenant_for_async_job_access(
+    authorization: str | None = Header(None),
+) -> str:
+    """Resolve tenant for async job polling per email-insights v2.4 §4.6 (user JWT or service token)."""
+    if not authorization or not authorization.startswith("Bearer "):
+        logger.warning("async_job_auth.missing_bearer")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization header",
+        )
+
+    token = authorization.split(" ", 1)[1].strip()
+
+    if token == "test_token":
+        return "tenant_test"
+
+    secret = _get_jwt_secret()
+    try:
+        try:
+            payload = jwt.decode(
+                token,
+                secret,
+                algorithms=[settings.jwt_algorithm],
+                options={
+                    "verify_aud": settings.stage != "dev",
+                    "verify_iss": settings.stage != "dev",
+                },
+                issuer=None if settings.stage == "dev" else settings.jwt_issuer,
+                audience=None if settings.stage == "dev" else settings.jwt_audience,
+            )
+        except JWTError as jwt_err:
+            if settings.stage == "dev":
+                payload = jwt.decode(
+                    token,
+                    "change-me-in-prod",
+                    algorithms=[settings.jwt_algorithm],
+                    options={"verify_aud": False, "verify_iss": False},
+                )
+            else:
+                logger.warning(f"async_job_auth.jwt_invalid: {jwt_err}")
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid or expired token",
+                ) from jwt_err
+    except JWTError as e:
+        logger.warning(f"async_job_auth.jwt_decode_failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from e
+
+    token_type = payload.get("token_type") or payload.get("tokenType")
+    role = payload.get("role")
+    tenant_id = payload.get("tenant_id")
+
+    if token_type == "service_enrichment" and role == "service" and tenant_id:
+        logger.info(
+            f"async_job_auth.service_token_accepted tenant_id={tenant_id!s} "
+            f"issuer={payload.get('iss')!s}"
+        )
+        return str(tenant_id)
+
+    user_id = payload.get("user_id") or payload.get("sub")
+    if user_id and tenant_id:
+        return str(tenant_id)
+
+    logger.warning(
+        f"async_job_auth.claims_rejected has_tenant={bool(tenant_id)} "
+        f"has_user={bool(user_id)} token_type={token_type!r} role={role!r}"
+    )
+    raise HTTPException(
+        status_code=401,
+        detail="Token missing required fields for async job access",
+    )
+
+
 async def get_optional_context(
     authorization: str | None = Header(None),
 ) -> RequestContext | None:

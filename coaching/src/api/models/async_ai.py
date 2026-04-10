@@ -75,6 +75,7 @@ class AsyncAIRequest(BaseModel):
 
     # Generic v2 backend-triggered request envelope (optional for backwards compatibility)
     event_id: str | None = Field(default=None, alias="eventId")
+    request_id: str | None = Field(default=None, alias="requestId")
     occurred_at_utc: datetime | None = Field(default=None, alias="occurredAtUtc")
     source_service: str | None = Field(default=None, alias="sourceService")
     schema_version: str | None = Field(default=None, alias="schemaVersion")
@@ -105,6 +106,7 @@ class AsyncAIRequest(BaseModel):
 
         required_fields = {
             "eventId": self.event_id,
+            "requestId": self.request_id,
             "occurredAtUtc": self.occurred_at_utc,
             "sourceService": self.source_service,
             "schemaVersion": self.schema_version,
@@ -140,6 +142,7 @@ class AsyncAIRequest(BaseModel):
                 },
                 {
                     "eventId": "evt-123",
+                    "requestId": "req-123",
                     "occurredAtUtc": "2026-03-27T16:00:00Z",
                     "sourceService": "PurposePath_Api",
                     "schemaVersion": "2.0",

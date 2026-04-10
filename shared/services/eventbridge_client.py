@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import boto3
 import structlog
@@ -67,18 +67,21 @@ class EventBridgePublisher:
         source: str = AI_EVENT_SOURCE,
         stage: str = "dev",
         enabled: bool = True,
+        domain_event_bus_name: str | None = None,
     ) -> None:
         """Initialize the EventBridge publisher.
 
         Args:
             region_name: AWS region
-            event_bus_name: EventBridge bus name (default: "default")
+            event_bus_name: EventBridge bus for internal events (ai.job.created, WebSocket, etc.)
             source: Event source identifier
             stage: Environment stage (dev/staging/production) for event filtering
             enabled: Whether publishing is enabled for this environment
+            domain_event_bus_name: Bus for email-insight v2.4 terminal events; defaults to event_bus_name
         """
         self._client: Any = get_eventbridge_client(region_name)
         self._event_bus_name = event_bus_name
+        self._domain_event_bus_name = domain_event_bus_name or event_bus_name
         self._source = source
         self._stage = stage
         self._enabled = enabled
@@ -168,6 +171,118 @@ class EventBridgePublisher:
                 "eventbridge.internal_error",
                 event_type=event.event_type,
                 error=str(e),
+            )
+            raise EventBridgePublishError(f"EventBridge error: {e}") from e
+
+    def publish_email_insight_terminal_v24(
+        self,
+        *,
+        terminal_status: Literal["completed", "failed"],
+        terminal_event_id: str,
+        occurred_at_utc: datetime,
+        job_id: str,
+        request_id: str,
+        kickoff_event_id: str,
+        tenant_id: str,
+        user_id: str,
+        correlation_id: str,
+        idempotency_key: str,
+        topic_category: str,
+        topic_id: str,
+        event_signal: str,
+        data: dict[str, Any],
+    ) -> str:
+        """Publish normative email-insight terminal event (spec v2.4 §3.7) to the domain bus.
+
+        Detail JSON is the flat contract shape (not wrapped in the legacy DomainEvent envelope).
+        """
+        detail_type = "ai.job.completed" if terminal_status == "completed" else "ai.job.failed"
+        detail: dict[str, Any] = {
+            "schemaVersion": "2.4",
+            "eventId": terminal_event_id,
+            "occurredAtUtc": occurred_at_utc.replace(tzinfo=UTC)
+            if occurred_at_utc.tzinfo is None
+            else occurred_at_utc.astimezone(UTC),
+            "sourceService": "PurposePath.AI",
+            "status": terminal_status,
+            "jobId": job_id,
+            "requestId": request_id,
+            "kickoffEventId": kickoff_event_id,
+            "tenantId": tenant_id,
+            "userId": user_id,
+            "correlationId": correlation_id,
+            "idempotencyKey": idempotency_key,
+            "topicCategory": topic_category,
+            "topicId": topic_id,
+            "eventSignal": event_signal,
+            "kickoffTransport": "eventbridge",
+            "executionMode": "eventbridge_terminal",
+            "data": data,
+        }
+        # ISO format for occurredAtUtc in JSON
+        detail["occurredAtUtc"] = detail["occurredAtUtc"].isoformat().replace("+00:00", "Z")
+
+        if not self._enabled:
+            logger.warning(
+                "eventbridge.email_insight_terminal_skipped_disabled",
+                detail_type=detail_type,
+                job_id=job_id,
+                request_id=request_id,
+                idempotency_key=idempotency_key,
+            )
+            return f"disabled-{detail_type}"
+
+        entry = {
+            "Source": self._source,
+            "DetailType": detail_type,
+            "Detail": json.dumps(detail, default=str),
+            "EventBusName": self._domain_event_bus_name,
+            "Time": datetime.now(UTC),
+        }
+
+        logger.info(
+            "eventbridge.email_insight_terminal_publishing",
+            detail_type=detail_type,
+            job_id=job_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            tenant_id=tenant_id,
+            event_bus=self._domain_event_bus_name,
+        )
+
+        try:
+            response = self._client.put_events(Entries=[entry])
+            if response.get("FailedEntryCount", 0) > 0:
+                failed = response.get("Entries", [{}])[0]
+                error_code = failed.get("ErrorCode", "Unknown")
+                error_message = failed.get("ErrorMessage", "Unknown error")
+                logger.error(
+                    "eventbridge.email_insight_terminal_publish_failed",
+                    detail_type=detail_type,
+                    error_code=error_code,
+                    error_message=error_message,
+                    job_id=job_id,
+                    request_id=request_id,
+                )
+                raise EventBridgePublishError(
+                    f"Failed to publish terminal event: {error_code} - {error_message}"
+                )
+            event_id: str = str(response.get("Entries", [{}])[0].get("EventId", ""))
+            logger.info(
+                "eventbridge.email_insight_terminal_published",
+                detail_type=detail_type,
+                eventbridge_event_id=event_id,
+                job_id=job_id,
+                request_id=request_id,
+            )
+            return event_id
+        except ClientError as e:
+            logger.error(
+                "eventbridge.email_insight_terminal_internal_error",
+                detail_type=detail_type,
+                error=str(e),
+                job_id=job_id,
             )
             raise EventBridgePublishError(f"EventBridge error: {e}") from e
 

@@ -362,6 +362,14 @@ class DynamoDBJobRepository:
             item["idempotency_key"] = job.idempotency_key
         if job.event_id is not None:
             item["event_id"] = job.event_id
+        if job.request_id is not None:
+            item["request_id"] = job.request_id
+        if job.topic_category is not None:
+            item["topic_category"] = job.topic_category
+        if job.event_signal is not None:
+            item["event_signal"] = job.event_signal
+        if job.kickoff_transport is not None:
+            item["kickoff_transport"] = job.kickoff_transport
 
         if job.result is not None:
             item["result"] = job.result
@@ -408,6 +416,10 @@ class DynamoDBJobRepository:
             correlation_id=item.get("correlation_id"),
             idempotency_key=item.get("idempotency_key"),
             event_id=item.get("event_id"),
+            request_id=item.get("request_id"),
+            topic_category=item.get("topic_category"),
+            event_signal=item.get("event_signal"),
+            kickoff_transport=item.get("kickoff_transport"),
             status=AIJobStatus(item["status"]),
             result=item.get("result"),
             error=item.get("error"),
