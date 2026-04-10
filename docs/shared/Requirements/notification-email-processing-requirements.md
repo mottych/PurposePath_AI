@@ -172,6 +172,41 @@ The system must:
 - preserve processing continuity where business-safe
 - isolate transport control paths so EventBridge and API status/control logic are not mixed within a single attempt
 - handle duplicate and delayed terminal outcomes deterministically across modes
+- require terminal completion contract fields sufficient for deterministic correlation (`requestId`, `jobId`, `kickoffEventId`, `correlationId`, `idempotencyKey`)
+- enforce first-terminal-wins behavior for each request and reject late conflicting terminals from reopening finalized processing
+- enforce EventBridge terminal SLA timeout with explicit transition into a new API fallback attempt when enabled
+
+## 6.1 Terminal Event Contract Requirements
+
+For EventBridge primary mode, the system must treat AI terminal events as authoritative completion signals.
+
+Terminal routing requirements:
+
+- source must be `purposepath.ai`
+- detail-type must be one of `ai.job.completed` or `ai.job.failed`
+- event must be delivered on environment domain event bus
+
+Terminal detail requirements:
+
+- include mode discriminator fields so control plane cannot be mixed in one attempt (`kickoffTransport=eventbridge`, `executionMode=eventbridge_terminal`)
+- include tenancy and tracing identity fields (`tenantId`, `userId`, `correlationId`, `idempotencyKey`)
+- include request and kickoff linkage (`requestId`, `jobId`, `kickoffEventId`)
+- completed events include AI result payload compatible with `purposepath.email-insight.v1`
+- failed events include explicit error code and error message
+
+## 6.2 API Fallback Authentication Requirements
+
+When API fallback mode is used, backend must authenticate to AI endpoints with service token identity:
+
+- use `Authorization: Bearer {authContext.serviceToken}` for `POST /api/v1/ai/execute-async`
+- use `Authorization: Bearer {authContext.serviceToken}` for `GET /api/v1/ai/jobs/{jobId}`
+
+Authorization requirements:
+
+- service token is accepted without user session for fallback endpoints
+- AI validates service-token issuer, audience, role, and tenant claim
+- AI enforces tenant isolation for job-status endpoint by matching token tenant to job tenant
+- authorization failures return deterministic fallback reason/detail values and metrics
 
 ## 7. Observability and Audit Requirements
 

@@ -223,6 +223,61 @@ Timeout behavior:
 - If EventBridge terminal message does not arrive within configured SLA, backend may enter API fallback mode as a new attempt.
 - SLA and API polling timeouts are independent configuration values.
 
+### 4.2 Terminal EventBridge Contract (Target Deployment)
+
+Target terminal routing for AI completion events:
+
+- source: `purposepath.ai`
+- detail-type: `ai.job.completed` and `ai.job.failed`
+- event bus: shared environment domain bus (for example `purposepath-domain-events-dev`)
+
+Terminal identity and isolation contract:
+
+- terminal detail includes `requestId`, `jobId`, and `kickoffEventId`
+- terminal detail includes `kickoffTransport=eventbridge` and `executionMode=eventbridge_terminal`
+- terminal detail includes `tenantId`, `userId`, `correlationId`, and `idempotencyKey`
+- completed events include `data.result` that satisfies `purposepath.email-insight.v1`
+- failed events include `data.errorCode` and `data.error`
+
+Deterministic terminal handling:
+
+- first terminal that finalizes request processing wins
+- duplicate terminals are ignored idempotently
+- conflicting late terminals are ignored and logged/metriced as conflicts
+
+### 4.3 API Fallback Auth Contract (Target Deployment)
+
+API fallback endpoints:
+
+- `POST /api/v1/ai/execute-async`
+- `GET /api/v1/ai/jobs/{jobId}`
+
+Auth contract:
+
+- backend sends `Authorization: Bearer {authContext.serviceToken}`
+- service token must be accepted for both endpoints
+- AI enforces issuer/audience/service-role/tenant-claim validation for service token
+- job-status access enforces tenant claim against tenant stored on job record
+
+### 4.4 New Configuration and Metrics (Target Deployment)
+
+Configuration keys:
+
+- `AiService:EventBridgeTerminalSlaMs`
+- `AiService:ApiFallbackEnabled`
+- `AiService:ApiFallbackPollIntervalMs`
+- `AiService:ApiFallbackPollTimeoutMs`
+- `AiService:TerminalConflictPolicy` (default `FirstTerminalWins`)
+
+Required metrics:
+
+- `ai_terminal_received_total`
+- `ai_terminal_duplicate_total`
+- `ai_terminal_conflict_total`
+- `ai_terminal_timeout_to_fallback_total`
+- `ai_fallback_success_total`
+- `ai_fallback_forbidden_total`
+
 ## 5. Error Handling and Fault Tolerance
 
 - mandatory contract failures: hard fail with explicit reason

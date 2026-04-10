@@ -1,6 +1,6 @@
 # Email Insights AI API Contract Specification
 
-**Version:** 2.3  
+**Version:** 2.4  
 **Last Updated:** April 9, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-09 - v2.4 - Added normative terminal EventBridge wire contract, terminal idempotency/ordering rules, and service-token auth contract for API fallback endpoints
 - 2026-04-09 - v2.3 - Enforced transport-mode isolation: EventBridge mode is terminal-event-driven only; API polling is allowed only in API fallback mode
 - 2026-04-08 - v2.2 - Added dual transport contract (EventBridge-first kickoff with API fallback) while keeping payload schema unchanged
 - 2026-04-08 - v2.1 - Document server-side enrichment parameters for `goal_created_email_insight` (foundation + goal-scoped strategies/measures)
@@ -97,15 +98,15 @@ To prevent cross-repo drift, the routing identity values below are normative def
 
 - `source`: `purposepath.api`
 - `detail-type`: `ai.job.requested`
-- `eventBusName`: `default`
+- `eventBusName`: `purposepath-domain-events-{env}`
 
 Environment baseline (current contract default):
 
 | Environment | source | detail-type | eventBusName |
 |-------------|--------|-------------|--------------|
-| dev | `purposepath.api` | `ai.job.requested` | `default` |
-| staging | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `default` (unless jointly overridden) |
-| prod | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `default` (unless jointly overridden) |
+| dev | `purposepath.api` | `ai.job.requested` | `purposepath-domain-events-dev` |
+| staging | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `purposepath-domain-events-staging` (unless jointly overridden) |
+| prod | `purposepath.api` (unless jointly overridden) | `ai.job.requested` (unless jointly overridden) | `purposepath-domain-events-prod` (unless jointly overridden) |
 
 Override rule (normative):
 
@@ -117,9 +118,10 @@ AI-side EventBridge consumers must treat `source` + `detail-type` as routing key
 
 Correlation and idempotency handshake contract:
 
+- `requestId` is required kickoff request identity and is carried as explicit field in trigger detail.
+- `eventId` is kickoff message identity for event lineage and telemetry.
 - `correlationId` is end-to-end trace identity and must propagate unchanged through job lifecycle events.
 - `idempotencyKey` is duplicate-protection identity and must be honored across kickoff methods.
-- `eventId` remains request identity for audit lineage and must be preserved in AI-side telemetry/audit correlation.
 
 Status expectation contract:
 
@@ -141,13 +143,14 @@ Default runtime values in current NotificationProcessor implementation:
 
 - `AiService:EventBridgeSource = purposepath.api`
 - `AiService:EventBridgeDetailType = ai.job.requested`
-- `AiService:EventBridgeEventBusName = default`
+- `AiService:EventBridgeEventBusName = purposepath-domain-events-{env}`
 
 EventBridge `detail` JSON is the canonical trigger envelope from Section 4 plus transport fields from Section 3.3. Minimum required shape:
 
 ```json
 {
    "eventId": "uuid",
+   "requestId": "notification-request-uuid",
    "occurredAtUtc": "2026-04-09T13:00:00.0000000Z",
    "sourceService": "PurposePath.NotificationProcessor.Lambda",
    "schemaVersion": "2.0",
@@ -235,6 +238,128 @@ Mode transition rule:
 Network requirement for fallback:
 - API fallback requires outbound HTTPS connectivity on port 443 from backend runtime to the AI API host.
 
+### 3.7 Terminal EventBridge Wire Contract (Normative)
+
+When EventBridge kickoff succeeds, completion is delivered only through terminal EventBridge events.
+
+Terminal routing identity:
+
+- `source` (required): `purposepath.ai`
+- `detail-type` (required): `ai.job.completed` or `ai.job.failed`
+- `eventBusName` (required): shared domain event bus for environment (for example, `purposepath-domain-events-dev`)
+
+Terminal detail required fields:
+
+- `schemaVersion` (string, required): `2.4`
+- `eventId` (string, required): terminal message identity
+- `occurredAtUtc` (string date-time, required)
+- `sourceService` (string, required)
+- `status` (string, required): `completed` or `failed`
+- `jobId` (string, required)
+- `requestId` (string, required): notification request identity used by API consumer
+- `kickoffEventId` (string, required): original kickoff request event identity
+- `tenantId` (string, required)
+- `userId` (string, required)
+- `correlationId` (string, required)
+- `idempotencyKey` (string, required)
+- `topicCategory` (string, required): `email_insight`
+- `topicId` (string, required)
+- `eventSignal` (string, required)
+- `kickoffTransport` (string, required): `eventbridge`
+- `executionMode` (string, required): `eventbridge_terminal`
+- `data` (object, required)
+
+Terminal completed payload shape:
+
+- `data.result` (object, required): must satisfy Section 5 `purposepath.email-insight.v1` payload contract
+
+Terminal failed payload shape:
+
+- `data.errorCode` (string, required)
+- `data.error` (string, required)
+
+Normative completed example:
+
+```json
+{
+   "schemaVersion": "2.4",
+   "eventId": "terminal-event-uuid",
+   "occurredAtUtc": "2026-04-09T13:10:00.0000000Z",
+   "sourceService": "PurposePath.AI",
+   "status": "completed",
+   "jobId": "job-uuid",
+   "requestId": "notification-request-uuid",
+   "kickoffEventId": "kickoff-event-uuid",
+   "tenantId": "tenant-1",
+   "userId": "user-1",
+   "correlationId": "corr-123",
+   "idempotencyKey": "requestId:topicId:attempt-uuid",
+   "topicCategory": "email_insight",
+   "topicId": "goal_created_email_insight",
+   "eventSignal": "goal_created_email_insight",
+   "kickoffTransport": "eventbridge",
+   "executionMode": "eventbridge_terminal",
+   "data": {
+      "result": {
+         "schemaVersion": "1.0.0",
+         "title": "string",
+         "summary": "string",
+         "blocks": [],
+         "generationMeta": {
+            "modelId": "string",
+            "promptVersion": "string",
+            "traceId": "string",
+            "generatedAtUtc": "2026-04-09T13:09:59.0000000Z",
+            "topicId": "goal_created_email_insight"
+         }
+      }
+   }
+}
+```
+
+Normative failed example:
+
+```json
+{
+   "schemaVersion": "2.4",
+   "eventId": "terminal-event-uuid",
+   "occurredAtUtc": "2026-04-09T13:10:00.0000000Z",
+   "sourceService": "PurposePath.AI",
+   "status": "failed",
+   "jobId": "job-uuid",
+   "requestId": "notification-request-uuid",
+   "kickoffEventId": "kickoff-event-uuid",
+   "tenantId": "tenant-1",
+   "userId": "user-1",
+   "correlationId": "corr-123",
+   "idempotencyKey": "requestId:topicId:attempt-uuid",
+   "topicCategory": "email_insight",
+   "topicId": "goal_created_email_insight",
+   "eventSignal": "goal_created_email_insight",
+   "kickoffTransport": "eventbridge",
+   "executionMode": "eventbridge_terminal",
+   "data": {
+      "errorCode": "ENRICHMENT_AUTH_FORBIDDEN",
+      "error": "Service token rejected by enrichment API"
+   }
+}
+```
+
+### 3.8 Terminal Idempotency and Ordering Contract
+
+Terminal processing behavior is deterministic and first-wins:
+
+- Finalization identity is `requestId`.
+- Duplicate terminal deliveries (same request/job/status) must be ignored idempotently.
+- Conflicting late terminals after finalization must not reopen processing.
+- Consumers should emit telemetry for duplicate and conflict terminal deliveries.
+
+Fallback SLA contract:
+
+- EventBridge terminal wait is bounded by `AiService:EventBridgeTerminalSlaMs`.
+- On SLA expiry without terminal event, backend may start a new API fallback attempt.
+- API fallback attempt uses API kickoff and API polling exclusively.
+
 ---
 
 ## 4. Trigger Request Contract
@@ -244,6 +369,7 @@ The trigger request payload defined below is canonical and transport-agnostic. I
 ### 4.1 Required Fields
 
 - `eventId` (string, required): Unique request event identifier.
+- `requestId` (string, required): Notification request identity used for terminal correlation.
 - `occurredAtUtc` (string date-time, required): Request timestamp.
 - `sourceService` (string, required): Originating backend service.
 - `schemaVersion` (string, required): Request schema version.
@@ -278,6 +404,31 @@ The trigger request payload defined below is canonical and transport-agnostic. I
 - AI service must not mint, mutate, or re-sign the token.
 - AI service forwards token to standard backend user-facing API endpoints for enrichment.
 - Backend user-facing endpoints validate token through standard authentication/authorization components.
+
+### 4.6 API Fallback Endpoint Auth Contract (Service Token)
+
+For API fallback mode, backend calls both endpoints with the same service token from `authContext.serviceToken`:
+
+- `POST /api/v1/ai/execute-async`
+- `GET /api/v1/ai/jobs/{jobId}`
+
+HTTP auth requirement:
+
+- `Authorization: Bearer {serviceToken}`
+
+Accepted service-token claims contract:
+
+- token type claim identifies `service_enrichment`
+- service role claim identifies non-user service principal (for example `role=service`)
+- issuer claim is trusted by AI auth configuration
+- audience claim includes AI API audience
+- tenant claim is present and required for tenancy enforcement
+
+Tenant isolation contract for `GET /api/v1/ai/jobs/{jobId}`:
+
+- Endpoint may be called without user session when valid service token is present.
+- AI must validate that token tenant claim matches tenant stored on the job record.
+- Mismatch must return authorization failure.
 
 ### 4.5 Server-side enrichment (`goal_created_email_insight`)
 
@@ -436,6 +587,9 @@ The system must emit deterministic reason/detail values for:
 - invalid token
 - insufficient token scope/claims
 - enrichment API authorization failure
+- service-token audience mismatch
+- service-token issuer mismatch
+- service-token tenant mismatch on job status access
 
 ---
 
