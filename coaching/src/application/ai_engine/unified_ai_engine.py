@@ -12,6 +12,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from pydantic import BaseModel
+
+from coaching.src.application.ai_engine.llm_json_schema_adaptation import (
+    adapt_json_schema_for_openai_structured_output,
+    adapt_json_schema_for_vertex_response_schema,
+)
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
@@ -26,7 +32,6 @@ from coaching.src.domain.value_objects.conversation_context import ConversationC
 from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
@@ -551,6 +556,11 @@ class UnifiedAIEngine:
         )
         provider, model_name = self.provider_factory.get_provider_for_model(model_code)
 
+        response_schema_for_provider = self._adapt_structured_schema_for_llm_provider(
+            response_schema,
+            provider.provider_name,
+        )
+
         # Step 7: Call LLM with topic configuration
         messages = [LLMMessage(role="user", content=rendered_user)]
 
@@ -564,7 +574,7 @@ class UnifiedAIEngine:
                 "max_tokens": topic.max_tokens,
                 "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
                 "system_prompt": rendered_system,
-                "has_response_schema": response_schema is not None,
+                "has_response_schema": response_schema_for_provider is not None,
             },
         )
 
@@ -590,7 +600,7 @@ class UnifiedAIEngine:
                 temperature=topic.temperature,
                 max_tokens=topic.max_tokens,
                 system_prompt=rendered_system,
-                response_schema=response_schema,  # Pass schema for structured output
+                response_schema=response_schema_for_provider,
             )
         except Exception:
             wall_ms = int((time.perf_counter() - llm_start) * 1000)
@@ -707,7 +717,7 @@ class UnifiedAIEngine:
             rendered_system_prompt=rendered_system,
             rendered_user_prompt=rendered_user,
             enriched_parameters=enriched_params,
-            response_schema=response_schema,
+            response_schema=response_schema_for_provider,
             llm_response=llm_response,
             serialized_response=serialized,
         )
@@ -1024,6 +1034,25 @@ class UnifiedAIEngine:
                 error=str(e),
             )
             return system_prompt, None
+
+    @staticmethod
+    def _adapt_structured_schema_for_llm_provider(
+        schema: dict[str, Any] | None,
+        provider_name: str,
+    ) -> dict[str, Any] | None:
+        """Map canonical strict schema to the dialect accepted by the active LLM provider.
+
+        Pydantic unions (discriminated or not) often emit ``oneOf``; OpenAI strict
+        structured outputs reject ``oneOf`` in some nested positions. Vertex
+        Gemini may accept a similar adjustment. Bedrock ignores ``response_schema``.
+        """
+        if schema is None:
+            return None
+        if provider_name == "openai":
+            return adapt_json_schema_for_openai_structured_output(schema)
+        if provider_name == "google_vertex":
+            return adapt_json_schema_for_vertex_response_schema(schema)
+        return schema
 
     def _prepare_schema_for_structured_output(
         self,
