@@ -289,7 +289,14 @@ class OpenAILLMProvider:
             )
 
         except Exception as e:
-            logger.error("OpenAI Responses API call failed", error=str(e), model=model)
+            err_body = getattr(e, "body", None)
+            logger.error(
+                "OpenAI Responses API call failed",
+                error=str(e),
+                model=model,
+                has_response_schema=response_schema is not None,
+                error_body=err_body,
+            )
             raise RuntimeError(f"OpenAI API call failed: {e}") from e
 
     async def generate_stream(
