@@ -1,6 +1,8 @@
 """Unit tests for AnalysisRequest value object."""
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.core.constants import AnalysisType
 from coaching.src.core.types import (
     create_analysis_request_id,
@@ -8,7 +10,6 @@ from coaching.src.core.types import (
     create_user_id,
 )
 from coaching.src.domain.entities.analysis_request import AnalysisRequest
-from pydantic import ValidationError
 
 
 class TestAnalysisRequestCreation:

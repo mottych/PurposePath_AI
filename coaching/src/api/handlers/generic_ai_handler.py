@@ -7,6 +7,9 @@ the UnifiedAIEngine, eliminating the need for endpoint-specific service classes.
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from fastapi import HTTPException, status
+from pydantic import BaseModel
+
 from coaching.src.api.models.auth import UserContext
 from coaching.src.application.ai_engine.response_serializer import SerializationError
 from coaching.src.application.ai_engine.unified_ai_engine import (
@@ -17,8 +20,6 @@ from coaching.src.application.ai_engine.unified_ai_engine import (
     UnifiedAIEngineError,
 )
 from coaching.src.core.topic_registry import get_endpoint_definition
-from fastapi import HTTPException, status
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from coaching.src.services.template_parameter_processor import TemplateParameterProcessor

@@ -8,6 +8,7 @@ from datetime import timedelta
 from typing import Any
 
 import structlog
+
 from coaching.src.domain.entities.llm_topic import LLMTopic, ParameterDefinition
 from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
 from coaching.src.models.prompt import (

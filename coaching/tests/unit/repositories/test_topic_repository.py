@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
+
 from coaching.src.domain.entities.llm_topic import (
     LLMTopic,
     PromptInfo,

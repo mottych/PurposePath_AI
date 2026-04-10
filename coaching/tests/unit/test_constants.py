@@ -1,6 +1,7 @@
 """Unit tests for core constants and enums."""
 
 import pytest
+
 from coaching.src.core.constants import (
     AnalysisType,
     CoachingTopic,

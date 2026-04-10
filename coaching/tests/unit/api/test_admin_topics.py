@@ -4,6 +4,9 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
@@ -14,8 +17,6 @@ from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.api.routes.admin.topics import router
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from shared.models.multitenant import RequestContext, UserRole
 
 pytestmark = pytest.mark.unit

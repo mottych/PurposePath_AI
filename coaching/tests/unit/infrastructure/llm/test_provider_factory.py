@@ -7,6 +7,7 @@ model selection based on MODEL_REGISTRY configuration.
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from coaching.src.core.config_multitenant import Settings
 from coaching.src.core.llm_models import MODEL_REGISTRY, LLMProvider
 from coaching.src.infrastructure.llm.exceptions import (

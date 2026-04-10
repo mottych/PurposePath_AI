@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from botocore.exceptions import ClientError
+
 from coaching.src.domain.entities.llm_config.template_metadata import TemplateMetadata
 from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,

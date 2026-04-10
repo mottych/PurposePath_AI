@@ -6,8 +6,9 @@ and progress of a coaching conversation.
 
 from typing import Any
 
-from coaching.src.core.constants import ConversationPhase
 from pydantic import BaseModel, Field, field_validator
+
+from coaching.src.core.constants import ConversationPhase
 
 
 class ConversationContext(BaseModel):

@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 import pytest
+
 from coaching.src.integration.sql_template.cdata_mcp_client import CDataMcpClient
 from coaching.src.integration.sql_template.enums import ErrorCode
 from coaching.src.integration.sql_template.errors import SqlTemplateGenerationError

@@ -7,6 +7,8 @@ integrating with the Phase 4-6 application services and domain layer.
 from typing import cast
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies import (
     get_conversation_service,
@@ -36,7 +38,6 @@ from coaching.src.domain.exceptions.conversation_exceptions import (
     ConversationNotFound,
 )
 from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/conversations", tags=["conversations"])

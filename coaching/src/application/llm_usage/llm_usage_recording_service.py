@@ -6,6 +6,7 @@ import uuid
 from datetime import UTC, datetime
 
 import structlog
+
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.token_usage import normalize_token_counts
 from coaching.src.domain.entities.llm_topic import LLMTopic

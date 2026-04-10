@@ -9,6 +9,9 @@ Migration Status:
 from typing import cast
 
 import structlog
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+
 from coaching.src.api.auth import get_current_context, get_current_user
 from coaching.src.api.dependencies import get_insights_service
 from coaching.src.api.dependencies.ai_engine import (
@@ -24,8 +27,6 @@ from coaching.src.models.responses import (
     InsightsSummaryResponse,
 )
 from coaching.src.services.insights_service import InsightsService
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse, PaginatedResponse
 

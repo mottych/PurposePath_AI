@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coaching.src.api.dependencies.ai_engine import get_generic_handler
 from coaching.src.api.main import app
 from coaching.src.api.models.analysis import (
@@ -17,7 +19,6 @@ from coaching.src.api.models.analysis import (
     StrategyAnalysisResponse,
 )
 from coaching.src.core.constants import AnalysisType
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

@@ -10,6 +10,8 @@ Design:
 
 import boto3
 import structlog
+from fastapi import Header
+
 from coaching.src.api.handlers.generic_ai_handler import GenericAIHandler
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
@@ -25,7 +27,6 @@ from coaching.src.infrastructure.repositories.dynamodb_llm_usage_repository impo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
-from fastapi import Header
 from shared.services.aws_helpers import get_bedrock_client
 
 logger = structlog.get_logger()

@@ -6,6 +6,7 @@ Enriches analysis requests with business data from the Business API.
 from typing import Any
 
 import structlog
+
 from coaching.src.application.enrichment.base_enrichment_service import BaseEnrichmentService
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 

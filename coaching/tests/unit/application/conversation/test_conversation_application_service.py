@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
 )

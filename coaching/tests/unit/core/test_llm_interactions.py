@@ -1,6 +1,7 @@
 """Unit tests for LLM Interactions Registry."""
 
 import pytest
+
 from coaching.src.core.llm_interactions import (
     INTERACTION_REGISTRY,
     InteractionCategory,

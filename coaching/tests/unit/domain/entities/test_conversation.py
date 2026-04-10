@@ -1,6 +1,7 @@
 """Unit tests for Conversation aggregate root."""
 
 import pytest
+
 from coaching.src.core.constants import (
     CoachingTopic,
     ConversationPhase,

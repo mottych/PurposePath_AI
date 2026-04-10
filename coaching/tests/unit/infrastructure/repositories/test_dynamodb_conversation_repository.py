@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
+
 from coaching.src.core.constants import (
     CoachingTopic,
     ConversationStatus,

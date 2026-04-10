@@ -7,6 +7,7 @@ and proper ID generation.
 from uuid import UUID
 
 import pytest
+
 from coaching.src.core.types import (
     create_analysis_request_id,
     create_conversation_id,

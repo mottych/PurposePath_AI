@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
+
 from coaching.src.domain.entities.llm_config.template_metadata import TemplateMetadata
 from coaching.src.infrastructure.repositories.llm_config.template_metadata_repository import (
     TemplateMetadataRepository,

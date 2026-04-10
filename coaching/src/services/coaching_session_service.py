@@ -19,6 +19,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from pydantic import BaseModel, Field
+
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
@@ -42,7 +44,6 @@ from coaching.src.domain.exceptions import (
     SessionNotFoundError,
 )
 from coaching.src.models.coaching_results import get_coaching_result_model
-from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from coaching.src.domain.entities.llm_topic import LLMTopic

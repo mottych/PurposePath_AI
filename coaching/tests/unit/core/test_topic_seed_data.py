@@ -1,4 +1,5 @@
 import pytest
+
 from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.topic_seed_data import TOPIC_SEED_DATA, TopicSeedData
 

@@ -1,6 +1,7 @@
 """Onboarding service for AI-powered onboarding assistance."""
 
 import structlog
+
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 

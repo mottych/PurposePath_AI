@@ -1,6 +1,7 @@
 """Unit tests for CompletionValidator domain service."""
 
 import pytest
+
 from coaching.src.core.constants import CoachingTopic, ConversationPhase, MessageRole
 from coaching.src.core.types import (
     create_conversation_id,

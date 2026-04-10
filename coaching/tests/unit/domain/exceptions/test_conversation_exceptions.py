@@ -1,6 +1,7 @@
 """Unit tests for conversation domain exceptions."""
 
 import pytest
+
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.domain.exceptions.conversation_exceptions import (
     ConversationCompletionError,

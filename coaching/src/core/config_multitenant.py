@@ -335,6 +335,7 @@ def get_google_vertex_credentials() -> dict[str, Any] | None:
     )
     try:
         import structlog
+
         from shared.services.aws_helpers import get_secretsmanager_client
 
         log = structlog.get_logger()

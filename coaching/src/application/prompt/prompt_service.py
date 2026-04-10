@@ -5,6 +5,7 @@ supporting both end-user consumption and admin UI management.
 """
 
 import structlog
+
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.types import PromptTemplateId
 from coaching.src.domain.entities.prompt_template import PromptTemplate

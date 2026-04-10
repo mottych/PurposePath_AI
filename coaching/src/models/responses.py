@@ -4,8 +4,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from pydantic import BaseModel, ConfigDict, Field
+
+from coaching.src.core.constants import ConversationPhase, ConversationStatus
 
 
 def _default_notification_preferences() -> dict[str, bool]:

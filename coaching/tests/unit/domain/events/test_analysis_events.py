@@ -1,6 +1,7 @@
 """Unit tests for analysis domain events."""
 
 import pytest
+
 from coaching.src.core.constants import AnalysisType
 from coaching.src.domain.events.analysis_events import (
     AnalysisCompleted,

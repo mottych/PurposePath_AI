@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from coaching.src.integration.sql_template.enums import ValidationFailureCode, ValidationMethod
 from coaching.src.integration.sql_template.errors import ValidationError
 from coaching.src.integration.sql_template.models import RequestedEvent, SqlGenerationResult

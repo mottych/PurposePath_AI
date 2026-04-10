@@ -134,6 +134,11 @@ ignore = [
     "N999",   # Invalid module name (triggered by repo path in CI)
 ]
 
+# Align with repo-root pyproject.toml so isort classifies coaching.* as first-party
+# when Ruff discovers this config (e.g. `ruff check` from coaching/).
+[tool.ruff.lint.isort]
+known-first-party = ["coaching", "shared"]
+
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "**/tests/**/*" = ["B011", "ARG001", "ARG002", "S101", "B007", "B017", "SIM118", "RUF043"]

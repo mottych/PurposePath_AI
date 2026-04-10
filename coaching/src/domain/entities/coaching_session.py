@@ -10,6 +10,8 @@ tracking conversation state, messages, and enforcing session lifecycle rules.
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
+
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.core.types import (
     SessionId,
@@ -22,7 +24,6 @@ from coaching.src.domain.exceptions import (
     SessionExpiredError,
     SessionNotActiveError,
 )
-from pydantic import BaseModel, Field, field_validator
 
 
 class CoachingMessage(BaseModel):

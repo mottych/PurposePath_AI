@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.domain.entities.ai_job import (
     AIJob,
     AIJobErrorCode,

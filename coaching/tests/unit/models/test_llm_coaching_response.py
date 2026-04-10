@@ -1,6 +1,7 @@
 """Unit tests for LLM coaching response model and parsing."""
 
 import pytest
+
 from coaching.src.models.llm_coaching_response import (
     AUTO_COMPLETION_CONFIDENCE_THRESHOLD,
     LLMCoachingResponse,

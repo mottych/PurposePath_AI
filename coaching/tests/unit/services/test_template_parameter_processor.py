@@ -13,6 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from coaching.src.core.parameter_registry import ParameterDefinition, ParameterType
 from coaching.src.core.retrieval_method_registry import RetrievalContext
 from coaching.src.services.template_parameter_processor import (

@@ -3,6 +3,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from coaching.src.domain.ports.llm_provider_port import LLMMessage
 from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 

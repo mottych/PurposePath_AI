@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from coaching.src.application.analysis.strategy_suggestion_service import StrategySuggestionService
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.core.constants import AnalysisType

@@ -10,6 +10,7 @@ Key architectural decisions:
 """
 
 import pytest
+
 from coaching.src.core.parameter_registry import (
     PARAMETER_REGISTRY,
     ParameterDefinition,

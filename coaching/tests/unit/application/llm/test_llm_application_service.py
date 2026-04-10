@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from coaching.src.application.llm.llm_service import LLMApplicationService
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMProviderPort, LLMResponse
 

@@ -1,10 +1,11 @@
 """Unit tests for PromptTemplate aggregate root."""
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.core.constants import CoachingTopic, ConversationPhase
 from coaching.src.core.types import create_template_id
 from coaching.src.domain.entities.prompt_template import PromptTemplate
-from pydantic import ValidationError
 
 pytestmark = pytest.mark.unit
 

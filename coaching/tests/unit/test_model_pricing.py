@@ -1,6 +1,7 @@
 """Unit tests for model pricing calculations."""
 
 import pytest
+
 from coaching.src.infrastructure.llm.model_pricing import (
     MODEL_PRICING,
     calculate_cost,

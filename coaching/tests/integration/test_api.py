@@ -3,8 +3,9 @@
 from typing import Any
 
 import pytest
-from coaching.src.api.main import app
 from fastapi.testclient import TestClient
+
+from coaching.src.api.main import app
 
 
 @pytest.fixture

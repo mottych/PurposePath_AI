@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from coaching.src.application.prompt.prompt_service import PromptApplicationService
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.domain.entities.prompt_template import PromptTemplate

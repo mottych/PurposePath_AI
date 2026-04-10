@@ -23,6 +23,7 @@ from typing import Any
 import httpx
 import pytest
 import structlog
+
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
 logger = structlog.get_logger()

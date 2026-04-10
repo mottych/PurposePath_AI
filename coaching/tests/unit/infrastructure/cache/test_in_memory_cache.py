@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+
 from coaching.src.infrastructure.cache.in_memory_cache import InMemoryCache
 
 pytestmark = pytest.mark.unit

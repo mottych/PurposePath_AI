@@ -10,6 +10,7 @@ import time
 from typing import Any
 
 import structlog
+
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus, AIJobType
 from coaching.src.domain.exceptions.session_exceptions import (

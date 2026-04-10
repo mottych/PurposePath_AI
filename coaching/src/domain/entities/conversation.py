@@ -7,6 +7,8 @@ business rules for coaching conversations.
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
+
 from coaching.src.core.constants import (
     PHASE_PROGRESS_WEIGHTS,
     ConversationPhase,
@@ -18,7 +20,6 @@ from coaching.src.domain.value_objects.conversation_context import (
     ConversationContext,
 )
 from coaching.src.domain.value_objects.message import Message
-from pydantic import BaseModel, Field, field_validator
 
 
 class Conversation(BaseModel):

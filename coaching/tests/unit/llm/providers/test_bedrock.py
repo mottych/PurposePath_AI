@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator, Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from coaching.src.llm.providers.base import ProviderConfig, ProviderType
 from coaching.src.llm.providers.bedrock import BedrockProvider
 

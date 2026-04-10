@@ -8,6 +8,7 @@ import json
 from typing import Any
 
 import structlog
+
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
 from coaching.src.core.constants import AnalysisType
 

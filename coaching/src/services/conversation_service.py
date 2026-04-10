@@ -3,6 +3,7 @@
 from typing import Any
 
 import structlog
+
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.exceptions import ConversationNotFoundCompatError, ConversationNotFoundError
 from coaching.src.infrastructure.llm.model_pricing import calculate_cost

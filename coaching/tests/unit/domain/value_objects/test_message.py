@@ -3,9 +3,10 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.core.constants import MessageRole
 from coaching.src.domain.value_objects.message import Message
-from pydantic import ValidationError
 
 
 class TestMessageCreation:

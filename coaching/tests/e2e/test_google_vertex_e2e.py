@@ -3,6 +3,7 @@
 import os
 
 import pytest
+
 from coaching.src.core.config_multitenant import get_google_vertex_credentials, get_settings
 from coaching.src.domain.ports.llm_provider_port import LLMMessage
 from coaching.src.infrastructure.llm.google_vertex_provider import GoogleVertexLLMProvider

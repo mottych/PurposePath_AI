@@ -7,6 +7,7 @@ from typing import Protocol
 
 import httpx
 import structlog
+
 from coaching.src.integration.sql_template.enums import ErrorCode, ErrorStage
 from coaching.src.integration.sql_template.errors import SqlTemplateGenerationError
 from coaching.src.integration.sql_template.models import DiscoveredColumn, RequestedDetail

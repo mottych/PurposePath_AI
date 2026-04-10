@@ -7,6 +7,9 @@ schema discovery (GET /ai/schemas), and topic listing (GET /ai/topics).
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+
 from coaching.src.api.main import app
 from coaching.src.api.models.ai_execute import (
     GenericAIRequest,
@@ -17,8 +20,6 @@ from coaching.src.api.models.ai_execute import (
 )
 from coaching.src.core.constants import TopicCategory, TopicType
 from coaching.src.core.topic_registry import TopicDefinition
-from fastapi import status
-from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.unit
 

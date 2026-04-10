@@ -1,6 +1,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
+
 from coaching.src.application.ai_engine.response_serializer import ResponseSerializer
 from coaching.src.application.ai_engine.unified_ai_engine import (
     ParameterValidationError,
@@ -19,7 +21,6 @@ from coaching.src.domain.value_objects.conversation_context import ConversationC
 from coaching.src.infrastructure.llm.provider_factory import LLMProviderFactory
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from pydantic import BaseModel
 
 
 class SampleResponseModel(BaseModel):

@@ -3,6 +3,9 @@
 from typing import Generic, TypeVar, cast
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies.ai_engine import (
     create_template_processor,
@@ -15,8 +18,6 @@ from coaching.src.api.models.business_data import (
     BusinessMetricsRequest,
     BusinessMetricsResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["business-data"])

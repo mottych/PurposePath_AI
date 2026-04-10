@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from coaching.src.core.constants import CoachingTopic, ConversationStatus
 from coaching.src.core.exceptions import ConversationNotFoundError
 from coaching.src.domain.entities.prompt_template import PromptTemplate

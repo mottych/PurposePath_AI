@@ -13,6 +13,7 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
+
 from coaching.src.models.llm_models import LLMResponse
 from coaching.src.services.llm_service import LLMService
 from coaching.src.services.llm_service_adapter import LLMServiceAdapter
