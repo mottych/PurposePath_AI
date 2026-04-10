@@ -12,6 +12,8 @@ Used by the generic AI execute endpoint to:
 from typing import Any
 
 import structlog
+from pydantic import BaseModel
+
 from coaching.src.api.models.analysis import (
     AlignmentAnalysisResponse,
     AlignmentExplanationResponse,
@@ -49,7 +51,6 @@ from coaching.src.models.responses import (
     InsightResponse,
     InsightsGenerationResponse,
 )
-from pydantic import BaseModel
 from shared.models.schemas import PaginatedResponse
 
 logger = structlog.get_logger()

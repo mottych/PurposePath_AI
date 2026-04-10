@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError as PydanticValidationError
+
 from coaching.src.integration.sql_template.enums import ErrorCode, ErrorStage
 from coaching.src.integration.sql_template.errors import SqlTemplateGenerationError
 from coaching.src.integration.sql_template.idempotency import InMemoryGenerationIdempotencyStore
@@ -17,7 +19,6 @@ from coaching.src.integration.sql_template.service import (
 )
 from coaching.src.integration.sql_template.sql_generator import SqlTemplateGenerator
 from coaching.src.integration.sql_template.sql_validator import SqlTemplateValidator
-from pydantic import ValidationError as PydanticValidationError
 
 
 class StubDiscoveryClient:

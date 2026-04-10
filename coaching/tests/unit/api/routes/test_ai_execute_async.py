@@ -4,9 +4,10 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coaching.src.api.main import app
 from coaching.src.domain.entities.ai_job import AIJob
-from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.unit
 

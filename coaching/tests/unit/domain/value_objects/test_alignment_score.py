@@ -1,12 +1,13 @@
 """Unit tests for alignment score value objects."""
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.domain.value_objects.alignment_score import (
     AlignmentScore,
     ComponentScores,
     FoundationAlignment,
 )
-from pydantic import ValidationError
 
 
 class TestComponentScores:

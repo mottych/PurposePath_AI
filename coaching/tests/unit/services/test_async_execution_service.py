@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus
 from coaching.src.services.async_execution_service import (

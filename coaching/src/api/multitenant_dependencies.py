@@ -5,6 +5,7 @@ from typing import Any
 
 import structlog
 from fastapi import Depends
+
 from shared.services.aws_helpers import get_bedrock_client as get_bedrock_client_helper
 from shared.services.aws_helpers import get_dynamodb_resource
 from shared.services.aws_helpers import get_s3_client as get_s3_client_helper

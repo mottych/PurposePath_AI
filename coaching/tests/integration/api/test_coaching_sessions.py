@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coaching.src.api.main import app
 from coaching.src.api.routes.coaching_sessions import (
     get_coaching_session_repository,
@@ -26,7 +28,6 @@ from coaching.src.services.coaching_session_service import (
     TopicStatus,
     TopicsWithStatusResponse,
 )
-from fastapi.testclient import TestClient
 
 # =============================================================================
 # Fixtures

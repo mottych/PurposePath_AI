@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.prompt_service import PromptService

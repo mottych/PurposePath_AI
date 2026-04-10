@@ -6,6 +6,8 @@ Endpoint Usage Status:
 """
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.llm_interactions import (
@@ -19,7 +21,6 @@ from coaching.src.models.admin_responses import (
     LLMInteractionInfo,
     LLMInteractionsResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

@@ -16,6 +16,8 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+
 from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
@@ -38,7 +40,6 @@ from coaching.src.models.prompt_responses import (
 )
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

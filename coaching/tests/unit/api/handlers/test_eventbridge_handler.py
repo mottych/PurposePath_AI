@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from coaching.src.api.handlers.eventbridge_handler import (
     handle_ai_job_created_event,
     handle_eventbridge_event,

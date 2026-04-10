@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from coaching.src.core.retrieval_method_registry import (
     RetrievalContext,
     get_all_strategies,

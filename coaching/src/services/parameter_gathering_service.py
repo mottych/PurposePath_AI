@@ -7,6 +7,7 @@ by making efficient API calls (one per source) and extracting individual values.
 from typing import Any
 
 import structlog
+
 from coaching.src.core.constants import ParameterSource
 from coaching.src.core.parameter_registry import PARAMETER_REGISTRY
 from coaching.src.core.topic_registry import (

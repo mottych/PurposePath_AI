@@ -10,6 +10,7 @@ from typing import Any
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
+
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.core.types import SessionId, TenantId, UserId
 from coaching.src.domain.entities.coaching_session import (

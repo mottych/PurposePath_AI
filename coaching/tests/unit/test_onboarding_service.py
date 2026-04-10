@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from coaching.src.services.onboarding_service import OnboardingService
 
 

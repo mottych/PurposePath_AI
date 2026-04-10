@@ -7,9 +7,10 @@ a single message within a coaching conversation.
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
+
 from coaching.src.core.constants import MessageRole
 from coaching.src.core.types import MessageId, create_message_id
-from pydantic import BaseModel, Field, field_validator
 
 
 class Message(BaseModel):

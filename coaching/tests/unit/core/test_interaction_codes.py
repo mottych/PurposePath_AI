@@ -1,4 +1,5 @@
 import pytest
+
 from coaching.src.core import interaction_codes
 
 pytestmark = pytest.mark.unit

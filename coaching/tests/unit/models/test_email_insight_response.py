@@ -3,8 +3,9 @@
 from datetime import UTC, datetime
 
 import pytest
-from coaching.src.models.responses import EmailInsightResponse
 from pydantic import ValidationError
+
+from coaching.src.models.responses import EmailInsightResponse
 
 
 @pytest.mark.unit

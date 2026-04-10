@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 import structlog
+
 from coaching.src.core.llm_models import DEFAULT_MODEL_ID
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.services.llm_service_adapter import LLMServiceAdapter

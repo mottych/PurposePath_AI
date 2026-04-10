@@ -8,6 +8,8 @@ Endpoint Usage Status:
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
+
 from coaching.src.api.dependencies import get_model_config_service
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.core.llm_models import LLMProvider, list_models
@@ -18,7 +20,6 @@ from coaching.src.models.admin_responses import (
 )
 from coaching.src.services.audit_log_service import AuditLogService
 from coaching.src.services.model_config_service import ModelConfigService
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

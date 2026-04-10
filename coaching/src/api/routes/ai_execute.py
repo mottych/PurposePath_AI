@@ -15,6 +15,8 @@ import time
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+
 from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
 from coaching.src.api.models.ai_execute import (
     GenericAIRequest,
@@ -42,7 +44,6 @@ from coaching.src.core.topic_registry import (
     get_topic_by_topic_id,
     list_all_topics,
 )
-from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 logger = structlog.get_logger()
 

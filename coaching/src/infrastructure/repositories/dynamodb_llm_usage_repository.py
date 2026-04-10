@@ -9,6 +9,7 @@ from typing import Any
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
+
 from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 
 logger = structlog.get_logger()

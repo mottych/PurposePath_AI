@@ -1,4 +1,5 @@
 import pytest
+
 from coaching.src.core.deprecation import deprecated
 
 pytestmark = pytest.mark.unit

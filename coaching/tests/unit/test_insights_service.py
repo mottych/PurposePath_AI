@@ -2,6 +2,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.repositories.dynamodb_conversation_repository import (
     DynamoDBConversationRepository,

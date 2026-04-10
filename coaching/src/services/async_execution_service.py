@@ -13,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 import structlog
+
 from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
 from coaching.src.application.ai_engine.unified_ai_engine import (
     ParameterValidationError,

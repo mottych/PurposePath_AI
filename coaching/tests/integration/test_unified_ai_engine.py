@@ -9,6 +9,7 @@ This module tests the topic-driven endpoint architecture including:
 """
 
 import pytest
+
 from coaching.src.application.ai_engine.unified_ai_engine import UnifiedAIEngine
 from coaching.src.core.topic_registry import (
     ENDPOINT_REGISTRY,

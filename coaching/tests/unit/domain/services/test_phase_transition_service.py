@@ -1,6 +1,7 @@
 """Unit tests for PhaseTransitionService domain service."""
 
 import pytest
+
 from coaching.src.core.constants import (
     CoachingTopic,
     ConversationPhase,

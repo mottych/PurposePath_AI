@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from coaching.src.workflows.base import WorkflowConfig, WorkflowStatus
 from coaching.src.workflows.conversation_workflow_template import ConversationWorkflowTemplate
 

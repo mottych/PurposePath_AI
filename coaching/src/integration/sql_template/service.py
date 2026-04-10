@@ -9,6 +9,7 @@ from typing import Protocol
 from uuid import uuid4
 
 import structlog
+
 from coaching.src.integration.sql_template.cdata_mcp_client import SchemaDiscoveryClient
 from coaching.src.integration.sql_template.enums import ErrorCode, ErrorStage, GenerationStatus
 from coaching.src.integration.sql_template.errors import SqlTemplateGenerationError, ValidationError

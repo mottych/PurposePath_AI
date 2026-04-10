@@ -4,6 +4,8 @@ Tests for the Pydantic models used to capture final coaching session results.
 """
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.models.coaching_results import (
     COACHING_RESULT_MODELS,
     CoreValue,
@@ -13,7 +15,6 @@ from coaching.src.models.coaching_results import (
     get_coaching_result_model,
     get_result_json_schema,
 )
-from pydantic import ValidationError
 
 
 class TestCoreValue:

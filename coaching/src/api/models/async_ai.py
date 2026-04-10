@@ -7,9 +7,10 @@ execution endpoints (POST /ai/execute-async, GET /ai/jobs/{jobId}).
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
 from coaching.src.domain.entities.ai_job import AIJob
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class AuthContext(BaseModel):

@@ -9,6 +9,7 @@ from typing import Any
 
 import structlog
 from boto3.dynamodb.conditions import Key
+
 from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStatus, AIJobType
 
 logger = structlog.get_logger()

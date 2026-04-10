@@ -18,6 +18,8 @@ This module provides REST API endpoints for various analysis types:
 from typing import cast
 
 import structlog
+from fastapi import APIRouter, Depends, status
+
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies.ai_engine import (
     create_template_processor,
@@ -36,7 +38,6 @@ from coaching.src.api.models.analysis import (
     StrategyAnalysisResponse,
 )
 from coaching.src.api.models.auth import UserContext
-from fastapi import APIRouter, Depends, status
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/analysis", tags=["analysis"])

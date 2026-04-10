@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from coaching.src.llm.providers.manager import ProviderManager
 from coaching.src.services.website_analysis_service import WebsiteAnalysisService
 

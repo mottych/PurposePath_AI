@@ -6,6 +6,7 @@ Tests complete conversation flows using topics instead of hardcoded prompts.
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.domain.entities.conversation import Conversation
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo

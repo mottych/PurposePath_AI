@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from coaching.src.models.conversation import Conversation, Message
 from coaching.src.models.prompt import LLMConfig, PromptTemplate
 from coaching.src.models.responses import (

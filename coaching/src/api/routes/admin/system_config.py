@@ -8,12 +8,13 @@ Endpoint Usage:
 from typing import Any
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.models.auth import UserContext
 from coaching.src.core.llm_models import MODEL_REGISTRY
 from coaching.src.services.parameter_store_service import get_parameter_store_service
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 

@@ -11,6 +11,8 @@ API Gateway's 30-second timeout limit.
 """
 
 import structlog
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
+
 from coaching.src.api.auth import get_current_user, get_tenant_for_async_job_access
 from coaching.src.api.dependencies.async_execution import get_async_execution_service
 from coaching.src.api.models.async_ai import (
@@ -27,7 +29,6 @@ from coaching.src.services.async_execution_service import (
     JobNotFoundError,
     JobValidationError,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
 
 logger = structlog.get_logger()
 

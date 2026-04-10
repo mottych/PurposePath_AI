@@ -27,6 +27,7 @@ from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
 import structlog
+
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
@@ -148,11 +149,12 @@ class GoogleVertexLLMProvider:
             project_id = self.project_id
             credentials = self.credentials
 
+            from google.oauth2 import service_account
+
             from coaching.src.core.config_multitenant import (
                 get_google_vertex_credentials,
                 get_settings,
             )
-            from google.oauth2 import service_account
 
             settings = get_settings()
 

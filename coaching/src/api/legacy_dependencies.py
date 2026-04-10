@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import structlog
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.application.analysis.alignment_service import AlignmentAnalysisService
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
@@ -14,8 +15,11 @@ from coaching.src.application.analysis.measure_service import MeasureAnalysisSer
 from coaching.src.application.analysis.strategy_service import StrategyAnalysisService
 
 if TYPE_CHECKING:
-    from coaching.src.services.model_config_service import ModelConfigService
     from mypy_boto3_dynamodb import DynamoDBServiceResource
+
+    from coaching.src.services.model_config_service import ModelConfigService
+
+from fastapi import Depends
 
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,
@@ -36,7 +40,6 @@ from coaching.src.services.insights_service import InsightsService
 from coaching.src.services.llm_template_service import LLMTemplateService
 from coaching.src.services.prompt_service import PromptService
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from fastapi import Depends
 from shared.models.multitenant import RequestContext
 from shared.services.aws_helpers import (
     get_bedrock_client,

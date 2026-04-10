@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from botocore.exceptions import ClientError
+
 from coaching.src.integration.sql_template.models import GenerationRecord
 
 

@@ -7,6 +7,8 @@ application services, domain entities, and auth-based context.
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coaching.src.api.dependencies import get_conversation_repository, get_conversation_service
 from coaching.src.api.dependencies.ai_engine import get_generic_handler
 from coaching.src.api.main import app
@@ -20,7 +22,6 @@ from coaching.src.models.responses import (
     ConversationSummary,
     MessageResponse,
 )
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

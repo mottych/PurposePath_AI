@@ -23,6 +23,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 import structlog
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from pydantic import BaseModel, Field
+
 from coaching.src.api.dependencies import (
     get_s3_prompt_storage,
     get_topic_repository,
@@ -90,8 +93,6 @@ from coaching.src.models.admin_topics import (
 )
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from pydantic import BaseModel, Field
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

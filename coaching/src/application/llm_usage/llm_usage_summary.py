@@ -1,7 +1,8 @@
 """Aggregate metrics from usage rows (on-the-fly quota-oriented sums)."""
 
-from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 from pydantic import BaseModel, Field
+
+from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 
 
 class LlmUsageSummary(BaseModel):

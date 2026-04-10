@@ -13,9 +13,10 @@ import json
 from typing import Any
 
 import structlog
+from pydantic import ValidationError
+
 from coaching.src.api.models.ai_job_kickoff import ApiAiJobRequestedDetail
 from coaching.src.core.config_multitenant import settings
-from pydantic import ValidationError
 
 logger = structlog.get_logger()
 

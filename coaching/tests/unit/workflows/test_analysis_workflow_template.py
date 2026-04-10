@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from coaching.src.workflows.analysis_workflow_template import AnalysisWorkflowTemplate
 from coaching.src.workflows.base import WorkflowConfig, WorkflowStatus
 

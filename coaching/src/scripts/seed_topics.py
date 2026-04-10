@@ -40,6 +40,7 @@ import sys
 
 import boto3
 import structlog
+
 from coaching.src.core.config_multitenant import settings
 from coaching.src.repositories.topic_repository import TopicRepository
 from coaching.src.services.s3_prompt_storage import S3PromptStorage

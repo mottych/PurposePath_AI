@@ -1,6 +1,7 @@
 """Tests for backend polling status mapping."""
 
 import pytest
+
 from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
 from coaching.src.domain.entities.ai_job import AIJobStatus
 

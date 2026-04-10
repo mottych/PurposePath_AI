@@ -7,6 +7,7 @@ message handling, and lifecycle operations.
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.core.types import TenantId, UserId
 from coaching.src.domain.entities.coaching_session import (

@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from coaching.src.integration.sql_template.enums import (
     AllowedOperator,
     ErrorCode,
@@ -15,7 +17,6 @@ from coaching.src.integration.sql_template.enums import (
     ValidationFailureCode,
     ValidationMethod,
 )
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class StrictModel(BaseModel):

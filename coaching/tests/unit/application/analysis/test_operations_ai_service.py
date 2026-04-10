@@ -9,6 +9,7 @@ Tests all three service methods with mocked LLM service:
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from coaching.src.application.analysis.operations_ai_service import OperationsAIService
 
 

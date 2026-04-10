@@ -21,6 +21,7 @@ from datetime import datetime
 from typing import Any
 
 import structlog
+
 from coaching.src.core.parameter_registry import (
     ParameterDefinition,
     get_parameter_definition,

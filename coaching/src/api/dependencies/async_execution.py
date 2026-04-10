@@ -6,6 +6,7 @@ execution service and its components.
 
 import boto3
 import structlog
+
 from coaching.src.api.dependencies.ai_engine import get_unified_ai_engine
 from coaching.src.core.config_multitenant import settings
 from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository

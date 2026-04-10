@@ -7,6 +7,11 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from coaching.src.api.middleware import (
     ErrorHandlingMiddleware,
     LoggingMiddleware,
@@ -23,10 +28,6 @@ from coaching.src.api.routes import (
     multitenant_conversations,
 )
 from coaching.src.core.config_multitenant import settings
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
-from starlette.middleware.base import BaseHTTPMiddleware
 
 # Configure Python logging for Lambda - Lambda captures stderr
 logging.basicConfig(

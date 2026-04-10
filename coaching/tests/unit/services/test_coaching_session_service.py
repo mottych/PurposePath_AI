@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from coaching.src.core.constants import ConversationStatus, TopicCategory, TopicType
 from coaching.src.core.topic_registry import (
     TemplateType,

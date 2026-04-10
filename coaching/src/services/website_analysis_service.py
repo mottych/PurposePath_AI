@@ -11,6 +11,7 @@ import html2text
 import requests
 import structlog
 from bs4 import BeautifulSoup
+
 from coaching.src.llm.providers.manager import ProviderManager
 
 logger = structlog.get_logger()

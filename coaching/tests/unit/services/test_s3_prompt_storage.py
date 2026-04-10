@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from botocore.exceptions import ClientError
+
 from coaching.src.domain.exceptions.topic_exceptions import S3StorageError
 from coaching.src.services.s3_prompt_storage import S3PromptStorage
 

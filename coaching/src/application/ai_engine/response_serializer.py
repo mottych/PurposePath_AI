@@ -9,8 +9,9 @@ import re
 from typing import Any, TypeVar
 
 import structlog
-from coaching.src.domain.entities.llm_topic import LLMTopic
 from pydantic import BaseModel, ValidationError
+
+from coaching.src.domain.entities.llm_topic import LLMTopic
 
 logger = structlog.get_logger()
 

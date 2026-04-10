@@ -6,6 +6,7 @@ from typing import cast
 
 import boto3
 import structlog
+
 from coaching.src.core.config_multitenant import settings
 from coaching.src.integration.sql_template.cdata_mcp_client import (
     CDataMcpClient,

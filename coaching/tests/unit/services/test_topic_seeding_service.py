@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.services.topic_seeding_service import (

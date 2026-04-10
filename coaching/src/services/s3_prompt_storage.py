@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import boto3
 import structlog
 from botocore.exceptions import ClientError
+
 from coaching.src.domain.exceptions.topic_exceptions import S3StorageError
 
 if TYPE_CHECKING:

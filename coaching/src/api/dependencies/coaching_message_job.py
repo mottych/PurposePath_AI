@@ -6,6 +6,7 @@ job service used in async message processing.
 
 import boto3
 import structlog
+
 from coaching.src.api.dependencies.ai_engine import (
     get_llm_usage_recording_service,
     get_provider_factory,

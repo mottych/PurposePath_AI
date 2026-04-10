@@ -31,6 +31,7 @@ if "boto3" not in sys.modules:
     sys.modules["boto3.dynamodb.conditions"] = conditions_module
 
 import pytest
+
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.exceptions.topic_exceptions import TopicNotFoundError
 from coaching.src.models.prompt import PromptTemplate

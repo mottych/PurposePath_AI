@@ -11,9 +11,10 @@ import warnings
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
+
 from coaching.src.core.constants import CoachingTopic
 from coaching.src.core.types import TemplateId
-from pydantic import BaseModel, Field, field_validator
 
 
 class PromptTemplate(BaseModel):

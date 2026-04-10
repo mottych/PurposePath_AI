@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
+
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
 

@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from coaching.src.domain.ports.llm_provider_port import LLMMessage
 from coaching.src.infrastructure.llm.google_vertex_provider import GoogleVertexLLMProvider
 

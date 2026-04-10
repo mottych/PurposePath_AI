@@ -3,8 +3,9 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from coaching.src.api.models.async_ai import AsyncAIRequest
 from pydantic import ValidationError
+
+from coaching.src.api.models.async_ai import AsyncAIRequest
 
 pytestmark = pytest.mark.unit
 

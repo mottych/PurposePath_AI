@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.services.audit_log_service import (
     AuditAction,
     AuditLogEntry,

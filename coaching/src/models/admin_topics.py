@@ -3,8 +3,9 @@
 from datetime import datetime
 from typing import Literal
 
-from coaching.src.core.constants import PromptType, TierLevel
 from pydantic import BaseModel, Field, field_validator
+
+from coaching.src.core.constants import PromptType, TierLevel
 
 # Conversation Config (for coaching topics only)
 

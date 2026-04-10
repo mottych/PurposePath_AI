@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.application.llm_usage.billing_periods import months_in_range
 
 pytestmark = pytest.mark.unit

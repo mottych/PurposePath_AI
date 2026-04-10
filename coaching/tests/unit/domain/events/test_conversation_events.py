@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+
 from coaching.src.core.constants import CoachingTopic, ConversationPhase, MessageRole
 from coaching.src.domain.events.conversation_events import (
     ConversationCompleted,

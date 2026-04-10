@@ -5,6 +5,8 @@ Reference: Issue #182
 """
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.api.models.strategic_planning import (
     ActionSuggestion,
     ActionSuggestionsData,
@@ -19,7 +21,6 @@ from coaching.src.api.models.strategic_planning import (
     StrategySuggestionsResponse,
     SuggestedTarget,
 )
-from pydantic import ValidationError
 
 
 @pytest.mark.unit

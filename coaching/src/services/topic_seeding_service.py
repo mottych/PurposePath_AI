@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
+
 from coaching.src.core.topic_registry import list_all_topics
 from coaching.src.core.topic_seed_data import TopicSeedData, get_seed_data_for_topic
 from coaching.src.domain.entities.llm_topic import LLMTopic, PromptInfo

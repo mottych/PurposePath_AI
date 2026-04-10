@@ -21,6 +21,8 @@ Migration Status:
 from typing import cast
 
 import structlog
+from fastapi import APIRouter, Depends, status
+
 from coaching.src.api.auth import get_current_user
 from coaching.src.api.dependencies.ai_engine import (
     create_template_processor,
@@ -45,7 +47,6 @@ from coaching.src.api.models.strategic_planning import (
     StrategySuggestionsRequest,
     StrategySuggestionsResponse,
 )
-from fastapi import APIRouter, Depends, status
 from shared.models.schemas import ApiResponse
 
 logger = structlog.get_logger()

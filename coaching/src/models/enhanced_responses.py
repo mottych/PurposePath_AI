@@ -3,8 +3,9 @@
 from datetime import datetime
 from typing import Any
 
-from coaching.src.core.constants import ConversationStatus
 from pydantic import BaseModel, Field
+
+from coaching.src.core.constants import ConversationStatus
 from shared.models.base import BaseResponseModel
 
 

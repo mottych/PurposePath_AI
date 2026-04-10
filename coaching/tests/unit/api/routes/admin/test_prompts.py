@@ -2,13 +2,14 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import FastAPI, status
+from fastapi.testclient import TestClient
+
 from coaching.src.api.dependencies import get_s3_prompt_storage, get_topic_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
 from coaching.src.api.routes.admin.prompts import router
 from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.domain.exceptions.topic_exceptions import DuplicateTopicError
-from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
 from shared.models.multitenant import RequestContext, UserRole
 
 # Setup app

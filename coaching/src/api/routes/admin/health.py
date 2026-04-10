@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from typing import Literal
 
 import structlog
+from fastapi import APIRouter, Depends
+
 from coaching.src.api.dependencies import (
     get_topic_repository,
 )
@@ -24,7 +26,6 @@ from coaching.src.models.admin_topics import (
     ServiceStatuses,
 )
 from coaching.src.repositories.topic_repository import TopicRepository
-from fastapi import APIRouter, Depends
 from shared.models.schemas import ApiResponse
 from shared.services.aws_helpers import get_bedrock_client, get_s3_client
 

@@ -1,11 +1,12 @@
 """Unit tests for ConversationContext value object."""
 
 import pytest
+from pydantic import ValidationError
+
 from coaching.src.core.constants import ConversationPhase
 from coaching.src.domain.value_objects.conversation_context import (
     ConversationContext,
 )
-from pydantic import ValidationError
 
 pytestmark = pytest.mark.unit
 

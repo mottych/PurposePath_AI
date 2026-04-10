@@ -5,12 +5,13 @@ Tests for coaching business-data endpoint with ApiResponse envelope.
 from unittest.mock import Mock, patch
 
 import pytest
+from fastapi.testclient import TestClient
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.main import app
 from coaching.src.api.multitenant_dependencies import (
     get_multitenant_conversation_service,
 )
-from fastapi.testclient import TestClient
 from shared.models.multitenant import (
     Permission,
     RequestContext,

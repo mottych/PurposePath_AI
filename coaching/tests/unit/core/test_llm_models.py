@@ -1,6 +1,7 @@
 """Unit tests for LLM Models Registry."""
 
 import pytest
+
 from coaching.src.core.llm_models import (
     MODEL_REGISTRY,
     LLMProvider,

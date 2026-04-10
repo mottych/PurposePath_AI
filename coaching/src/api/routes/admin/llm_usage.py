@@ -3,6 +3,9 @@
 from datetime import UTC, datetime
 
 import structlog
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.api.dependencies.ai_engine import get_llm_usage_repository
 from coaching.src.api.middleware.admin_auth import require_admin_access
@@ -15,8 +18,6 @@ from coaching.src.domain.entities.llm_usage_record import LlmUsageRecord
 from coaching.src.infrastructure.repositories.dynamodb_llm_usage_repository import (
     DynamoDBLlmUsageRepository,
 )
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 

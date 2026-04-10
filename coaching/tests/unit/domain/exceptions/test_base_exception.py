@@ -1,6 +1,7 @@
 """Unit tests for base DomainException."""
 
 import pytest
+
 from coaching.src.domain.exceptions.base_exception import DomainException
 
 

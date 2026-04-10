@@ -34,6 +34,7 @@ import argparse
 import sys
 
 import structlog
+
 from coaching.src.services.parameter_store_service import ParameterStoreService
 
 logger = structlog.get_logger()

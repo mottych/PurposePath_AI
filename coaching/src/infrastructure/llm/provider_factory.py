@@ -28,6 +28,7 @@ Related Issues:
 from typing import Any
 
 import structlog
+
 from coaching.src.core.config_multitenant import (
     Settings,
     get_google_vertex_credentials,

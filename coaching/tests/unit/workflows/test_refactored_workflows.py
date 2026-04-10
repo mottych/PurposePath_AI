@@ -7,6 +7,7 @@ analysis_workflow.py properly integrate with domain entities and services.
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+
 from coaching.src.application.analysis.base_analysis_service import BaseAnalysisService
 from coaching.src.application.conversation.conversation_service import (
     ConversationApplicationService,

@@ -3,9 +3,10 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.domain.value_objects.message import Message
-from pydantic import BaseModel, Field
 
 
 class ConversationContext(BaseModel):

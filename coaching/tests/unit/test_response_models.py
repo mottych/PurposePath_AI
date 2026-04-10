@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import pytest
+
 from coaching.src.core.constants import ConversationPhase, ConversationStatus
 from coaching.src.models.responses import (
     ConversationListResponse,

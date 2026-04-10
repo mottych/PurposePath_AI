@@ -10,11 +10,12 @@ Status: Safe to remove.
 """
 
 import structlog
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
 from coaching.src.api.auth import get_current_context
 from coaching.src.models.requests import CoachingRequest
 from coaching.src.models.responses import CoachingResponse
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from shared.models.multitenant import RequestContext
 from shared.models.schemas import ApiResponse
 
