@@ -48,7 +48,8 @@ async def get_event_publisher() -> EventBridgePublisher:
     if _event_publisher is None:
         _event_publisher = EventBridgePublisher(
             region_name=settings.aws_region,
-            event_bus_name="default",  # Using default EventBridge bus
+            event_bus_name="default",
+            domain_event_bus_name=settings.resolved_domain_event_bus_name,
             source="purposepath.ai",
             stage=settings.stage,
             enabled=settings.ai_async_jobs_enabled,
@@ -57,6 +58,7 @@ async def get_event_publisher() -> EventBridgePublisher:
             "EventBridgePublisher initialized",
             source="purposepath.ai",
             stage=settings.stage,
+            domain_event_bus=settings.resolved_domain_event_bus_name,
         )
 
     return _event_publisher

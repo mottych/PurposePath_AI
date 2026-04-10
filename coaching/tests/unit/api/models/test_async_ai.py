@@ -25,6 +25,7 @@ class TestAsyncAIRequest:
         """V2 backend-triggered payload validates with required fields."""
         request = AsyncAIRequest(
             eventId="evt-1",
+            requestId="req-1",
             occurredAtUtc=datetime.now(UTC),
             sourceService="PurposePath_Api",
             schemaVersion="2.0",
@@ -71,6 +72,7 @@ class TestAsyncAIRequest:
         with pytest.raises(ValidationError):
             AsyncAIRequest(
                 eventId="evt-1",
+                requestId="req-1",
                 occurredAtUtc=datetime.now(UTC),
                 sourceService="PurposePath_Api",
                 schemaVersion="2.0",
@@ -97,6 +99,7 @@ class TestAsyncAIRequest:
         with pytest.raises(ValidationError, match="expired"):
             AsyncAIRequest(
                 eventId="evt-1",
+                requestId="req-1",
                 occurredAtUtc=datetime.now(UTC),
                 sourceService="PurposePath_Api",
                 schemaVersion="2.0",
@@ -124,6 +127,7 @@ class TestAsyncAIRequest:
         with pytest.raises(ValidationError, match="service_enrichment"):
             AsyncAIRequest(
                 eventId="evt-1",
+                requestId="req-1",
                 occurredAtUtc=datetime.now(UTC),
                 sourceService="PurposePath_Api",
                 schemaVersion="2.0",

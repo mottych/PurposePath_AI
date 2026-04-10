@@ -427,6 +427,7 @@ class TestAsyncAIExecutionService:
 
         detail = ApiAiJobRequestedDetail(
             event_id="evt-1",
+            request_id="req-kickoff-1",
             occurred_at_utc=datetime.now(UTC),
             source_service="PurposePath.NotificationProcessor.Lambda",
             schema_version="2.0",
@@ -460,6 +461,9 @@ class TestAsyncAIExecutionService:
         assert written.correlation_id == "corr-1"
         assert written.idempotency_key == "idem-1"
         assert written.event_id == "evt-1"
+        assert written.request_id == "req-kickoff-1"
         assert written.jwt_token == "svc"
         mock_eventbridge.publish_ai_job_created.assert_called_once()
-        assert mock_eventbridge.publish_ai_job_created.call_args.kwargs["job_id"] == "backend-job-id-1"
+        assert (
+            mock_eventbridge.publish_ai_job_created.call_args.kwargs["job_id"] == "backend-job-id-1"
+        )

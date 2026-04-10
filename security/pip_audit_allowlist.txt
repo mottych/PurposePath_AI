@@ -21,3 +21,5 @@ GHSA-3936-cmfr-pm3m
 PYSEC-2024-48
 # langchain-openai SSRF in token counting (not in hot path for this service)
 GHSA-2g6r-c272-w58r
+# langchain-core — f-string / DictPromptTemplate validation (GHSA-926x); bump 0.3.84+ when ecosystem allows
+GHSA-926x-3r5x-gfhw

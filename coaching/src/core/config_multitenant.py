@@ -173,6 +173,19 @@ class Settings(BaseSettings):
     ai_kickoff_detail_type: str = Field(
         default="ai.job.requested", validation_alias="AI_KICKOFF_DETAIL_TYPE"
     )
+    # Shared domain bus for email-insight kickoff + terminal events (spec v2.4 §3.3.1 / §3.7)
+    domain_event_bus_name: str = Field(
+        default="",
+        validation_alias="DOMAIN_EVENT_BUS_NAME",
+        description="Override; default purposepath-domain-events-{STAGE}",
+    )
+
+    @property
+    def resolved_domain_event_bus_name(self) -> str:
+        """EventBridge bus for Api kickoff consumption and AI terminal events."""
+        if self.domain_event_bus_name.strip():
+            return self.domain_event_bus_name.strip()
+        return f"purposepath-domain-events-{self.stage}"
 
     # LLM Configuration
     llm_temperature: float = 0.7

@@ -7,6 +7,7 @@ coordinating between the API, domain models, repository, and event publishing.
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
@@ -124,6 +125,10 @@ class AsyncAIExecutionService:
         correlation_id: str | None,
         idempotency_key: str | None,
         event_id: str | None,
+        request_id: str | None = None,
+        topic_category: str | None = None,
+        event_signal: str | None = None,
+        kickoff_transport: str | None = None,
     ) -> AIJob:
         """Validate topic/params and build a pending AIJob (no persistence)."""
         endpoint = get_topic_by_topic_id(topic_id)
@@ -159,6 +164,10 @@ class AsyncAIExecutionService:
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
             event_id=event_id,
+            request_id=request_id,
+            topic_category=topic_category,
+            event_signal=event_signal,
+            kickoff_transport=kickoff_transport,
             status=AIJobStatus.PENDING,
             estimated_duration_ms=estimated_duration,
         )
@@ -177,6 +186,87 @@ class AsyncAIExecutionService:
             correlation_id=job.correlation_id,
             idempotency_key=job.idempotency_key,
             event_id=job.event_id,
+        )
+
+    @staticmethod
+    def _should_publish_email_insight_domain_terminal(job: AIJob) -> bool:
+        """v2.4 domain-bus terminals only for Api EventBridge kickoff (issue #305)."""
+        return (
+            job.request_id is not None
+            and job.topic_category == TopicCategory.EMAIL_INSIGHT.value
+            and job.event_id is not None
+            and job.kickoff_transport == "eventbridge"
+        )
+
+    def _publish_async_job_completed_terminal(
+        self,
+        job: AIJob,
+        *,
+        result_dict: dict[str, Any],
+        processing_time_ms: int,
+    ) -> None:
+        """Publish completion: v2.4 terminal to domain bus or legacy WebSocket-oriented event."""
+        if self._should_publish_email_insight_domain_terminal(job):
+            self._publisher.publish_email_insight_terminal_v24(
+                terminal_status="completed",
+                terminal_event_id=str(uuid4()),
+                occurred_at_utc=datetime.now(UTC),
+                job_id=job.job_id,
+                request_id=job.request_id or "",
+                kickoff_event_id=job.event_id or "",
+                tenant_id=job.tenant_id,
+                user_id=job.user_id,
+                correlation_id=job.correlation_id or "",
+                idempotency_key=job.idempotency_key or "",
+                topic_category=job.topic_category or TopicCategory.EMAIL_INSIGHT.value,
+                topic_id=job.topic_id,
+                event_signal=job.event_signal or job.topic_id,
+                data={"result": result_dict},
+            )
+            return
+        self._publisher.publish_ai_job_completed(
+            job_id=job.job_id,
+            tenant_id=job.tenant_id,
+            user_id=job.user_id,
+            topic_id=job.topic_id,
+            result=result_dict,
+            processing_time_ms=processing_time_ms,
+        )
+
+    def _publish_async_job_failed_terminal(
+        self,
+        job: AIJob,
+        *,
+        error: str,
+        error_code: AIJobErrorCode,
+        _processing_time_ms: int,
+    ) -> None:
+        """Publish failure: v2.4 terminal or legacy failed event."""
+        if self._should_publish_email_insight_domain_terminal(job):
+            self._publisher.publish_email_insight_terminal_v24(
+                terminal_status="failed",
+                terminal_event_id=str(uuid4()),
+                occurred_at_utc=datetime.now(UTC),
+                job_id=job.job_id,
+                request_id=job.request_id or "",
+                kickoff_event_id=job.event_id or "",
+                tenant_id=job.tenant_id,
+                user_id=job.user_id,
+                correlation_id=job.correlation_id or "",
+                idempotency_key=job.idempotency_key or "",
+                topic_category=job.topic_category or TopicCategory.EMAIL_INSIGHT.value,
+                topic_id=job.topic_id,
+                event_signal=job.event_signal or job.topic_id,
+                data={"errorCode": error_code.value, "error": error},
+            )
+            return
+        self._publisher.publish_ai_job_failed(
+            job_id=job.job_id,
+            tenant_id=job.tenant_id,
+            user_id=job.user_id,
+            topic_id=job.topic_id,
+            error=error,
+            error_code=error_code.value,
         )
 
     async def ingest_api_job_requested_event(self, detail: ApiAiJobRequestedDetail) -> None:
@@ -200,6 +290,10 @@ class AsyncAIExecutionService:
             correlation_id=detail.correlation_id,
             idempotency_key=detail.idempotency_key,
             event_id=detail.event_id,
+            request_id=detail.request_id,
+            topic_category=detail.topic_category,
+            event_signal=detail.event_signal,
+            kickoff_transport="eventbridge",
         )
 
         inserted = await self._repository.put_if_absent(job)
@@ -258,6 +352,10 @@ class AsyncAIExecutionService:
         correlation_id: str | None = None,
         idempotency_key: str | None = None,
         event_id: str | None = None,
+        request_id: str | None = None,
+        topic_category: str | None = None,
+        event_signal: str | None = None,
+        kickoff_transport: str | None = None,
     ) -> AIJob:
         """Create and validate a new async AI job.
 
@@ -290,6 +388,10 @@ class AsyncAIExecutionService:
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
             event_id=event_id,
+            request_id=request_id,
+            topic_category=topic_category,
+            event_signal=event_signal,
+            kickoff_transport=kickoff_transport,
         )
 
         await self._repository.save(job)
@@ -515,20 +617,19 @@ class AsyncAIExecutionService:
                 processing_time_ms=processing_time_ms,
             )
 
-            # Publish completed event
+            # Publish completed event (v2.4 domain terminal or legacy)
             try:
-                self._publisher.publish_ai_job_completed(
-                    job_id=job.job_id,
-                    tenant_id=job.tenant_id,
-                    user_id=job.user_id,
-                    topic_id=job.topic_id,
-                    result=result_dict,
+                self._publish_async_job_completed_terminal(
+                    job,
+                    result_dict=result_dict,
                     processing_time_ms=processing_time_ms,
                 )
             except EventBridgePublishError as e:
                 logger.warning(
                     "async_job.completed_event_failed",
                     job_id=job.job_id,
+                    request_id=job.request_id,
+                    idempotency_key=job.idempotency_key,
                     error=str(e),
                 )
 
@@ -619,20 +720,20 @@ class AsyncAIExecutionService:
             processing_time_ms=processing_time_ms,
         )
 
-        # Publish failed event
+        # Publish failed event (v2.4 domain terminal or legacy)
         try:
-            self._publisher.publish_ai_job_failed(
-                job_id=job.job_id,
-                tenant_id=job.tenant_id,
-                user_id=job.user_id,
-                topic_id=job.topic_id,
+            self._publish_async_job_failed_terminal(
+                job,
                 error=error,
-                error_code=error_code.value,
+                error_code=error_code,
+                _processing_time_ms=processing_time_ms,
             )
         except EventBridgePublishError as e:
             logger.warning(
                 "async_job.failed_event_failed",
                 job_id=job.job_id,
+                request_id=job.request_id,
+                idempotency_key=job.idempotency_key,
                 error=str(e),
             )
 

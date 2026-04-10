@@ -222,7 +222,8 @@ async def get_job_repository() -> DynamoDBJobRepository:
 async def get_event_publisher() -> EventBridgePublisher:
     """Get EventBridge publisher instance."""
     return EventBridgePublisher(
-        region_name="us-east-1",
+        region_name=settings.aws_region,
+        domain_event_bus_name=settings.resolved_domain_event_bus_name,
         stage=settings.stage,
         enabled=settings.ai_async_jobs_enabled,
     )

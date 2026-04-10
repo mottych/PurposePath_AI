@@ -191,6 +191,7 @@ class TestHandleEventBridgeEvent:
             "detail-type": "ai.job.requested",
             "detail": {
                 "eventId": "e1",
+                "requestId": "req-1",
                 "occurredAtUtc": now,
                 "sourceService": "PurposePath.NotificationProcessor.Lambda",
                 "schemaVersion": "2.0",

@@ -70,6 +70,7 @@ class TestAsyncExecuteRoute:
                 "/api/v1/ai/execute-async",
                 json={
                     "eventId": "evt-1",
+                    "requestId": "req-1",
                     "occurredAtUtc": datetime.now(UTC).isoformat(),
                     "sourceService": "PurposePath_Api",
                     "schemaVersion": "2.0",
@@ -103,6 +104,8 @@ class TestAsyncExecuteRoute:
             assert call_kwargs["correlation_id"] == "corr-1"
             assert call_kwargs["idempotency_key"] == "idem-1"
             assert call_kwargs["event_id"] == "evt-1"
+            assert call_kwargs["request_id"] == "req-1"
+            assert call_kwargs["kickoff_transport"] == "api"
         finally:
             app.dependency_overrides.clear()
 
@@ -133,6 +136,7 @@ class TestAsyncExecuteRoute:
                 "/api/v1/ai/execute-async",
                 json={
                     "eventId": "evt-1",
+                    "requestId": "req-1",
                     "occurredAtUtc": datetime.now(UTC).isoformat(),
                     "sourceService": "PurposePath_Api",
                     "schemaVersion": "2.0",
