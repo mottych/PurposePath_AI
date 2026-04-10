@@ -57,3 +57,41 @@ def test_unified_engine_adapt_routes_by_provider() -> None:
 
 def test_adapt_none_returns_none() -> None:
     assert UnifiedAIEngine._adapt_structured_schema_for_llm_provider(None, "openai") is None
+
+
+def _first_property_key_of_object_schema(obj: dict) -> str | None:
+    props = obj.get("properties")
+    if not isinstance(props, dict) or not props:
+        return None
+    return next(iter(props.keys()))
+
+
+def test_openai_blocks_anyof_branches_have_distinct_first_keys() -> None:
+    """OpenAI rejects anyOf when each object branch shares the same first key."""
+    full = EmailInsightResponse.model_json_schema(by_alias=True)
+    prepared = _prepare_like_engine(full, "EmailInsightResponse")
+    adapted = adapt_json_schema_for_openai_structured_output(prepared)
+
+    blocks = adapted.get("properties", {}).get("blocks")
+    assert isinstance(blocks, dict)
+    items = blocks.get("items")
+    assert isinstance(items, dict)
+    variants = items.get("anyOf") or items.get("oneOf")
+    assert isinstance(variants, list) and len(variants) == 3
+
+    first_keys: list[str] = []
+    for branch in variants:
+        assert isinstance(branch, dict)
+        if "$ref" in branch:
+            ref = branch["$ref"]
+            assert ref.startswith("#/$defs/")
+            def_name = ref.removeprefix("#/$defs/")
+            defn = adapted.get("$defs", {}).get(def_name)
+            assert isinstance(defn, dict)
+            key = _first_property_key_of_object_schema(defn)
+        else:
+            key = _first_property_key_of_object_schema(branch)
+        assert key is not None
+        first_keys.append(key)
+
+    assert len(set(first_keys)) == len(first_keys), f"duplicate first keys: {first_keys}"

@@ -263,8 +263,12 @@ class EmailInsightParagraphBlock(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["paragraph"] = "paragraph"
+    # Field order matters for OpenAI strict structured outputs: each branch of the
+    # blocks union is sent as anyOf; the API rejects anyOf object variants whose
+    # first property key is identical ("Objects provided via 'anyOf' must not
+    # share identical first keys"). Discriminator stays ``type`` but is not first.
     text: str = Field(min_length=1, max_length=600, description="Paragraph content")
+    type: Literal["paragraph"] = "paragraph"
 
 
 class EmailInsightListBlock(BaseModel):
@@ -272,12 +276,12 @@ class EmailInsightListBlock(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["list"] = "list"
     items: list[str] = Field(
         min_length=1,
         max_length=6,
         description="List items for actionable guidance",
     )
+    type: Literal["list"] = "list"
 
 
 class EmailInsightCtaBlock(BaseModel):
@@ -285,7 +289,6 @@ class EmailInsightCtaBlock(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["cta"] = "cta"
     label: str = Field(min_length=1, max_length=80, description="CTA label text")
     action: str = Field(min_length=1, max_length=120, description="CTA action identifier")
     url: str | None = Field(
@@ -293,6 +296,7 @@ class EmailInsightCtaBlock(BaseModel):
         max_length=500,
         description="Optional URI link; https-only enforcement is handled by backend runtime policy",
     )
+    type: Literal["cta"] = "cta"
 
 
 EmailInsightBlock = Annotated[
