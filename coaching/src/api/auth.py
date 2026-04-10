@@ -356,12 +356,12 @@ async def get_tenant_for_async_job_access(
     if token == "test_token":
         return "tenant_test"
 
-    secret = _get_jwt_secret()
+    jwt_signing_key = _get_jwt_secret()
     try:
         try:
             payload = jwt.decode(
                 token,
-                secret,
+                jwt_signing_key,
                 algorithms=[settings.jwt_algorithm],
                 options={
                     "verify_aud": settings.stage != "dev",
