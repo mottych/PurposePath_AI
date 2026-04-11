@@ -340,7 +340,7 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 
 ### POST /subscriptions/promo/validate (public)
 - Body: `{ "promoCode": "string", "tierId": "uuid", "frequency": "monthly|yearly" }`.
-- Response: `{ "success": true, "data": { "isValid": true|false, "discount": { "type": "percentage|fixed", "value": 20, "duration": "once", "durationInMonths": 6 }, "newPrice": null, "errorMessage": "string|null" } }`.
+- Response: `{ "success": true, "data": { "isValid": true|false, "discount": { "adjustmentType": "percent|amount|override", "percentOff": 20, "amountOff": { "amount": 10.00, "currency": "USD" }, "overridePrice": { "amount": 49.99, "currency": "USD" }, "duration": "once", "durationInMonths": 6 }, "newPrice": null, "errorMessage": "string|null" } }`.
 
 ### POST /subscriptions/create-payment
 - Body: `{ "subscriptionId": "uuid", "paymentProvider": "stripe|paypal|square", "paymentMethodId": "string", "tier": "Starter|Professional|Enterprise", "frequency": "monthly|yearly", "promoCode": "string|null", "metadata": { "key": "value" } }`.
