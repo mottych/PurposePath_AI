@@ -369,16 +369,23 @@ type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'pastD
 
 ### Promo Codes
 
+See `POST /subscriptions/promo/validate` in `account-api.md` for the wire contract.
+
 ```typescript
 type PromoAdjustmentType = 'percent' | 'amount' | 'override';
 type PromoDiscountDuration = 'once' | 'repeating' | 'forever';
 
+interface PromoMoney {
+  amount: number;
+  currency: string;
+}
+
 interface PromoDiscount {
   adjustmentType: PromoAdjustmentType;
   percentOff?: number; // Required when adjustmentType = 'percent' (0-100)
-  amountOff?: { amount: number; currency: string }; // Required when adjustmentType = 'amount'
-  overridePrice?: { amount: number; currency: string }; // Required when adjustmentType = 'override'
-  duration: PromoDiscountDuration;
+  amountOff?: PromoMoney; // Required when adjustmentType = 'amount'
+  overridePrice?: PromoMoney; // Required when adjustmentType = 'override'
+  duration?: PromoDiscountDuration;
   durationInMonths?: number; // For 'repeating' duration
 }
 ```
