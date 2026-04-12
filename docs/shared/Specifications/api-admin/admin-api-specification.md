@@ -1,6 +1,6 @@
 # Admin API Specification
 
-**Version:** 2.7  
+**Version:** 2.8  
 **Status:** Complete  
 **Last Updated:** April 12, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 12, 2026 | 2.8 | Clarified billing discount/price-tier targeting semantics (`targetType`/`targetId`, optional category `scheduleId`, specific-over-category precedence, coaching category temporary no-op) via billing admin specification alignment. | System |
 | Apr 12, 2026 | 2.7 | Removed legacy Admin `/discount-codes` surface; canonical admin discount operations are billing-only under `/billing/discount-codes` | System |
 | Apr 3, 2026 | 2.6 | Added Notification Maintenance endpoint (`GET /notifications/{notificationId}`) for single notification retrieval by ID | System |
 | Apr 3, 2026 | 2.5 | Added Notification Maintenance endpoints (`PATCH /notifications/{notificationId}/status`, `PATCH /notifications/{notificationId}/overrides`) and documented override/status update contracts | System |
@@ -3175,6 +3176,15 @@ Canonical pricing shape:
 
 For normative request/response schemas, validations, and examples, use:
 - `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
+
+Targeting semantics note:
+- Billing pricing/discount targeting uses `targetType` with these meanings:
+  - `planSchedule` => `targetId` is plan ID (specific)
+  - `extensionPlanSchedule` => `targetId` is extension definition ID (specific)
+  - `category` => `targetId` is `subscription | rider | coaching` (broad category)
+- `category` `scheduleId` is optional; when supplied, applicability is limited to that schedule.
+- Specific targets win over category targets.
+- `category = coaching` is currently a runtime no-op until coaching billing offerings are introduced.
 
 Contract note:
 - `discountType` and `discountValue` are no longer valid admin discount-code fields.

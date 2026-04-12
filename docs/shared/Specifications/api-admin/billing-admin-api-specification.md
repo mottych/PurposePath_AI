@@ -1,6 +1,6 @@
 # Billing Admin API Specification
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Status:** Ready for implementation  
 **Last Updated:** April 12, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1/billing`
@@ -9,6 +9,7 @@
 
 | Date | Version | Changes |
 |------|---------|---------|
+| Apr 12, 2026 | 1.2 | Clarified billing price-tier/discount applicability targeting semantics: `targetType`/`targetId` matrix, optional `scheduleId` for category targets, specific-over-category precedence, and temporary `coaching` no-op behavior. |
 | Apr 12, 2026 | 1.1 | Confirmed clean-cut billing implementation: legacy admin `/discount-codes` controller path removed; canonical discount operations remain under `/billing/discount-codes`. |
 | Mar 23, 2026 | 1.0 | Initial billing admin API specification. |
 
@@ -500,6 +501,24 @@ Each `lines[]` item contains:
 - `amountOff`
 - `overridePrice`
 
+**Targeting semantics:**
+
+- `targetType = planSchedule`
+  - `targetId`: plan ID
+  - `scheduleId`: required
+- `targetType = extensionPlanSchedule`
+  - `targetId`: extension definition ID
+  - `scheduleId`: required
+- `targetType = category`
+  - `targetId`: `subscription | rider | coaching`
+  - `scheduleId`: optional
+  - when `scheduleId` is provided, the line applies only to that schedule
+
+**Resolution behavior:**
+
+- specific targets win over category targets (`planSchedule`/`extensionPlanSchedule` before `category`)
+- `category = coaching` is currently a no-op in runtime pricing/discount resolution (reserved for future coaching billing support)
+
 ### PATCH /price-tiers/{priceTierId}
 
 Updatable fields:
@@ -573,6 +592,8 @@ Discount code payload supports:
 - `repeatability.maxRedemptionsPerTenant`
 - `repeatability.canCombineWithOtherDiscounts`
 - `repeatability.blocksOtherDiscountsWhileActive`
+
+`applicability[]` follows the same targeting semantics and precedence rules defined under price tier `lines[]`.
 
 ### PATCH /discount-codes/{discountCodeId}
 
