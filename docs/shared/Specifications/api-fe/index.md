@@ -60,10 +60,10 @@ This specification is split into multiple documents for efficient AI assistant c
    - Coaching Conversations
    - Strategic Planning AI
 
-9. **[Traction Service](./traction-service/README.md)** ⭐ MODULAR STRUCTURE (v7)
+9. **[Traction Service](./traction-service/goals-api.md)** ⭐ MODULAR STRUCTURE (v7)
    - **Controller-based specifications** for easier maintenance
    - Goals, Measures, Measure Links, Measure Data, Actions, Issues, People, Dashboard
-   - [View Traction Service Index →](./traction-service/README.md)
+   - Start with goals spec, then use sibling docs in `traction-service/`
 
 10. **[Dashboard Service](./dashboard-service.md)** ⭐ NEW (v1.0)
    - User Dashboard Configuration CRUD
@@ -304,7 +304,7 @@ REACT_APP_FE_BASE_HEADER_LOGIN=false
 
 - [Account Service Specs →](./account-service.md)
 - [AI/Coaching Service Specs →](../ai-user/backend-integration-unified-ai.md)
-- [Traction Service Specs →](./traction-service/README.md)
+- [Traction Service Specs →](./traction-service/goals-api.md)
 - [Integration Service Specs →](./integration-service/integration-service.md)
 - [People & Org Structure →](./org-structure-service.md)
 - [Common Patterns & Data Models →](./common-patterns.md)

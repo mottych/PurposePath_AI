@@ -13,7 +13,7 @@ This folder contains obsolete API specification documents that have been superse
 
 ## Current Specifications
 
-**Traction Service v7** - See [`../traction-service/README.md`](../traction-service/README.md)
+**Traction Service v7** - See [`../api-fe/index.md`](../api-fe/index.md)
 
 The v7 specifications have been reorganized into **controller-based modular documents** for easier maintenance and AI assistant consumption:
 

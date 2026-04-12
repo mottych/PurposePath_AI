@@ -1008,5 +1008,5 @@ All Coaching Service endpoints follow the standard error format:
 
 - [← Back to Index](./index.md)
 - [← Account Service](./account-service.md)
-- [Traction Service Specs →](./traction-service/README.md)
+- [Traction Service Specs →](../api-fe/index.md)
 - [Common Patterns →](./common-patterns.md)
