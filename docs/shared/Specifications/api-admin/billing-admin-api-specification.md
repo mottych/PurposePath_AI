@@ -1,9 +1,16 @@
 # Billing Admin API Specification
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Ready for implementation  
-**Last Updated:** March 23, 2026  
+**Last Updated:** April 12, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1/billing`
+
+## Change Log
+
+| Date | Version | Changes |
+|------|---------|---------|
+| Apr 12, 2026 | 1.1 | Confirmed clean-cut billing implementation: legacy admin `/discount-codes` controller path removed; canonical discount operations remain under `/billing/discount-codes`. |
+| Mar 23, 2026 | 1.0 | Initial billing admin API specification. |
 
 ---
 

@@ -367,26 +367,18 @@ type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'pastD
 // Note: Use isActive boolean for access control, not status string
 ```
 
-### Promo Codes
+### Billing Discounts
 
-See `POST /subscriptions/promo/validate` in `account-api.md` for the wire contract.
+Use canonical billing endpoints under `/billing/*` for discount preview/application contract details.
 
 ```typescript
-type PromoAdjustmentType = 'percent' | 'amount' | 'override';
-type PromoDiscountDuration = 'once' | 'repeating' | 'forever';
+type BillingPriceAdjustmentType = 'percent' | 'amount' | 'override';
 
-interface PromoMoney {
-  amount: number;
-  currency: string;
-}
-
-interface PromoDiscount {
-  adjustmentType: PromoAdjustmentType;
+interface BillingDiscountLine {
+  adjustmentType: BillingPriceAdjustmentType;
   percentOff?: number; // Required when adjustmentType = 'percent' (0-100)
-  amountOff?: PromoMoney; // Required when adjustmentType = 'amount'
-  overridePrice?: PromoMoney; // Required when adjustmentType = 'override'
-  duration?: PromoDiscountDuration;
-  durationInMonths?: number; // For 'repeating' duration
+  amountOff?: { amount: number; currency: string }; // Required when adjustmentType = 'amount'
+  overridePrice?: { amount: number; currency: string }; // Required when adjustmentType = 'override'
 }
 ```
 

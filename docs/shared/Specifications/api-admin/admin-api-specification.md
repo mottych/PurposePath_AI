@@ -1,8 +1,8 @@
 # Admin API Specification
 
-**Version:** 2.6  
+**Version:** 2.7  
 **Status:** Complete  
-**Last Updated:** April 1, 2026  
+**Last Updated:** April 12, 2026  
 **Base URL:** `{REACT_APP_ADMIN_API_URL}/admin/api/v1`  
 **Default (Localhost):** `http://localhost:8003/admin/api/v1`  
 **Production:** `https://api.purposepath.app/admin/api/v1`
@@ -13,6 +13,7 @@
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| Apr 12, 2026 | 2.7 | Removed legacy Admin `/discount-codes` surface; canonical admin discount operations are billing-only under `/billing/discount-codes` | System |
 | Apr 3, 2026 | 2.6 | Added Notification Maintenance endpoint (`GET /notifications/{notificationId}`) for single notification retrieval by ID | System |
 | Apr 3, 2026 | 2.5 | Added Notification Maintenance endpoints (`PATCH /notifications/{notificationId}/status`, `PATCH /notifications/{notificationId}/overrides`) and documented override/status update contracts | System |
 | Apr 3, 2026 | 2.4 | Standardized Notifications Catalog response envelope, added email template key aliases (`GET/PATCH /email-templates/by-key/{templateKey}`), and corrected endpoint summary counts | System |
@@ -42,7 +43,7 @@
    - [Plan Management](#plan-management)
    - [Feature Management](#feature-management)
    - [Subscription Operations](#subscription-operations)
-   - [Discount Code Management](#discount-code-management)
+  - [Billing Discount Code Management](#billing-discount-code-management)
    - [System Settings Management](#system-settings-management)
    - [Role Template Management](#role-template-management)
    - [User Management](#user-management)
@@ -3153,7 +3154,7 @@ Get subscription audit log.
 
 ---
 
-## Discount Code Management
+## Billing Discount Code Management
 
 Legacy `discountType`-based contracts are removed for clean-cut billing.
 
@@ -4736,7 +4737,7 @@ Business rule violations return 400 Bad Request with context:
 
 ## Summary
 
-**Total Endpoints:** 95
+**Total Endpoints:** 93
 
 **Breakdown by Category:**
 - Health & System: 1
@@ -4750,7 +4751,7 @@ Business rule violations return 400 Bad Request with context:
 - Plan Management: 8
 - Feature Management: 8
 - Subscription Operations: 6
-- Discount Code Management: 9
+- Billing Discount Code Management: 7
 - System Settings Management: 5
 - Role Template Management: 8
 - User Management: 5

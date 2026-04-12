@@ -1,8 +1,8 @@
 # Backend Billing Redesign Draft
 
-Version: 1.1  
+Version: 1.2  
 Audience: Backend, Frontend, Product  
-Status: Proposed design draft for review
+Status: Implemented baseline (legacy clean-cut)
 
 ## 1. Scope and Decisions
 
@@ -855,30 +855,17 @@ Operational thresholds:
 
 ### 9.3 Cutover phases and rollback
 
-Phase A: Foundation deploy (dark mode)
-- Deploy new domain/application/infrastructure paths disabled by feature flags.
-- Keep legacy reads/writes active.
-
-Phase B: Shadow execution
-- Execute new billing calculations in parallel without side effects.
-- Persist shadow outputs for comparison only.
-
-Phase C: Controlled write cutover
-- Enable new write paths for a pilot tenant cohort.
-- Webhooks routed only to new billing-service provider endpoints.
-- Legacy webhook path returns hard failure to prevent split processing.
-
-Phase D: Full cutover
-- Expand to all tenants.
-- Disable legacy billing mutation endpoints.
-
-Phase E: Decommission
-- Remove retired components and cleanup config/secrets/routes.
+Current state (Apr 2026): clean-cut complete
+- Legacy account `/subscriptions/*` surface removed.
+- Legacy admin `/discount-codes/*` surface removed.
+- Legacy discount code domain/application/infrastructure stack removed.
+- Provider webhooks and billing mutations run only through canonical billing flows.
+- Legacy webhook and mutation fallback is not supported.
 
 Rollback policy:
 - If critical severity access regression or monetary mismatch is detected:
-  - disable new write feature flags immediately.
-  - continue reads from last consistent snapshots.
+  - use controlled rollback through canonical billing deployment toggles only.
+  - do not restore legacy endpoints or legacy discount code paths.
   - replay failed operations from idempotent request/event logs after fix.
 
 ## 10. Implementation Epics and Issue Breakdown

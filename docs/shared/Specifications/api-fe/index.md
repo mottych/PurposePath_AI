@@ -17,7 +17,7 @@ This specification is split into multiple documents for efficient AI assistant c
    - Subscription & Billing Integration
    - User Features & Limits
 
-2. **[Account API (Auth/Billing/Subscriptions)](./account-api.md)** ⭐ Consolidated (v2.0)
+2. **[Account API (Auth/Billing)](./account-api.md)** ⭐ Consolidated (v2.0)
    - Auth flows, profile, tenant endpoints
    - Subscription tiers, user subscriptions
    - Billing portal, payment intents, provider webhooks

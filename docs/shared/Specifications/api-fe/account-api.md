@@ -1,12 +1,12 @@
 # Account API Specification
 
-**Version:** 2.6  
-**Last Updated:** March 20, 2026 (Add POST /auth/forgot-username endpoint)  
+**Version:** 2.7  
+**Last Updated:** April 12, 2026 (remove legacy /subscriptions endpoints; billing endpoints are canonical)  
 **Service Base URL:** `{REACT_APP_ACCOUNT_API_URL}` (e.g., `https://api.dev.purposepath.app/account/api/v1`)
 
 ## Scope
 
-Consolidated account endpoints implemented by the Account Lambda controllers: `Auth`, `Users`, `Tenants`, `SubscriptionTiers`, `UserSubscription`, `Billing`, `Subscriptions`, `BillingWebhook`, `Health`.
+Consolidated account endpoints implemented by the Account Lambda controllers: `Auth`, `Users`, `Tenants`, `Billing`, and `Health`.
 
 ## Conventions
 
@@ -308,43 +308,11 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 ### POST /billing/subscription/reactivate
 - Active endpoint. Reactivates a cancelled subscription.
 
-## Subscriptions (admin/ops)
+## Subscriptions (legacy)
 
-### GET /subscriptions
-- Query: `page`, `pageSize`, `tenantId`, `status`, `tier`, `isTrialing`, `isActive`, `sortBy` (default `CreatedAt`), `sortOrder` (`asc|desc`).
-- Response: `PaginatedResponse<SubscriptionSummaryResponse>` with `data` list and `pagination` metadata.
+Legacy `/subscriptions/*` endpoints were removed.
 
-### GET /subscriptions/{id}
-- Path: subscription ID (GUID). Response: `ApiResponse<SubscriptionResponse>`.
-
-### GET /subscriptions/tenant/{tenantId}
-- Path: tenant ID (GUID). Response: `ApiResponse<SubscriptionResponse>`.
-
-### POST /subscriptions
-- Body: `{ "tenantId": "uuid", "ownerId": "uuid", "tier": "Starter|Professional|Enterprise", "currentPeriodStart": "ISO-8601|null", "currentPeriodEnd": "ISO-8601|null" }`.
-- Response: `ApiResponse<SubscriptionResponse>` (201 Created on success).
-
-### PUT /subscriptions/{id}/tier
-- Body: `{ "newTier": "Starter|Professional|Enterprise", "effectiveDate": "ISO-8601|null", "prorateBilling": true|false }`.
-- Response: updated `SubscriptionResponse`.
-
-### POST /subscriptions/{id}/cancel
-- Response: `ApiResponse<SubscriptionResponse>` (subscription cancelled immediately).
-
-### POST /subscriptions/{id}/trial
-- Deleted.
-
-### PUT /subscriptions/{id}/billing-provider
-- Body: `{ "billingProviderId": "string", "providerSubscriptionId": "string", "providerCustomerId": "string" }`.
-- Response: updated `SubscriptionResponse` (links provider IDs).
-
-### POST /subscriptions/promo/validate (public)
-- Body: `{ "promoCode": "string", "tierId": "uuid", "frequency": "monthly|yearly" }`.
-- Response: `{ "success": true, "data": { "isValid": true|false, "discount": { "adjustmentType": "percent|amount|override", "percentOff": 20, "amountOff": { "amount": 10.00, "currency": "USD" }, "overridePrice": { "amount": 49.99, "currency": "USD" }, "duration": "once", "durationInMonths": 6 }, "newPrice": null, "errorMessage": "string|null" } }`.
-
-### POST /subscriptions/create-payment
-- Body: `{ "subscriptionId": "uuid", "paymentProvider": "stripe|paypal|square", "paymentMethodId": "string", "tier": "Starter|Professional|Enterprise", "frequency": "monthly|yearly", "promoCode": "string|null", "metadata": { "key": "value" } }`.
-- Response `PaymentSubscriptionResponse`: `{ "providerSubscriptionId": "string", "providerCustomerId": "string", "status": "active|incomplete|trialing|past_due", "clientSecret": "string|null", "requiresAction": true|false, "errorMessage": "string|null" }`.
+Use canonical billing endpoints under `/billing/*` only.
 
 ## Billing Webhook
 
