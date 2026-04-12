@@ -455,9 +455,9 @@ Exact placeholder names and prompt wording live in topic seed data and deployed 
 ### 5.2 Field Contract
 
 - `schemaVersion` (string, required): Semver string.
-- `title` (string, required): Length 1..120.
-- `summary` (string, required): Length 1..500.
-- `blocks` (array, required): 1..6 items.
+- `title` (string, required).
+- `summary` (string, required).
+- `blocks` (array, required): at least one item.
 - `confidence` (optional): Numeric `0..1` or enum `low|medium|high`.
 - `generationMeta` (object, required): Metadata object.
 
@@ -479,11 +479,11 @@ Allowed block types:
 
 Block constraints:
 
-- `paragraph.text`: `1..600`
-- `list.items`: `1..6`
-- `list.items[]`: `1..180`
-- `cta.label`: `1..80`
-- `cta.action`: `1..120`
+- `paragraph.text`: non-empty
+- `list.items`: at least one item
+- `list.items[]`: non-empty text
+- `cta.label`: non-empty
+- `cta.action`: non-empty
 - `cta.url`: optional URI string (then https-only backend gate applies)
 
 Unknown block types are non-fatal and handled by pre-validation filtering rules in Section 6.
@@ -506,7 +506,7 @@ Processing order is normative:
 5. If no blocks remain after filtering/dropping:
    - Degrade to template-only behavior with deterministic fallback reason/detail.
 6. Strict schema validation executes on the sanitized payload.
-7. Normalize text and enforce all post-normalization limits.
+7. Normalize text and evaluate length/count guidance as non-fatal drift telemetry.
 8. Backend renders final HTML/text insight fragments and proceeds with email send.
 
 Token and enrichment execution behavior is also normative:
@@ -523,7 +523,7 @@ Transport execution behavior is also normative:
 
 ---
 
-## 7. Normalization and Limit Enforcement
+## 7. Normalization and Length Guidance
 
 ### 7.1 Normalization Algorithm
 
@@ -534,15 +534,15 @@ All length checks use normalized text:
 3. Remove control characters except newline.
 4. Normalize line breaks to `\n`.
 
-### 7.2 Limits
+### 7.2 Guidance Targets
 
-- `title <= 120`
-- `summary <= 500`
-- `max blocks = 6`
-- `paragraph <= 600`
-- `list items <= 6`
-- `list item <= 180`
-- `combinedInsightLength <= 2000`
+- `title <= 120` (guidance target)
+- `summary <= 500` (guidance target)
+- `max blocks = 6` (guidance target)
+- `paragraph <= 600` (guidance target)
+- `list items <= 6` (guidance target)
+- `list item <= 180` (guidance target)
+- `combinedInsightLength <= 2000` (guidance target)
 
 `combinedInsightLength`:
 
@@ -552,6 +552,8 @@ All length checks use normalized text:
 - normalized `list.items[]`
 - normalized `cta.label`
 - normalized `cta.action`
+
+Guidance overrun must not, by itself, trigger template-only fallback when payload remains structurally valid and safe to render.
 
 ---
 
@@ -574,7 +576,6 @@ The system must emit deterministic reason/detail values for:
 - malformed JSON parse failure
 - payload empty after filtering
 - schema validation failure
-- limit exceeded
 - timeout
 - unknown execution failure
 
