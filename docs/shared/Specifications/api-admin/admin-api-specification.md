@@ -2905,7 +2905,7 @@ Apply ad-hoc discount to subscription.
 **Request:**
 ```json
 {
-  "discountType": "Percentage",
+  "adjustmentType": "percent",
   "value": 25,
   "cyclesToApply": 3,
   "reason": "Customer service recovery - service outage compensation"
@@ -2913,10 +2913,11 @@ Apply ad-hoc discount to subscription.
 ```
 
 **Validations:**
-- `discountType`: Required, enum (Percentage, FixedAmount)
-- `value`: Required, positive decimal
-  - Percentage: 1-100
-  - FixedAmount: positive amount in subscription currency
+- `adjustmentType`: Required, enum (`percent`, `amount`, `override`)
+- `value`: Required decimal
+  - `percent`: 1-100
+  - `amount`: positive amount in subscription currency
+  - `override`: target price, must be >= 0
 - `cyclesToApply`: Required, positive integer (number of billing cycles)
 - `reason`: Required, 1-500 characters
 
@@ -2925,12 +2926,12 @@ Apply ad-hoc discount to subscription.
 {
   "subscriptionId": "dd0e8400-e29b-41d4-a716-446655440000",
   "tenantId": "cc0e8400-e29b-41d4-a716-446655440000",
-  "discountType": "Percentage",
+  "adjustmentType": "percent",
   "value": 25,
   "cyclesToApply": 3,
-  "currentPrice": 29.99,
-  "discountedPrice": 22.49,
-  "totalSavings": 22.50,
+  "originalPrice": 29.99,
+  "newPrice": 22.49,
+  "discountAmount": 7.50,
   "startsAt": "2026-02-15T00:00:00Z",
   "endsAt": "2026-05-15T00:00:00Z",
   "reason": "Customer service recovery - service outage compensation",

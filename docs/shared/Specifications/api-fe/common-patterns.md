@@ -370,12 +370,14 @@ type SubscriptionStatus = string; // Dynamic, e.g., 'active', 'trialing', 'pastD
 ### Promo Codes
 
 ```typescript
-type PromoDiscountType = 'percentage' | 'fixed';
+type PromoAdjustmentType = 'percent' | 'amount' | 'override';
 type PromoDiscountDuration = 'once' | 'repeating' | 'forever';
 
 interface PromoDiscount {
-  type: PromoDiscountType;
-  value: number; // Percentage (0-100) or fixed amount in cents
+  adjustmentType: PromoAdjustmentType;
+  percentOff?: number; // Required when adjustmentType = 'percent' (0-100)
+  amountOff?: { amount: number; currency: string }; // Required when adjustmentType = 'amount'
+  overridePrice?: { amount: number; currency: string }; // Required when adjustmentType = 'override'
   duration: PromoDiscountDuration;
   durationInMonths?: number; // For 'repeating' duration
 }
