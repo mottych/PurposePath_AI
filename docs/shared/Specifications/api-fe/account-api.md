@@ -146,6 +146,11 @@ Frontend can decode the JWT to access these claims, but `isTenantOwner` is also 
 - Query: `refreshToken` (camelCase). Legacy `refresh_token` still accepted.
 - Response: `{ "success": true }`.
 
+### POST /auth/ai/service-enrichment
+- **Auth:** Bearer access token (user session).
+- **Purpose:** Optional short-lived **service enrichment** token for `authContext` on `POST /ai/execute-async` (PurposePath_Web). When not implemented, clients may fall back to deriving `authContext` from the session JWT per team agreement (see PurposePath_Api#954).
+- **Response (example):** `{ "success": true, "data": { "serviceToken": "...", "expiresAtUtc": "...", "issuer": "PurposePath_Api" } }` (snake_case field aliases may be accepted).
+
 ### GET /auth/check-username (Public)
 **No Auth Required** - Check if a username is available for registration or invitation activation.
 
