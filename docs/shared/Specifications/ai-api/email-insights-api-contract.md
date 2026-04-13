@@ -1,7 +1,7 @@
 # Email Insights AI API Contract Specification
 
 **Version:** 2.4  
-**Last Updated:** April 9, 2026  
+**Last Updated:** April 12, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
 
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-12 - v2.4 - Documented coaching vs `api.{env}` BFF auth boundary, claim names, and coaching denial log markers for async job polling (issue #313)
 - 2026-04-09 - v2.4 - Added normative terminal EventBridge wire contract, terminal idempotency/ordering rules, and service-token auth contract for API fallback endpoints
 - 2026-04-09 - v2.3 - Enforced transport-mode isolation: EventBridge mode is terminal-event-driven only; API polling is allowed only in API fallback mode
 - 2026-04-08 - v2.2 - Added dual transport contract (EventBridge-first kickoff with API fallback) while keeping payload schema unchanged
@@ -429,6 +430,17 @@ Tenant isolation contract for `GET /api/v1/ai/jobs/{jobId}`:
 - Endpoint may be called without user session when valid service token is present.
 - AI must validate that token tenant claim matches tenant stored on the job record.
 - Mismatch must return authorization failure.
+
+#### 4.6.1 Coaching service vs public API host (normative)
+
+- **PurposePath_AI (coaching)** implements `POST /api/v1/ai/execute-async` and `GET /api/v1/ai/jobs/{jobId}` on its HTTP API. For **v2** `execute-async`, tenant and user context come from the JSON body; a user session JWT is **not** required when the v2 envelope is valid.
+- **Job polling auth** (`GET .../jobs/{jobId}`) accepts a **Bearer** JWT that is either:
+  - **Service token:** claims must include `token_type` **or** `tokenType` = `service_enrichment`, `role` = `service`, and `tenant_id` matching the job owner tenant after signature verification; or
+  - **User token:** claims must include `tenant_id` and `user_id` or standard `sub`, matching usual user-session semantics.
+- **Signature and issuer/audience:** coaching verifies HS256 with the shared JWT secret. When `STAGE` is not `dev`, issuer and audience are validated against configured `jwt_issuer` / `jwt_audience`. In `dev`, issuer/audience checks are relaxed while the signature must still validate (including dev fallback secret behavior documented in code).
+- **Public API host** (`https://api.{env}.purposepath.app`, PurposePath_Api) may apply **additional** authorization (for example ASP.NET policies) **before** proxying to coaching. An HTTP **403** with a generic body such as `{"message":"Forbidden"}` is typically produced by that **BFF layer**, not by coaching. If coaching rejects a token, expect **401** with a `detail` string from FastAPI unless a different route explicitly returns **403** (for example inactive user accounts on user-session paths).
+
+**Denial observability (coaching):** CloudWatch log lines include `async_job_auth.denied` with `denial_reason=...` for polling auth failures; `async_execute.started` includes `has_bearer_header` for v2 kickoffs; inactive user session denial uses `user_auth.denied denial_reason=user_not_active`.
 
 ### 4.5 Server-side enrichment (`goal_created_email_insight`)
 

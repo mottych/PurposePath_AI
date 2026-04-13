@@ -160,16 +160,20 @@ async def execute_async(
         if authorization and authorization.startswith("Bearer "):
             jwt_token = authorization.split(" ")[1]
 
-    logger.info(
-        "async_execute.started",
-        topic_id=request_body.topic_id,
-        tenant_id=tenant_id,
-        user_id=user_id,
-        contract_version="v2" if contract_v2 else "legacy",
-        correlation_id=request_body.correlation_id if contract_v2 else None,
-        idempotency_key=request_body.idempotency_key if contract_v2 else None,
-        event_id=request_body.event_id if contract_v2 else None,
-    )
+    started_fields: dict[str, object] = {
+        "topic_id": request_body.topic_id,
+        "tenant_id": tenant_id,
+        "user_id": user_id,
+        "contract_version": "v2" if contract_v2 else "legacy",
+        "correlation_id": request_body.correlation_id if contract_v2 else None,
+        "idempotency_key": request_body.idempotency_key if contract_v2 else None,
+        "event_id": request_body.event_id if contract_v2 else None,
+    }
+    if contract_v2:
+        started_fields["has_bearer_header"] = bool(
+            authorization and authorization.startswith("Bearer ")
+        )
+    logger.info("async_execute.started", **started_fields)
 
     try:
         job = await service.create_job(
