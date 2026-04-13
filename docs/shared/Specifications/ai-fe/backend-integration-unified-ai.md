@@ -338,6 +338,8 @@ Execute an AI topic asynchronously. Returns immediately with a job ID; results d
 }
 ```
 
+**Troubleshooting:** A `422` whose `detail`/`input` shows only `topic_id` and `parameters` means the client sent the **legacy** async body. Coaching accepts **only** the canonical envelope (camelCase keys as in the example and in OpenAPI `AsyncAIRequest` for `POST /api/v1/ai/execute-async`). `POST /ai/execute` still uses `topic_id` + `parameters`; `execute-async` does not.
+
 **Response (Immediate):**
 
 ```json
