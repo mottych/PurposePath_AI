@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
+from coaching.src.core.constants import TopicCategory
 from coaching.src.domain.entities.ai_job import AIJob
 
 
@@ -51,95 +52,40 @@ class AuthContext(BaseModel):
 
 
 class AsyncAIRequest(BaseModel):
-    """Request model for async AI execution.
+    """Canonical request body for POST /ai/execute-async.
 
-    Same structure as GenericAIRequest to maintain consistency.
-
-    Attributes:
-        topic_id: Topic identifier from endpoint registry
-        parameters: Parameters to pass to the AI prompt template
+    One shape for all async single-shot kickoffs (interactive app, API, or
+    EventBridge-aligned replays). Topic inputs live in ``activityData`` (same
+    role as template parameters for the resolved ``topicId``).
     """
-
-    topic_id: str = Field(
-        ...,
-        alias="topicId",
-        min_length=1,
-        max_length=100,
-        description="Topic identifier from endpoint registry",
-        examples=["niche_review", "ica_review", "value_proposition_review"],
-    )
-    parameters: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Parameters to pass to the AI prompt template",
-        examples=[{"current_value": "We help small businesses grow"}],
-    )
-
-    # Generic v2 backend-triggered request envelope (optional for backwards compatibility)
-    event_id: str | None = Field(default=None, alias="eventId")
-    request_id: str | None = Field(default=None, alias="requestId")
-    occurred_at_utc: datetime | None = Field(default=None, alias="occurredAtUtc")
-    source_service: str | None = Field(default=None, alias="sourceService")
-    schema_version: str | None = Field(default=None, alias="schemaVersion")
-    correlation_id: str | None = Field(default=None, alias="correlationId")
-    idempotency_key: str | None = Field(default=None, alias="idempotencyKey")
-    retry_attempt: int | None = Field(default=None, alias="retryAttempt")
-    tenant_id: str | None = Field(default=None, alias="tenantId")
-    user_id: str | None = Field(default=None, alias="userId")
-    topic_category: str | None = Field(default=None, alias="topicCategory")
-    event_signal: str | None = Field(default=None, alias="eventSignal")
-    locale: str | None = Field(default=None)
-    timezone: str | None = Field(default=None)
-    activity_data: dict[str, Any] | None = Field(default=None, alias="activityData")
-    auth_context: AuthContext | None = Field(default=None, alias="authContext")
-    causation_id: str | None = Field(default=None, alias="causationId")
-    metadata: dict[str, Any] | None = Field(default=None)
-
-    @property
-    def is_backend_contract_v2(self) -> bool:
-        """Whether this request uses the generic backend-triggered envelope."""
-        return self.auth_context is not None or self.activity_data is not None
-
-    @model_validator(mode="after")
-    def validate_v2_contract_requirements(self) -> "AsyncAIRequest":
-        """Enforce required fields only when v2 contract envelope is used."""
-        if not self.is_backend_contract_v2:
-            return self
-
-        required_fields = {
-            "eventId": self.event_id,
-            "requestId": self.request_id,
-            "occurredAtUtc": self.occurred_at_utc,
-            "sourceService": self.source_service,
-            "schemaVersion": self.schema_version,
-            "correlationId": self.correlation_id,
-            "idempotencyKey": self.idempotency_key,
-            "retryAttempt": self.retry_attempt,
-            "tenantId": self.tenant_id,
-            "userId": self.user_id,
-            "topicCategory": self.topic_category,
-            "topicId": self.topic_id,
-            "eventSignal": self.event_signal,
-            "locale": self.locale,
-            "timezone": self.timezone,
-            "activityData": self.activity_data,
-            "authContext": self.auth_context,
-        }
-        missing = [field_name for field_name, value in required_fields.items() if value is None]
-        if missing:
-            raise ValueError(f"Missing required v2 contract fields: {missing}")
-        if self.topic_category != "email_insight":
-            raise ValueError("topicCategory must be 'email_insight' for v2 backend contract")
-        if self.auth_context and self.auth_context.token_type != "service_enrichment":
-            raise ValueError("authContext.tokenType must be 'service_enrichment'")
-        return self
 
     model_config = ConfigDict(
         populate_by_name=True,
         json_schema_extra={
             "examples": [
                 {
-                    "topic_id": "niche_review",
-                    "parameters": {"current_value": "We help small businesses grow"},
+                    "eventId": "evt-onb-1",
+                    "requestId": "req-onb-1",
+                    "occurredAtUtc": "2026-04-13T12:00:00Z",
+                    "sourceService": "PurposePath_Web",
+                    "schemaVersion": "2.0",
+                    "correlationId": "corr-onb-1",
+                    "idempotencyKey": "idem-onb-1",
+                    "retryAttempt": 0,
+                    "tenantId": "tenant_456",
+                    "userId": "user_123",
+                    "topicCategory": "onboarding",
+                    "topicId": "niche_review",
+                    "eventSignal": "user_requested",
+                    "locale": "en-US",
+                    "timezone": "UTC",
+                    "activityData": {"current_value": "We help small businesses grow"},
+                    "authContext": {
+                        "serviceToken": "token-value",
+                        "expiresAtUtc": "2026-04-13T12:15:00Z",
+                        "issuer": "PurposePath_Api",
+                        "tokenType": "service_enrichment",
+                    },
                 },
                 {
                     "eventId": "evt-123",
@@ -168,6 +114,45 @@ class AsyncAIRequest(BaseModel):
             ]
         },
     )
+
+    event_id: str = Field(..., alias="eventId")
+    request_id: str = Field(..., alias="requestId")
+    occurred_at_utc: datetime = Field(..., alias="occurredAtUtc")
+    source_service: str = Field(..., alias="sourceService", min_length=1)
+    schema_version: str = Field(..., alias="schemaVersion", min_length=1)
+    correlation_id: str = Field(..., alias="correlationId")
+    idempotency_key: str = Field(..., alias="idempotencyKey")
+    retry_attempt: int = Field(..., alias="retryAttempt", ge=0)
+    tenant_id: str = Field(..., alias="tenantId")
+    user_id: str = Field(..., alias="userId")
+    topic_category: str = Field(..., alias="topicCategory")
+    topic_id: str = Field(
+        ...,
+        alias="topicId",
+        min_length=1,
+        max_length=100,
+        description="Topic identifier from endpoint registry",
+    )
+    event_signal: str = Field(..., alias="eventSignal", min_length=1)
+    locale: str = Field(..., min_length=1)
+    timezone: str = Field(..., min_length=1)
+    activity_data: dict[str, Any] = Field(..., alias="activityData")
+    auth_context: AuthContext = Field(..., alias="authContext")
+    causation_id: str | None = Field(default=None, alias="causationId")
+    request_metadata: dict[str, Any] | None = Field(default=None, alias="metadata")
+
+    @model_validator(mode="after")
+    def validate_canonical_envelope(self) -> "AsyncAIRequest":
+        """Enforce token type and registered topic category."""
+        allowed_categories = {c.value for c in TopicCategory}
+        if self.topic_category not in allowed_categories:
+            raise ValueError(
+                f"topicCategory must be one of {sorted(allowed_categories)}; "
+                f"got {self.topic_category!r}"
+            )
+        if self.auth_context.token_type != "service_enrichment":
+            raise ValueError("authContext.tokenType must be 'service_enrichment'")
+        return self
 
 
 class AsyncJobCreatedResponse(BaseModel):
@@ -229,7 +214,7 @@ class AsyncJobData(BaseModel):
 class JobStatusResponse(BaseModel):
     """Response model for job status query.
 
-    Used by GET /ai/jobs/{jobId} for polling fallback.
+    Used for GET /ai/jobs/{jobId} polling fallback.
 
     Attributes:
         success: Always True for successful query

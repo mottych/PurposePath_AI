@@ -343,7 +343,7 @@ async def get_current_user(authorization: str = Header(...)) -> UserContext:
 async def get_tenant_for_async_job_access(
     authorization: str | None = Header(None),
 ) -> str:
-    """Resolve tenant for async job polling per email-insights v2.4 §4.6 (user JWT or service token)."""
+    """Resolve tenant for async job polling (user JWT or service token; email-insights spec §4.6)."""
     if not authorization or not authorization.startswith("Bearer "):
         logger.warning("async_job_auth.missing_bearer")
         raise HTTPException(

@@ -1,7 +1,7 @@
 # Email Insights AI API Contract Specification
 
 **Version:** 2.4  
-**Last Updated:** April 9, 2026  
+**Last Updated:** April 13, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
 
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-13 - v2.4 - §4.7: single HTTP body for all `execute-async` kickoffs; `topicCategory` from coaching `TopicCategory` for non-email topics (issue #315)
 - 2026-04-09 - v2.4 - Added normative terminal EventBridge wire contract, terminal idempotency/ordering rules, and service-token auth contract for API fallback endpoints
 - 2026-04-09 - v2.3 - Enforced transport-mode isolation: EventBridge mode is terminal-event-driven only; API polling is allowed only in API fallback mode
 - 2026-04-08 - v2.2 - Added dual transport contract (EventBridge-first kickoff with API fallback) while keeping payload schema unchanged
@@ -429,6 +430,16 @@ Tenant isolation contract for `GET /api/v1/ai/jobs/{jobId}`:
 - Endpoint may be called without user session when valid service token is present.
 - AI must validate that token tenant claim matches tenant stored on the job record.
 - Mismatch must return authorization failure.
+
+### 4.7 `POST /api/v1/ai/execute-async` — single envelope for all async kickoffs
+
+PurposePath_AI accepts **one** JSON shape for `execute-async` (the trigger fields in §4.1–§4.3), including:
+
+- **`activityData`**: topic template inputs (same information older clients sent as a top-level `parameters` object).
+- **`topicCategory`**: for `email_insight` topics, use `email_insight`. For other registered single-shot topics (for example onboarding reviews), use the topic’s **`TopicCategory`** value from coaching (`onboarding`, `insights`, `strategic_planning`, etc.).
+- **`eventSignal`**: stable string for the triggering context (`goal_created` for the email-insight mapping, or a product-agreed value such as `user_requested` for interactive flows).
+
+There is **no** alternate minimal body on the same URL.
 
 ### 4.5 Server-side enrichment (`goal_created_email_insight`)
 

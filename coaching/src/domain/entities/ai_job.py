@@ -141,7 +141,7 @@ class AIJob(BaseModel):
     )
     request_id: str | None = Field(
         default=None,
-        description="Notification request identity for terminal correlation (spec v2.4)",
+        description="Notification request identity for terminal correlation (email-insights contract)",
     )
     topic_category: str | None = Field(
         default=None,
