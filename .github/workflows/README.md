@@ -60,7 +60,7 @@ The GitHub Actions user needs these permissions:
 - Lambda full access
 - DynamoDB full access
 - API Gateway full access
-- S3 access for SAM artifacts
+- S3 access for deployment artifacts (e.g. Lambda bundles, Pulumi state backups as configured)
 - Secrets Manager read access
 
 ## Deployment Flow
