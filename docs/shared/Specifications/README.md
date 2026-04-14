@@ -4,6 +4,14 @@
 
 `docs/shared/Specifications/` contains cross-repository API and integration specifications synchronized by the shared-docs workflow.
 
+Generated machine-readable API contracts are now the canonical contract source of truth:
+
+- `docs/contracts/openapi/account.openapi.json`
+- `docs/contracts/openapi/admin.openapi.json`
+- `docs/contracts/openapi/integration.openapi.json`
+- `docs/contracts/openapi/traction.openapi.json`
+- `docs/contracts/asyncapi/integration.asyncapi.yaml`
+
 ## How to Add or Modify Specifications
 
 Use the canonical workflow guide:
@@ -22,9 +30,9 @@ Use the canonical workflow guide:
 
 ### Billing Specifications
 
-- Frontend billing contract: `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
-- Admin billing contract: `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
-- Machine-readable source contract: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
+- Thin workflow context (frontend): `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
+- Thin workflow context (admin): `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
+- Legacy machine-readable migration source: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
 
 ### AI API Specifications
 
@@ -32,8 +40,9 @@ Use the canonical workflow guide:
 
 ## Working Rules
 
-- Specs here are source of truth for API contracts.
-- Contract changes must follow the specification change workflow.
+- OpenAPI/AsyncAPI artifacts under `docs/contracts/` are source of truth for endpoint/interface contracts.
+- Specs in this folder are thin non-contract documents for workflow, semantics, and operational context.
+- Contract changes must follow the specification change workflow and regenerate artifacts in `docs/contracts/`.
 - Keep section README/index documents updated when adding or moving files.
 
 ## Related References

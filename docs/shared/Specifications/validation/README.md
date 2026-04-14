@@ -3,12 +3,12 @@
 Use this folder when contract-sensitive implementation files changed but API contracts did not.
 
 Purpose:
-- Provide explicit evidence that request/response payloads, constraints, and error contracts still match specifications.
+- Provide explicit evidence that request/response payloads, constraints, and error contracts still match generated OpenAPI/AsyncAPI artifacts under `docs/contracts/`.
 - Prevent accidental drift when making bug fixes or internal refactors.
 
 When required:
 - Any PR/commit that changes controller, DTO request/response, mapper, or application command/result/handler files for API services,
-  and does not update specs under docs/shared/Specifications.
+  and does not update generated contracts under `docs/contracts/`.
 
 File naming:
 - `YYYY-MM-DD-<short-topic>.md`
