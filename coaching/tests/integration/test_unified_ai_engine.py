@@ -117,7 +117,8 @@ class TestTopicSeedData:
             assert topic_data.topic_name
             assert topic_data.topic_type in ["single_shot", "conversation_coaching"]
             assert topic_data.category
-            assert topic_data.model_code
+            assert topic_data.basic_model_code
+            assert topic_data.premium_model_code
             assert 0.0 <= topic_data.temperature <= 2.0
             assert topic_data.max_tokens > 0
 
