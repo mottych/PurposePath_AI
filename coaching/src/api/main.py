@@ -4,7 +4,7 @@ import logging
 import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -27,7 +27,8 @@ from coaching.src.api.routes import (
     insights,
     multitenant_conversations,
 )
-from coaching.src.core.config_multitenant import settings
+from coaching.src.api.routes.runtime_contracts import register_runtime_contract_routes
+from coaching.src.core.config_multitenant import Settings, get_settings
 
 # Configure Python logging for Lambda - Lambda captures stderr
 logging.basicConfig(
@@ -89,80 +90,101 @@ class CORSPreflightMiddleware(BaseHTTPMiddleware):
         return response
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan manager."""
-    logger.info("Starting PurposePath AI Coaching API", stage=settings.stage, version="2.0.0")
-    yield
-    logger.info("Shutting down PurposePath AI Coaching API")
+def create_app(app_settings: Settings | None = None) -> FastAPI:
+    """Build the FastAPI application (supports injected settings for tests)."""
+    cfg = app_settings if app_settings is not None else get_settings()
 
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+        """Application lifespan manager."""
+        logger.info("Starting PurposePath AI Coaching API", stage=cfg.stage, version="2.0.0")
+        yield
+        logger.info("Shutting down PurposePath AI Coaching API")
 
-app = FastAPI(
-    title="PurposePath AI Coaching API",
-    description="AI-powered coaching platform for personal and professional development",
-    version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan,
-)
+    application = FastAPI(
+        title="PurposePath AI Coaching API",
+        description="AI-powered coaching platform for personal and professional development",
+        version="2.0.0",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=lifespan,
+    )
+    application.state.settings = cfg
 
-# Add middleware in correct order - CORS must be last (runs first)
-app.add_middleware(RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0)  # type: ignore[arg-type,call-arg]
-app.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
-app.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
-app.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
+    # Add middleware in correct order - CORS must be last (runs first)
+    application.add_middleware(
+        RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0
+    )
+    application.add_middleware(ErrorHandlingMiddleware)
+    application.add_middleware(LoggingMiddleware)
+    application.add_middleware(CORSPreflightMiddleware)
 
-# CORS middleware must be added LAST so it runs FIRST in the middleware chain
-# This ensures CORS headers are added before any authentication or error handling
-_cors_config: dict[str, Any] = {
-    # Allow purposepath.app apex/subdomains, and local dev ports.
-    "allow_origin_regex": r"(^https://([a-zA-Z0-9-]+\.)*purposepath\.app$)|(^http://localhost:\d+$)",
-    "allow_credentials": True,
-    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    # Allow all request headers to prevent preflight breakage when frontend tooling
-    # adds non-static headers (for example tracing/monitoring headers).
-    "allow_headers": ["*"],
-    "expose_headers": [
-        "X-Request-Id",
-        "X-RateLimit-Limit",
-        "X-RateLimit-Remaining",
-        "X-RateLimit-Reset",
-    ],
-    "max_age": 3600,
-}
-app.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
-
-# Include routers
-app.include_router(health.router, prefix=f"{settings.api_prefix}/health", tags=["health"])
-app.include_router(admin.router, prefix=f"{settings.api_prefix}")
-app.include_router(insights.router, prefix=f"{settings.api_prefix}/insights", tags=["insights"])
-app.include_router(
-    multitenant_conversations.router,
-    prefix=f"{settings.api_prefix}/multitenant/conversations",
-    tags=["multitenant", "conversations"],
-)
-app.include_router(
-    business_data.router,
-    prefix=f"{settings.api_prefix}/multitenant/conversations",
-    tags=["business-data", "multitenant"],
-)
-app.include_router(ai_execute.router, prefix=f"{settings.api_prefix}")
-app.include_router(coaching_sessions.router, prefix=f"{settings.api_prefix}")
-app.include_router(ai_execute_async.router, prefix=f"{settings.api_prefix}")
-
-
-@app.get("/", tags=["root"], response_model=dict[str, str])
-async def root() -> dict[str, str]:
-    """API root endpoint."""
-    return {
-        "name": "PurposePath AI Coaching API",
-        "version": "2.0.0",
-        "stage": settings.stage,
-        "docs": "/docs",
-        "redoc": "/redoc",
-        "health": f"{settings.api_prefix}/health",
+    # CORS middleware must be added LAST so it runs FIRST in the middleware chain
+    # This ensures CORS headers are added before any authentication or error handling
+    _cors_config: dict[str, Any] = {
+        # Allow purposepath.app apex/subdomains, and local dev ports.
+        "allow_origin_regex": (
+            r"(^https://([a-zA-Z0-9-]+\.)*purposepath\.app$)|(^http://localhost:\d+$)"
+        ),
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        # Allow all request headers to prevent preflight breakage when frontend tooling
+        # adds non-static headers (for example tracing/monitoring headers).
+        "allow_headers": ["*"],
+        "expose_headers": [
+            "X-Request-Id",
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Reset",
+        ],
+        "max_age": 3600,
     }
+    application.add_middleware(CORSMiddleware, **_cors_config)
 
+    # Include routers
+    application.include_router(health.router, prefix=f"{cfg.api_prefix}/health", tags=["health"])
+    application.include_router(admin.router, prefix=f"{cfg.api_prefix}")
+    application.include_router(
+        insights.router, prefix=f"{cfg.api_prefix}/insights", tags=["insights"]
+    )
+    application.include_router(
+        multitenant_conversations.router,
+        prefix=f"{cfg.api_prefix}/multitenant/conversations",
+        tags=["multitenant", "conversations"],
+    )
+    application.include_router(
+        business_data.router,
+        prefix=f"{cfg.api_prefix}/multitenant/conversations",
+        tags=["business-data", "multitenant"],
+    )
+    application.include_router(ai_execute.router, prefix=f"{cfg.api_prefix}")
+    application.include_router(coaching_sessions.router, prefix=f"{cfg.api_prefix}")
+    application.include_router(ai_execute_async.router, prefix=f"{cfg.api_prefix}")
+
+    if cfg.stage.lower() == "dev":
+        register_runtime_contract_routes(application, cfg)
+
+    @application.get("/", tags=["root"], response_model=dict[str, str])
+    async def root(request: Request) -> dict[str, str]:
+        """API root endpoint."""
+        s: Settings = request.app.state.settings
+        payload: dict[str, str] = {
+            "name": "PurposePath AI Coaching API",
+            "version": "2.0.0",
+            "stage": s.stage,
+            "health": f"{s.api_prefix}/health",
+        }
+        if s.stage.lower() == "dev":
+            payload["openapi"] = f"{s.api_prefix}/openapi/v1.json"
+            payload["swagger"] = f"{s.api_prefix}/swagger"
+            payload["asyncapi"] = f"{s.api_prefix}/contracts/asyncapi"
+        return payload
+
+    return application
+
+
+app = create_app()
 
 handler = Mangum(app, lifespan="off")
 
@@ -186,7 +208,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             file=sys.stderr,
             flush=True,
         )
-        return handle_eventbridge_event(event, context)
+        return cast(dict[str, Any], handle_eventbridge_event(event, context))
 
     # Direct print to stderr - Lambda MUST capture this
     print(
@@ -204,17 +226,18 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         flush=True,
     )
 
-    return response
+    return cast(dict[str, Any], response)
 
 
 if __name__ == "__main__":
     import uvicorn
 
+    _settings = get_settings()
     logger.info("Starting development server")
     uvicorn.run(
         "coaching.src.api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level=settings.log_level.lower(),
+        log_level=_settings.log_level.lower(),
     )

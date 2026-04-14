@@ -43,6 +43,7 @@ Use this guide for:
 1.1 Identify owning runtime contract endpoint
 - HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
 - Async/event contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
+- AI coaching Lambda (PurposePath_AI, **dev only**): HTTP `https://{api-host}/coaching/api/v1/openapi/v1.json`, Swagger `https://{api-host}/coaching/api/v1/swagger`, AsyncAPI `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`)
 
 2. Open or reference governing issue
 - Track change in a GitHub issue.
