@@ -51,7 +51,8 @@
 - Response payload unchanged: yes
 - Validation/error behavior unchanged: yes
 - Spec references:
-  - docs/shared/Specifications/api-fe/billing-backend-openapi.yaml
+  - live Account OpenAPI endpoint: /account/api/v1/openapi/v1.json
+  - live Admin OpenAPI endpoint: /admin/api/v1/openapi/v1.json
   - docs/shared/Specifications/api-fe/billing-frontend-api-specification.md
   - docs/shared/Specifications/api-admin/billing-admin-api-specification.md
 

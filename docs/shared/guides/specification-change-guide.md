@@ -16,9 +16,9 @@ Use this guide for:
 
 ## Source of Truth Rule
 
-- OpenAPI/AsyncAPI artifacts under `docs/contracts/` are the API/interface contract source of truth.
+- Deployed OpenAPI/AsyncAPI endpoints are the API/interface contract source of truth.
 - `docs/shared/Specifications/` documents are thin non-contract references for workflow, state, and operational semantics.
-- If code and contract artifacts diverge, default action is to align code and regenerate artifacts.
+- If code and runtime contract endpoints diverge, default action is to align code and validate against the runtime endpoints.
 
 ## Contract Strictness Principles
 
@@ -40,9 +40,9 @@ Use this guide for:
 - Select the correct document under `api-fe/`, `api-admin/`, `ai-fe/`, `ai-admin/`, or `integration/`.
 - If no suitable file exists, create one and link it from the nearest index README.
 
-1.1 Identify owning generated contract artifact
-- HTTP contracts: `docs/contracts/openapi/*.openapi.json`
-- Async/event contracts: `docs/contracts/asyncapi/*.yaml`
+1.1 Identify owning runtime contract endpoint
+- HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
+- Async/event contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
 
 2. Open or reference governing issue
 - Track change in a GitHub issue.
@@ -56,13 +56,13 @@ Use this guide for:
 4. Update specification content
 - Maintain consistent structure:
   - Header and version/date context.
-  - Contract artifact reference(s).
+  - Runtime contract endpoint reference(s).
   - Non-contract semantic guidance only.
 - Enforce JSON naming convention from the shared API naming guide.
 - Ensure examples are realistic and internally consistent.
 
-4.1 Regenerate contracts from code
-- Regenerate OpenAPI/AsyncAPI artifacts under `docs/contracts/` after contract-affecting code changes.
+4.1 Validate contracts from runtime endpoints
+- Validate OpenAPI/AsyncAPI behavior against the live runtime endpoints for the affected environment after contract-affecting code changes.
 - Do not duplicate endpoint request/response shape definitions in thin spec docs.
 
 5. Cross-check with guardrails
@@ -74,23 +74,23 @@ Use this guide for:
 - If a document is superseded, note replacement target and date.
 
 7. Validation and close-out
-- Confirm implementation and tests align with generated contract artifacts.
-- Include `docs/contracts` references in issue/PR notes.
-- Ensure repository contract guard workflows pass for contract generation and validation.
+- Confirm implementation and tests align with the runtime contract endpoints.
+- Include runtime endpoint references in issue/PR notes.
+- Ensure repository contract guard workflows pass for runtime contract validation.
 
 ## Repository Enforcement (PurposePath_Api)
 
-- Workflow(s): `.github/workflows/api-contract-spec-guard.yml` and related contract validation pipelines.
+- Workflow(s): `.github/workflows/api-contract-spec-guard.yml` and related runtime contract validation pipelines.
 - Enforcement behavior:
-  - Fails when contract-affecting changes do not update/regenerate required contract artifacts.
-  - Validates required contract expectations for register idempotency and confirm-email status outcomes.
+  - Fails when affected services do not expose valid runtime contract endpoints.
+  - Validates required contract expectations for register idempotency and confirm-email status outcomes against the live Account OpenAPI endpoint.
 
 ## Minimum Checklist
 
 - [ ] Correct spec file selected or created.
 - [ ] Impact and compatibility documented.
-- [ ] Generated contract artifacts updated/regenerated.
-- [ ] Validation/error behavior represented in generated contracts and verified.
+- [ ] Runtime contract endpoints validated for affected services.
+- [ ] Validation/error behavior represented in runtime contracts and verified.
 - [ ] Section index/README updated.
 - [ ] Superseded docs archived with pointer.
 - [ ] Issue/PR includes spec links and validation evidence.

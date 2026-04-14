@@ -6,10 +6,10 @@ This specification has been reduced to a thin, non-contract layer as part of Epi
 
 ## Canonical Contract Sources
 
-All endpoint-level contract details are now generated from code and maintained in:
-- `docs/contracts/openapi/traction.openapi.json`
-- `docs/contracts/openapi/integration.openapi.json`
-- `docs/contracts/asyncapi/integration.asyncapi.yaml`
+All endpoint-level contract details are now exposed from the deployed runtime endpoints:
+- Traction: `https://{api-host}/traction/api/v1/openapi/v1.json`
+- Integration: `https://{api-host}/integration/api/v1/openapi/v1.json`
+- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
 
 Contract details include:
 - Paths and HTTP methods
@@ -28,4 +28,4 @@ This document should only contain guidance that is not representable in OpenAPI/
 
 ## Authoring Rule
 
-Do not duplicate endpoint contract shapes in this document. Add/update contract-level API details in code and regenerate contracts under docs/contracts.
+Do not duplicate endpoint contract shapes in this document. Add/update contract-level API details in code and validate against the live runtime endpoints.

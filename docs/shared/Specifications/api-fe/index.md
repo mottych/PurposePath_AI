@@ -6,12 +6,12 @@ This index now tracks thin semantic specifications only.
 
 ## Canonical Contract Sources
 
-For all endpoint-level contract details, use generated artifacts:
-- `docs/contracts/openapi/account.openapi.json`
-- `docs/contracts/openapi/admin.openapi.json`
-- `docs/contracts/openapi/integration.openapi.json`
-- `docs/contracts/openapi/traction.openapi.json`
-- `docs/contracts/asyncapi/integration.asyncapi.yaml`
+For all endpoint-level contract details, use the deployed runtime contract endpoints:
+- Account: `https://{api-host}/account/api/v1/openapi/v1.json`
+- Admin: `https://{api-host}/admin/api/v1/openapi/v1.json`
+- Integration: `https://{api-host}/integration/api/v1/openapi/v1.json`
+- Traction: `https://{api-host}/traction/api/v1/openapi/v1.json`
+- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
 
 ## Thin Spec Documents (Non-Contract Context)
 

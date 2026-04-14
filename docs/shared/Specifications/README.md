@@ -4,13 +4,11 @@
 
 `docs/shared/Specifications/` contains cross-repository API and integration specifications synchronized by the shared-docs workflow.
 
-Generated machine-readable API contracts are now the canonical contract source of truth:
+Deployed runtime contract endpoints are now the canonical contract source of truth:
 
-- `docs/contracts/openapi/account.openapi.json`
-- `docs/contracts/openapi/admin.openapi.json`
-- `docs/contracts/openapi/integration.openapi.json`
-- `docs/contracts/openapi/traction.openapi.json`
-- `docs/contracts/asyncapi/integration.asyncapi.yaml`
+- HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
+- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
+- Thin docs in this folder remain synchronized for workflow, semantics, state, and operational context only.
 
 ## How to Add or Modify Specifications
 
@@ -32,7 +30,6 @@ Use the canonical workflow guide:
 
 - Thin workflow context (frontend): `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
 - Thin workflow context (admin): `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
-- Legacy machine-readable migration source: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
 
 ### AI API Specifications
 
@@ -40,9 +37,9 @@ Use the canonical workflow guide:
 
 ## Working Rules
 
-- OpenAPI/AsyncAPI artifacts under `docs/contracts/` are source of truth for endpoint/interface contracts.
+- Deployed OpenAPI/AsyncAPI endpoints are source of truth for endpoint/interface contracts.
 - Specs in this folder are thin non-contract documents for workflow, semantics, and operational context.
-- Contract changes must follow the specification change workflow and regenerate artifacts in `docs/contracts/`.
+- Contract changes must follow the specification change workflow and validate against the runtime endpoints for the affected environment.
 - Keep section README/index documents updated when adding or moving files.
 
 ## Related References
