@@ -47,6 +47,11 @@ def _strategies_linked_to_goal(
     return [s for s in strategies if str(s.get("goalId", "")) == gid]
 
 
+def _strategy_record_id(strategy: dict[str, Any]) -> str:
+    """Stable id for strategy records from business API (id or strategyId)."""
+    return str(strategy.get("id") or strategy.get("strategyId") or "")
+
+
 def _format_strategy_lines(strategies: list[dict[str, Any]]) -> str:
     """Human-readable bullet list for prompts (email / coaching)."""
     if not strategies:
@@ -849,6 +854,7 @@ async def get_strategy_by_id(context: RetrievalContext) -> dict[str, Any]:
         "strategies_by_status",
         "strategies_by_type",
         "strategies_formatted",
+        "peer_strategies_formatted",
     ),
 )
 async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
@@ -881,12 +887,29 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
         linked = _strategies_linked_to_goal(strategies_list, goal_id if goal_id else None)
         strategies_formatted = _format_strategy_lines(linked)
 
+        exclude_id_raw = context.payload.get("strategy_id")
+        peer_strategies_formatted: str
+        if exclude_id_raw:
+            exclude = str(exclude_id_raw)
+            peers = [s for s in linked if _strategy_record_id(s) != exclude]
+            if not peers:
+                peer_strategies_formatted = (
+                    "No other strategies linked to this goal besides the one under review."
+                    if linked
+                    else "No strategies linked to this goal yet."
+                )
+            else:
+                peer_strategies_formatted = _format_strategy_lines(peers)
+        else:
+            peer_strategies_formatted = strategies_formatted
+
         return {
             "strategies": strategies_list,
             "strategies_count": len(strategies_list),
             "strategies_by_status": by_status,
             "strategies_by_type": by_type,
             "strategies_formatted": strategies_formatted,
+            "peer_strategies_formatted": peer_strategies_formatted,
         }
     except Exception as e:
         logger.error(
@@ -900,6 +923,7 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
             "strategies_by_status": {},
             "strategies_by_type": {},
             "strategies_formatted": "No strategies linked to this goal yet.",
+            "peer_strategies_formatted": "No strategies linked to this goal yet.",
         }
 
 

@@ -3,6 +3,7 @@
 Response models for strategic planning AI topics:
 - alignment_check: Goal alignment with business foundation
 - strategy_suggestions: Strategy recommendations
+- strategy_alignment_evaluation: Single-strategy alignment and effectiveness review
 - measure_recommendations: Measure suggestions
 - action_suggestions: Action plan recommendations
 
@@ -105,6 +106,46 @@ class AlignmentCheckResponse(StrategicPlanningBaseModel):
 # =============================================================================
 # StrategySuggestions Request & Response Models
 # =============================================================================
+
+
+class StrategyAlignmentParagraph(StrategicPlanningBaseModel):
+    """One themed section in a strategy alignment evaluation."""
+
+    topic: str = Field(
+        ...,
+        min_length=2,
+        max_length=200,
+        description="Section title (e.g. Purpose and values alignment, Practicality)",
+    )
+    text: str = Field(
+        ...,
+        min_length=20,
+        max_length=8000,
+        description="Guidance and analysis for this section",
+    )
+
+
+class StrategyAlignmentEvaluationResponse(StrategicPlanningBaseModel):
+    """Response for strategy_alignment_evaluation topic.
+
+    Evaluates one strategy against goal intent, business purpose/values, peer
+    strategies, practicality, and progress tracking. The first paragraph must
+    address alignment with purpose and values.
+    """
+
+    paragraphs: list[StrategyAlignmentParagraph] = Field(
+        ...,
+        min_length=2,
+        max_length=16,
+        description="Ordered insight sections; first MUST be purpose and values alignment",
+    )
+    purpose_values_alignment_score: int = Field(
+        ...,
+        alias="purposeValuesAlignmentScore",
+        ge=0,
+        le=100,
+        description="Overall alignment with organizational purpose and core values (0-100)",
+    )
 
 
 class StrategySuggestionsRequest(StrategicPlanningBaseModel):
@@ -574,6 +615,8 @@ __all__ = [
     "MeasureRecommendation",
     "MeasureRecommendationsData",
     "MeasureRecommendationsResponse",
+    "StrategyAlignmentEvaluationResponse",
+    "StrategyAlignmentParagraph",
     "StrategySuggestion",
     "StrategySuggestionsRequest",
     "StrategySuggestionsResponse",

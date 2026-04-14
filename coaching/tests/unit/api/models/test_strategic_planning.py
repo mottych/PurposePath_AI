@@ -17,6 +17,8 @@ from coaching.src.api.models.strategic_planning import (
     MeasureRecommendation,
     MeasureRecommendationsData,
     MeasureRecommendationsResponse,
+    StrategyAlignmentEvaluationResponse,
+    StrategyAlignmentParagraph,
     StrategySuggestion,
     StrategySuggestionsResponse,
     SuggestedTarget,
@@ -190,6 +192,65 @@ class TestStrategySuggestionsResponse:
                 alignment_score=101,  # Above maximum
             )
         assert "less than or equal to 100" in str(exc_info.value)
+
+
+@pytest.mark.unit
+class TestStrategyAlignmentEvaluationResponse:
+    """Tests for StrategyAlignmentEvaluationResponse model."""
+
+    def test_valid_response(self) -> None:
+        """Minimal valid payload with two paragraphs and score."""
+        response = StrategyAlignmentEvaluationResponse(
+            paragraphs=[
+                StrategyAlignmentParagraph(
+                    topic="Purpose and values alignment",
+                    text=(
+                        "This strategy reinforces the stated purpose by focusing on customer "
+                        "trust, and it upholds the integrity value; no material conflicts observed."
+                    ),
+                ),
+                StrategyAlignmentParagraph(
+                    topic="Goal fit and peer strategies",
+                    text=(
+                        "The approach directly supports the revenue intent and complements the "
+                        "parallel channel strategy without redundant spend."
+                    ),
+                ),
+            ],
+            purposeValuesAlignmentScore=82,
+        )
+        assert response.purpose_values_alignment_score == 82
+        assert response.paragraphs[0].topic.startswith("Purpose")
+
+    def test_score_out_of_range(self) -> None:
+        """purposeValuesAlignmentScore must stay within 0-100."""
+        with pytest.raises(ValidationError):
+            StrategyAlignmentEvaluationResponse(
+                paragraphs=[
+                    StrategyAlignmentParagraph(
+                        topic="Purpose and values alignment",
+                        text="x" * 25,
+                    ),
+                    StrategyAlignmentParagraph(
+                        topic="Other",
+                        text="y" * 25,
+                    ),
+                ],
+                purposeValuesAlignmentScore=101,
+            )
+
+    def test_too_few_paragraphs(self) -> None:
+        """At least two paragraphs are required."""
+        with pytest.raises(ValidationError):
+            StrategyAlignmentEvaluationResponse(
+                paragraphs=[
+                    StrategyAlignmentParagraph(
+                        topic="Purpose and values alignment",
+                        text="x" * 25,
+                    ),
+                ],
+                purposeValuesAlignmentScore=50,
+            )
 
 
 @pytest.mark.unit
@@ -403,6 +464,7 @@ class TestResponseModelRegistry:
         expected_models = [
             "AlignmentCheckResponse",
             "StrategySuggestionsResponse",
+            "StrategyAlignmentEvaluationResponse",
             "MeasureRecommendationsResponse",
             "ActionSuggestionsResponse",
         ]
@@ -416,6 +478,10 @@ class TestResponseModelRegistry:
 
         assert RESPONSE_MODEL_REGISTRY["AlignmentCheckResponse"] is AlignmentCheckResponse
         assert RESPONSE_MODEL_REGISTRY["StrategySuggestionsResponse"] is StrategySuggestionsResponse
+        assert (
+            RESPONSE_MODEL_REGISTRY["StrategyAlignmentEvaluationResponse"]
+            is StrategyAlignmentEvaluationResponse
+        )
         assert (
             RESPONSE_MODEL_REGISTRY["MeasureRecommendationsResponse"]
             is MeasureRecommendationsResponse
