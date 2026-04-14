@@ -114,9 +114,11 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     application.state.settings = cfg
 
     # Add middleware in correct order - CORS must be last (runs first)
-    application.add_middleware(
-        RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0
-    )  # type: ignore[arg-type,call-arg]
+    application.add_middleware(  # type: ignore[arg-type, call-arg]
+        RateLimitingMiddleware,
+        default_capacity=100,
+        default_refill_rate=10.0,
+    )
     application.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
     application.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
     application.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
