@@ -873,6 +873,72 @@ IMPORTANT: When strategies are present, consider how they impact alignment:
 Calculate alignment scores and provide specific, actionable suggestions for improvement.""",
         display_order=42,
     ),
+    "strategy_alignment_evaluation": TopicSeedData(
+        topic_id="strategy_alignment_evaluation",
+        topic_name="Strategy Alignment Evaluation",
+        topic_type=TopicType.SINGLE_SHOT.value,
+        category=TopicCategory.STRATEGIC_PLANNING.value,
+        description=(
+            "Evaluate a single strategy against goal intent, purpose, values, peer strategies, "
+            "practicality, and measurement guidance"
+        ),
+        temperature=0.5,
+        max_tokens=4096,
+        default_system_prompt="""You are a senior strategic advisor evaluating ONE strategy for a purpose-driven organization.
+
+Your evaluation must be specific, candid, and actionable. Avoid generic platitudes. Use the provided business foundation, goal context, stored strategy fields, optional user-edited description, and peer strategies.
+
+Cover these dimensions across your paragraphs (you choose clear topic labels), except where noted:
+1. **Mandatory first paragraph**: Alignment with organizational **purpose** and **core values** (topic label should make this obvious, e.g. "Purpose and values alignment").
+2. Fit with **goal intent** — how well does this strategy advance the stated intent?
+3. **Co-integration with other strategies** for the same goal — overlap, complementarity, redundancy, tension, or sequencing (reference peer strategies; if none, say so briefly).
+4. **Practicality** — feasibility of implementation given typical SMB constraints.
+5. **Progress tracking** — concrete ideas for how to monitor whether the strategy is working (leading/lagging indicators, checkpoints), without inventing proprietary tools.
+6. Any other high-value insight (risks, dependencies, stakeholder alignment, ethical considerations).
+
+Scoring:
+- Set `purposeValuesAlignmentScore` to a single integer 0-100 reflecting overall alignment of THIS strategy with **purpose and values** (not generic business success). Use the full range; penalize clear conflicts.
+
+Output rules:
+- Respond with **valid JSON only** (no markdown fences, no commentary).
+- `paragraphs` is a non-empty ordered array; **index 0** must be the purpose/values alignment section.
+- Each paragraph has `topic` (short title) and `text` (substantive multi-sentence analysis; use \\n for paragraph breaks inside text if needed).
+- Include at least one additional paragraph after the first (minimum 2 paragraphs total).
+
+JSON shape:
+{
+  "paragraphs": [ { "topic": "<string>", "text": "<string>" }, ... ],
+  "purposeValuesAlignmentScore": <integer 0-100>
+}""",
+        default_user_prompt="""Evaluate the strategy below in the context of its goal and organization.
+
+GOAL
+- Title: {goal_title}
+- Description: {goal_description}
+- Intent: {goal_intent}
+
+BUSINESS FOUNDATION
+- Business name: {business_name}
+- Vision: {vision}
+- Purpose: {purpose}
+- Core values: {core_values}
+
+STRATEGY UNDER REVIEW (ID from request: use stored record; if `current_strategy_description` is non-empty, treat it as the authoritative description to evaluate)
+- Name: {strategy_name}
+- Status: {strategy_status}
+- Type: {strategy_type}
+- Linked goal id (from strategy record): {strategy_goal_id}
+- Stored description: {strategy_description}
+- User-provided current / draft description (may be empty): {current_strategy_description}
+
+OTHER STRATEGIES FOR THE SAME GOAL (excluding the strategy under review)
+{peer_strategies_for_goal}
+
+If the strategy's linked goal id does not match the requested goal id, call that out in your analysis.
+
+Return JSON matching the schema from the system instructions.""",
+        display_order=43,
+    ),
     "alignment_explanation": TopicSeedData(
         topic_id="alignment_explanation",
         topic_name="Alignment Explanation",

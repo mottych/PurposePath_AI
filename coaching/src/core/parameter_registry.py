@@ -828,6 +828,32 @@ _register(
     )
 )
 
+_register(
+    ParameterDefinition(
+        name="peer_strategies_for_goal",
+        param_type=ParameterType.STRING,
+        description=(
+            "Formatted list of other strategies for the goal, excluding strategy_id from the "
+            "request when present; used for single-strategy evaluation prompts."
+        ),
+        default="No strategies linked to this goal yet.",
+        retrieval_method="get_all_strategies",
+        extraction_path="peer_strategies_formatted",
+    )
+)
+
+_register(
+    ParameterDefinition(
+        name="current_strategy_description",
+        param_type=ParameterType.STRING,
+        description=(
+            "Optional draft or edited strategy description from the client; when non-empty, "
+            "prefer this text over stored strategy fields for evaluation."
+        ),
+        default="",
+    )
+)
+
 # -----------------------------------------------------------------------------
 # Measure Parameters (from get_measure_by_id or get_measures_summary)
 # -----------------------------------------------------------------------------

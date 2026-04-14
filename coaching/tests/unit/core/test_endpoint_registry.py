@@ -109,6 +109,12 @@ class TestGetTopicDefinition:
         assert endpoint is not None
         assert endpoint.topic_id == "alignment_check"
 
+    def test_get_strategy_alignment_evaluation_endpoint(self) -> None:
+        """Strategy alignment evaluation topic is registered for legacy path."""
+        endpoint = get_endpoint_definition("POST", "/coaching/strategy-alignment-evaluation")
+        assert endpoint is not None
+        assert endpoint.topic_id == "strategy_alignment_evaluation"
+
     def test_get_non_existing_endpoint(self) -> None:
         """Test getting a non-existing endpoint returns None."""
         endpoint = get_endpoint_definition("POST", "/non/existing/path")
