@@ -9,6 +9,7 @@ from typing import Any, cast
 import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -164,6 +165,25 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     if cfg.stage.lower() == "dev":
         register_runtime_contract_routes(application, cfg)
+
+    def custom_openapi() -> dict[str, Any]:
+        if application.openapi_schema:
+            return application.openapi_schema
+        openapi_schema = get_openapi(
+            title=application.title,
+            version=application.version,
+            openapi_version=application.openapi_version,
+            description=application.description,
+            routes=application.routes,
+        )
+        if cfg.stage.lower() == "dev":
+            from coaching.src.api.openapi_topic_contracts import enrich_openapi_schema
+
+            enrich_openapi_schema(openapi_schema, api_prefix=cfg.api_prefix)
+        application.openapi_schema = openapi_schema
+        return application.openapi_schema
+
+    application.openapi = custom_openapi  # type: ignore[method-assign]
 
     @application.get("/", tags=["root"], response_model=dict[str, str])
     async def root(request: Request) -> dict[str, str]:
