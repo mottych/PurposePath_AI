@@ -25,6 +25,8 @@
 
 This specification defines the contract between backend orchestration and AI topic execution for generic activity-driven email insights.
 
+**Runtime contract sources (dev, PurposePath_AI):** validate HTTP and EventBridge shapes against the deployed coaching service, not this document: OpenAPI `https://{api-host}/coaching/api/v1/openapi/v1.json`, AsyncAPI `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`). This file remains narrative and semantic guidance; endpoint- and wire-level truth is those runtime documents.
+
 It covers:
 
 - Generic trigger request contract

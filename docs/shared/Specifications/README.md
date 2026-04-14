@@ -7,7 +7,8 @@
 Deployed runtime contract endpoints are now the canonical contract source of truth:
 
 - HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
-- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
+- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}` (platform lambdas)
+- AI coaching (PurposePath_AI) dev-only: `https://{api-host}/coaching/api/v1/openapi/v1.json`, Swagger UI at `https://{api-host}/coaching/api/v1/swagger`, AsyncAPI at `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`)
 - Thin docs in this folder remain synchronized for workflow, semantics, state, and operational context only.
 
 ## How to Add or Modify Specifications
