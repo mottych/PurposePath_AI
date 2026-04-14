@@ -4,7 +4,7 @@ import logging
 import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -116,10 +116,10 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     # Add middleware in correct order - CORS must be last (runs first)
     application.add_middleware(
         RateLimitingMiddleware, default_capacity=100, default_refill_rate=10.0
-    )
-    application.add_middleware(ErrorHandlingMiddleware)
-    application.add_middleware(LoggingMiddleware)
-    application.add_middleware(CORSPreflightMiddleware)
+    )  # type: ignore[arg-type,call-arg]
+    application.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
+    application.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
+    application.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
 
     # CORS middleware must be added LAST so it runs FIRST in the middleware chain
     # This ensures CORS headers are added before any authentication or error handling
@@ -141,7 +141,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         ],
         "max_age": 3600,
     }
-    application.add_middleware(CORSMiddleware, **_cors_config)
+    application.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
 
     # Include routers
     application.include_router(health.router, prefix=f"{cfg.api_prefix}/health", tags=["health"])
@@ -228,7 +228,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             file=sys.stderr,
             flush=True,
         )
-        return cast(dict[str, Any], handle_eventbridge_event(event, context))
+        return handle_eventbridge_event(event, context)
 
     # Direct print to stderr - Lambda MUST capture this
     print(
@@ -246,7 +246,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         flush=True,
     )
 
-    return cast(dict[str, Any], response)
+    return response
 
 
 if __name__ == "__main__":
