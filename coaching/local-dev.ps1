@@ -8,15 +8,15 @@ param(
 
 Write-Host "Starting TrueNorth Coaching API development server..." -ForegroundColor Green
 
-# Check if virtual environment exists
-if (!(Test-Path ".venv")) {
-    Write-Error "Virtual environment not found. Please run setup.ps1 first."
+$CoachingRoot = $PSScriptRoot
+Set-Location $CoachingRoot
+
+$PythonExe = Join-Path $CoachingRoot ".venv\Scripts\python.exe"
+if (!(Test-Path -LiteralPath $PythonExe)) {
+    Write-Error "Virtual environment not found at coaching\.venv. Run setup.ps1 or: uv sync"
     exit 1
 }
-
-# Activate virtual environment
-Write-Host "Activating virtual environment..." -ForegroundColor Yellow
-& .\.venv\Scripts\Activate.ps1
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
 
 # Set environment variables
 $env:STAGE = "dev"
@@ -29,8 +29,9 @@ Write-Host "Health Check: http://localhost:$Port/api/v1/health" -ForegroundColor
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
 
 # Start the server
+$LogLevelArg = $LogLevel.ToLower()
 if ($Reload) {
-    uv run uvicorn src.api.main:app --host 0.0.0.0 --port $Port --reload --log-level $LogLevel.ToLower()
+    & $PythonExe -m uvicorn src.api.main:app --host 0.0.0.0 --port $Port --reload --log-level $LogLevelArg
 } else {
-    uv run uvicorn src.api.main:app --host 0.0.0.0 --port $Port --log-level $LogLevel.ToLower()
+    & $PythonExe -m uvicorn src.api.main:app --host 0.0.0.0 --port $Port --log-level $LogLevelArg
 }

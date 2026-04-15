@@ -2,6 +2,9 @@
 
 Write-Host "Setting up TrueNorth Coaching Module with uv..." -ForegroundColor Green
 
+$CoachingRoot = $PSScriptRoot
+Set-Location $CoachingRoot
+
 # Check if uv is installed
 if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "Installing uv..." -ForegroundColor Yellow
@@ -16,17 +19,20 @@ if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
 Write-Host "Creating virtual environment..." -ForegroundColor Yellow
 uv venv
 
-# Activate virtual environment
-Write-Host "Activating virtual environment..." -ForegroundColor Yellow
-& .\.venv\Scripts\Activate.ps1
+$PythonExe = Join-Path $CoachingRoot ".venv\Scripts\python.exe"
+if (!(Test-Path -LiteralPath $PythonExe)) {
+    Write-Error "uv venv did not create .venv\Scripts\python.exe"
+    exit 1
+}
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
 
 # Sync dependencies
 Write-Host "Installing dependencies..." -ForegroundColor Yellow
-uv pip sync requirements.txt
+uv pip sync requirements.txt --python $PythonExe
 
 # Install development dependencies
 Write-Host "Installing development dependencies..." -ForegroundColor Yellow
-uv pip install -e ".[dev]"
+uv pip install --python $PythonExe -e ".[dev]"
 
 # Install serverless framework globally if not present
 if (!(Get-Command serverless -ErrorAction SilentlyContinue)) {
@@ -73,6 +79,7 @@ Write-Host "`nSetup complete!" -ForegroundColor Green
 Write-Host "`nTo activate the virtual environment in future sessions, run:" -ForegroundColor Cyan
 Write-Host "  .\.venv\Scripts\Activate.ps1" -ForegroundColor White
 Write-Host "`nTo run the development server:" -ForegroundColor Cyan
-Write-Host "  uv run uvicorn src.api.main:app --reload --port 8000" -ForegroundColor White
+Write-Host "  .\local-dev.ps1" -ForegroundColor White
+Write-Host "  (or: & .\.venv\Scripts\python.exe -m uvicorn src.api.main:app --reload --port 8000)" -ForegroundColor DarkGray
 Write-Host "`nTo deploy to AWS:" -ForegroundColor Cyan
 Write-Host "  .\deploy.ps1 -stage dev" -ForegroundColor White
