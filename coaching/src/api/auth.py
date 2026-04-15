@@ -171,6 +171,10 @@ async def get_current_context(
 
         # Check user status - only Active users allowed
         if user_status and user_status.lower() != "active":
+            logger.warning(
+                "user_auth.denied denial_reason=user_not_active user_status=%s",
+                user_status,
+            )
             raise HTTPException(status_code=403, detail="User account is not active")
 
         # Parse role if provided, default to MEMBER
@@ -345,7 +349,7 @@ async def get_tenant_for_async_job_access(
 ) -> str:
     """Resolve tenant for async job polling (user JWT or service token; email-insights spec §4.6)."""
     if not authorization or not authorization.startswith("Bearer "):
-        logger.warning("async_job_auth.missing_bearer")
+        logger.warning("async_job_auth.denied denial_reason=missing_bearer_header")
         raise HTTPException(
             status_code=401,
             detail="Missing authorization header",
@@ -379,13 +383,16 @@ async def get_tenant_for_async_job_access(
                     options={"verify_aud": False, "verify_iss": False},
                 )
             else:
-                logger.warning(f"async_job_auth.jwt_invalid: {jwt_err}")
+                logger.warning(
+                    "async_job_auth.denied denial_reason=jwt_invalid detail=%s",
+                    jwt_err,
+                )
                 raise HTTPException(
                     status_code=401,
                     detail="Invalid or expired token",
                 ) from jwt_err
     except JWTError as e:
-        logger.warning(f"async_job_auth.jwt_decode_failed: {e}")
+        logger.warning("async_job_auth.denied denial_reason=jwt_decode_failed detail=%s", e)
         raise HTTPException(status_code=401, detail="Invalid or expired token") from e
 
     token_type = payload.get("token_type") or payload.get("tokenType")
@@ -394,8 +401,9 @@ async def get_tenant_for_async_job_access(
 
     if token_type == "service_enrichment" and role == "service" and tenant_id:
         logger.info(
-            f"async_job_auth.service_token_accepted tenant_id={tenant_id!s} "
-            f"issuer={payload.get('iss')!s}"
+            "async_job_auth.service_token_accepted tenant_id=%s issuer=%s",
+            tenant_id,
+            payload.get("iss"),
         )
         return str(tenant_id)
 
@@ -403,9 +411,26 @@ async def get_tenant_for_async_job_access(
     if user_id and tenant_id:
         return str(tenant_id)
 
+    if token_type == "service_enrichment":
+        if role != "service":
+            denial_reason = "service_enrichment_requires_role_service"
+        elif not tenant_id:
+            denial_reason = "service_enrichment_requires_tenant_id"
+        else:
+            denial_reason = "service_enrichment_incomplete_claims"
+    elif role == "service":
+        denial_reason = "service_role_requires_token_type_service_enrichment"
+    else:
+        denial_reason = "missing_user_or_tenant_for_async_job_access"
+
     logger.warning(
-        f"async_job_auth.claims_rejected has_tenant={bool(tenant_id)} "
-        f"has_user={bool(user_id)} token_type={token_type!r} role={role!r}"
+        "async_job_auth.denied denial_reason=%s token_type=%r role=%r "
+        "tenant_id_present=%s user_id_present=%s",
+        denial_reason,
+        token_type,
+        role,
+        bool(tenant_id),
+        bool(user_id),
     )
     raise HTTPException(
         status_code=401,
