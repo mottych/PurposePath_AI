@@ -14,6 +14,11 @@ on:
           - 'true'
           - 'false'
 
+# Serialize Pulumi updates: overlapping pushes caused 409 "Another update is currently in progress".
+concurrency:
+  group: deploy-dev-coaching
+  cancel-in-progress: false
+
 jobs:
   pre-deployment-checks:
     name: Pre-Deployment Validation
