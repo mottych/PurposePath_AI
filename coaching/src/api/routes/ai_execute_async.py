@@ -1,19 +1,16 @@
 """API routes for async AI execution.
 
 This module provides endpoints for asynchronous AI execution:
-- POST /ai/execute-async - Start an async AI job
-    USED BY: FE - useAsyncAI hook (niche_review, ica_review, value_proposition_review)
-- GET /ai/jobs/{jobId} - Check job status (polling fallback)
-    USED BY: FE - ai-job-service.ts for job polling
+- POST /ai/execute-async — canonical orchestration envelope for all async kickoffs
+- GET /ai/jobs/{jobId} — job status (polling fallback)
 
-These endpoints enable long-running AI operations that exceed
-API Gateway's 30-second timeout limit.
+These endpoints support long-running AI operations beyond API Gateway timeouts.
 """
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
 
-from coaching.src.api.auth import get_current_user, get_tenant_for_async_job_access
+from coaching.src.api.auth import get_tenant_for_async_job_access
 from coaching.src.api.dependencies.async_execution import get_async_execution_service
 from coaching.src.api.models.async_ai import (
     AsyncAIRequest,
@@ -22,7 +19,6 @@ from coaching.src.api.models.async_ai import (
     JobStatusData,
     JobStatusResponse,
 )
-from coaching.src.api.models.auth import UserContext
 from coaching.src.api.models.job_status_contract import api_contract_status_for_job_status
 from coaching.src.services.async_execution_service import (
     AsyncAIExecutionService,
@@ -35,16 +31,6 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/ai", tags=["AI Async Execute"])
 
 
-async def get_optional_current_user(authorization: str | None = Header(None)) -> UserContext | None:
-    """Best-effort user extraction for routes supporting backend-triggered calls."""
-    if not authorization:
-        return None
-    try:
-        return await get_current_user(authorization)
-    except HTTPException:
-        return None
-
-
 @router.post(
     "/execute-async",
     response_model=AsyncJobCreatedResponse,
@@ -53,41 +39,15 @@ async def get_optional_current_user(authorization: str | None = Header(None)) ->
     description="""
 Start an asynchronous AI job for long-running operations.
 
-This endpoint returns immediately with a job ID. The actual AI execution
-happens asynchronously, and results are delivered via WebSocket events.
+Uses the **canonical execute-async JSON body** (orchestration envelope): tenant/user,
+correlation, idempotency, `activityData` for topic parameters, and `authContext` for
+the service enrichment token. See shared spec: `email-insights-api-contract.md` §4
+and §4.7.
 
 **Flow:**
 1. Call this endpoint → receive `jobId` immediately
 2. Listen for WebSocket events (`ai.job.completed` or `ai.job.failed`)
 3. Optionally poll `GET /ai/jobs/{jobId}` as fallback
-
-**Use this endpoint for:**
-- Operations that may take longer than 30 seconds
-- Better UX with progress indicators
-- Resilient handling of long AI operations
-
-**Request:**
-```json
-{
-    "topic_id": "niche_review",
-    "parameters": {
-        "current_value": "We help small businesses grow"
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "jobId": "550e8400-e29b-41d4-a716-446655440000",
-        "status": "pending",
-        "topicId": "niche_review",
-        "estimatedDurationMs": 35000
-    }
-}
-```
 """,
     responses={
         200: {"description": "Job created successfully"},
@@ -104,7 +64,7 @@ happens asynchronously, and results are delivered via WebSocket events.
             },
         },
         422: {
-            "description": "Missing required parameters",
+            "description": "Missing or invalid envelope / parameters",
             "content": {
                 "application/json": {
                     "example": {
@@ -117,63 +77,25 @@ happens asynchronously, and results are delivered via WebSocket events.
 )
 async def execute_async(
     request_body: AsyncAIRequest,
-    user: UserContext | None = Depends(get_optional_current_user),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
     authorization: str | None = Header(None),
 ) -> AsyncJobCreatedResponse:
-    """Start an async AI job.
+    """Start an async AI job from the canonical orchestration envelope."""
+    tenant_id = str(request_body.tenant_id)
+    user_id = str(request_body.user_id)
+    parameters = request_body.activity_data
+    jwt_token = request_body.auth_context.service_token
 
-    Creates a new job record and starts background execution.
-    Returns immediately with job ID for tracking.
-
-    Args:
-        request_body: AI execution request with topic_id and parameters
-        user: Authenticated user context from JWT
-        service: Async execution service from DI
-        authorization: Authorization header with Bearer token for enrichment
-
-    Returns:
-        AsyncJobCreatedResponse with job ID and status
-
-    Raises:
-        HTTPException: Various status codes for validation errors
-    """
-    contract_v2 = request_body.is_backend_contract_v2
-
-    if contract_v2:
-        tenant_id = str(request_body.tenant_id)
-        user_id = str(request_body.user_id)
-        parameters = request_body.activity_data or {}
-        jwt_token = request_body.auth_context.service_token if request_body.auth_context else None
-        if jwt_token is None and authorization and authorization.startswith("Bearer "):
-            jwt_token = authorization.split(" ", 1)[1].strip()
-    else:
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing or invalid authorization header",
-            )
-        tenant_id = user.tenant_id
-        user_id = user.user_id
-        parameters = request_body.parameters
-        jwt_token = None
-        if authorization and authorization.startswith("Bearer "):
-            jwt_token = authorization.split(" ")[1]
-
-    started_fields: dict[str, object] = {
-        "topic_id": request_body.topic_id,
-        "tenant_id": tenant_id,
-        "user_id": user_id,
-        "contract_version": "v2" if contract_v2 else "legacy",
-        "correlation_id": request_body.correlation_id if contract_v2 else None,
-        "idempotency_key": request_body.idempotency_key if contract_v2 else None,
-        "event_id": request_body.event_id if contract_v2 else None,
-    }
-    if contract_v2:
-        started_fields["has_bearer_header"] = bool(
-            authorization and authorization.startswith("Bearer ")
-        )
-    logger.info("async_execute.started", **started_fields)
+    logger.info(
+        "async_execute.started",
+        topic_id=request_body.topic_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        correlation_id=request_body.correlation_id,
+        idempotency_key=request_body.idempotency_key,
+        event_id=request_body.event_id,
+        has_bearer_header=bool(authorization and authorization.startswith("Bearer ")),
+    )
 
     try:
         job = await service.create_job(
@@ -182,13 +104,13 @@ async def execute_async(
             topic_id=request_body.topic_id,
             parameters=parameters,
             jwt_token=jwt_token,
-            correlation_id=request_body.correlation_id if contract_v2 else None,
-            idempotency_key=request_body.idempotency_key if contract_v2 else None,
-            event_id=request_body.event_id if contract_v2 else None,
-            request_id=request_body.request_id if contract_v2 else None,
-            topic_category=request_body.topic_category if contract_v2 else None,
-            event_signal=request_body.event_signal if contract_v2 else None,
-            kickoff_transport="api" if contract_v2 else None,
+            correlation_id=request_body.correlation_id,
+            idempotency_key=request_body.idempotency_key,
+            event_id=request_body.event_id,
+            request_id=request_body.request_id,
+            topic_category=request_body.topic_category,
+            event_signal=request_body.event_signal,
+            kickoff_transport="api",
         )
 
         logger.info(
@@ -217,7 +139,6 @@ async def execute_async(
             error=error_msg,
         )
 
-        # Determine appropriate status code
         if "not found" in error_msg.lower():
             status_code = status.HTTP_404_NOT_FOUND
         elif "missing required parameters" in error_msg.lower():
@@ -302,22 +223,7 @@ async def get_job_status(
     tenant_id: str = Depends(get_tenant_for_async_job_access),
     service: AsyncAIExecutionService = Depends(get_async_execution_service),
 ) -> JobStatusResponse:
-    """Get job status by ID.
-
-    Retrieves current job status, including result if completed
-    or error if failed. Enforces tenant isolation.
-
-    Args:
-        job_id: Unique job identifier
-        tenant_id: Tenant from user JWT or service token (v2.4 §4.6)
-        service: Async execution service from DI
-
-    Returns:
-        JobStatusResponse with current job status
-
-    Raises:
-        HTTPException: 404 if job not found or tenant mismatch
-    """
+    """Get job status by ID (tenant from Bearer JWT: user session or service token)."""
     try:
         job = await service.get_job(job_id=job_id, tenant_id=tenant_id)
 

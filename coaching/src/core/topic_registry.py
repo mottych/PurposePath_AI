@@ -492,6 +492,37 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _strategies("strategies_for_goal"),  # Auto-enriched and formatted
         ),
     ),
+    "strategy_alignment_evaluation": TopicDefinition(
+        topic_id="strategy_alignment_evaluation",
+        endpoint_path="/coaching/strategy-alignment-evaluation",  # Legacy route
+        http_method="POST",  # Legacy route
+        response_model="StrategyAlignmentEvaluationResponse",
+        topic_type=TopicType.SINGLE_SHOT,
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description=(
+            "Evaluate one strategy's alignment with goal intent, purpose, values, peer "
+            "strategies, practicality, and progress tracking"
+        ),
+        is_active=True,
+        parameter_refs=(
+            _req("goal_id"),
+            _req("strategy_id"),
+            _opt_req("current_strategy_description"),
+            _goal("goal_title"),
+            _goal("goal_description"),
+            _goal("goal_intent"),
+            _onb("vision"),
+            _onb("purpose"),
+            _onb("core_values"),
+            _onb("business_name"),
+            _strategy("strategy_name"),
+            _strategy("strategy_description"),
+            _strategy("strategy_status"),
+            _strategy("strategy_type"),
+            _strategy("strategy_goal_id"),
+            _strategies("peer_strategies_for_goal"),
+        ),
+    ),
     "alignment_explanation": TopicDefinition(
         topic_id="alignment_explanation",
         endpoint_path="/coaching/alignment-explanation",  # Legacy route

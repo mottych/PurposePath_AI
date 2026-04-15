@@ -173,12 +173,12 @@ If any check fails, issue closure is blocked until cleanup is complete.
 - Use issue-linked commit messages (for example `feat(#123): add endpoint`).
 - Open PRs with clear scope, risks, and validation notes.
 
-## Spec and Contract Guardrails
+## API Contract Rules
 
-- Relevant specification is the source of truth for API contracts.
+- Relevant live OpenAPI/AsyncAPI endpoints are the source of truth for API contracts.
 - Do not change endpoint contract (URL/method/payload/error format) without explicit approval.
-- If code differs from approved spec, fix code to match spec by default.
-- If spec is incomplete or ambiguous, stop and request clarification.
+- If code differs from the approved live contract, fix code to match the contract by default.
+- If the live contract or thin semantic docs are incomplete or ambiguous, stop and request clarification.
 - If spec change is required, open a spec-change path and wait for approval.
 
 ## Quality Gates

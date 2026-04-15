@@ -6,21 +6,49 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
+from coaching.src.api.dependencies.async_execution import get_async_execution_service
 from coaching.src.api.main import app
 from coaching.src.domain.entities.ai_job import AIJob
 
 pytestmark = pytest.mark.unit
 
 
+def _canonical_body(**overrides: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "eventId": "evt-1",
+        "requestId": "req-1",
+        "occurredAtUtc": datetime.now(UTC).isoformat(),
+        "sourceService": "PurposePath_Api",
+        "schemaVersion": "2.0",
+        "correlationId": "corr-1",
+        "idempotencyKey": "idem-1",
+        "retryAttempt": 0,
+        "tenantId": "tenant_from_payload",
+        "userId": "user_from_payload",
+        "topicCategory": "email_insight",
+        "topicId": "goal_created_email_insight",
+        "eventSignal": "goal_created",
+        "locale": "en-US",
+        "timezone": "UTC",
+        "activityData": {"goal_id": "goal_1"},
+        "authContext": {
+            "serviceToken": "backend-service-token",
+            "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
+            "issuer": "PurposePath_Api",
+            "tokenType": "service_enrichment",
+        },
+    }
+    body.update(overrides)
+    return body
+
+
 @pytest.fixture
 def client() -> TestClient:
-    """Create FastAPI test client."""
     return TestClient(app)
 
 
 @pytest.fixture
 def mock_service() -> AsyncMock:
-    """Create mocked async execution service."""
     service = AsyncMock()
     service.create_job = AsyncMock(
         return_value=AIJob(
@@ -34,67 +62,17 @@ def mock_service() -> AsyncMock:
 
 
 class TestAsyncExecuteRoute:
-    """Tests for POST /ai/execute-async context handling."""
+    """POST /ai/execute-async accepts only the canonical orchestration envelope."""
 
-    def test_legacy_flow_uses_authenticated_context(
+    def test_canonical_envelope_creates_job(
         self, client: TestClient, mock_service: AsyncMock
     ) -> None:
-        """Legacy request should use auth-derived tenant/user context."""
-        from coaching.src.api.dependencies.async_execution import get_async_execution_service
-
         app.dependency_overrides[get_async_execution_service] = lambda: mock_service
         try:
             response = client.post(
                 "/api/v1/ai/execute-async",
-                json={"topic_id": "niche_review", "parameters": {"current_value": "test"}},
-                headers={"Authorization": "Bearer test_token"},
+                json=_canonical_body(),
             )
-
-            assert response.status_code == 200
-            call_kwargs = mock_service.create_job.await_args.kwargs
-            assert call_kwargs["tenant_id"] == "tenant_test"
-            assert call_kwargs["user_id"] == "user_test"
-            assert call_kwargs["topic_id"] == "niche_review"
-            assert call_kwargs["parameters"] == {"current_value": "test"}
-        finally:
-            app.dependency_overrides.clear()
-
-    def test_v2_flow_uses_payload_context_and_service_token(
-        self, client: TestClient, mock_service: AsyncMock
-    ) -> None:
-        """V2 request should use explicit context and forwarded service token."""
-        from coaching.src.api.dependencies.async_execution import get_async_execution_service
-
-        app.dependency_overrides[get_async_execution_service] = lambda: mock_service
-        try:
-            response = client.post(
-                "/api/v1/ai/execute-async",
-                json={
-                    "eventId": "evt-1",
-                    "requestId": "req-1",
-                    "occurredAtUtc": datetime.now(UTC).isoformat(),
-                    "sourceService": "PurposePath_Api",
-                    "schemaVersion": "2.0",
-                    "correlationId": "corr-1",
-                    "idempotencyKey": "idem-1",
-                    "retryAttempt": 0,
-                    "tenantId": "tenant_from_payload",
-                    "userId": "user_from_payload",
-                    "topicCategory": "email_insight",
-                    "topicId": "goal_created_email_insight",
-                    "eventSignal": "goal_created",
-                    "locale": "en-US",
-                    "timezone": "UTC",
-                    "activityData": {"goal_id": "goal_1"},
-                    "authContext": {
-                        "serviceToken": "backend-service-token",
-                        "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
-                        "issuer": "PurposePath_Api",
-                        "tokenType": "service_enrichment",
-                    },
-                },
-            )
-
             assert response.status_code == 200
             call_kwargs = mock_service.create_job.await_args.kwargs
             assert call_kwargs["tenant_id"] == "tenant_from_payload"
@@ -110,55 +88,35 @@ class TestAsyncExecuteRoute:
         finally:
             app.dependency_overrides.clear()
 
-    def test_legacy_without_auth_fails(self, client: TestClient, mock_service: AsyncMock) -> None:
-        """Legacy request without auth should still be rejected."""
-        from coaching.src.api.dependencies.async_execution import get_async_execution_service
-
-        app.dependency_overrides[get_async_execution_service] = lambda: mock_service
-        try:
-            response = client.post(
-                "/api/v1/ai/execute-async",
-                json={"topic_id": "niche_review", "parameters": {"current_value": "test"}},
-            )
-
-            assert response.status_code == 401
-        finally:
-            app.dependency_overrides.clear()
-
-    def test_v2_without_service_token_fails_validation(
+    def test_topic_only_payload_returns_422(
         self, client: TestClient, mock_service: AsyncMock
     ) -> None:
-        """V2 request missing authContext.serviceToken should fail with 422."""
-        from coaching.src.api.dependencies.async_execution import get_async_execution_service
-
         app.dependency_overrides[get_async_execution_service] = lambda: mock_service
         try:
             response = client.post(
                 "/api/v1/ai/execute-async",
                 json={
-                    "eventId": "evt-1",
-                    "requestId": "req-1",
-                    "occurredAtUtc": datetime.now(UTC).isoformat(),
-                    "sourceService": "PurposePath_Api",
-                    "schemaVersion": "2.0",
-                    "correlationId": "corr-1",
-                    "idempotencyKey": "idem-1",
-                    "retryAttempt": 0,
-                    "tenantId": "tenant_from_payload",
-                    "userId": "user_from_payload",
-                    "topicCategory": "email_insight",
-                    "topicId": "goal_created_email_insight",
-                    "eventSignal": "goal_created",
-                    "locale": "en-US",
-                    "timezone": "UTC",
-                    "activityData": {"goal_id": "goal_1"},
-                    "authContext": {
-                        "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
-                        "issuer": "PurposePath_Api",
-                        "tokenType": "service_enrichment",
-                    },
+                    "topicId": "niche_review",
+                    "parameters": {"current_value": "test"},
                 },
             )
+            assert response.status_code == 422
+            mock_service.create_job.assert_not_awaited()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_missing_service_token_in_auth_context_returns_422(
+        self, client: TestClient, mock_service: AsyncMock
+    ) -> None:
+        app.dependency_overrides[get_async_execution_service] = lambda: mock_service
+        try:
+            body = _canonical_body()
+            body["authContext"] = {
+                "expiresAtUtc": (datetime.now(UTC) + timedelta(minutes=5)).isoformat(),
+                "issuer": "PurposePath_Api",
+                "tokenType": "service_enrichment",
+            }
+            response = client.post("/api/v1/ai/execute-async", json=body)
             assert response.status_code == 422
             mock_service.create_job.assert_not_awaited()
         finally:

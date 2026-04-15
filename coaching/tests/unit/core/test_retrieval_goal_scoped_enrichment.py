@@ -51,6 +51,28 @@ async def test_get_all_strategies_without_goal_id_empty_formatted() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_all_strategies_peer_strategies_excludes_strategy_id() -> None:
+    """peer_strategies_formatted lists goal strategies except the payload strategy_id."""
+    client = AsyncMock()
+    client.get_strategies = AsyncMock(
+        return_value=[
+            {"id": "s1", "name": "Alpha", "goalId": "g1"},
+            {"id": "s2", "name": "Beta", "goalId": "g1"},
+        ]
+    )
+    ctx = RetrievalContext(
+        client=client,
+        tenant_id="t1",
+        user_id="u1",
+        payload={"goal_id": "g1", "strategy_id": "s1"},
+    )
+    result = await get_all_strategies(ctx)
+    assert "Beta" in result["peer_strategies_formatted"]
+    assert "Alpha" not in result["peer_strategies_formatted"]
+    assert "Alpha" in result["strategies_formatted"]
+
+
+@pytest.mark.asyncio
 async def test_get_measures_summary_measures_for_goal_filters() -> None:
     """Measures linked by goalId or connections.goalIds appear in goal-scoped fields."""
     client = AsyncMock()

@@ -44,6 +44,7 @@ from coaching.src.api.models.strategic_planning import (
     AlignmentCheckResponse,
     GoalIntentReviewResponse,
     MeasureRecommendationsResponse,
+    StrategyAlignmentEvaluationResponse,
     StrategySuggestionsResponse,
 )
 from coaching.src.models.responses import (
@@ -79,6 +80,7 @@ RESPONSE_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     # === Strategic Planning ===
     "GoalIntentReviewResponse": GoalIntentReviewResponse,
     "StrategySuggestionsResponse": StrategySuggestionsResponse,
+    "StrategyAlignmentEvaluationResponse": StrategyAlignmentEvaluationResponse,
     "MeasureRecommendationsResponse": MeasureRecommendationsResponse,
     "AlignmentAnalysisResponse": AlignmentAnalysisResponse,
     "AlignmentExplanationResponse": AlignmentExplanationResponse,

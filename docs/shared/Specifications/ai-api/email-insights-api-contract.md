@@ -1,7 +1,7 @@
 # Email Insights AI API Contract Specification
 
 **Version:** 2.4  
-**Last Updated:** April 12, 2026  
+**Last Updated:** April 14, 2026  
 **Status:** Approved for Full Cutover  
 **Scope:** Generic `email_insight` topics
 
@@ -11,6 +11,7 @@
 
 ## Revision Log
 
+- 2026-04-13 - v2.4 - §4.7: single HTTP body for all `execute-async` kickoffs; `topicCategory` from coaching `TopicCategory` for non-email topics (issue #315)
 - 2026-04-12 - v2.4 - Documented coaching vs `api.{env}` BFF auth boundary, claim names, and coaching denial log markers for async job polling (issue #313)
 - 2026-04-09 - v2.4 - Added normative terminal EventBridge wire contract, terminal idempotency/ordering rules, and service-token auth contract for API fallback endpoints
 - 2026-04-09 - v2.3 - Enforced transport-mode isolation: EventBridge mode is terminal-event-driven only; API polling is allowed only in API fallback mode
@@ -24,6 +25,8 @@
 ## 1. Overview
 
 This specification defines the contract between backend orchestration and AI topic execution for generic activity-driven email insights.
+
+**Runtime contract sources (dev, PurposePath_AI):** validate HTTP and EventBridge shapes against the deployed coaching service, not this document: OpenAPI `https://{api-host}/coaching/api/v1/openapi/v1.json`, AsyncAPI `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`). This file remains narrative and semantic guidance; endpoint- and wire-level truth is those runtime documents.
 
 It covers:
 
@@ -441,6 +444,16 @@ Tenant isolation contract for `GET /api/v1/ai/jobs/{jobId}`:
 - **Public API host** (`https://api.{env}.purposepath.app`, PurposePath_Api) may apply **additional** authorization (for example ASP.NET policies) **before** proxying to coaching. An HTTP **403** with a generic body such as `{"message":"Forbidden"}` is typically produced by that **BFF layer**, not by coaching. If coaching rejects a token, expect **401** with a `detail` string from FastAPI unless a different route explicitly returns **403** (for example inactive user accounts on user-session paths).
 
 **Denial observability (coaching):** CloudWatch log lines include `async_job_auth.denied` with `denial_reason=...` for polling auth failures; `async_execute.started` includes `has_bearer_header` for v2 kickoffs; inactive user session denial uses `user_auth.denied denial_reason=user_not_active`.
+
+### 4.7 `POST /api/v1/ai/execute-async` — single envelope for all async kickoffs
+
+PurposePath_AI accepts **one** JSON shape for `execute-async` (the trigger fields in §4.1–§4.3), including:
+
+- **`activityData`**: topic template inputs (same information older clients sent as a top-level `parameters` object).
+- **`topicCategory`**: for `email_insight` topics, use `email_insight`. For other registered single-shot topics (for example onboarding reviews), use the topic’s **`TopicCategory`** value from coaching (`onboarding`, `insights`, `strategic_planning`, etc.).
+- **`eventSignal`**: stable string for the triggering context (`goal_created` for the email-insight mapping, or a product-agreed value such as `user_requested` for interactive flows).
+
+There is **no** alternate minimal body on the same URL.
 
 ### 4.5 Server-side enrichment (`goal_created_email_insight`)
 

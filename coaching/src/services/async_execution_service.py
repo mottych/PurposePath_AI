@@ -808,6 +808,7 @@ class AsyncAIExecutionService:
             "value_proposition_review": 35000,
             "website_scan": 45000,
             "alignment_check": 30000,
+            "strategy_alignment_evaluation": 40000,
             "strategy_suggestions": 40000,
             "kpi_recommendations": 40000,
         }

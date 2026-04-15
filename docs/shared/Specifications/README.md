@@ -4,6 +4,13 @@
 
 `docs/shared/Specifications/` contains cross-repository API and integration specifications synchronized by the shared-docs workflow.
 
+Deployed runtime contract endpoints are now the canonical contract source of truth:
+
+- HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
+- Async contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}` (platform lambdas)
+- AI coaching (PurposePath_AI) dev-only: `https://{api-host}/coaching/api/v1/openapi/v1.json`, Swagger UI at `https://{api-host}/coaching/api/v1/swagger`, AsyncAPI at `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`). The coaching OpenAPI document includes **`x-purposepath-topic-contracts`**, per-topic `components.schemas` (`PurposePathExecuteParameters__*`, `PurposePathExecuteAsyncActivityData__*`, `PurposePathModel__*`), and **named request examples** on `POST …/ai/execute` and `POST …/ai/execute-async` for single-shot topics.
+- Thin docs in this folder remain synchronized for workflow, semantics, state, and operational context only.
+
 ## How to Add or Modify Specifications
 
 Use the canonical workflow guide:
@@ -22,9 +29,8 @@ Use the canonical workflow guide:
 
 ### Billing Specifications
 
-- Frontend billing contract: `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
-- Admin billing contract: `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
-- Machine-readable source contract: `docs/shared/Specifications/api-fe/billing-backend-openapi.yaml`
+- Thin workflow context (frontend): `docs/shared/Specifications/api-fe/billing-frontend-api-specification.md`
+- Thin workflow context (admin): `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
 
 ### AI API Specifications
 
@@ -32,8 +38,9 @@ Use the canonical workflow guide:
 
 ## Working Rules
 
-- Specs here are source of truth for API contracts.
-- Contract changes must follow the specification change workflow.
+- Deployed OpenAPI/AsyncAPI endpoints are source of truth for endpoint/interface contracts.
+- Specs in this folder are thin non-contract documents for workflow, semantics, and operational context.
+- Contract changes must follow the specification change workflow and validate against the runtime endpoints for the affected environment.
 - Keep section README/index documents updated when adding or moving files.
 
 ## Related References
