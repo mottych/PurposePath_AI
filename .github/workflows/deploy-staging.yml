@@ -13,6 +13,18 @@ on:
         options:
           - 'true'
           - 'false'
+  workflow_call:
+    inputs:
+      skip_tests:
+        description: 'Skip tests before deployment'
+        required: false
+        default: 'false'
+        type: string
+
+# Serialize Pulumi updates: overlapping triggers (push, dispatch, API repo) caused 409 conflicts.
+concurrency:
+  group: deploy-staging-coaching
+  cancel-in-progress: false
 
 jobs:
   pre-deployment-checks:
