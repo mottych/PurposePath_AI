@@ -106,7 +106,7 @@ def _measure(name: str, path: str = "") -> ParameterRef:
 
 
 def _measures(name: str, path: str = "") -> ParameterRef:
-    """Create a MEASURES source parameter reference (from get_measures_summary)."""
+    """Create a MEASURES source parameter reference (from get_measures_summary / GET /measures)."""
     return ParameterRef(name=name, source=ParameterSource.MEASURES, source_path=path)
 
 
@@ -118,7 +118,7 @@ def _strategy(name: str, path: str = "") -> ParameterRef:
 
 
 def _strategies(name: str, path: str = "") -> ParameterRef:
-    """Create a STRATEGIES source parameter reference (from get_all_strategies)."""
+    """Create a STRATEGIES source parameter reference (from get_all_strategies / Traction goals)."""
     return ParameterRef(
         name=name, source=ParameterSource.GOALS, source_path=path
     )  # Reuse GOALS source

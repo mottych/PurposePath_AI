@@ -4,6 +4,7 @@ This client provides integration with the .NET Business API for
 retrieving user and organizational data for context enrichment.
 """
 
+import asyncio
 from typing import Any, cast
 
 import httpx
@@ -80,6 +81,18 @@ class BusinessApiClient:
 
         return headers
 
+    def _traction_api_base(self) -> str:
+        """Base URL for Traction API v1 (goals, strategies, measures, operations).
+
+        Production uses ``BUSINESS_API_BASE_URL`` ending in ``/account/api/v1``; Traction
+        is the sibling ``/traction/api/v1``. Tests may pass a host-only base, in which
+        case ``/traction/api/v1`` is appended.
+        """
+        base = self.base_url.rstrip("/")
+        if "/account/api/v1" in base:
+            return base.replace("/account/api/v1", "/traction/api/v1")
+        return f"{base}/traction/api/v1"
+
     @staticmethod
     def _extract_data(payload: dict[str, Any]) -> Any:
         """Normalize Traction responses that may nest data multiple times."""
@@ -91,6 +104,58 @@ class BusinessApiClient:
                 return inner
 
         return data
+
+    @staticmethod
+    def _inject_strategy_goal_id(strategy: dict[str, Any], goal_id: str) -> None:
+        if not strategy.get("goalId") and not strategy.get("goal_id"):
+            strategy["goalId"] = goal_id
+
+    async def _list_traction_goal_ids(self, tenant_id: str) -> list[str]:
+        """List goal ids for the tenant (Traction), for aggregating goal-scoped resources."""
+        traction = self._traction_api_base()
+        response = await self.client.get(
+            f"{traction}/goals",
+            headers=self._get_headers(tenant_id),
+            params={"pageSize": 200},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        data = self._extract_data(payload)
+        if isinstance(data, dict) and "items" in data:
+            goals = data.get("items", [])
+        elif isinstance(data, list):
+            goals = data
+        elif isinstance(data, dict):
+            goals = data.get("data") or data.get("goals") or []
+        else:
+            goals = []
+        out: list[str] = []
+        for g in goals:
+            if isinstance(g, dict) and g.get("id") is not None:
+                out.append(str(g["id"]))
+        return out
+
+    async def _fetch_goal_strategies_traction(
+        self, tenant_id: str, goal_id: str
+    ) -> list[dict[str, Any]]:
+        traction = self._traction_api_base()
+        response = await self.client.get(
+            f"{traction}/goals/{goal_id}/strategies",
+            headers=self._get_headers(tenant_id),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        data = self._extract_data(payload)
+        if isinstance(data, list):
+            raw = data
+        elif isinstance(data, dict):
+            raw = data.get("items") or data.get("strategies") or data.get("data") or []
+        else:
+            raw = []
+        strategies_list = cast(list[dict[str, Any]], raw)
+        for s in strategies_list:
+            self._inject_strategy_goal_id(s, goal_id)
+        return strategies_list
 
     async def get_user_context(self, user_id: str, tenant_id: str) -> dict[str, Any]:
         """
@@ -276,9 +341,10 @@ class BusinessApiClient:
         try:
             logger.info("Fetching user goals", user_id=user_id, tenant_id=tenant_id)
 
-            # GET /goals?personId={userId} (Traction Service - updated query param)
+            # GET /goals?personId={userId} (Traction — not Account base path)
+            traction = self._traction_api_base()
             response = await self.client.get(
-                "/goals",
+                f"{traction}/goals",
                 headers=self._get_headers(tenant_id),
                 params={"personId": user_id},  # Changed from ownerId to personId
             )
@@ -342,12 +408,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching goal", goal_id=goal_id, tenant_id=tenant_id)
 
-            # Goals are in Traction service, not Account service
-            # Construct full traction URL from base URL
-            traction_url = self.base_url.replace("/account/api/v1", "/traction/api/v1")
-
+            traction = self._traction_api_base()
             response = await self.client.get(
-                f"{traction_url}/goals/{goal_id}",
+                f"{traction}/goals/{goal_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
@@ -385,8 +448,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching strategy", strategy_id=strategy_id, tenant_id=tenant_id)
 
+            traction = self._traction_api_base()
             response = await self.client.get(
-                f"/strategies/{strategy_id}",
+                f"{traction}/strategies/{strategy_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
@@ -410,37 +474,72 @@ class BusinessApiClient:
             raise
 
     async def get_strategies(
-        self, tenant_id: str, params: dict[str, Any] | None = None
+        self,
+        tenant_id: str,
+        *,
+        goal_id: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """List strategies for the tenant.
+        """List strategies (Traction).
 
-        Endpoint: GET /strategies
+        When ``goal_id`` is set: GET /goals/{goalId}/strategies (live OpenAPI).
 
-        Args:
-            tenant_id: Tenant identifier
-            params: Optional query parameters (status, type, goalId, page, pageSize)
+        When omitted: GET /goals then strategies per goal (no tenant-wide /strategies
+        on current contracts).
         """
         try:
-            logger.info("Fetching strategies", tenant_id=tenant_id)
-
-            response = await self.client.get(
-                "/strategies",
-                headers=self._get_headers(tenant_id),
-                params=params or None,
+            logger.info(
+                "Fetching strategies",
+                tenant_id=tenant_id,
+                goal_id=goal_id,
             )
-            response.raise_for_status()
 
-            payload = response.json()
-            data = self._extract_data(payload)
+            traction = self._traction_api_base()
+            gid = str(goal_id).strip() if goal_id else ""
+            if gid:
+                response = await self.client.get(
+                    f"{traction}/goals/{gid}/strategies",
+                    headers=self._get_headers(tenant_id),
+                    params=params or None,
+                )
+                response.raise_for_status()
+                payload = response.json()
+                data = self._extract_data(payload)
+                if isinstance(data, list):
+                    raw = data
+                elif isinstance(data, dict):
+                    raw = data.get("items") or data.get("strategies") or data.get("data") or []
+                else:
+                    raw = []
+                strategies_list = cast(list[dict[str, Any]], raw)
+                for s in strategies_list:
+                    self._inject_strategy_goal_id(s, gid)
+                return strategies_list
 
-            if isinstance(data, list):
-                strategies = data
-            elif isinstance(data, dict):
-                strategies = data.get("items") or data.get("strategies") or data.get("data") or []
-            else:
-                strategies = []
+            goal_ids = await self._list_traction_goal_ids(tenant_id)
+            if not goal_ids:
+                return []
 
-            return cast(list[dict[str, Any]], strategies)
+            fetch_tasks = [self._fetch_goal_strategies_traction(tenant_id, g) for g in goal_ids]
+            results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+            merged: list[dict[str, Any]] = []
+            seen_ids: set[str] = set()
+            for r in results:
+                if not isinstance(r, list):
+                    logger.warning(
+                        "Partial failure loading strategies for a goal",
+                        tenant_id=tenant_id,
+                        error=str(r),
+                    )
+                    continue
+                for s in r:
+                    sid = str(s.get("id") or s.get("strategyId") or "")
+                    if sid and sid in seen_ids:
+                        continue
+                    if sid:
+                        seen_ids.add(sid)
+                    merged.append(s)
+            return merged
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -462,8 +561,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching measure", measure_id=measure_id, tenant_id=tenant_id)
 
+            traction = self._traction_api_base()
             response = await self.client.get(
-                f"/measures/{measure_id}",
+                f"{traction}/measures/{measure_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()
@@ -500,8 +600,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching measures", tenant_id=tenant_id)
 
+            traction = self._traction_api_base()
             response = await self.client.get(
-                "/measures",
+                f"{traction}/measures",
                 headers=self._get_headers(tenant_id),
                 params=params or None,
             )
@@ -532,30 +633,29 @@ class BusinessApiClient:
             raise
 
     async def get_measures_summary(self, tenant_id: str) -> dict[str, Any]:
-        """Get comprehensive measures summary with progress and statistics.
+        """Build a measures summary from Traction ``GET /measures``.
 
-        Endpoint: GET /measures/summary
-
-        Returns all measures with:
-        - Full measure details
-        - Progress per goal/strategy link
-        - Summary statistics (totals, by status, by category, by owner)
-        - Overall health score
-        - Trend data
+        The legacy ``GET /measures/summary`` route is not on live OpenAPI; enrichment
+        still expects ``measures``, ``summary``, and ``healthScore`` keys.
         """
         try:
             logger.info("Fetching measures summary", tenant_id=tenant_id)
 
-            response = await self.client.get(
-                "/measures/summary",
-                headers=self._get_headers(tenant_id),
-            )
-            response.raise_for_status()
+            measures = await self.get_measures(tenant_id)
+            by_status: dict[str, int] = {}
+            for m in measures:
+                status = str(m.get("status", "unknown"))
+                by_status[status] = by_status.get(status, 0) + 1
 
-            payload = response.json()
-            data = self._extract_data(payload)
-
-            return cast(dict[str, Any], data if isinstance(data, dict) else {})
+            return {
+                "measures": measures,
+                "summary": {
+                    "byStatus": by_status,
+                    "byCategory": [],
+                    "byOwner": [],
+                },
+                "healthScore": 0,
+            }
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -1182,10 +1282,11 @@ class BusinessApiClient:
         try:
             logger.info("Fetching measure catalog", tenant_id=tenant_id, goal_id=goal_id)
 
+            traction = self._traction_api_base()
             if goal_id:
-                endpoint = f"/goals/{goal_id}/available-measures"
+                endpoint = f"{traction}/goals/{goal_id}/available-measures"
             else:
-                endpoint = "/goals/available-measures"
+                endpoint = f"{traction}/goals/available-measures"
 
             response = await self.client.get(
                 endpoint,

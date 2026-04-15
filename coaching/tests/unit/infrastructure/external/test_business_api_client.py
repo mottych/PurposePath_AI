@@ -25,7 +25,10 @@ def business_client(mock_http_client):
     """Create BusinessApiClient with mocked HTTP client."""
     from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 
-    client = BusinessApiClient(base_url="https://api.test.com", jwt_token="test-token")
+    client = BusinessApiClient(
+        base_url="https://api.test.com/account/api/v1",
+        jwt_token="test-token",
+    )
     client.client = mock_http_client
     return client
 
@@ -127,7 +130,7 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "g1"
         mock_http_client.get.assert_called_with(
-            "/goals",
+            "https://api.test.com/traction/api/v1/goals",
             headers=business_client._get_headers("t1"),
             params={"personId": "u1"},
         )
@@ -258,10 +261,8 @@ class TestBusinessApiClient:
 
         assert result["id"] == "g1"
         assert result["title"] == "Goal 1"
-        # get_goal_by_id tries to replace /account/ with /traction/ in base_url
-        # Test fixture uses "https://api.test.com" (no /account/), so no replacement occurs
         mock_http_client.get.assert_called_with(
-            "https://api.test.com/goals/g1",
+            "https://api.test.com/traction/api/v1/goals/g1",
             headers=business_client._get_headers("t1"),
         )
 
@@ -276,22 +277,40 @@ class TestBusinessApiClient:
         assert result["id"] == "s1"
         assert result["name"] == "Strategy 1"
         mock_http_client.get.assert_called_with(
-            "/strategies/s1",
+            "https://api.test.com/traction/api/v1/strategies/s1",
             headers=business_client._get_headers("t1"),
         )
 
     async def test_get_strategies(self, business_client, mock_http_client):
-        """Test get_strategies."""
-        mock_http_client.get.return_value.json.return_value = {
-            "data": {"items": [{"id": "s1", "name": "Strategy 1"}]}
-        }
+        """Test get_strategies aggregates via Traction goals when no goal_id."""
+        goals_resp = Mock()
+        goals_resp.status_code = 200
+        goals_resp.json.return_value = {"data": {"items": [{"id": "g1"}]}}
+        strat_resp = Mock()
+        strat_resp.status_code = 200
+        strat_resp.json.return_value = {"data": {"items": [{"id": "s1", "name": "Strategy 1"}]}}
+        mock_http_client.get.side_effect = [goals_resp, strat_resp]
 
         result = await business_client.get_strategies("t1")
 
         assert len(result) == 1
         assert result[0]["id"] == "s1"
-        mock_http_client.get.assert_called_with(
-            "/strategies",
+        assert result[0]["goalId"] == "g1"
+        assert mock_http_client.get.call_count == 2
+
+    async def test_get_strategies_goal_scoped(self, business_client, mock_http_client):
+        """Test get_strategies with goal_id uses a single goal-scoped Traction call."""
+        mock_http_client.get.side_effect = None
+        mock_http_client.get.return_value.json.return_value = {
+            "data": {"items": [{"id": "s1", "name": "Strategy 1"}]},
+        }
+
+        result = await business_client.get_strategies("t1", goal_id="g9")
+
+        assert len(result) == 1
+        assert result[0]["goalId"] == "g9"
+        mock_http_client.get.assert_called_once_with(
+            "https://api.test.com/traction/api/v1/goals/g9/strategies",
             headers=business_client._get_headers("t1"),
             params=None,
         )
@@ -307,7 +326,7 @@ class TestBusinessApiClient:
         assert result["id"] == "m1"
         assert result["name"] == "Measure 1"
         mock_http_client.get.assert_called_with(
-            "/measures/m1",
+            "https://api.test.com/traction/api/v1/measures/m1",
             headers=business_client._get_headers("t1"),
         )
 
@@ -322,28 +341,27 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "m1"
         mock_http_client.get.assert_called_with(
-            "/measures",
+            "https://api.test.com/traction/api/v1/measures",
             headers=business_client._get_headers("t1"),
             params=None,
         )
 
     async def test_get_measures_summary(self, business_client, mock_http_client):
-        """Test get_measures_summary."""
+        """Test get_measures_summary builds from GET /measures (Traction)."""
         mock_http_client.get.return_value.json.return_value = {
-            "data": {
-                "measures": [{"id": "m1", "name": "Measure 1"}],
-                "summary": {"total": 10, "onTrack": 8},
-                "healthScore": 85,
-            }
+            "data": {"items": [{"id": "m1", "name": "Measure 1", "status": "active"}]},
         }
 
         result = await business_client.get_measures_summary("t1")
 
-        assert result["healthScore"] == 85
-        assert result["summary"]["total"] == 10
-        mock_http_client.get.assert_called_with(
-            "/measures/summary",
+        assert result["healthScore"] == 0
+        assert len(result["measures"]) == 1
+        assert result["measures"][0]["id"] == "m1"
+        assert result["summary"]["byStatus"]["active"] == 1
+        mock_http_client.get.assert_called_once_with(
+            "https://api.test.com/traction/api/v1/measures",
             headers=business_client._get_headers("t1"),
+            params=None,
         )
 
     async def test_get_people(self, business_client, mock_http_client):
@@ -479,7 +497,7 @@ class TestBusinessApiClient:
         result = await business_client.get_kpi_by_id("m1", "t1")
         assert result["id"] == "m1"
         mock_http_client.get.assert_called_with(
-            "/measures/m1",
+            "https://api.test.com/traction/api/v1/measures/m1",
             headers=business_client._get_headers("t1"),
         )
 
@@ -488,7 +506,7 @@ class TestBusinessApiClient:
         result = await business_client.get_kpis("t1")
         assert len(result) == 1
         mock_http_client.get.assert_called_with(
-            "/measures",
+            "https://api.test.com/traction/api/v1/measures",
             headers=business_client._get_headers("t1"),
             params=None,
         )

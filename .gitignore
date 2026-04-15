@@ -107,6 +107,7 @@ venv.bak/
 
 # Virtual environments (uv)
 .venv/
+.venv-ci/
 .uv/
 
 # Spyder project settings
