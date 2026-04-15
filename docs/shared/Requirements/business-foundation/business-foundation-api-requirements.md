@@ -1079,7 +1079,7 @@ interface WizardProgress {
 - `demographics`: required, max 1000 characters
 - `goals`: required, max 1000 characters
 - `painPoints`: required, max 1000 characters
-- Maximum 3 ICAs per tenant
+- Maximum 5 ICAs per tenant
 
 ---
 

@@ -231,7 +231,7 @@ Behaviors:
 | Where They Are | Long Text | No | Where to find them (channels, communities) |
 | Buying Process | Long Text | No | How they evaluate and purchase |
 
-**Multiple ICAs**: Users can define up to 3 ICAs to represent different customer segments.
+**Multiple ICAs**: Users can define up to 5 ICAs to represent different customer segments.
 
 ### 4.4 Products & Services
 
@@ -744,7 +744,7 @@ What pain points do they face? *
 
 [✨ AI: Enrich my ICA with more details]
 
-[+ Add Another ICA] (up to 3)
+[+ Add Another ICA] (up to 5)
 ```
 
 ### 7.4 Products & Services Section
