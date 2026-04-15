@@ -73,12 +73,12 @@ class TestResponseMetadataModel:
     def test_valid_metadata(self) -> None:
         """Test creating valid metadata."""
         metadata = ResponseMetadata(
-            model="anthropic.claude-3-sonnet",
+            model="anthropic.claude-sonnet-4-6",
             tokens_used=1500,
             processing_time_ms=2500,
             finish_reason="stop",
         )
-        assert metadata.model == "anthropic.claude-3-sonnet"
+        assert metadata.model == "anthropic.claude-sonnet-4-6"
         assert metadata.tokens_used == 1500
         assert metadata.processing_time_ms == 2500
         assert metadata.finish_reason == "stop"

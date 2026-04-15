@@ -239,6 +239,26 @@ class TestLLMTopic:
                 updated_at=datetime.now(tz=UTC),
             )
 
+    def test_retired_claude_3_sonnet_code_remapped_to_sonnet_46(self) -> None:
+        """Stored registry codes for retired Bedrock models map to active successors."""
+        topic = LLMTopic(
+            topic_id="legacy_sonnet",
+            topic_name="Legacy",
+            topic_type="single_shot",
+            category="test",
+            is_active=True,
+            basic_model_code="CLAUDE_3_SONNET",
+            premium_model_code="CLAUDE_3_SONNET",
+            temperature=0.7,
+            max_tokens=8000,
+            prompts=[],
+            additional_config={},
+            created_at=datetime.now(tz=UTC),
+            updated_at=datetime.now(tz=UTC),
+        )
+        assert topic.basic_model_code == "CLAUDE_SONNET_4_6"
+        assert topic.premium_model_code == "CLAUDE_SONNET_4_6"
+
     def test_to_dynamodb_item(self, sample_topic: LLMTopic) -> None:
         """Test conversion to DynamoDB item."""
         from decimal import Decimal

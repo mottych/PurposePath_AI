@@ -9,6 +9,7 @@ from coaching.src.core.llm_models import (
     get_model,
     get_model_provider_class,
     list_models,
+    resolve_active_model_code,
 )
 
 
@@ -47,6 +48,13 @@ class TestModelRegistry:
         assert model.provider_class == "BedrockLLMProvider"
         assert model.max_tokens > 0
         assert model.cost_per_1k_tokens > 0
+        assert model.is_active is False
+
+    def test_resolve_active_model_code_remaps_retired_claude_3_sonnet(self) -> None:
+        """Inactive CLAUDE_3_SONNET should resolve to CLAUDE_SONNET_4_6."""
+        assert resolve_active_model_code("CLAUDE_3_SONNET") == "CLAUDE_SONNET_4_6"
+        assert resolve_active_model_code("CLAUDE_SONNET_4_6") == "CLAUDE_SONNET_4_6"
+        assert resolve_active_model_code("NOT_A_CODE", fallback="GPT_4O") == "GPT_4O"
 
     def test_claude_haiku_4_5_is_registered_and_active(self) -> None:
         """Claude Haiku 4.5 should be available for active selection."""
@@ -87,6 +95,7 @@ class TestModelRegistry:
 
         assert len(active_models) > 0
         assert all(m.is_active for m in active_models)
+        assert all(m.code != "CLAUDE_3_SONNET" for m in active_models)
 
     def test_list_models_by_provider(self) -> None:
         """Test filtering models by provider."""

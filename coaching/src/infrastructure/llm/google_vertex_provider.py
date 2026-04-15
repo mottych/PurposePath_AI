@@ -43,8 +43,9 @@ DEFAULT_CACHE_TTL_SECONDS = 3600
 CACHE_SUPPORTED_MODELS_GEMINI: set[str] = {
     "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-001",
+    "gemini-3.1-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
     "gemini-1.5-pro",
     "gemini-1.5-flash",
 }
@@ -72,16 +73,14 @@ class GoogleVertexLLMProvider:
 
     # Supported Vertex AI model IDs
     SUPPORTED_MODELS: ClassVar[list[str]] = [
-        # Gemini 3.x Series (latest - December 2025)
+        # Gemini 3.x (Vertex publishes preview IDs until GA aliases ship)
         "gemini-3.1-pro-preview",
+        "gemini-3-flash-preview",
+        "gemini-3.1-flash-lite-preview",
         # Gemini 2.5 Series
         "gemini-2.5-pro",
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
-        # Gemini 2.0 Series
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-001",
-        "gemini-2.0-flash-lite",
         # Gemini 1.5 Series (legacy)
         "gemini-1.5-pro",
         "gemini-1.5-flash",

@@ -55,7 +55,6 @@ class OpenAILLMProvider:
         # GPT-4o Series
         "gpt-4o",
         "gpt-4o-mini",
-        "gpt-4-turbo",
         # GPT-5 Series
         "gpt-5-pro",
         "gpt-5",
@@ -65,6 +64,10 @@ class OpenAILLMProvider:
         # GPT 5.2 Series (Latest - December 2025)
         "gpt-5.2",
         "gpt-5.2-pro",
+        # GPT 5.4 Series (March 2026)
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
     ]
 
     def __init__(self, api_key: str | None = None, organization: str | None = None):
@@ -229,6 +232,9 @@ class OpenAILLMProvider:
                 "gpt-5-nano",
                 "gpt-5.2",
                 "gpt-5.2-pro",
+                "gpt-5.4",
+                "gpt-5.4-mini",
+                "gpt-5.4-nano",
             }
             if model not in models_without_temperature:
                 params["temperature"] = temperature
@@ -375,6 +381,9 @@ class OpenAILLMProvider:
                 "gpt-5-nano",
                 "gpt-5.2",
                 "gpt-5.2-pro",
+                "gpt-5.4",
+                "gpt-5.4-mini",
+                "gpt-5.4-nano",
             }
             if model not in models_without_temperature:
                 params["temperature"] = temperature

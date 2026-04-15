@@ -848,11 +848,11 @@ class TestResponseMetadata:
     def test_response_metadata_with_values(self) -> None:
         """Test ResponseMetadata with explicit values."""
         metadata = ResponseMetadata(
-            model="claude-3-sonnet",
+            model="claude-sonnet-4-6",
             processing_time_ms=500,
             tokens_used=1500,
         )
-        assert metadata.model == "claude-3-sonnet"
+        assert metadata.model == "claude-sonnet-4-6"
         assert metadata.processing_time_ms == 500
         assert metadata.tokens_used == 1500
 

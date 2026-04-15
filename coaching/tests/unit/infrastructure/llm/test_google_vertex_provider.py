@@ -29,7 +29,7 @@ class TestGoogleVertexProviderInitialization:
         assert isinstance(models, list)
         assert "gemini-2.5-pro" in models
         assert "gemini-2.5-flash" in models
-        assert "gemini-2.0-flash" in models
+        assert "gemini-3-flash-preview" in models
 
     def test_supported_models_is_copy(self) -> None:
         """Test that supported_models returns a copy, not the original list."""
@@ -381,7 +381,7 @@ class TestGoogleVertexProviderModelValidation:
         """Test validate_model returns True for supported models."""
         assert await provider.validate_model("gemini-2.5-pro") is True
         assert await provider.validate_model("gemini-2.5-flash") is True
-        assert await provider.validate_model("gemini-2.0-flash") is True
+        assert await provider.validate_model("gemini-3-flash-preview") is True
 
     @pytest.mark.asyncio
     async def test_validate_model_returns_false_for_unsupported(

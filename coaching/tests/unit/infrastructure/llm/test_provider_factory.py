@@ -93,7 +93,7 @@ class TestGetProviderForModel:
         provider1, _ = factory.get_provider_for_model("CLAUDE_3_5_SONNET_V2")
 
         # Second call should return same provider
-        provider2, _ = factory.get_provider_for_model("CLAUDE_3_SONNET")
+        provider2, _ = factory.get_provider_for_model("CLAUDE_SONNET_4_6")
 
         assert provider1 is provider2
         assert len(factory._providers) == 1

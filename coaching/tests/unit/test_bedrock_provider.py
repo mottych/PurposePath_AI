@@ -61,7 +61,7 @@ class TestBedrockProviderProperties:
         # Assert
         assert isinstance(models, list)
         assert len(models) > 0
-        assert "anthropic.claude-3-sonnet-20240229-v1:0" in models
+        assert "anthropic.claude-3-5-sonnet-20240620-v1:0" in models
         assert "anthropic.claude-haiku-4-5-20251001-v1:0" in models
 
     def test_supported_models_returns_copy(self) -> None:
@@ -94,7 +94,7 @@ class TestBedrockProviderValidation:
         """Test that temperature < 0 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         # Act & Assert
         with pytest.raises(ValueError, match="Temperature must be between"):
@@ -110,7 +110,7 @@ class TestBedrockProviderValidation:
         """Test that temperature > 1 raises ValueError."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         # Act & Assert
         with pytest.raises(ValueError, match="Temperature must be between"):
@@ -140,7 +140,7 @@ class TestBedrockProviderValidation:
         """Test that temperature 0.0 and 1.0 are accepted."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         # Mock bedrock client converse response (new Converse API format)
         provider.bedrock_client.converse = Mock(
@@ -173,18 +173,16 @@ class TestBedrockProviderModelSupport:
         provider = BedrockLLMProvider(bedrock_client=Mock())
 
         # Act & Assert
-        assert "anthropic.claude-3-sonnet-20240229-v1:0" in provider.supported_models
-        assert "anthropic.claude-haiku-4-5-20251001-v1:0" in provider.supported_models
         assert "anthropic.claude-3-5-sonnet-20240620-v1:0" in provider.supported_models
+        assert "anthropic.claude-haiku-4-5-20251001-v1:0" in provider.supported_models
+        assert "anthropic.claude-sonnet-4-5-20250929-v1:0" in provider.supported_models
 
-    def test_supports_llama_models(self) -> None:
-        """Test that Llama models are supported."""
-        # Arrange
+    def test_supports_claude_sonnet_46(self) -> None:
+        """Test that Claude Sonnet 4.6 is supported (inference profile base id)."""
         provider = BedrockLLMProvider(bedrock_client=Mock())
 
-        # Act & Assert
-        assert "meta.llama3-70b-instruct-v1:0" in provider.supported_models
-        assert "meta.llama3-8b-instruct-v1:0" in provider.supported_models
+        assert "anthropic.claude-sonnet-4-6" in provider.supported_models
+        assert "us.anthropic.claude-sonnet-4-6" in provider.supported_models
 
 
 @pytest.mark.unit
@@ -200,7 +198,7 @@ class TestBedrockProviderEdgeCases:
         """Test generate with empty messages list."""
         # Arrange
         messages: list[LLMMessage] = []
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         # Act - Should handle gracefully or raise appropriate error
         # The actual behavior depends on implementation
@@ -224,7 +222,7 @@ class TestBedrockProviderEdgeCases:
         """Test generate with None system prompt."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         provider.bedrock_client.converse = Mock(
             return_value={
@@ -249,7 +247,7 @@ class TestBedrockProviderEdgeCases:
         """Test generate with None max_tokens."""
         # Arrange
         messages = [LLMMessage(role="user", content="Test")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         provider.bedrock_client.converse = Mock(
             return_value={
@@ -292,7 +290,7 @@ class TestBedrockProviderMultipleModels:
         """Test generation with Claude model."""
         # Arrange
         messages = [LLMMessage(role="user", content="Hello")]
-        model = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
 
         # Act
         result = await provider.generate(messages=messages, model=model)
@@ -309,9 +307,9 @@ class TestBedrockProviderMultipleModels:
         messages = [LLMMessage(role="user", content="Test")]
 
         claude_models = [
-            "anthropic.claude-3-sonnet-20240229-v1:0",
+            "anthropic.claude-3-5-sonnet-20240620-v1:0",
             "anthropic.claude-haiku-4-5-20251001-v1:0",
-            "anthropic.claude-v2:1",
+            "anthropic.claude-sonnet-4-6",
         ]
 
         # Act & Assert
@@ -401,6 +399,14 @@ class TestInferenceProfileResolution:
                 "anthropic.claude-opus-4-5-20251101-v1:0",
                 "us.anthropic.claude-opus-4-5-20251101-v1:0",
             ),
+            (
+                "anthropic.claude-sonnet-4-6",
+                "us.anthropic.claude-sonnet-4-6",
+            ),
+            (
+                "anthropic.claude-opus-4-6-v1",
+                "us.anthropic.claude-opus-4-6-v1",
+            ),
         ]
 
         for input_model, expected_output in test_cases:
@@ -413,9 +419,7 @@ class TestInferenceProfileResolution:
 
         # Models that support direct invocation (should NOT be modified)
         direct_models = [
-            "anthropic.claude-3-sonnet-20240229-v1:0",
-            "anthropic.claude-3-5-sonnet-20240620-v1:0",  # v1 supports direct
-            "meta.llama3-70b-instruct-v1:0",
+            "anthropic.claude-3-5-sonnet-20240620-v1:0",  # Claude 3.5 Sonnet v1 — direct invoke
         ]
 
         for model in direct_models:
@@ -430,7 +434,7 @@ class TestInferenceProfileResolution:
         prefixed_models = [
             "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
             "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
-            "apac.anthropic.claude-opus-4-5-20250929-v1:0",
+            "apac.anthropic.claude-opus-4-5-20251101-v1:0",
         ]
 
         for model in prefixed_models:
