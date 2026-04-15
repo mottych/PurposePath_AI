@@ -192,7 +192,7 @@ class ParameterStoreService:
             Tuple of (basic_model_code, premium_model_code)
         """
         logger.info("Using hardcoded fallback default models")
-        return ("CLAUDE_3_5_SONNET_V2", "CLAUDE_OPUS_4_5")
+        return ("CLAUDE_SONNET_4_6", "CLAUDE_OPUS_4_6")
 
     def clear_cache(self) -> None:
         """Clear the parameter cache.

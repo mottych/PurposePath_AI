@@ -32,14 +32,14 @@ configurations:
 
   - interaction_code: "STRATEGY_ANALYSIS"
     template_id: "STRATEGY_ANALYSIS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.8
     max_tokens: 4096
 
   - interaction_code: "KPI_ANALYSIS"
     template_id: "KPI_ANALYSIS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.7
     max_tokens: 3000
@@ -55,7 +55,7 @@ configurations:
 
   - interaction_code: "COACHING_RESPONSE"
     template_id: "COACHING_RESPONSE_V1_DEV"
-    model_code: "CLAUDE_3_HAIKU"
+    model_code: "CLAUDE_HAIKU_4_5"
     tier: "basic"  # Basic tier gets faster, cheaper model
     temperature: 0.7
     max_tokens: 2048
@@ -78,35 +78,35 @@ configurations:
   
   - interaction_code: "STRATEGIC_ALIGNMENT"
     template_id: "STRATEGIC_ALIGNMENT_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.7
     max_tokens: 4096
 
   - interaction_code: "ROOT_CAUSE_ANALYSIS"
     template_id: "ROOT_CAUSE_ANALYSIS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.7
     max_tokens: 3000
 
   - interaction_code: "ACTION_SUGGESTIONS"
     template_id: "ACTION_SUGGESTIONS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.8
     max_tokens: 3000
 
   - interaction_code: "PRIORITIZATION_SUGGESTIONS"
     template_id: "PRIORITIZATION_SUGGESTIONS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.6  # Lower for systematic prioritization
     max_tokens: 2500
 
   - interaction_code: "SCHEDULING_SUGGESTIONS"
     template_id: "SCHEDULING_SUGGESTIONS_V1_DEV"
-    model_code: "CLAUDE_3_HAIKU"  # Fast model for scheduling
+    model_code: "CLAUDE_HAIKU_4_5"  # Fast model for scheduling
     tier: null
     temperature: 0.5
     max_tokens: 2500
@@ -124,14 +124,14 @@ configurations:
   
   - interaction_code: "ONBOARDING_SUGGESTIONS"
     template_id: "ONBOARDING_SUGGESTIONS_V1_DEV"
-    model_code: "CLAUDE_3_SONNET"
+    model_code: "CLAUDE_SONNET_4_6"
     tier: null
     temperature: 0.7
     max_tokens: 3000
 
   - interaction_code: "WEBSITE_SCAN"
     template_id: "WEBSITE_SCAN_V1_DEV"
-    model_code: "CLAUDE_3_HAIKU"  # Fast model for extraction
+    model_code: "CLAUDE_HAIKU_4_5"  # Fast model for extraction
     tier: null
     temperature: 0.5  # Lower for factual extraction
     max_tokens: 4096
@@ -144,9 +144,9 @@ configurations:
 #    - 0.8-1.0: Creative suggestions, brainstorming, ideation
 #
 # 2. Model Selection Guidelines:
-#    - CLAUDE_3_5_SONNET: Best quality, complex reasoning, premium features
-#    - CLAUDE_3_SONNET: Balanced quality/cost, general purpose
-#    - CLAUDE_3_HAIKU: Fast & cheap, simple tasks, high volume
+#    - CLAUDE_3_5_SONNET / CLAUDE_3_5_SONNET_V2: Strong general-purpose Claude 3.5 line
+#    - CLAUDE_SONNET_4_6: Current default balanced Sonnet on Bedrock
+#    - CLAUDE_HAIKU_4_5: Fast & cheap extraction / high volume
 #
 # 3. Tier-Based Configuration:
 #    - Use tier: null for features available to all users

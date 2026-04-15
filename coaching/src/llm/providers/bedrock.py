@@ -61,13 +61,15 @@ class BedrockProvider(BaseProvider):
         "us.anthropic.claude-haiku-4-5-20251001-v1:0",
         "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         "us.anthropic.claude-3-opus-20240229-v1:0",
-        "us.anthropic.claude-3-sonnet-20240229-v1:0",
+        "us.anthropic.claude-sonnet-4-6",
+        "us.anthropic.claude-opus-4-6-v1",
         # Legacy model IDs (for backwards compatibility)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-haiku-4-5-20251001-v1:0",
         "anthropic.claude-3-opus-20240229-v1:0",
-        "anthropic.claude-3-sonnet-20240229-v1:0",
+        "anthropic.claude-sonnet-4-6",
+        "anthropic.claude-opus-4-6-v1",
         # Amazon Titan
         "amazon.titan-text-premier-v1:0",
         "amazon.titan-text-express-v1",

@@ -81,7 +81,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         capabilities=["chat", "analysis", "streaming", "function_calling"],
         max_tokens=4096,
         cost_per_1k_tokens=0.003,
-        is_active=True,
+        is_active=False,  # Retired from active paths; use CLAUDE_SONNET_4_6
     ),
     "CLAUDE_3_HAIKU": SupportedModel(
         code="CLAUDE_3_HAIKU",
@@ -206,6 +206,52 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         ],
         max_tokens=200000,
         cost_per_1k_tokens=0.015,  # Opus tier pricing
+        is_active=True,
+    ),
+    # Claude Sonnet 4.6 / Opus 4.6 — inference profiles (global + regional prefixes)
+    "CLAUDE_SONNET_4_6": SupportedModel(
+        code="CLAUDE_SONNET_4_6",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-sonnet-4-6",
+        version="4.6",
+        provider_class="BedrockLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "pdf_support",
+            "extended_context",
+            "extended_thinking",
+            "priority_tier",
+            "agentic",
+        ],
+        max_tokens=1000000,
+        cost_per_1k_tokens=0.0045,
+        is_active=True,
+    ),
+    "CLAUDE_OPUS_4_6": SupportedModel(
+        code="CLAUDE_OPUS_4_6",
+        provider=LLMProvider.BEDROCK,
+        model_name="anthropic.claude-opus-4-6-v1",
+        version="4.6",
+        provider_class="BedrockLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "pdf_support",
+            "extended_context",
+            "extended_thinking",
+            "priority_tier",
+            "advanced_reasoning",
+            "agentic",
+        ],
+        max_tokens=1000000,
+        cost_per_1k_tokens=0.016,
         is_active=True,
     ),
     # ==========================================================================
@@ -333,6 +379,56 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.0945,  # Avg of $21/1M input, $168/1M output
         is_active=True,
     ),
+    # GPT-5.4 family (March 2026) — pricing approximated from OpenAI list / mini card
+    "GPT_5_4": SupportedModel(
+        code="GPT_5_4",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5.4",
+        version="5.4",
+        provider_class="OpenAILLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "advanced_reasoning",
+            "agentic",
+        ],
+        max_tokens=400000,
+        cost_per_1k_tokens=0.012,
+        is_active=True,
+    ),
+    "GPT_5_4_MINI": SupportedModel(
+        code="GPT_5_4_MINI",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5.4-mini",
+        version="5.4",
+        provider_class="OpenAILLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "reasoning",
+            "agentic",
+        ],
+        max_tokens=400000,
+        cost_per_1k_tokens=0.002625,  # ~avg of $0.75/1M in, $4.50/1M out
+        is_active=True,
+    ),
+    "GPT_5_4_NANO": SupportedModel(
+        code="GPT_5_4_NANO",
+        provider=LLMProvider.OPENAI,
+        model_name="gpt-5.4-nano",
+        version="5.4",
+        provider_class="OpenAILLMProvider",
+        capabilities=["chat", "analysis", "streaming", "function_calling", "reasoning"],
+        max_tokens=400000,
+        cost_per_1k_tokens=0.001,
+        is_active=True,
+    ),
     # ==========================================================================
     # Google Vertex AI / Gemini Models
     # ==========================================================================
@@ -393,7 +489,7 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.00025,  # Avg of $0.10/1M input, $0.40/1M output
         is_active=True,
     ),
-    # Gemini 3.1 Pro - Latest generation (Preview - February 2026)
+    # Gemini 3.x on Vertex (Feb-Mar 2026): Google still publishes *-preview IDs only; see Vertex model docs.
     "GEMINI_3_PRO": SupportedModel(
         code="GEMINI_3_PRO",
         provider=LLMProvider.GOOGLE_VERTEX,
@@ -416,7 +512,65 @@ MODEL_REGISTRY: dict[str, SupportedModel] = {
         cost_per_1k_tokens=0.007,  # Avg of $2/1M input, $12/1M output (<=200k)
         is_active=True,
     ),
+    "GEMINI_3_1_FLASH": SupportedModel(
+        code="GEMINI_3_1_FLASH",
+        provider=LLMProvider.GOOGLE_VERTEX,
+        model_name="gemini-3-flash-preview",
+        version="3.1",
+        provider_class="GoogleVertexLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "long_context",
+            "multimodal",
+            "thinking",
+            "thought_signatures",
+        ],
+        max_tokens=1048576,
+        cost_per_1k_tokens=0.0015,
+        is_active=True,
+    ),
+    "GEMINI_3_1_FLASH_LITE": SupportedModel(
+        code="GEMINI_3_1_FLASH_LITE",
+        provider=LLMProvider.GOOGLE_VERTEX,
+        model_name="gemini-3.1-flash-lite-preview",
+        version="3.1",
+        provider_class="GoogleVertexLLMProvider",
+        capabilities=[
+            "chat",
+            "analysis",
+            "streaming",
+            "function_calling",
+            "vision",
+            "long_context",
+        ],
+        max_tokens=1048576,
+        cost_per_1k_tokens=0.00035,
+        is_active=True,
+    ),
 }
+
+
+# Inactive registry codes → preferred active replacement (DynamoDB / legacy topic rows)
+INACTIVE_MODEL_SUCCESSOR_CODE: dict[str, str] = {
+    "CLAUDE_3_SONNET": "CLAUDE_SONNET_4_6",
+}
+
+
+def resolve_active_model_code(model_code: str, *, fallback: str = "CLAUDE_HAIKU_4_5") -> str:
+    """Return an active MODEL_REGISTRY code, remapping known retired codes.
+
+    Used for extraction and other paths that must not call inactive models.
+    """
+    if model_code not in MODEL_REGISTRY:
+        return fallback
+    spec = MODEL_REGISTRY[model_code]
+    if spec.is_active:
+        return model_code
+    return INACTIVE_MODEL_SUCCESSOR_CODE.get(model_code, fallback)
 
 
 def get_model(code: str) -> SupportedModel:
@@ -496,10 +650,12 @@ DEFAULT_MODEL_ID = MODEL_REGISTRY[DEFAULT_MODEL_CODE].model_name
 __all__ = [
     "DEFAULT_MODEL_CODE",
     "DEFAULT_MODEL_ID",
+    "INACTIVE_MODEL_SUCCESSOR_CODE",
     "MODEL_REGISTRY",
     "LLMProvider",
     "SupportedModel",
     "get_model",
     "get_model_provider_class",
     "list_models",
+    "resolve_active_model_code",
 ]

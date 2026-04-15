@@ -271,7 +271,7 @@ async def test_model_validation_real_providers() -> None:
 
     # Valid models
     assert await bedrock_provider.validate_model("anthropic.claude-3-5-sonnet-20240620-v1:0")
-    assert await bedrock_provider.validate_model("anthropic.claude-3-sonnet-20240229-v1:0")
+    assert await bedrock_provider.validate_model("anthropic.claude-sonnet-4-6")
 
     # Invalid model
     assert not await bedrock_provider.validate_model("invalid-model-id")

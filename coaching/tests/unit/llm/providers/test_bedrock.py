@@ -11,7 +11,7 @@ from coaching.src.llm.providers.bedrock import BedrockProvider
 def provider_config() -> ProviderConfig:
     return ProviderConfig(
         provider_type=ProviderType.BEDROCK,
-        model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+        model_name="us.anthropic.claude-sonnet-4-6",
         region_name="us-east-1",
         api_key="test-key",
     )
@@ -86,10 +86,10 @@ async def test_validate_model_supported(provider_config: ProviderConfig) -> None
         mock_session.return_value.client.return_value = mock_client
 
         mock_client.list_foundation_models.return_value = {
-            "modelSummaries": [{"modelId": "anthropic.claude-3-sonnet-20240229-v1:0"}]
+            "modelSummaries": [{"modelId": "us.anthropic.claude-sonnet-4-6"}]
         }
 
-        is_valid = await provider.validate_model("anthropic.claude-3-sonnet-20240229-v1:0")
+        is_valid = await provider.validate_model("us.anthropic.claude-sonnet-4-6")
         assert is_valid is True
 
 

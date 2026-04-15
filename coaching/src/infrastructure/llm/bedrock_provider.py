@@ -22,7 +22,7 @@ Prompt Caching:
     See: https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
 
 Note on Inference Profiles:
-    Newer Claude models (Claude 3.5 Sonnet v2+, Claude Haiku 4.5, Claude Sonnet 4.5, Claude Opus 4.5)
+    Newer Claude models (Claude 3.5 Sonnet v2+, Claude Haiku 4.5, Claude Sonnet 4.5/4.6, Claude Opus 4.5/4.6)
     require inference profiles instead of direct model IDs. These are region-prefixed
     model identifiers (e.g., "us.anthropic.claude-3-5-sonnet-20241022-v2:0").
 
@@ -46,6 +46,8 @@ INFERENCE_PROFILE_MODELS: set[str] = {
     "anthropic.claude-haiku-4-5-20251001-v1:0",  # Claude Haiku 4.5
     "anthropic.claude-sonnet-4-5-20250929-v1:0",  # Claude Sonnet 4.5
     "anthropic.claude-opus-4-5-20251101-v1:0",  # Claude Opus 4.5
+    "anthropic.claude-sonnet-4-6",  # Claude Sonnet 4.6
+    "anthropic.claude-opus-4-6-v1",  # Claude Opus 4.6
 }
 
 # Models that support prompt caching via cache_control blocks
@@ -71,6 +73,16 @@ CACHE_SUPPORTED_MODELS: set[str] = {
     "us.anthropic.claude-opus-4-5-20251101-v1:0",
     "eu.anthropic.claude-opus-4-5-20251101-v1:0",
     "apac.anthropic.claude-opus-4-5-20251101-v1:0",
+    # Claude Sonnet 4.6
+    "anthropic.claude-sonnet-4-6",
+    "us.anthropic.claude-sonnet-4-6",
+    "eu.anthropic.claude-sonnet-4-6",
+    "apac.anthropic.claude-sonnet-4-6",
+    # Claude Opus 4.6
+    "anthropic.claude-opus-4-6-v1",
+    "us.anthropic.claude-opus-4-6-v1",
+    "eu.anthropic.claude-opus-4-6-v1",
+    "apac.anthropic.claude-opus-4-6-v1",
 }
 
 # Minimum tokens required for caching (varies by model)
@@ -96,7 +108,6 @@ class BedrockLLMProvider:
     # Supported Bedrock model IDs (including inference profile variants)
     SUPPORTED_MODELS: ClassVar[list[str]] = [
         # Claude 3 models (direct invocation supported)
-        "anthropic.claude-3-sonnet-20240229-v1:0",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         # Claude 3.5 Sonnet v2 (requires inference profile)
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -118,12 +129,16 @@ class BedrockLLMProvider:
         "us.anthropic.claude-opus-4-5-20251101-v1:0",
         "eu.anthropic.claude-opus-4-5-20251101-v1:0",
         "apac.anthropic.claude-opus-4-5-20251101-v1:0",
-        # Legacy Claude models
-        "anthropic.claude-v2:1",
-        "anthropic.claude-v2",
-        # Meta Llama models
-        "meta.llama3-70b-instruct-v1:0",
-        "meta.llama3-8b-instruct-v1:0",
+        # Claude Sonnet 4.6 (inference profile)
+        "anthropic.claude-sonnet-4-6",
+        "us.anthropic.claude-sonnet-4-6",
+        "eu.anthropic.claude-sonnet-4-6",
+        "apac.anthropic.claude-sonnet-4-6",
+        # Claude Opus 4.6 (inference profile)
+        "anthropic.claude-opus-4-6-v1",
+        "us.anthropic.claude-opus-4-6-v1",
+        "eu.anthropic.claude-opus-4-6-v1",
+        "apac.anthropic.claude-opus-4-6-v1",
     ]
 
     def __init__(self, bedrock_client: Any, region: str = "us-east-1"):

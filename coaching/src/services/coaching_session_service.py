@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
-from coaching.src.core.llm_models import MODEL_REGISTRY
+from coaching.src.core.llm_models import MODEL_REGISTRY, resolve_active_model_code
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
@@ -1318,16 +1318,17 @@ class CoachingSessionService:
         extraction_topic = copy(llm_topic)
         # Use configured extraction model, but gracefully fall back if a model code
         # is configured before the corresponding registry entry is deployed.
-        extraction_model = llm_topic.get_extraction_model_code()
-
-        if extraction_model not in MODEL_REGISTRY:
-            fallback_model = "CLAUDE_HAIKU_4_5"
+        extraction_model = resolve_active_model_code(
+            llm_topic.get_extraction_model_code(),
+            fallback="CLAUDE_HAIKU_4_5",
+        )
+        requested = llm_topic.get_extraction_model_code()
+        if extraction_model != requested:
             logger.warning(
-                "coaching_service.extraction_model_not_in_registry",
-                requested_model=extraction_model,
-                fallback_model=fallback_model,
+                "coaching_service.extraction_model_remapped",
+                requested_model=requested,
+                resolved_model=extraction_model,
             )
-            extraction_model = fallback_model
         extraction_topic.basic_model_code = extraction_model
         extraction_topic.premium_model_code = extraction_model
         extraction_model_max = MODEL_REGISTRY[extraction_model].max_tokens

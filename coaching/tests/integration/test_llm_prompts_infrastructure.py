@@ -50,7 +50,7 @@ def sample_topic_item() -> dict[str, Any]:
             },
         ],
         "config": {
-            "default_model": "anthropic.claude-3-sonnet-20240229-v1:0",
+            "default_model": "anthropic.claude-sonnet-4-6",
             "supports_streaming": True,
             "max_turns": 20,
         },

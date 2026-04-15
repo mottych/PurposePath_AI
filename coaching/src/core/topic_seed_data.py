@@ -54,8 +54,8 @@ class TopicSeedData:
     category: str
     description: str
     tier_level: TierLevel = TierLevel.FREE
-    basic_model_code: str = "CLAUDE_3_5_SONNET_V2"
-    premium_model_code: str = "CLAUDE_OPUS_4_5"
+    basic_model_code: str = "CLAUDE_SONNET_4_6"
+    premium_model_code: str = "CLAUDE_OPUS_4_6"
     temperature: float = 0.7
     max_tokens: int = 4096
     top_p: float = 1.0

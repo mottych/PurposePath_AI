@@ -10,7 +10,11 @@ from decimal import Decimal
 from typing import Any, ClassVar
 
 from coaching.src.core.constants import TierLevel
-from coaching.src.core.llm_models import DEFAULT_MODEL_CODE, MODEL_REGISTRY
+from coaching.src.core.llm_models import (
+    DEFAULT_MODEL_CODE,
+    INACTIVE_MODEL_SUCCESSOR_CODE,
+    MODEL_REGISTRY,
+)
 from coaching.src.domain.exceptions.topic_exceptions import (
     InvalidModelConfigurationError,
     InvalidTopicTypeError,
@@ -254,6 +258,10 @@ class LLMTopic:
         if not candidate:
             return DEFAULT_MODEL_CODE
         if candidate in MODEL_REGISTRY:
+            spec = MODEL_REGISTRY[candidate]
+            if not spec.is_active:
+                replacement = INACTIVE_MODEL_SUCCESSOR_CODE.get(candidate, DEFAULT_MODEL_CODE)
+                return replacement if replacement in MODEL_REGISTRY else DEFAULT_MODEL_CODE
             return candidate
 
         return cls.LEGACY_MODEL_CODE_ALIASES.get(candidate.lower(), candidate)
@@ -613,7 +621,7 @@ class LLMTopic:
             basic_model, premium_model = param_service.get_default_models()
         except Exception:
             # Fallback to hardcoded defaults if Parameter Store unavailable
-            basic_model, premium_model = ("CLAUDE_3_5_SONNET_V2", "CLAUDE_OPUS_4_5")
+            basic_model, premium_model = ("CLAUDE_SONNET_4_6", "CLAUDE_OPUS_4_6")
 
         return cls(
             topic_id=endpoint_def.topic_id,
