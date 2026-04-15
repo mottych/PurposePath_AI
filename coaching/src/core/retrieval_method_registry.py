@@ -864,7 +864,12 @@ async def get_all_strategies(context: RetrievalContext) -> dict[str, Any]:
             "retrieval_method.get_all_strategies",
             tenant_id=context.tenant_id,
         )
-        strategies = await context.client.get_strategies(context.tenant_id)
+        payload_goal = context.payload.get("goal_id")
+        goal_kw = str(payload_goal).strip() if payload_goal else None
+        strategies = await context.client.get_strategies(
+            context.tenant_id,
+            goal_id=goal_kw or None,
+        )
         strategies_list = list(strategies)
 
         # Group by status
