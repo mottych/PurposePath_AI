@@ -27,6 +27,10 @@ This repository does not own:
 - `shared/`: shared utilities and schema assets.
 - `coaching/pulumi/` and workflow files: service deployment automation.
 
+## CI/CD: staging deploy from the API repo
+
+`PurposePath_Api` can start a staging deployment here with a `repository_dispatch` event of type `deploy-staging`. The handler is `.github/workflows/deploy-from-api.yml`, which calls the reusable `.github/workflows/deploy-staging.yml` workflow (same pipeline as push to `staging` / manual dispatch). API-triggered runs share the `deploy-staging-coaching` concurrency group with other staging deploys so Pulumi updates do not overlap.
+
 ## Canonical Standards
 
 - Shared standards:
