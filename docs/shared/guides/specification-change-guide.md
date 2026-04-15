@@ -77,14 +77,6 @@ Use this guide for:
 7. Validation and close-out
 - Confirm implementation and tests align with the runtime contract endpoints.
 - Include runtime endpoint references in issue/PR notes.
-- Ensure repository contract guard workflows pass for runtime contract validation.
-
-## Repository Enforcement (PurposePath_Api)
-
-- Workflow(s): `.github/workflows/api-contract-spec-guard.yml` and related runtime contract validation pipelines.
-- Enforcement behavior:
-  - Fails when affected services do not expose valid runtime contract endpoints.
-  - Validates required contract expectations for register idempotency and confirm-email status outcomes against the live Account OpenAPI endpoint.
 
 ## Minimum Checklist
 
