@@ -15,6 +15,7 @@ Options:
     --deactivate-orphans   Deactivate topics that no longer have endpoints
 
 Examples:
+    # Set PYTHONPATH to the repository root (parent of the `coaching` package), then:
     # Seed all new topics (skip existing)
     python -m coaching.src.scripts.seed_topics
 
@@ -32,6 +33,8 @@ Examples:
 
     # Deactivate orphaned topics
     python -m coaching.src.scripts.seed_topics --deactivate-orphans
+
+    See coaching/src/scripts/README.md for PowerShell / uv invocations.
 """
 
 import argparse

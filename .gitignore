@@ -406,6 +406,7 @@ security-reports/
 vulnerability-reports/
 .snyk
 .artifacts/*
+.artifacts-downloaded/
 !.artifacts/security/
 .artifacts/security/*
 !.artifacts/security/.gitignore

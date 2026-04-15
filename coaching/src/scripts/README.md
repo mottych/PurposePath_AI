@@ -11,11 +11,13 @@ These scripts seed coaching topics into the `purposepath-topics-{env}` DynamoDB 
 ### `seed_topics.py`
 Main seeding script that:
 - Creates all coaching topics in DynamoDB from the endpoint registry
-- Supports 44 topics total
+- Seeds every topic defined in the endpoint registry / topic seed data
 - Is idempotent (safe to run multiple times)
 - Can update existing topics or skip them
 
 ## Usage
+
+The script imports `coaching.src.*`. Set **`PYTHONPATH` to the repository root** (the parent folder of the `coaching` package), then run the module as `coaching.src.scripts.seed_topics`.
 
 ```bash
 # Set environment variables
@@ -23,22 +25,40 @@ export AWS_PROFILE=purposepath-dev
 export AWS_REGION=us-east-1
 export STAGE=dev
 
-# Run seed script
+# Repository root = PurposePath_AI (folder that contains the `coaching` directory)
+export PYTHONPATH="$(pwd)"
+
+# Run seed script (from repo root or from coaching — see below)
 cd coaching
-python -m src.scripts.seed_topics
+uv run python -m coaching.src.scripts.seed_topics
 
 # Run with options
-python -m src.scripts.seed_topics --force-update  # Update existing
-python -m src.scripts.seed_topics --dry-run       # Preview changes
-python -m src.scripts.seed_topics --validate-only # Validate only
+uv run python -m coaching.src.scripts.seed_topics --force-update  # Update existing
+uv run python -m coaching.src.scripts.seed_topics --dry-run       # Preview changes
+uv run python -m coaching.src.scripts.seed_topics --validate-only # Validate only
+
+# Seed a single topic (example: strategy_alignment_evaluation, issue #296)
+uv run python -m coaching.src.scripts.seed_topics --topic-id strategy_alignment_evaluation --force-update
 ```
+
+**PowerShell (Windows), from repository root:**
+
+```powershell
+$env:AWS_PROFILE = "purposepath-dev"
+$env:AWS_REGION = "us-east-1"
+$env:STAGE = "dev"
+$env:PYTHONPATH = "C:\path\to\PurposePath_AI"
+cd coaching
+uv run python -m coaching.src.scripts.seed_topics --topic-id strategy_alignment_evaluation --force-update
+```
+
+Legacy path `python -m src.scripts.seed_topics` only works if your environment exposes the same import layout as CI (see `pyproject.toml` `pythonpath` for tests).
 
 ## Prerequisites
 
 1. **Infrastructure Deployed**: DynamoDB topics table must exist
 2. **AWS Credentials**: Configure AWS profile or credentials
-3. **Dependencies**: Install Python dependencies
-- Old YAML files remain untouched (cleaned up later)
+3. **Dependencies**: Install Python dependencies (`uv sync` in `coaching/`)
 
 ## Idempotency
 
