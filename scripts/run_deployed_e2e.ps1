@@ -9,9 +9,21 @@ param(
 Write-Host "=== PurposePath AI - Deployed E2E Tests ===" -ForegroundColor Cyan
 Write-Host ""
 
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $RepoRoot
+
+. (Join-Path $PSScriptRoot "Resolve-CoachingPython.ps1")
+$PythonExe = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+if (-not $PythonExe) {
+    Write-Host "ERROR: No coaching venv Python found. Run: cd coaching && uv sync" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
+Write-Host ""
+
 # Get authentication token
 Write-Host "Getting authentication token..." -ForegroundColor Yellow
-$token = .venv\Scripts\python.exe scripts\get_e2e_token.py
+$token = & $PythonExe scripts\get_e2e_token.py
 
 if (-not $token) {
     Write-Host "ERROR: Failed to get authentication token" -ForegroundColor Red
@@ -52,11 +64,11 @@ $TestFilter = $args[0]
 if ($TestFilter) {
     Write-Host "Running E2E tests matching: $TestFilter" -ForegroundColor Green
     Write-Host ""
-    .venv\Scripts\python.exe -m pytest coaching/tests/e2e/ -v -m e2e -k $TestFilter --tb=short
+    & $PythonExe -m pytest coaching/tests/e2e/ -v -m e2e -k $TestFilter --tb=short
 } else {
     Write-Host "Running ALL E2E tests against deployed environment..." -ForegroundColor Green
     Write-Host ""
-    .venv\Scripts\python.exe -m pytest coaching/tests/e2e/ -v -m e2e --tb=short
+    & $PythonExe -m pytest coaching/tests/e2e/ -v -m e2e --tb=short
 }
 
 $ExitCode = $LASTEXITCODE

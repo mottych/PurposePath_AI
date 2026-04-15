@@ -2,9 +2,12 @@
 # Pre-commit validation script for PurposePath AI
 # Run this before committing to ensure code quality
 #
-# Usage: 
+# Usage:
 #   .\scripts\pre-commit-check.ps1           # Run all checks
 #   .\scripts\pre-commit-check.ps1 -Quick    # Skip tests (faster)
+#
+# Python: uses coaching\.venv\Scripts\python.exe if present, else coaching\.venv-ci\Scripts\python.exe,
+#          else $env:VIRTUAL_ENV\Scripts\python.exe. Install with: cd coaching && uv sync
 
 param(
     [switch]$Quick = $false
@@ -24,12 +27,25 @@ $WarningCount = 0
 # Change to repo root
 Set-Location $PSScriptRoot\..
 
+# Prefer Python from the coaching venv (same layout as CI / uv)
+$RepoRoot = (Get-Location).Path
+. (Join-Path $PSScriptRoot "Resolve-CoachingPython.ps1")
+$PythonExe = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+if (-not $PythonExe) {
+    Write-Host "No venv Python found. Install one of:" -ForegroundColor Red
+    Write-Host "  coaching\.venv   (recommended: cd coaching && uv sync)" -ForegroundColor Yellow
+    Write-Host "  coaching\.venv-ci" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
+Write-Host ""
+
 # 1. Ruff Linting
 Write-Host "[1/4] Running Ruff linting..." -ForegroundColor Yellow
-python -m ruff check coaching/ shared/ --output-format=concise
+& $PythonExe -m ruff check coaching/ shared/ --output-format=concise
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Ruff linting failed!" -ForegroundColor Red
-    Write-Host "   Run 'python -m ruff check coaching/ shared/ --fix' to auto-fix" -ForegroundColor Yellow
+    Write-Host "   Run '& `"$PythonExe`" -m ruff check coaching/ shared/ --fix' to auto-fix" -ForegroundColor Yellow
     $ErrorCount++
 } else {
     Write-Host "✅ Ruff linting passed" -ForegroundColor Green
@@ -38,10 +54,10 @@ Write-Host ""
 
 # 2. Ruff Formatting Check
 Write-Host "[2/4] Checking code formatting..." -ForegroundColor Yellow
-python -m ruff format --check coaching/ shared/
+& $PythonExe -m ruff format --check coaching/ shared/
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Code formatting check failed!" -ForegroundColor Red
-    Write-Host "   Run 'python -m ruff format coaching/ shared/' to fix" -ForegroundColor Yellow
+    Write-Host "   Run '& `"$PythonExe`" -m ruff format coaching/ shared/' to fix" -ForegroundColor Yellow
     $ErrorCount++
 } else {
     Write-Host "✅ Code formatting passed" -ForegroundColor Green
@@ -50,7 +66,7 @@ Write-Host ""
 
 # 3. MyPy Type Checking (informational only)
 Write-Host "[3/4] Running type checks..." -ForegroundColor Yellow
-python -m mypy coaching/src shared/ --explicit-package-bases --no-error-summary 2>&1 | Out-Null
+& $PythonExe -m mypy coaching/src shared/ --explicit-package-bases --no-error-summary 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠️  Type checking warnings present (not blocking)" -ForegroundColor Yellow
     $WarningCount++
@@ -64,10 +80,10 @@ if (-not $Quick) {
     Write-Host "[4/4] Running unit tests..." -ForegroundColor Yellow
     
     # Check if pytest is available
-    python -m pytest --version 2>&1 | Out-Null
+    & $PythonExe -m pytest --version 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "⚠️  Pytest not available - skipping tests" -ForegroundColor Yellow
-        Write-Host "   Install dependencies: pip install -r requirements.txt" -ForegroundColor Gray
+        Write-Host "   Install dependencies: cd coaching && uv sync" -ForegroundColor Gray
         $WarningCount++
     } else {
         # Try to run tests (same command as CI/CD for consistency)
@@ -96,7 +112,7 @@ if (-not $Quick) {
             "--ignore=coaching/tests/unit/domain/services/test_phase_transition_service.py",
             "--ignore=coaching/tests/unit/domain/value_objects/test_conversation_context.py"
         )
-        $TestOutput = python -m pytest @TestArgs 2>&1
+        $TestOutput = & $PythonExe -m pytest @TestArgs 2>&1
         
         # Check if tests failed due to missing dependencies
         if ($TestOutput -match "ModuleNotFoundError|ImportError") {
@@ -106,7 +122,7 @@ if (-not $Quick) {
             $WarningCount++
         } elseif ($LASTEXITCODE -ne 0) {
             Write-Host "❌ Unit tests failed!" -ForegroundColor Red
-            Write-Host "   Run 'python -m pytest coaching/tests/unit -v --tb=short' to see details" -ForegroundColor Yellow
+            Write-Host "   Run '& `"$PythonExe`" -m pytest coaching/tests/unit -v --tb=short' to see details" -ForegroundColor Yellow
             $ErrorCount++
         } else {
             Write-Host "✅ Unit tests passed" -ForegroundColor Green

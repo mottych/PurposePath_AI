@@ -4,14 +4,20 @@
 Write-Host "=== PurposePath AI E2E Test Runner ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Check prerequisites
-Write-Host "Checking prerequisites..." -ForegroundColor Yellow
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $RepoRoot
 
-# Check Python virtual environment
-if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    Write-Host "ERROR: Virtual environment not found. Run 'python -m venv .venv' first." -ForegroundColor Red
+. (Join-Path $PSScriptRoot "Resolve-CoachingPython.ps1")
+$PythonExe = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+if (-not $PythonExe) {
+    Write-Host "ERROR: No coaching venv Python found. Run: cd coaching && uv sync" -ForegroundColor Red
     exit 1
 }
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
+Write-Host ""
+
+# Check prerequisites
+Write-Host "Checking prerequisites..." -ForegroundColor Yellow
 
 # Check AWS credentials
 if (-not $env:AWS_PROFILE -and -not ($env:AWS_ACCESS_KEY_ID -and $env:AWS_SECRET_ACCESS_KEY)) {
@@ -53,10 +59,10 @@ $TestFilter = $args[0]
 
 if ($TestFilter) {
     Write-Host "Running E2E tests matching: $TestFilter" -ForegroundColor Green
-    .venv\Scripts\python.exe -m pytest coaching/tests/e2e/ -v -m e2e -k $TestFilter
+    & $PythonExe -m pytest coaching/tests/e2e/ -v -m e2e -k $TestFilter
 } else {
     Write-Host "Running all E2E tests..." -ForegroundColor Green
-    .venv\Scripts\python.exe -m pytest coaching/tests/e2e/ -v -m e2e
+    & $PythonExe -m pytest coaching/tests/e2e/ -v -m e2e
 }
 
 $ExitCode = $LASTEXITCODE

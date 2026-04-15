@@ -8,7 +8,11 @@ Write-Host "PurposePath Security Scan" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
 
-Set-Location "$PSScriptRoot\.."
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+. (Join-Path $PSScriptRoot "Resolve-CoachingPython.ps1")
+$bootstrapPython = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+
+Set-Location $RepoRoot
 
 $venvPath = ".venv-security"
 $venvPython = "$venvPath\Scripts\python.exe"
@@ -24,14 +28,17 @@ if ($null -ne (Get-Command python -ErrorAction SilentlyContinue)) {
 
 if (-not (Test-Path $venvPython)) {
     Write-Host "[1/3] Creating .venv-security..." -ForegroundColor Yellow
-    if ($hasPython) {
+    if ($bootstrapPython) {
+        & $bootstrapPython -m venv $venvPath
+    }
+    elseif ($hasPython) {
         python -m venv $venvPath
     }
     elseif ($hasUv) {
         uv venv $venvPath
     }
     else {
-        Write-Host "❌ Neither 'python' nor 'uv' is available to create .venv-security." -ForegroundColor Red
+        Write-Host "❌ No Python available to create .venv-security (coaching venv, PATH python, or uv)." -ForegroundColor Red
         exit 1
     }
 }

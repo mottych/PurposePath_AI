@@ -39,26 +39,30 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$ScriptsDir = Split-Path -Parent $PSScriptRoot
+$RepoRoot = (Resolve-Path (Split-Path -Parent $ScriptsDir)).Path
+. (Join-Path $ScriptsDir "Resolve-CoachingPython.ps1")
+$PythonExe = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+if (-not $PythonExe) {
+    Write-Host "❌ No coaching venv Python found" -ForegroundColor Red
+    Write-Host "   Run: cd coaching && uv sync" -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "=" -NoNewline
 Write-Host ("=" * 79)
 Write-Host "LLM Configuration Seeding - Environment: $Environment"
 Write-Host "=" -NoNewline
 Write-Host ("=" * 79)
 Write-Host ""
-
-# Verify virtual environment is active
-if (-not $env:VIRTUAL_ENV) {
-    Write-Host "❌ Error: Virtual environment not active" -ForegroundColor Red
-    Write-Host "   Please activate venv first: .\.venv\Scripts\Activate.ps1" -ForegroundColor Yellow
-    exit 1
-}
-
-Write-Host "✅ Virtual environment active: $env:VIRTUAL_ENV" -ForegroundColor Green
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
 Write-Host ""
 
+Push-Location $RepoRoot
+try {
 # Step 1: Verify code registries
 Write-Host "Step 1: Verifying code registries..." -ForegroundColor Cyan
-$registryCheck = python -c @"
+& $PythonExe -c @"
 from coaching.src.core.llm_interactions import INTERACTION_REGISTRY
 from coaching.src.core.llm_models import MODEL_REGISTRY
 print(f'✓ {len(INTERACTION_REGISTRY)} interactions in registry')
@@ -80,7 +84,7 @@ if (-not $SkipTemplates) {
         Write-Host "   Skipping template seeding" -ForegroundColor Yellow
     }
     else {
-        python scripts\llm_config\seed_templates.py `
+        & $PythonExe scripts\llm_config\seed_templates.py `
             --templates-dir $TemplatesDir `
             --bucket $Bucket `
             --environment $Environment `
@@ -106,7 +110,7 @@ if (-not $SkipConfigs) {
         Write-Host "   Skipping configuration seeding" -ForegroundColor Yellow
     }
     else {
-        python scripts\llm_config\seed_configurations.py `
+        & $PythonExe scripts\llm_config\seed_configurations.py `
             --config-file $ConfigFile `
             --environment $Environment `
             --region $Region
@@ -126,7 +130,7 @@ Write-Host ""
 if (-not $SkipValidation) {
     Write-Host "Step 4: Validating LLM configuration system..." -ForegroundColor Cyan
     
-    python scripts\llm_config\validate_configuration.py `
+    & $PythonExe scripts\llm_config\validate_configuration.py `
         --environment $Environment `
         --bucket $Bucket `
         --region $Region
@@ -141,6 +145,10 @@ else {
 }
 Write-Host ""
 
+} finally {
+    Pop-Location
+}
+
 # Success!
 Write-Host "=" -NoNewline
 Write-Host ("=" * 79)
@@ -150,7 +158,7 @@ Write-Host ("=" * 79)
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Review validation results above"
-Write-Host "  2. Test configuration system with: python -m pytest coaching/tests/"
+Write-Host "  2. Test configuration system with: & `"$PythonExe`" -m pytest coaching/tests/"
 Write-Host "  3. Enable feature flag: use_llm_config_system=True"
 Write-Host "  4. Deploy to $Environment environment"
 Write-Host ""

@@ -10,11 +10,21 @@ Write-Host ""
 # Change to repo root
 Set-Location $PSScriptRoot\..
 
+$RepoRoot = (Get-Location).Path
+. (Join-Path $PSScriptRoot "Resolve-CoachingPython.ps1")
+$PythonExe = Get-CoachingPythonExecutable -RepoRoot $RepoRoot
+if (-not $PythonExe) {
+    Write-Host "No venv Python found. Run: cd coaching && uv sync" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Using Python: $PythonExe" -ForegroundColor DarkGray
+Write-Host ""
+
 $FixCount = 0
 
 # 1. Auto-fix Ruff linting issues
 Write-Host "[1/2] Auto-fixing Ruff linting issues..." -ForegroundColor Yellow
-python -m ruff check coaching/ shared/ --fix --silent 2>&1 | Out-Null
+& $PythonExe -m ruff check coaching/ shared/ --fix --silent 2>&1 | Out-Null
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✅ Ruff linting issues fixed" -ForegroundColor Green
@@ -26,7 +36,7 @@ Write-Host ""
 
 # 2. Auto-fix formatting
 Write-Host "[2/2] Auto-fixing code formatting..." -ForegroundColor Yellow
-$FormatOutput = python -m ruff format coaching/ shared/ 2>&1
+$FormatOutput = & $PythonExe -m ruff format coaching/ shared/ 2>&1
 if ($FormatOutput -match "reformatted") {
     Write-Host "✅ Code formatting fixed" -ForegroundColor Green
     $FixCount++
