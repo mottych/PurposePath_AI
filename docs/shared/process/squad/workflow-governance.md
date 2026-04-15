@@ -173,7 +173,7 @@ If any check fails, issue closure is blocked until cleanup is complete.
 - Use issue-linked commit messages (for example `feat(#123): add endpoint`).
 - Open PRs with clear scope, risks, and validation notes.
 
-## Spec and Contract Guardrails
+## API Contract Rules
 
 - Relevant live OpenAPI/AsyncAPI endpoints are the source of truth for API contracts.
 - Do not change endpoint contract (URL/method/payload/error format) without explicit approval.

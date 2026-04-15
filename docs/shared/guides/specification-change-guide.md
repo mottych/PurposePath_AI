@@ -43,6 +43,7 @@ Use this guide for:
 1.1 Identify owning runtime contract endpoint
 - HTTP contracts: `https://{api-host}/{service}/api/v1/openapi/v1.json`
 - Async/event contracts: `https://{api-host}/admin/api/v1/contracts/asyncapi?lambda={scope}`
+- AI coaching Lambda (PurposePath_AI, **dev only**): HTTP `https://{api-host}/coaching/api/v1/openapi/v1.json`, Swagger `https://{api-host}/coaching/api/v1/swagger`, AsyncAPI `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`)
 
 2. Open or reference governing issue
 - Track change in a GitHub issue.
@@ -76,14 +77,6 @@ Use this guide for:
 7. Validation and close-out
 - Confirm implementation and tests align with the runtime contract endpoints.
 - Include runtime endpoint references in issue/PR notes.
-- Ensure repository contract guard workflows pass for runtime contract validation.
-
-## Repository Enforcement (PurposePath_Api)
-
-- Workflow(s): `.github/workflows/api-contract-spec-guard.yml` and related runtime contract validation pipelines.
-- Enforcement behavior:
-  - Fails when affected services do not expose valid runtime contract endpoints.
-  - Validates required contract expectations for register idempotency and confirm-email status outcomes against the live Account OpenAPI endpoint.
 
 ## Minimum Checklist
 
