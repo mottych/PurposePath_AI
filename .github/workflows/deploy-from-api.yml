@@ -1,0 +1,17 @@
+name: Deploy from API Trigger
+
+on:
+  repository_dispatch:
+    types: [deploy-staging]
+
+# Same group as deploy-staging.yml so API-triggered runs queue with push/dispatch staging deploys.
+concurrency:
+  group: deploy-staging-coaching
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-staging.yml
+    with:
+      skip_tests: 'false'
+    secrets: inherit
