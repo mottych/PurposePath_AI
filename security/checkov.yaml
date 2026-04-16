@@ -19,3 +19,6 @@ skip-path:
   - docs
   - coaching/tests
   - tests
+  # Pulumi TypeScript project vendors a local .venv in-repo; Checkov was scanning
+  # thousands of third-party files and hitting the orchestrator timeout.
+  - infrastructure/pulumi/.venv
