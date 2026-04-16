@@ -759,7 +759,7 @@ def main() -> int:
                 "checkov",
                 checkov_command,
                 FINDINGS_DIR / "checkov.log.txt",
-                timeout_seconds=600,
+                timeout_seconds=900,
             )
         )
 
