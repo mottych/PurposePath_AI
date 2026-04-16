@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Any
 
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
 from .base import BaseWorkflow, WorkflowState, WorkflowStatus, WorkflowType
@@ -180,7 +180,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
 
         try:
             # Build LangChain messages for invoke()
-            lc_messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=system_prompt)]
+            lc_messages: list[BaseMessage] = [SystemMessage(content=system_prompt)]
 
             # Add existing user messages from conversation history
             user_messages_added = False

@@ -30,6 +30,16 @@ from shared.models.schemas import PaginatedResponse, PaginationMeta
 logger = structlog.get_logger()
 
 
+def _unwrap_dict(val: object) -> dict[str, Any]:
+    return val if isinstance(val, dict) else {}
+
+
+def _unwrap_dict_list(val: object) -> list[dict[str, Any]]:
+    if not isinstance(val, list):
+        return []
+    return [x for x in val if isinstance(x, dict)]
+
+
 class InsightsService:
     """Service for generating coaching insights on-demand.
 
@@ -274,14 +284,16 @@ class InsightsService:
             return_exceptions=True,  # Don't fail if one endpoint fails
         )
 
-        # Unpack results with error handling
-        foundation = results[0] if not isinstance(results[0], Exception) else {}
-        goals = results[1] if not isinstance(results[1], Exception) else []
-        strategies = results[2] if not isinstance(results[2], Exception) else []
-        measures = results[3] if not isinstance(results[3], Exception) else []
-        measures_summary = results[4] if not isinstance(results[4], Exception) else {}
-        recent_actions = results[5] if not isinstance(results[5], Exception) else []
-        open_issues = results[6] if not isinstance(results[6], Exception) else []
+        # Unpack results with error handling (gather + return_exceptions widens types for mypy)
+        foundation = {} if isinstance(results[0], Exception) else _unwrap_dict(results[0])
+        goals = [] if isinstance(results[1], Exception) else _unwrap_dict_list(results[1])
+        strategies = [] if isinstance(results[2], Exception) else _unwrap_dict_list(results[2])
+        measures = [] if isinstance(results[3], Exception) else _unwrap_dict_list(results[3])
+        measures_summary = (
+            {} if isinstance(results[4], Exception) else _unwrap_dict(results[4])
+        )
+        recent_actions = [] if isinstance(results[5], Exception) else _unwrap_dict_list(results[5])
+        open_issues = [] if isinstance(results[6], Exception) else _unwrap_dict_list(results[6])
 
         # Derive goal_stats and performance_score from measures_summary for compatibility
         goals_list = goals if isinstance(goals, list) else []
