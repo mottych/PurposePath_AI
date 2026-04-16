@@ -169,7 +169,7 @@ Content-Type: application/json
 ### 2. Deploy to Production
 
 No code changes needed - just deploy with:
-- ✅ Dependencies installed (beautifulsoup4, html2text, lxml)
+- ✅ Dependencies installed (beautifulsoup4, html2text; HTML parsing uses stdlib `html.parser`)
 - ✅ AWS Bedrock access configured
 - ✅ Environment variables set (BEDROCK_MODEL_ID, BEDROCK_REGION)
 

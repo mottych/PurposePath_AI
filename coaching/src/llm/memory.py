@@ -250,7 +250,7 @@ class ConversationMemory:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ConversationMemory":
+    def from_dict(cls, data: dict[str, Any]) -> ConversationMemory:
         """Create memory from dictionary.
 
         Args:

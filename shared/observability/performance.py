@@ -18,7 +18,7 @@ def measure_time(
     record_metric: bool = True,
     log_result: bool = True,
     dimensions: dict[str, str] | None = None,
-) -> Generator[dict[str, Any], None, None]:
+) -> Generator[dict[str, Any]]:
     """
     Context manager to measure operation execution time.
 

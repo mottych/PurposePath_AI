@@ -138,7 +138,7 @@ The SAM template (`coaching/template.yaml`) defines these routes:
    docker --version
    ```
 
-4. **Python** (3.11 or later)
+4. **Python** (3.14 or later)
    ```bash
    python --version
    ```

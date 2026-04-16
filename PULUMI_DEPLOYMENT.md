@@ -24,7 +24,7 @@ The PurposePath AI platform uses **two separate Pulumi projects**:
   aws configure
   ```
 
-- **Python** 3.11+
+- **Python** 3.14+
   ```powershell
   python --version
   ```

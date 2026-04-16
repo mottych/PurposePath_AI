@@ -340,8 +340,8 @@ Pipfile.lock
 # poetry
 poetry.lock
 
-# uv
-uv.lock
+# uv (coaching/uv.lock is tracked for reproducible Lambda + CI pins)
+/uv.lock
 
 # ==========================================
 # CI/CD and Deployment

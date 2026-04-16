@@ -36,7 +36,7 @@ class LLMResponse(BaseModel):
         return self.model_dump(exclude_none=True)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "LLMResponse":
+    def from_dict(cls, data: dict[str, Any]) -> LLMResponse:
         """Create from dictionary data."""
         return cls.model_validate(data)
 
@@ -85,7 +85,7 @@ class BusinessContextForLLM(BaseModel):
         return self.model_dump(exclude_none=True)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "BusinessContextForLLM":
+    def from_dict(cls, data: dict[str, Any]) -> BusinessContextForLLM:
         """Create from dictionary data."""
         return cls.model_validate(data)
 
@@ -108,7 +108,7 @@ class SessionOutcomes(BaseModel):
     success: bool = Field(default=True, description="Whether extraction was successful")
 
     @classmethod
-    def create_error(cls, error_message: str) -> "SessionOutcomes":
+    def create_error(cls, error_message: str) -> SessionOutcomes:
         """Create an error outcome."""
         return cls(extracted_data=None, confidence=0.0, error=error_message, success=False)
 
@@ -117,6 +117,6 @@ class SessionOutcomes(BaseModel):
         return self.model_dump(exclude_none=True)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SessionOutcomes":
+    def from_dict(cls, data: dict[str, Any]) -> SessionOutcomes:
         """Create from dictionary data."""
         return cls.model_validate(data)

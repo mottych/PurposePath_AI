@@ -14,7 +14,7 @@ AI-powered coaching conversations service powered by Amazon Bedrock.
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - uv package manager
 - AWS CLI configured
 
@@ -22,8 +22,9 @@ AI-powered coaching conversations service powered by Amazon Bedrock.
 
 ```bash
 # Create virtual environment and install dependencies
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv venv --python 3.14
+uv lock --python 3.14
+uv pip install -r requirements.txt -r requirements-dev.txt
 
 # Start development server
 uv run uvicorn src.api.main:app --reload

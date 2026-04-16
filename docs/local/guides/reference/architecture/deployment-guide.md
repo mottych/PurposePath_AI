@@ -26,7 +26,7 @@ This guide covers deployment of the LLM Configuration System to AWS infrastructu
 ### Tools Required
 
 - AWS CLI v2.x
-- Python 3.11+
+- Python 3.14+
 - Terraform or CloudFormation (optional)
 - Docker (for local testing)
 

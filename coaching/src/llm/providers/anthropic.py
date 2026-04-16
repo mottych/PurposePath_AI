@@ -46,7 +46,6 @@ class AnthropicProvider(BaseProvider):
             logger.info("Initializing Anthropic provider", model=model_name)
 
             # Create ChatAnthropic client with explicit parameters using exact field names
-            from typing import Any
 
             from pydantic import SecretStr
 
@@ -130,7 +129,6 @@ class AnthropicProvider(BaseProvider):
 
         try:
             # Test with a simple message
-            from typing import Any
 
             from langchain_core.messages import HumanMessage
             from pydantic import SecretStr

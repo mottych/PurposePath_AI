@@ -4,12 +4,12 @@ version = "1.0.0"
 description = "PurposePath AI Coaching Service - Serverless AI-powered coaching platform"
 authors = [{ name = "PurposePath Team", email = "dev@purposepath.ai" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 
 # Workspace-level configuration for multi-service monorepo
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -53,7 +53,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py314"
 
 # Include coaching and shared directories  
 extend-include = ["coaching/src/**/*.py", "shared/**/*.py"]
@@ -64,6 +64,8 @@ ignore = [
     "E501",   # Line too long
     "B008",   # FastAPI Depends() in defaults is standard pattern
     "N999",   # Invalid module name (false positive from repo name PurposePath_AI)
+    "UP040",  # TypeAlias → `type` statement: large churn; optional with 3.14
+    "UP046",  # Generic[T] on Pydantic/TypedDict: not compatible with class T[] yet everywhere
 ]
 
 [tool.ruff.lint.isort]
@@ -75,7 +77,7 @@ known-first-party = ["coaching", "shared"]
 
 [tool.black]
 line-length = 100
-target-version = ['py311']
+target-version = ['py314']
 # Include Python files in coaching and shared directories
 include = '/(coaching|shared)/.*\.pyi?$'
 

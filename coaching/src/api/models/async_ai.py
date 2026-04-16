@@ -39,7 +39,7 @@ class AuthContext(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_token_expiry(self) -> "AuthContext":
+    def validate_token_expiry(self) -> AuthContext:
         """Require non-expired service tokens for enrichment calls."""
         expires_at = (
             self.expires_at_utc.replace(tzinfo=UTC)
@@ -142,7 +142,7 @@ class AsyncAIRequest(BaseModel):
     request_metadata: dict[str, Any] | None = Field(default=None, alias="metadata")
 
     @model_validator(mode="after")
-    def validate_canonical_envelope(self) -> "AsyncAIRequest":
+    def validate_canonical_envelope(self) -> AsyncAIRequest:
         """Enforce token type and registered topic category."""
         allowed_categories = {c.value for c in TopicCategory}
         if self.topic_category not in allowed_categories:
@@ -168,7 +168,7 @@ class AsyncJobCreatedResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     success: bool = Field(default=True, description="Whether job creation succeeded")
-    data: "AsyncJobData" = Field(..., description="Created job details")
+    data: AsyncJobData = Field(..., description="Created job details")
 
 
 class AsyncJobData(BaseModel):
@@ -224,7 +224,7 @@ class JobStatusResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     success: bool = Field(default=True, description="Whether query succeeded")
-    data: "JobStatusData" = Field(..., description="Job status details")
+    data: JobStatusData = Field(..., description="Job status details")
 
 
 class JobStatusData(BaseModel):
@@ -294,7 +294,7 @@ class JobStatusData(BaseModel):
     )
 
     @classmethod
-    def from_job(cls, job: AIJob) -> "JobStatusData":
+    def from_job(cls, job: AIJob) -> JobStatusData:
         """Create JobStatusData from AIJob domain model.
 
         Args:

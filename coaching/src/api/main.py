@@ -96,7 +96,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     cfg = app_settings if app_settings is not None else get_settings()
 
     @asynccontextmanager
-    async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         """Application lifespan manager."""
         logger.info("Starting PurposePath AI Coaching API", stage=cfg.stage, version="2.0.0")
         yield
@@ -115,13 +115,13 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
 
     # Add middleware in correct order - CORS must be last (runs first)
     application.add_middleware(
-        RateLimitingMiddleware,  # type: ignore[arg-type, call-arg]
+        RateLimitingMiddleware,
         default_capacity=100,
         default_refill_rate=10.0,
     )
-    application.add_middleware(ErrorHandlingMiddleware)  # type: ignore[arg-type,call-arg]
-    application.add_middleware(LoggingMiddleware)  # type: ignore[arg-type,call-arg]
-    application.add_middleware(CORSPreflightMiddleware)  # type: ignore[arg-type,call-arg]
+    application.add_middleware(ErrorHandlingMiddleware)
+    application.add_middleware(LoggingMiddleware)
+    application.add_middleware(CORSPreflightMiddleware)
 
     # CORS middleware must be added LAST so it runs FIRST in the middleware chain
     # This ensures CORS headers are added before any authentication or error handling
@@ -143,7 +143,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
         ],
         "max_age": 3600,
     }
-    application.add_middleware(CORSMiddleware, **_cors_config)  # type: ignore[arg-type]
+    application.add_middleware(CORSMiddleware, **_cors_config)
 
     # Include routers
     application.include_router(health.router, prefix=f"{cfg.api_prefix}/health", tags=["health"])

@@ -95,7 +95,7 @@ class PromptTemplate(BaseModel):
         }
 
     @classmethod
-    def from_yaml(cls, yaml_data: PromptTemplateYamlData) -> "PromptTemplate":
+    def from_yaml(cls, yaml_data: PromptTemplateYamlData) -> PromptTemplate:
         """Create PromptTemplate from YAML data."""
         return cls(
             topic=yaml_data.topic,

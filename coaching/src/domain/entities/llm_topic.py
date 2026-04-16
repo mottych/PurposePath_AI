@@ -57,7 +57,7 @@ class PromptInfo:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "PromptInfo":
+    def from_dict(cls, data: dict[str, Any]) -> PromptInfo:
         """Create from DynamoDB dictionary.
 
         Args:
@@ -114,7 +114,7 @@ class ParameterDefinition:
         return result
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ParameterDefinition":
+    def from_dict(cls, data: dict[str, Any]) -> ParameterDefinition:
         """Create from DynamoDB dictionary.
 
         Args:
@@ -382,7 +382,7 @@ class LLMTopic:
         return item
 
     @classmethod
-    def from_dynamodb_item(cls, item: dict[str, Any]) -> "LLMTopic":
+    def from_dynamodb_item(cls, item: dict[str, Any]) -> LLMTopic:
         """Create from DynamoDB item.
 
         Deserializes nested objects and parses ISO 8601 datetime strings.
@@ -503,7 +503,7 @@ class LLMTopic:
         return self.get_prompt(prompt_type=prompt_type) is not None
 
     @classmethod
-    def create_default_from_enum(cls, topic_enum: Any) -> "LLMTopic":
+    def create_default_from_enum(cls, topic_enum: Any) -> LLMTopic:
         """Create a default LLMTopic from CoachingTopic enum.
 
         DEPRECATED: Use create_default_from_endpoint() for registry-based topics.
@@ -578,7 +578,7 @@ class LLMTopic:
         )
 
     @classmethod
-    def create_default_from_endpoint(cls, endpoint_def: Any) -> "LLMTopic":
+    def create_default_from_endpoint(cls, endpoint_def: Any) -> LLMTopic:
         """Create a default LLMTopic from TOPIC_REGISTRY definition.
 
         This is the preferred method for creating default topics from the
@@ -655,11 +655,11 @@ class LLMTopic:
         return self.to_dynamodb_item()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "LLMTopic":
+    def from_dict(cls, data: dict[str, Any]) -> LLMTopic:
         """Alias for from_dynamodb_item for backward compatibility."""
         return cls.from_dynamodb_item(data)
 
-    def update(self, **kwargs: Any) -> "LLMTopic":
+    def update(self, **kwargs: Any) -> LLMTopic:
         """Create a copy of the topic with updated fields.
 
         Args:

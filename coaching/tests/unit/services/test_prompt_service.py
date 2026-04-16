@@ -22,7 +22,7 @@ if "boto3" not in sys.modules:
         def __init__(self, *args: object, **kwargs: object) -> None:
             """Lightweight stand-in for boto3.dynamodb.conditions objects."""
 
-        def __call__(self, *args: object, **kwargs: object) -> "_DummyCondition":
+        def __call__(self, *args: object, **kwargs: object) -> _DummyCondition:
             return self
 
     conditions_module.Attr = _DummyCondition  # type: ignore[attr-defined]

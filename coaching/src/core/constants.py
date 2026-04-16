@@ -178,7 +178,7 @@ class TierLevel(StrEnum):
     ULTIMATE = "ultimate"
 
     @classmethod
-    def can_access_topic(cls, user_tier: "TierLevel", topic_tier: "TierLevel") -> bool:
+    def can_access_topic(cls, user_tier: TierLevel, topic_tier: TierLevel) -> bool:
         """Check if a user tier can access a topic tier.
 
         Args:
