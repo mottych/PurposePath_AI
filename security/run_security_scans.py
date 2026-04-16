@@ -298,13 +298,18 @@ def run_checkov_scans(scan_targets: list[str]) -> ScanResult:
             "-d",
             target,
         ]
+        # GitHub Actions workflows: constrain to the actions runner only. Running the full
+        # default framework set against workflow YAML was exceeding 10+ minutes on CI.
+        if target == ".github/workflows":
+            cmd.extend(["--framework", "github_actions"])
+        timeout_seconds = 900 if target == ".github/workflows" else 600
         command_echo.extend(cmd)
         log_path = FINDINGS_DIR / f"checkov-scan-{idx}.log.txt"
         result = run_command(
             f"checkov[{target}]",
             cmd,
             log_path,
-            timeout_seconds=600,
+            timeout_seconds=timeout_seconds,
         )
         total_elapsed += result.duration_seconds
         combined_exit = max(combined_exit, result.exit_code)
