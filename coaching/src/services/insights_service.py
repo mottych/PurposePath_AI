@@ -289,9 +289,7 @@ class InsightsService:
         goals = [] if isinstance(results[1], Exception) else _unwrap_dict_list(results[1])
         strategies = [] if isinstance(results[2], Exception) else _unwrap_dict_list(results[2])
         measures = [] if isinstance(results[3], Exception) else _unwrap_dict_list(results[3])
-        measures_summary = (
-            {} if isinstance(results[4], Exception) else _unwrap_dict(results[4])
-        )
+        measures_summary = {} if isinstance(results[4], Exception) else _unwrap_dict(results[4])
         recent_actions = [] if isinstance(results[5], Exception) else _unwrap_dict_list(results[5])
         open_issues = [] if isinstance(results[6], Exception) else _unwrap_dict_list(results[6])
 

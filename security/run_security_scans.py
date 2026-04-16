@@ -754,7 +754,14 @@ def main() -> int:
         for target in scan_targets:
             checkov_command.extend(["-d", target])
 
-        results.append(run_command("checkov", checkov_command, FINDINGS_DIR / "checkov.log.txt"))
+        results.append(
+            run_command(
+                "checkov",
+                checkov_command,
+                FINDINGS_DIR / "checkov.log.txt",
+                timeout_seconds=600,
+            )
+        )
 
     detect_secrets_result, new_secret_count = run_detect_secrets()
     results.append(detect_secrets_result)

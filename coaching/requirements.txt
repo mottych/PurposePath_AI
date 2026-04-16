@@ -2,7 +2,7 @@
 #    uv export --frozen --no-emit-project --no-dev --no-hashes -o requirements.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.2
+aiohttp==3.13.5
     # via
     #   httpx-aiohttp
     #   langchain-community
@@ -56,7 +56,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   click
     #   tqdm
     #   uvicorn
-cryptography==46.0.3
+cryptography==46.0.7
     # via
     #   google-auth
     #   python-jose
@@ -71,7 +71,7 @@ dnspython==2.8.0
     # via email-validator
 docstring-parser==0.17.0
     # via anthropic
-ecdsa==0.19.1
+ecdsa==0.19.2
     # via python-jose
 email-validator==2.3.0
     # via purposepath-coaching
@@ -164,7 +164,7 @@ langgraph-checkpoint==2.1.2
     # via langgraph
 langgraph-sdk==0.1.74
     # via langgraph
-langsmith==0.5.0
+langsmith==0.7.32
     # via
     #   langchain
     #   langchain-community
@@ -201,7 +201,7 @@ openai==1.109.1
     # via
     #   langchain-openai
     #   purposepath-coaching
-orjson==3.11.5
+orjson==3.11.8
     # via
     #   langgraph-sdk
     #   langsmith
@@ -216,7 +216,7 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-pyasn1==0.6.1
+pyasn1==0.6.3
     # via
     #   pyasn1-modules
     #   python-jose
@@ -244,7 +244,7 @@ pydantic-settings==2.12.0
     # via
     #   langchain-community
     #   purposepath-coaching
-pyjwt==2.10.1
+pyjwt==2.12.1
     # via redis
 python-dateutil==2.9.0.post0
     # via botocore
@@ -255,7 +255,7 @@ python-dotenv==1.2.1
     #   uvicorn
 python-jose==3.5.0
     # via purposepath-coaching
-python-multipart==0.0.21
+python-multipart==0.0.26
     # via purposepath-coaching
 pyyaml==6.0.3
     # via
@@ -268,7 +268,7 @@ redis==5.3.1
     # via purposepath-coaching
 regex==2025.11.3
     # via tiktoken
-requests==2.32.5
+requests==2.33.1
     # via
     #   google-auth
     #   google-genai
@@ -337,7 +337,7 @@ typing-inspection==0.4.2
     # via
     #   pydantic
     #   pydantic-settings
-urllib3==2.6.2
+urllib3==2.6.3
     # via
     #   botocore
     #   requests
@@ -355,6 +355,8 @@ websockets==15.0.1
     # via
     #   google-genai
     #   uvicorn
+xxhash==3.6.0
+    # via langsmith
 yarl==1.22.0
     # via aiohttp
 zstandard==0.25.0

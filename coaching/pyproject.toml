@@ -40,7 +40,7 @@ dependencies = [
     "langchain-openai>=0.2.14,<0.3.0",
     "openai[aiohttp]>=1.60.0",
     "langgraph>=0.2.62,<0.3.0",
-    "langsmith>=0.1.0",
+    "langsmith>=0.7.31,<0.8.0",
     "tiktoken>=0.8.0",
     "numpy>=1.26.0,<2.4.0",
     # Database and caching
@@ -48,7 +48,7 @@ dependencies = [
     "redis[hiredis]>=5.0.0,<7.0.0",
     # Utilities and security
     "python-jose[cryptography]>=3.3.0,<4.0.0",
-    "python-multipart>=0.0.6,<1.0.0",
+    "python-multipart>=0.0.26,<1.0.0",
     "httpx>=0.25.0,<1.0.0",
     "structlog>=23.2.0,<27.0.0",
     "pyyaml>=6.0.1,<7.0.0",
@@ -73,7 +73,7 @@ dev = [
     "pytest-xdist>=3.3.1,<4.0.0",
     
     # Code quality
-    "black>=23.7.0,<25.0.0",
+    "black>=26.3.1,<27.0.0",
     "ruff>=0.9.0,<1.0.0",
     "mypy>=1.14.0,<2.0.0",
     "pre-commit>=3.3.3,<4.0.0",
@@ -106,11 +106,25 @@ build-backend = "hatchling.build"
 packages = ["src"]
 
 [tool.uv]
+# Security-resolved floors for transitive deps (pip-audit / GHSA).
+override-dependencies = [
+    "aiohttp>=3.13.4",
+    "urllib3>=2.6.3",
+    "requests>=2.33.0",
+    "cryptography>=46.0.7",
+    "ecdsa>=0.19.2",
+    "orjson>=3.11.6",
+    "pyasn1>=0.6.2",
+    "pyjwt>=2.12.0",
+    "filelock>=3.20.3",
+    "pygments>=2.20.0",
+    "virtualenv>=20.36.2",
+]
 dev-dependencies = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "pytest-mock>=3.11.1",
-    "black>=23.7.0",
+    "black>=26.3.1",
     "ruff>=0.9.0",
     "mypy>=1.14.0",
     "ipython>=8.12.0",
