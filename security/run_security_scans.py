@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -232,6 +233,101 @@ def parse_pip_audit_findings() -> list[dict[str, Any]]:
                 }
             )
     return findings
+
+
+def _resolved_checkov_json_path(output_path: Path) -> Path | None:
+    """Resolve the JSON file Checkov wrote for a given ``--output-file-path``."""
+    if output_path.is_dir():
+        inner = output_path / "results_json.json"
+        return inner if inner.is_file() else None
+    if output_path.is_file():
+        return output_path
+    return None
+
+
+def _merge_checkov_failed_checks(part_files: list[Path]) -> dict[str, Any]:
+    merged_failed: list[dict[str, Any]] = []
+    for path in part_files:
+        if not path.is_file():
+            continue
+        try:
+            payload: Any = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if isinstance(payload, dict):
+            merged_failed.extend(payload.get("results", {}).get("failed_checks", []))
+        elif isinstance(payload, list):
+            for item in payload:
+                if isinstance(item, dict):
+                    merged_failed.extend(item.get("results", {}).get("failed_checks", []))
+    return {"results": {"failed_checks": merged_failed}}
+
+
+def run_checkov_scans(scan_targets: list[str]) -> ScanResult:
+    """Run Checkov once per scan root to avoid single-process timeouts on large trees."""
+    merged_dir = FINDINGS_DIR / "checkov.json"
+    if merged_dir.exists():
+        if merged_dir.is_file():
+            merged_dir.unlink()
+        else:
+            shutil.rmtree(merged_dir)
+
+    part_json_files: list[Path] = []
+    combined_exit = 0
+    total_elapsed = 0.0
+    errors: list[str] = []
+    command_echo: list[str] = []
+
+    for idx, target in enumerate(scan_targets):
+        part_base = FINDINGS_DIR / f"checkov-scan-{idx}-{target.replace('/', '_')}"
+        if part_base.exists():
+            if part_base.is_file():
+                part_base.unlink()
+            else:
+                shutil.rmtree(part_base)
+        cmd = [
+            PYTHON,
+            "-m",
+            "checkov.main",
+            "--config-file",
+            str(SECURITY_DIR / "checkov.yaml"),
+            "--output",
+            "json",
+            "--output-file-path",
+            str(part_base),
+            "-d",
+            target,
+        ]
+        command_echo.extend(cmd)
+        log_path = FINDINGS_DIR / f"checkov-scan-{idx}.log.txt"
+        result = run_command(
+            f"checkov[{target}]",
+            cmd,
+            log_path,
+            timeout_seconds=600,
+        )
+        total_elapsed += result.duration_seconds
+        combined_exit = max(combined_exit, result.exit_code)
+        if result.error:
+            errors.append(f"{target}: {result.error}")
+        resolved = _resolved_checkov_json_path(part_base)
+        if resolved is not None:
+            part_json_files.append(resolved)
+
+    merged_dir.mkdir(parents=True, exist_ok=True)
+    merged_payload = _merge_checkov_failed_checks(part_json_files)
+    (merged_dir / "results_json.json").write_text(
+        json.dumps(merged_payload, indent=2), encoding="utf-8", newline="\n"
+    )
+
+    return ScanResult(
+        name="checkov",
+        command=command_echo,
+        exit_code=combined_exit,
+        duration_seconds=round(total_elapsed, 2),
+        output_file=str((merged_dir / "results_json.json").relative_to(REPO_ROOT)),
+        error="; ".join(errors) if errors else None,
+    )
 
 
 def parse_checkov_findings() -> list[dict[str, Any]]:
@@ -739,29 +835,7 @@ def main() -> int:
 
     scan_targets = [path for path in ["infrastructure", "deployment", ".github/workflows"] if (REPO_ROOT / path).exists()]
     if scan_targets:
-        checkov_report = FINDINGS_DIR / "checkov.json"
-        checkov_command = [
-            PYTHON,
-            "-m",
-            "checkov.main",
-            "--config-file",
-            str(SECURITY_DIR / "checkov.yaml"),
-            "--output",
-            "json",
-            "--output-file-path",
-            str(checkov_report),
-        ]
-        for target in scan_targets:
-            checkov_command.extend(["-d", target])
-
-        results.append(
-            run_command(
-                "checkov",
-                checkov_command,
-                FINDINGS_DIR / "checkov.log.txt",
-                timeout_seconds=900,
-            )
-        )
+        results.append(run_checkov_scans(scan_targets))
 
     detect_secrets_result, new_secret_count = run_detect_secrets()
     results.append(detect_secrets_result)
