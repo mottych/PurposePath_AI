@@ -186,7 +186,7 @@ jobs:
       - name: Health Check
         run: |
           echo "Testing API health endpoint..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/api/v1/health || echo "000")
           if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
             echo "✅ API is responding (HTTP $HTTP_CODE)"
           else
