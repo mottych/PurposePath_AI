@@ -186,7 +186,8 @@ jobs:
       - name: Health Check
         run: |
           echo "Testing API health endpoint..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/api/v1/health || echo "000")
+          # Trailing slash avoids 307 redirect from Starlette (smoke expects final 2xx).
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.api-url.outputs.url }}/api/v1/health/ || echo "000")
           if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
             echo "✅ API is responding (HTTP $HTTP_CODE)"
           else
@@ -198,7 +199,7 @@ jobs:
         run: |
           echo "Testing CORS preflight behavior..."
           ORIGIN="https://dev.purposepath.app"
-          TARGET="${{ steps.api-url.outputs.url }}/api/v1/health"
+          TARGET="${{ steps.api-url.outputs.url }}/api/v1/health/"
 
           CORS_HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS "$TARGET" \
             -H "Origin: $ORIGIN" \
