@@ -1,7 +1,8 @@
 framework:
   - cloudformation
   - github_actions
-  - secrets
+  # secrets: omitted — repository already runs detect-secrets in security scans; Checkov
+  # secret scanning across large trees was timing out CI (900s+).
 
 quiet: true
 compact: true
