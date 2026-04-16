@@ -458,9 +458,9 @@ class TestTopicsEndpoint:
         # Verify known topics exist
         topic_ids = [t["topic_id"] for t in topics]
         assert "website_scan" in topic_ids, "website_scan should be available"
-        assert (
-            "goal_created_email_insight" in topic_ids
-        ), "goal_created_email_insight should be available"
+        assert "goal_created_email_insight" in topic_ids, (
+            "goal_created_email_insight should be available"
+        )
         # Coaching topics from COACHING_TOPIC_REGISTRY use simple IDs
         assert "core_values" in topic_ids, "core_values coaching topic should be available"
 
