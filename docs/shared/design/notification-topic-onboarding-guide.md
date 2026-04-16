@@ -45,9 +45,11 @@ The email notification system uses canonical domain registries plus runtime reso
 - Each method key must have one concrete resolver implementation, except payload_passthrough.
 
 5. AI orchestration boundary:
-- File: Services/PurposePath.NotificationProcessor.Lambda/Services/EmailInsights/EmailInsightOrchestrator.cs
-- Owns envelope metadata generation and AI call lifecycle.
-- Resolver methods should pass business inputs only.
+- Files:
+  - Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/EmailInsightTemplateParameterResolverMethod.cs
+  - Services/PurposePath.Traction.Lambda/Workflow/AiTopicResolutionTask.cs
+- Sender owns topic-specific parameter payload construction.
+- Step Functions orchestration owns handshake metadata generation, transport, and polling.
 
 ## 3. End-to-End Onboarding Workflow
 
@@ -165,23 +167,22 @@ If the new notification relies on AI-generated email insight content, follow thi
 - Mark email_insight_payload as async (`IsAsync = true`).
 
 3. Intermediate topic method behavior:
-- Update AI topic routing and activity-data shaping in:
-  - Services/PurposePath.NotificationProcessor.Lambda/Services/EmailInsights/EmailInsightOrchestrator.cs
-- Update:
-  - ResolveAiTopicId for event-to-topic mapping
-  - BuildActivityData for topic-specific business context packaging
+- Update sender-side parameter payload shaping in:
+  - Services/PurposePath.NotificationProcessor.Lambda/Services/TemplateParameters/EmailInsightTemplateParameterResolverMethod.cs
+- Update generic workflow task/orchestrator in:
+  - Services/PurposePath.Traction.Lambda/Workflow/AiTopicResolutionTask.cs
 
-4. Dual transport behavior (final design):
-- Primary transport: EventBridge kickoff from backend resolver into AI async execution contract.
-- Fallback transport: HTTP `POST /ai/execute-async` using the same canonical request payload contract.
-- Contract rule: transport is interchangeable; payload semantics, validation rules, and response mapping remain unchanged.
-- Mode isolation rule: EventBridge path is terminal-event-driven and must not API-poll. API polling is allowed only in API fallback mode.
-- Fallback transition rule: API fallback starts as a new API-mode attempt when EventBridge publish fails or terminal SLA expires.
-- Network rule: API fallback requires outbound HTTPS access on port 443 from backend runtime to AI API host.
+4. Workflow behavior (final design):
+- Primary transport: Step Functions publishes the canonical envelope to EventBridge using `ai.job.requested`.
+- Callback continuation: terminal `ai.job.completed` or `ai.job.failed` EventBridge messages resume the workflow.
+- Fallback transport: when callback fails or times out, workflow invokes `POST /ai/execute-async` with the same canonical envelope, waits, and polls the job API to terminal completion.
+- Contract rule: sender passes `topicId` plus topic-specific parameters; the orchestrator adds handshake metadata internally.
+- Mode isolation rule: workflow transport logic is topic-agnostic and must not invent topic-specific business payload fields.
 
 5. Metadata envelope handling:
-- Keep event and tracing metadata generation inside EmailInsightOrchestrator.
-- Do not move envelope metadata requirements into template parameter definitions.
+- Keep business payload requirements in the sender-side resolver.
+- Keep request, correlation, idempotency, and job lifecycle metadata inside the AI topic resolution service/workflow.
+- Do not move handshake metadata requirements into template parameter definitions.
 
 6. AI response mapping:
 - Ensure output payload is parsed and mapped through:

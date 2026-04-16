@@ -118,7 +118,7 @@ Current reusable retrieval sources:
 - goal_by_id -> IGoalRepository
 - subscription_by_tenant -> ISubscriptionRepository + ISubscriptionTierRepository
 - email_insight_payload -> EmailInsightPayloadPipeline
-- email_insight_payload orchestration -> EmailInsightOrchestrator
+- email_insight_payload orchestration -> EmailInsightTemplateParameterResolverMethod + AiTopicResolutionTask workflow
 
 Non-responsibilities:
 - no template rendering or send operations
