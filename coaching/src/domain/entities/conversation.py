@@ -81,7 +81,7 @@ class Conversation(BaseModel):
         topic: str,
         conversation_id: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> "Conversation":
+    ) -> Conversation:
         """Factory method to create a new conversation."""
         from uuid import uuid4
 

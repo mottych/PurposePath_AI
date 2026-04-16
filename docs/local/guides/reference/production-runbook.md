@@ -24,7 +24,7 @@
 ### Service Details
 
 - **Service Name:** PurposePath AI Coaching
-- **Tech Stack:** Python 3.11, FastAPI, AWS Lambda, DynamoDB
+- **Tech Stack:** Python 3.14, FastAPI, AWS Lambda, DynamoDB
 - **Deployment:** AWS SAM, GitHub Actions
 - **Environments:** Dev, Staging, Production
 

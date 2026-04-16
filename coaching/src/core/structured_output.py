@@ -147,7 +147,7 @@ def get_extraction_prompt(result_model_name: str) -> str | None:
     )
 
 
-def _get_clean_schema(model: type["BaseModel"]) -> dict[str, Any]:
+def _get_clean_schema(model: type[BaseModel]) -> dict[str, Any]:
     """Get a clean JSON schema from a Pydantic model.
 
     Removes internal schema details that clutter the prompt.

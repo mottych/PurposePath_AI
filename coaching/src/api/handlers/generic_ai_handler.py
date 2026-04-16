@@ -58,7 +58,7 @@ class GenericAIHandler:
         request_body: BaseModel,
         user_context: UserContext,
         response_model: type[BaseModel],
-        template_processor: "TemplateParameterProcessor | None" = None,
+        template_processor: TemplateParameterProcessor | None = None,
     ) -> BaseModel:
         """Handle single-shot AI request.
 

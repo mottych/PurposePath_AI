@@ -282,7 +282,7 @@ class UnifiedAIEngine:
         response_model: type[BaseModel],
         user_id: str | None = None,
         tenant_id: str | None = None,
-        template_processor: "TemplateParameterProcessor | None" = None,
+        template_processor: TemplateParameterProcessor | None = None,
         allow_inactive: bool = False,
         user_tier: TierLevel = TierLevel.ULTIMATE,
         invocation_context: LlmInvocationContext | None = None,
@@ -343,7 +343,7 @@ class UnifiedAIEngine:
         response_model: type[BaseModel],
         user_id: str | None = None,
         tenant_id: str | None = None,
-        template_processor: "TemplateParameterProcessor | None" = None,
+        template_processor: TemplateParameterProcessor | None = None,
         allow_inactive: bool = False,
         user_tier: TierLevel = TierLevel.ULTIMATE,
         invocation_context: LlmInvocationContext | None = None,
@@ -384,7 +384,7 @@ class UnifiedAIEngine:
         response_model: type[BaseModel],
         user_id: str | None,
         tenant_id: str | None,
-        template_processor: "TemplateParameterProcessor | None",
+        template_processor: TemplateParameterProcessor | None,
         allow_inactive: bool,
         user_tier: TierLevel,
         invocation_context: LlmInvocationContext | None = None,
@@ -731,7 +731,7 @@ class UnifiedAIEngine:
         topic: LLMTopic,
         user_id: str,
         tenant_id: str,
-        template_processor: "TemplateParameterProcessor | None" = None,
+        template_processor: TemplateParameterProcessor | None = None,
     ) -> dict[str, Any]:
         """Enrich parameters by fetching missing values via retrieval methods.
 

@@ -48,7 +48,7 @@ new aws.iam.RolePolicy("coaching-bedrock-policy", {
 
 // Python Lambda function
 const coachingLambda = new aws.lambda.Function("coaching-api", {
-    runtime: "python3.11",
+    runtime: "python3.14",
     handler: "lambda_handler.handler",
     role: lambdaRole.arn,
     code: new pulumi.asset.FileArchive(".."),  // Package entire coaching directory

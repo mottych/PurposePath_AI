@@ -199,7 +199,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
                 )
 
             # Use invoke() which returns a string directly
-            response_content = await provider.invoke(lc_messages)  # type: ignore[arg-type]
+            response_content = await provider.invoke(lc_messages)
 
             question_message = {
                 "role": "assistant",

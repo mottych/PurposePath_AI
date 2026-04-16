@@ -125,7 +125,7 @@ class PaginationMeta(BaseResponseModel):
     has_previous: bool = Field(..., description="Whether there are previous pages")
 
     @classmethod
-    def create(cls, page: int, page_size: int, total_items: int) -> "PaginationMeta":
+    def create(cls, page: int, page_size: int, total_items: int) -> PaginationMeta:
         """Create pagination metadata from basic parameters."""
         total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 0
         return cls(
@@ -147,7 +147,7 @@ class PaginatedResponse(BaseResponseModel, Generic[T]):
     @classmethod
     def create(
         cls, items: list[T], page: int, page_size: int, total_items: int
-    ) -> "PaginatedResponse[T]":
+    ) -> PaginatedResponse[T]:
         """Create a paginated response from items and pagination info."""
         pagination = PaginationMeta.create(page, page_size, total_items)
         return cls(items=items, pagination=pagination)
@@ -166,12 +166,12 @@ class StandardApiResponse(BaseResponseModel, Generic[T]):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @classmethod
-    def success_response(cls, data: T, message: str | None = None) -> "StandardApiResponse[T]":
+    def success_response(cls, data: T, message: str | None = None) -> StandardApiResponse[T]:
         """Create a successful response."""
         return cls(success=True, data=data, message=message, error=None)
 
     @classmethod
-    def error_response(cls, error: str, data: T | None = None) -> "StandardApiResponse[T]":
+    def error_response(cls, error: str, data: T | None = None) -> StandardApiResponse[T]:
         """Create an error response."""
         return cls(success=False, error=error, data=data, message=None)
 

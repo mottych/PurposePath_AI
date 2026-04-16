@@ -85,7 +85,7 @@ class DomainEvent(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "DomainEvent":
+    def from_dict(cls, data: dict[str, Any]) -> DomainEvent:
         """
         Create event from dictionary.
 

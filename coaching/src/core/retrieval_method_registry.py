@@ -1446,7 +1446,7 @@ async def get_website_content(context: RetrievalContext) -> dict[str, Any]:
         response.raise_for_status()
 
         # Parse HTML
-        soup = BeautifulSoup(response.text, "lxml")
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Extract title
         title_tag = soup.find("title")

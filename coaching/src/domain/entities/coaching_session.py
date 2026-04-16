@@ -164,7 +164,7 @@ class CoachingSession(BaseModel):
         max_turns: int = 0,
         idle_timeout_minutes: int = 30,
         expires_at: datetime | None = None,
-    ) -> "CoachingSession":
+    ) -> CoachingSession:
         """Create a new coaching session.
 
         Args:

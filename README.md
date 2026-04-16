@@ -6,7 +6,7 @@ Serverless AI-powered coaching platform built with Pulumi, FastAPI, and Amazon B
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - AWS CLI configured
 - Pulumi CLI (`choco install pulumi` or download from pulumi.com)
 - Node.js 18+ (for Lambda Pulumi project)

@@ -170,7 +170,7 @@ class WebsiteAnalysisService:
             response.raise_for_status()
 
             # Parse HTML to extract metadata
-            soup = BeautifulSoup(response.text, "lxml")
+            soup = BeautifulSoup(response.text, "html.parser")
 
             # Get page title
             title_tag = soup.find("title")
@@ -180,7 +180,8 @@ class WebsiteAnalysisService:
             meta_desc = soup.find("meta", {"name": "description"})
             if not meta_desc:
                 meta_desc = soup.find("meta", {"property": "og:description"})
-            meta_description = meta_desc.get("content", "").strip() if meta_desc else ""
+            _content = meta_desc.get("content", "") if meta_desc else ""
+            meta_description = _content.strip() if isinstance(_content, str) else ""
 
             return response.text, page_title, meta_description
 
@@ -198,7 +199,7 @@ class WebsiteAnalysisService:
         Returns:
             Cleaned text content
         """
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(html, "html.parser")
 
         # Remove script, style, and other non-content elements
         for element in soup(["script", "style", "nav", "footer", "header", "aside"]):

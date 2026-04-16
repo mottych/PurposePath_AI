@@ -118,7 +118,7 @@ class XRayTracer:
 class _NoOpContextManager:
     """No-op context manager when X-Ray is disabled."""
 
-    def __enter__(self) -> "_NoOpContextManager":
+    def __enter__(self) -> _NoOpContextManager:
         return self
 
     def __exit__(self, *args: Any) -> None:
