@@ -1,7 +1,7 @@
 """Health check routes with ApiResponse envelope.
 
 Endpoints:
-- GET /health/: Basic health check
+- GET /health and GET /health/: Basic health check (both paths; avoids bad redirects behind path-mapped proxies)
     USED BY: Admin - LLMDashboardPage (useLLMSystemHealth)
 - GET /health/ready: Readiness check with service dependencies
 """
@@ -22,6 +22,7 @@ router = APIRouter()
 logger = structlog.get_logger()
 
 
+@router.get("", response_model=ApiResponse[HealthCheckResponse])
 @router.get("/", response_model=ApiResponse[HealthCheckResponse])
 async def health_check() -> ApiResponse[HealthCheckResponse]:
     """Basic health check with ApiResponse envelope."""

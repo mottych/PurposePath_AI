@@ -184,6 +184,7 @@ async def _perform_validation_checks(
     return critical_issues, warnings, recommendations
 
 
+@router.get("", response_model=ApiResponse[AdminHealthResponse])
 @router.get("/", response_model=ApiResponse[AdminHealthResponse])
 async def get_admin_health(
     topic_repo: TopicRepository = Depends(get_topic_repository),
@@ -201,6 +202,10 @@ async def get_admin_health(
     **Permissions Required:** ADMIN_ACCESS (enforced by middleware)
 
     **Used by:** Admin Portal - LLM Dashboard Page
+
+    Both ``GET .../admin/health`` and ``GET .../admin/health/`` are registered so clients
+    behind API Gateway path mappings are not sent a redirect whose ``Location`` omits
+    the mapping prefix (see GitHub issue #320).
 
     **Returns:**
     - Overall health status (healthy/warnings/errors/critical)
