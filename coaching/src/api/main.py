@@ -1,5 +1,6 @@
 """Main FastAPI application with Phase 7 architecture."""
 
+import asyncio
 import logging
 import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -211,6 +212,20 @@ app = create_app()
 handler = Mangum(app, lifespan="off")
 
 
+def _ensure_asyncio_loop_for_lambda() -> None:
+    """Ensure a thread event loop exists for sync ASGI adapters (Mangum).
+
+    Python 3.12+ tightened ``asyncio.get_event_loop()``; 3.14 raises if no loop is set.
+    Mangum 0.19 still calls ``get_event_loop()`` on the Lambda main thread.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError("event loop is closed")
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
+
 # Wrapper to add debug logging for Lambda
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Lambda handler wrapper with debug logging.
@@ -222,6 +237,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     import sys
 
     from coaching.src.api.handlers import handle_eventbridge_event, is_eventbridge_event
+
+    _ensure_asyncio_loop_for_lambda()
 
     # Check if this is an EventBridge event
     if is_eventbridge_event(event):
