@@ -26,3 +26,9 @@ GHSA-926x-3r5x-gfhw
 # langchain-core — CVE-2026-34070 / OSV ECHO id (pip-audit); track upgrade when 0.3.x ships a fix
 CVE-2026-34070
 ECHO-34c7-ca18-1a8c
+# langchain-text-splitters redirect SSRF advisory (GHSA-fv5p); fixed versions require 1.x migration
+# Current service does not call HTMLHeaderTextSplitter.split_text_from_url in request hot path.
+GHSA-fv5p-p927-qmxr
+# langchain-openai DNS rebinding / TOCTOU SSRF advisory (GHSA-r7w7); fixed versions require 1.x migration
+# Current service does not use remote image URL token counting on untrusted input paths.
+GHSA-r7w7-9xr2-qq2r
