@@ -170,6 +170,12 @@ class TestListEndpointsByTopicType:
         for endpoint in endpoints:
             assert endpoint.topic_type == TopicType.CONVERSATION_COACHING
 
+    def test_goals_conversation_topic_exists(self) -> None:
+        """Guided goal creation topic is registered as conversation coaching."""
+        endpoints = list_topics_by_topic_type(TopicType.CONVERSATION_COACHING)
+        topic_ids = {endpoint.topic_id for endpoint in endpoints}
+        assert "goals" in topic_ids
+
 
 class TestListAllEndpoints:
     """Tests for list_all_topics function."""

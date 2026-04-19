@@ -110,6 +110,95 @@ class VisionResult(BaseModel):
 
 
 # =============================================================================
+# Goal Creation Coaching Result
+# =============================================================================
+
+
+class GoalActionResult(BaseModel):
+    """Action item planned for a goal strategy."""
+
+    title: str = Field(..., min_length=3, max_length=200, description="Action title")
+    assignee: str = Field(..., min_length=1, max_length=120, description="Person accountable")
+    due_date: str = Field(..., min_length=1, max_length=50, description="Due date or milestone")
+    priority: str = Field(..., min_length=1, max_length=20, description="Priority level")
+    success_criteria: str = Field(
+        ...,
+        min_length=10,
+        max_length=500,
+        description="How success for this action is evaluated",
+    )
+
+
+class GoalMeasureResult(BaseModel):
+    """Measure selected to track strategy progress."""
+
+    name: str = Field(..., min_length=1, max_length=120, description="Measure name")
+    measure_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Measure type (leading, lagging, custom, catalog)",
+    )
+    unit: str = Field(..., min_length=1, max_length=30, description="Measure unit")
+    target_value: str = Field(..., min_length=1, max_length=100, description="Target value")
+    cadence: str = Field(..., min_length=1, max_length=40, description="Review cadence")
+
+
+class GoalStrategyResult(BaseModel):
+    """Strategy with linked actions and measures."""
+
+    strategy_name: str = Field(..., min_length=3, max_length=200, description="Strategy name")
+    strategy_description: str = Field(
+        ...,
+        min_length=10,
+        max_length=1000,
+        description="How this strategy advances the goal",
+    )
+    actions: list[GoalActionResult] = Field(
+        ...,
+        min_length=1,
+        max_length=10,
+        description="Planned actions for this strategy",
+    )
+    measures: list[GoalMeasureResult] = Field(
+        ...,
+        min_length=1,
+        max_length=10,
+        description="Measures used to track this strategy",
+    )
+
+
+class GoalCreationResult(BaseModel):
+    """Final aggregate output from guided goal creation coaching."""
+
+    goal_title: str = Field(..., min_length=5, max_length=200, description="Goal title")
+    goal_intent: str = Field(
+        ...,
+        min_length=20,
+        max_length=1000,
+        description="Goal intent statement",
+    )
+    alignment_summary: str = Field(
+        ...,
+        min_length=20,
+        max_length=1000,
+        description="Alignment to purpose, values, and vision",
+    )
+    strategies: list[GoalStrategyResult] = Field(
+        ...,
+        min_length=1,
+        max_length=8,
+        description="Strategies with actions and measures",
+    )
+    next_90_day_focus: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=10,
+        description="Priority focus items for the next 90 days",
+    )
+
+
+# =============================================================================
 # Result Model Registry
 # =============================================================================
 
@@ -117,6 +206,7 @@ COACHING_RESULT_MODELS: dict[str, type[BaseModel]] = {
     "CoreValuesResult": CoreValuesResult,
     "PurposeResult": PurposeResult,
     "VisionResult": VisionResult,
+    "GoalCreationResult": GoalCreationResult,
 }
 """Registry mapping result model names to their Pydantic classes.
 

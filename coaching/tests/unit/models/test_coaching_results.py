@@ -10,6 +10,10 @@ from coaching.src.models.coaching_results import (
     COACHING_RESULT_MODELS,
     CoreValue,
     CoreValuesResult,
+    GoalActionResult,
+    GoalCreationResult,
+    GoalMeasureResult,
+    GoalStrategyResult,
     PurposeResult,
     VisionResult,
     get_coaching_result_model,
@@ -159,6 +163,62 @@ class TestVisionResult:
             )
 
 
+class TestGoalCreationResult:
+    """Tests for GoalCreationResult model."""
+
+    def test_create_valid_goal_creation_result(self) -> None:
+        """Test creating a valid GoalCreationResult."""
+        result = GoalCreationResult(
+            goal_title="Launch customer retention system",
+            goal_intent="Improve recurring revenue by reducing churn and increasing customer lifetime value.",
+            alignment_summary="This goal advances our purpose by helping clients sustain long-term growth while reinforcing our core value of customer impact.",
+            strategies=[
+                GoalStrategyResult(
+                    strategy_name="Build proactive customer success rhythm",
+                    strategy_description="Create structured outreach and intervention workflows for at-risk customers.",
+                    actions=[
+                        GoalActionResult(
+                            title="Define churn risk signals",
+                            assignee="Customer Success Lead",
+                            due_date="2026-05-15",
+                            priority="high",
+                            success_criteria="A documented risk rubric is approved and used in weekly reviews.",
+                        )
+                    ],
+                    measures=[
+                        GoalMeasureResult(
+                            name="30-day churn rate",
+                            measure_type="lagging",
+                            unit="percent",
+                            target_value="< 3%",
+                            cadence="monthly",
+                        )
+                    ],
+                )
+            ],
+            next_90_day_focus=[
+                "Pilot retention workflow with top 20 accounts",
+                "Instrument churn early-warning dashboard",
+            ],
+        )
+
+        assert result.goal_title.startswith("Launch")
+        assert len(result.strategies) == 1
+        assert result.strategies[0].actions[0].priority == "high"
+        assert result.strategies[0].measures[0].name == "30-day churn rate"
+
+    def test_requires_at_least_one_strategy(self) -> None:
+        """GoalCreationResult must include at least one strategy."""
+        with pytest.raises(ValidationError):
+            GoalCreationResult(
+                goal_title="Valid Goal Title",
+                goal_intent="This intent is long enough to satisfy model validation constraints.",
+                alignment_summary="This summary is long enough to satisfy model validation constraints.",
+                strategies=[],
+                next_90_day_focus=["One focus item"],
+            )
+
+
 class TestCoachingResultModelsRegistry:
     """Tests for the result model registry."""
 
@@ -167,6 +227,7 @@ class TestCoachingResultModelsRegistry:
         assert "CoreValuesResult" in COACHING_RESULT_MODELS
         assert "PurposeResult" in COACHING_RESULT_MODELS
         assert "VisionResult" in COACHING_RESULT_MODELS
+        assert "GoalCreationResult" in COACHING_RESULT_MODELS
 
     def test_registry_values_are_classes(self) -> None:
         """Test that registry values are Pydantic model classes."""

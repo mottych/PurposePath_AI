@@ -1037,7 +1037,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _req("analysis_type"),
         ),
     ),
-    # ========== Section 8: Coaching Conversations (3 endpoints) ==========
+    # ========== Section 8: Coaching Conversations (4 endpoints) ==========
     # Multi-turn coaching conversations with session management.
     # These use the generic coaching engine with conversation_config settings.
     "core_values": TopicDefinition(
@@ -1113,6 +1113,42 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _onb("onboarding_ica", "onboarding_ica"),
             _onb("onboarding_value_proposition", "onboarding_value_proposition"),
             _onb("onboarding_products", "onboarding_products"),
+        ),
+    ),
+    "goals": TopicDefinition(
+        topic_id="goals",
+        endpoint_path=None,  # Uses unified /ai/coaching endpoint
+        http_method=None,  # Uses unified /ai/coaching endpoint
+        response_model="GoalCreationResult",
+        result_model="GoalCreationResult",  # Enable extraction and auto-completion
+        topic_type=TopicType.CONVERSATION_COACHING,
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description="Guide users through creating a complete goal with aligned intent, strategies, measures, and actions.",
+        is_active=True,
+        allowed_prompt_types=(
+            PromptType.SYSTEM,
+            PromptType.INITIATION,
+            PromptType.RESUME,
+        ),
+        # Goal creation requires business foundation context plus existing planning artifacts
+        # so the coach can challenge alignment and avoid duplicate/conflicting plans.
+        parameter_refs=(
+            _user("user_name"),
+            _onb("company_name", "company_name"),
+            _onb("vision", "vision"),
+            _onb("purpose", "purpose"),
+            _onb("core_values", "core_values"),
+            _onb("onboarding_niche", "onboarding_niche"),
+            _onb("onboarding_ica", "onboarding_ica"),
+            _onb("onboarding_value_proposition", "onboarding_value_proposition"),
+            _onb("onboarding_products", "onboarding_products"),
+            _goals("goals"),
+            _goals("goals_summary"),
+            _strategies("strategies"),
+            _measures("measures"),
+            _measures("catalog_measures"),
+            _measures("tenant_custom_measures"),
+            _people("people"),
         ),
     ),
 }
