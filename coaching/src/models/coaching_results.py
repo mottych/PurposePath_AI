@@ -8,6 +8,8 @@ Each coaching topic has its own result model with topic-specific fields.
 The models are registered in COACHING_RESULT_MODELS for dynamic resolution.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 # =============================================================================
@@ -199,6 +201,142 @@ class GoalCreationResult(BaseModel):
 
 
 # =============================================================================
+# Issue root cause coaching result (GitHub #132)
+# =============================================================================
+
+
+class IssueRootCauseActionItem(BaseModel):
+    """Single recommended action from issue root cause coaching."""
+
+    title: str = Field(..., min_length=1, max_length=300, description="Action title")
+    description: str = Field(
+        ...,
+        min_length=10,
+        max_length=4000,
+        description="What to do, acceptance criteria, and dependencies",
+    )
+    due_date: str = Field(
+        ...,
+        min_length=1,
+        max_length=120,
+        description="Due date (absolute) or proposed milestone date",
+    )
+    assignee: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Accountable owner (name or role/seat)",
+    )
+    priority: Literal["Critical", "High", "Medium", "Low"] = Field(
+        ..., description="Execution priority for the action"
+    )
+    alignment_note: str = Field(
+        ...,
+        min_length=5,
+        max_length=800,
+        description="Which value, goal, or strategy this action supports",
+    )
+
+
+class IssueRootCauseCoachingResult(BaseModel):
+    """Structured extraction payload after issue root cause coaching (GitHub #132)."""
+
+    issue_one_sentence: str = Field(
+        ...,
+        min_length=10,
+        max_length=500,
+        description="Clean one-sentence statement of the focal issue",
+    )
+    desired_outcome: str = Field(
+        ...,
+        min_length=10,
+        max_length=1500,
+        description="What success looks like when the issue is resolved",
+    )
+    relevant_business_context: str = Field(
+        ...,
+        min_length=20,
+        max_length=8000,
+        description="Purpose, values, goals/strategies, roles, and related open issues used",
+    )
+    technique_selected: str = Field(
+        ...,
+        min_length=3,
+        max_length=200,
+        description="Diagnostic technique used (e.g. Five Whys, fishbone)",
+    )
+    technique_rationale: str = Field(
+        ...,
+        min_length=10,
+        max_length=2000,
+        description="Why this technique fits the issue",
+    )
+    symptoms: str = Field(
+        ...,
+        min_length=5,
+        max_length=4000,
+        description="Observable symptoms or surface problem",
+    )
+    contributing_factors: str = Field(
+        ...,
+        min_length=5,
+        max_length=4000,
+        description="Contributing factors between symptom and root cause",
+    )
+    root_cause: str = Field(
+        ...,
+        min_length=10,
+        max_length=4000,
+        description="Identified or best-hypothesis root cause",
+    )
+    evidence_and_reasoning: str = Field(
+        ...,
+        min_length=10,
+        max_length=6000,
+        description="Evidence, patterns, and reasoning for the root cause",
+    )
+    hypothesis_notes: str = Field(
+        default="",
+        max_length=2000,
+        description="What remains uncertain or needs validation",
+    )
+    energy_pattern_current: str = Field(
+        ...,
+        min_length=5,
+        max_length=800,
+        description="Current energy pattern in plain language",
+    )
+    energy_shift_needed: str = Field(
+        ...,
+        min_length=5,
+        max_length=800,
+        description="Constructive shift for the leader or team",
+    )
+    recommended_actions: list[IssueRootCauseActionItem] = Field(
+        ...,
+        min_length=1,
+        max_length=25,
+        description="Smallest sufficient set of owned actions",
+    )
+    related_issues_to_track: list[str] = Field(
+        default_factory=list,
+        description="Parked or related issues to track separately",
+    )
+    risks_and_watchouts: str = Field(
+        ...,
+        min_length=5,
+        max_length=4000,
+        description="Execution risks or recurrence watchouts",
+    )
+    next_coaching_question: str = Field(
+        ...,
+        min_length=5,
+        max_length=500,
+        description="Single best next question if coaching continues",
+    )
+
+
+# =============================================================================
 # Result Model Registry
 # =============================================================================
 
@@ -207,6 +345,7 @@ COACHING_RESULT_MODELS: dict[str, type[BaseModel]] = {
     "PurposeResult": PurposeResult,
     "VisionResult": VisionResult,
     "GoalCreationResult": GoalCreationResult,
+    "IssueRootCauseCoachingResult": IssueRootCauseCoachingResult,
 }
 """Registry mapping result model names to their Pydantic classes.
 

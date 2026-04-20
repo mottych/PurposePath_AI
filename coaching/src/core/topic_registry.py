@@ -1037,7 +1037,7 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _req("analysis_type"),
         ),
     ),
-    # ========== Section 8: Coaching Conversations (4 endpoints) ==========
+    # ========== Section 8: Coaching Conversations (5 topics) ==========
     # Multi-turn coaching conversations with session management.
     # These use the generic coaching engine with conversation_config settings.
     "core_values": TopicDefinition(
@@ -1148,6 +1148,40 @@ TOPIC_REGISTRY: dict[str, TopicDefinition] = {
             _measures("measures"),
             _measures("catalog_measures"),
             _measures("tenant_custom_measures"),
+            _people("people"),
+        ),
+    ),
+    "issue_root_cause_coaching": TopicDefinition(
+        topic_id="issue_root_cause_coaching",
+        endpoint_path=None,  # Uses unified /ai/coaching endpoint
+        http_method=None,  # Uses unified /ai/coaching endpoint
+        response_model="IssueRootCauseCoachingResult",
+        result_model="IssueRootCauseCoachingResult",
+        topic_type=TopicType.CONVERSATION_COACHING,
+        category=TopicCategory.STRATEGIC_PLANNING,
+        description=(
+            "Context-aware coaching to surface root causes for one focal issue and define "
+            "aligned actions, using business foundation, goals, strategies, open issues, and people."
+        ),
+        is_active=True,
+        allowed_prompt_types=(
+            PromptType.SYSTEM,
+            PromptType.INITIATION,
+            PromptType.RESUME,
+        ),
+        parameter_refs=(
+            ParameterRef(
+                name="issue_id",
+                source=ParameterSource.REQUEST,
+                source_path="issue_id",
+                required=True,
+            ),
+            _user("user_name"),
+            _issue("issue"),
+            _opt_req("business_foundation"),
+            _goals("goals"),
+            _strategies("strategies"),
+            _opt_req("issues"),
             _people("people"),
         ),
     ),

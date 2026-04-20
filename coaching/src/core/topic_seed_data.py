@@ -14,6 +14,9 @@ Usage:
 from dataclasses import dataclass
 
 from coaching.src.core.constants import TierLevel, TopicCategory, TopicType
+from coaching.src.core.prompt_static.issue_root_cause_coaching_system import (
+    load_issue_root_cause_coaching_system_prompt,
+)
 
 
 @dataclass
@@ -69,7 +72,7 @@ class TopicSeedData:
 
 
 # ========== Seed Data Registry ==========
-# All 45 topics with their default configurations
+# All topics with their default configurations
 
 TOPIC_SEED_DATA: dict[str, TopicSeedData] = {
     # ========== Section 1: Onboarding & Business Intelligence (4 topics) ==========
@@ -1632,7 +1635,7 @@ Details: {conflict_details}
 Recommend resolution approach.""",
         display_order=81,
     ),
-        # ========== Section 7: Conversation Coaching (4 topics) ==========
+    # ========== Section 7: Conversation Coaching (5 topics) ==========
     "core_values": TopicSeedData(
         topic_id="core_values",
         topic_name="Core Values Discovery",
@@ -2002,6 +2005,64 @@ Resume at the most useful point:
 - Ensure clear linkage: intent -> strategy -> action -> measure.
 - Only complete when user explicitly confirms readiness.""",
         display_order=103,
+    ),
+    "issue_root_cause_coaching": TopicSeedData(
+        topic_id="issue_root_cause_coaching",
+        topic_name="Issue Root Cause Coaching",
+        topic_type=TopicType.CONVERSATION_COACHING.value,
+        category=TopicCategory.STRATEGIC_PLANNING.value,
+        description=(
+            "Coach a leader through Identify-Discuss-Solve on one focal issue with enriched "
+            "business context, then extract root cause analysis and owned actions."
+        ),
+        temperature=0.7,
+        max_tokens=4096,
+        default_system_prompt=load_issue_root_cause_coaching_system_prompt(),
+        default_initiation_prompt="""Begin issue root cause coaching.
+
+ISSUE_TO_RESOLVE (id: {{issue_id}}):
+{{issue}}
+
+BUSINESS_FOUNDATION (summary / structured):
+{{business_foundation}}
+
+CURRENT_GOALS_AND_STRATEGIES:
+- Goals: {{goals}}
+- Strategies: {{strategies}}
+
+OPEN_ISSUES (tenant list; focal issue may appear here):
+{{issues}}
+
+EMPLOYEES_AND_ROLES:
+{{people}}
+
+Leader name: {{user_name}}
+
+Open with one powerful question that turns the issue into one clean sentence and clarifies the desired outcome.""",
+        default_resume_prompt="""# Session Resume Instructions
+
+You are RESUMING issue root cause coaching. The user {{user_name}} has returned.
+
+## Context Available
+- Focal issue id: {{issue_id}}
+- Issue record: {{issue}}
+- Business foundation: {{business_foundation}}
+- Goals: {{goals}}; Strategies: {{strategies}}
+- Open issues: {{issues}}
+- People / roles: {{people}}
+- Full conversation history in-thread
+
+## Resume Approach
+1. Welcome them back briefly.
+2. Summarize agreed symptom vs hypothesis vs open questions in a few bullets.
+3. Ask whether anything material changed since last session.
+4. Continue with the single highest-value next step in the Identify-Discuss-Solve flow.
+
+## Rules
+- Stay on the focal issue unless the user explicitly changes it.
+- Park tangential issues explicitly.
+- End turns with at most one primary coaching question unless they asked for a list.""",
+        display_order=104,
     ),
     # ========== Section 8: Analysis API (4 topics) ==========
     "alignment_analysis": TopicSeedData(

@@ -175,6 +175,7 @@ class TestListEndpointsByTopicType:
         endpoints = list_topics_by_topic_type(TopicType.CONVERSATION_COACHING)
         topic_ids = {endpoint.topic_id for endpoint in endpoints}
         assert "goals" in topic_ids
+        assert "issue_root_cause_coaching" in topic_ids
 
 
 class TestListAllEndpoints:

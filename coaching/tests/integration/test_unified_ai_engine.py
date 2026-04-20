@@ -137,6 +137,7 @@ class TestTopicSeedData:
             "website_scan",
             "onboarding_coaching",
             "insights_generation",
+            "issue_root_cause_coaching",
         ]
 
         for topic_id in migrated_topics:
@@ -212,12 +213,21 @@ class TestArchitectureCompliance:
                 )
                 expected_key = f"COACHING:{endpoint.topic_id}"
                 assert key == expected_key, f"Coaching key mismatch: {key} vs {expected_key}"
-            else:
-                # Standard METHOD:path format
+            elif endpoint.endpoint_path and endpoint.http_method:
+                # Legacy METHOD:path registry keys (if present)
                 full_path = f"{endpoint.http_method}:{endpoint.endpoint_path}"
-                assert full_path == key, f"Key mismatch: {key} vs {full_path}"
-                assert full_path not in seen_paths, f"Duplicate endpoint: {full_path}"
-                seen_paths.add(full_path)
+                if key == full_path:
+                    assert full_path not in seen_paths, f"Duplicate endpoint: {full_path}"
+                    seen_paths.add(full_path)
+                else:
+                    assert key == endpoint.topic_id, (
+                        f"Registry key should match topic_id when not METHOD:path, "
+                        f"got {key} vs {endpoint.topic_id} (legacy path {full_path})"
+                    )
+            else:
+                assert key == endpoint.topic_id, (
+                    f"Topic-only key should match topic_id, got {key} vs {endpoint.topic_id}"
+                )
 
     def test_topic_id_naming_convention(self):
         """Verify topic IDs follow snake_case convention."""
@@ -230,6 +240,8 @@ class TestArchitectureCompliance:
     def test_endpoint_path_consistency(self):
         """Verify endpoint paths are properly formatted."""
         for endpoint in ENDPOINT_REGISTRY.values():
+            if endpoint.endpoint_path is None or endpoint.http_method is None:
+                continue
             assert endpoint.endpoint_path.startswith("/"), (
                 f"Endpoint path {endpoint.endpoint_path} should start with /"
             )
