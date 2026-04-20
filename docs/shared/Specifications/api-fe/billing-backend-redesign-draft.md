@@ -343,8 +343,8 @@ Admin endpoint expectations:
 
 ### 3.3 Provider Webhook Endpoints (Billing Service)
 
-- `POST /billing/providers/stripe/webhooks`
-- Reserved path pattern for future providers: `POST /billing/providers/{provider}/webhooks`
+- `POST /billing/webhooks/stripe`
+- Provider path pattern: `POST /billing/webhooks/{provider}`
 
 Rules:
 - No account API webhook endpoints.
