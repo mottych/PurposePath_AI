@@ -35,6 +35,7 @@ class SeedingResult:
         skipped: Topic IDs that were skipped (already exist, no force update)
         deactivated: Topic IDs that were deactivated (orphaned)
         errors: List of (topic_id, error_message) tuples for failed operations
+        missing_seed_topics: Registry topic IDs with no TopicSeedData (non-fatal)
     """
 
     created: list[str] = field(default_factory=list)
@@ -42,6 +43,7 @@ class SeedingResult:
     skipped: list[str] = field(default_factory=list)
     deactivated: list[str] = field(default_factory=list)
     errors: list[tuple[str, str]] = field(default_factory=list)
+    missing_seed_topics: list[str] = field(default_factory=list)
 
     @property
     def total_processed(self) -> int:
@@ -151,9 +153,11 @@ class TopicSeedingService:
                 # Get seed data
                 seed_data = get_seed_data_for_topic(topic_id)
                 if seed_data is None:
-                    error_msg = f"No seed data found for topic {topic_id}"
-                    logger.warning(error_msg, topic_id=topic_id)
-                    result.errors.append((topic_id, error_msg))
+                    logger.warning(
+                        "No seed data for registry topic (skipped)",
+                        topic_id=topic_id,
+                    )
+                    result.missing_seed_topics.append(topic_id)
                     continue
 
                 # Check if topic exists
@@ -211,6 +215,7 @@ class TopicSeedingService:
             skipped=len(result.skipped),
             deactivated=len(result.deactivated),
             errors=len(result.errors),
+            missing_seed_topics=len(result.missing_seed_topics),
             dry_run=dry_run,
         )
 

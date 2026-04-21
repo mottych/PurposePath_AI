@@ -148,6 +148,14 @@ async def seed_all_topics(
             for topic_id in sorted(result.deactivated):
                 print_warning(f"{topic_id} (no endpoint)")
 
+        if result.missing_seed_topics:
+            print(
+                f"\n{Colors.WARNING}Registry topics without seed data "
+                f"({len(result.missing_seed_topics)}):{Colors.ENDC}"
+            )
+            for topic_id in sorted(result.missing_seed_topics):
+                print_warning(f"{topic_id} (add TopicSeedData or remove from registry)")
+
         if result.errors:
             print(f"\n{Colors.FAIL}Errors ({len(result.errors)}):{Colors.ENDC}")
             for topic_id, error in result.errors:
@@ -160,6 +168,7 @@ async def seed_all_topics(
         print(f"Updated:          {len(result.updated)}")
         print(f"Skipped:          {len(result.skipped)}")
         print(f"Deactivated:      {len(result.deactivated)}")
+        print(f"Missing seed:     {len(result.missing_seed_topics)}")
         print(f"Errors:           {len(result.errors)}")
 
         if result.is_successful:
