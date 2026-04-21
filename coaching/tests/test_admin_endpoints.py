@@ -51,6 +51,42 @@ async def test_admin_health_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_configurations_health_prefetch_skips_topic_repo_list():
+    """Prefetch path must not call list_all again (stats already loaded topics)."""
+    from coaching.src.api.routes.admin.health import _check_configurations_health
+    from coaching.src.domain.entities.llm_topic import LLMTopic
+    from coaching.src.repositories.topic_repository import TopicRepository
+
+    mock_repo = AsyncMock(spec=TopicRepository)
+    mock_repo.list_all = AsyncMock()
+
+    topics = [
+        LLMTopic(
+            topic_id="t1",
+            topic_name="T1",
+            category="coaching",
+            topic_type="single_shot",
+            description="d",
+            tier_level="FREE",
+            basic_model_code="claude-3-5-sonnet-20241022",
+            premium_model_code="claude-3-5-sonnet-20241022",
+            temperature=0.7,
+            max_tokens=4096,
+            is_active=True,
+            display_order=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            prompts=[],
+        )
+    ]
+
+    status = await _check_configurations_health(mock_repo, prefetched_topics=topics)
+
+    assert status.status == "operational"
+    mock_repo.list_all.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_admin_stats_endpoint():
     """Test the admin stats endpoint returns proper structure."""
     from coaching.src.api.routes.admin.topics import get_topics_stats
