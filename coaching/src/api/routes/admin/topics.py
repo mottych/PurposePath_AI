@@ -521,7 +521,9 @@ async def get_topics_stats(
             _perform_validation_checks,
         )
 
-        configs_health = await _check_configurations_health()
+        configs_health = await _check_configurations_health(
+            topic_repo, prefetched_topics=all_topics
+        )
         templates_health = await _check_templates_health()
         models_health = await _check_models_health()
         critical_issues, warnings_list, recommendations = await _perform_validation_checks(

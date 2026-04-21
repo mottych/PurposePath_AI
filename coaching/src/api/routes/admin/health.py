@@ -7,6 +7,7 @@ This provides comprehensive system health information including validation statu
 critical issues, warnings, and service health monitoring.
 """
 
+import asyncio
 import time
 from datetime import UTC, datetime
 from typing import Literal
@@ -18,6 +19,7 @@ from coaching.src.api.dependencies import (
     get_topic_repository,
 )
 from coaching.src.core.config_multitenant import settings
+from coaching.src.domain.entities.llm_topic import LLMTopic
 from coaching.src.models.admin_topics import (
     AdminHealthResponse,
     HealthIssue,
@@ -33,17 +35,22 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/health", tags=["Admin - Health"])
 
 
-async def _check_configurations_health() -> ServiceHealthStatus:
-    """Check health of LLM configurations."""
+async def _check_configurations_health(
+    topic_repo: TopicRepository,
+    *,
+    prefetched_topics: list[LLMTopic] | None = None,
+) -> ServiceHealthStatus:
+    """Check health of LLM configuration storage (same read path as runtime).
+
+    Previously this called ``describe_table`` on the topics table, which can fail under
+    least-privilege IAM (DescribeTable denied) while topic reads used by coaching still
+    succeed — producing a false "configurations down" on the admin LLM dashboard
+    (GitHub issue #325).
+    """
     start_time = time.time()
     try:
-        # Check if we can access the configurations
-        # For now, just verify DynamoDB access
-        from shared.services.boto3_helpers import get_dynamodb_resource
-
-        dynamodb = get_dynamodb_resource(settings.aws_region)
-        # Quick health check - describe the topics table
-        dynamodb.meta.client.describe_table(TableName=settings.topics_table)
+        if prefetched_topics is None:
+            await topic_repo.list_all(include_inactive=True)
 
         elapsed_ms = int((time.time() - start_time) * 1000)
         return ServiceHealthStatus(
@@ -216,10 +223,12 @@ async def get_admin_health(
     logger.info("Admin health check requested")
 
     try:
-        # Check service health in parallel
-        configs_health = await _check_configurations_health()
-        templates_health = await _check_templates_health()
-        models_health = await _check_models_health()
+        # Check service health in parallel (configurations use topic repo read path)
+        configs_health, templates_health, models_health = await asyncio.gather(
+            _check_configurations_health(topic_repo),
+            _check_templates_health(),
+            _check_models_health(),
+        )
 
         # Perform validation checks
         critical_issues, warnings_list, recommendations = await _perform_validation_checks(
