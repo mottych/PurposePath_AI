@@ -33,7 +33,8 @@ Error Responses:
     410 - SESSION_EXPIRED: Session has expired or timed out
     422 - SESSION_NOT_FOUND: Session not found
     422 - MAX_TURNS_REACHED: Maximum conversation turns reached
-    422 - INVALID_TOPIC: Topic not found or invalid
+    422 - INVALID_TOPIC: Topic id not in coaching registry
+    422 - TOPIC_NOT_CONFIGURED: Registry topic exists but DynamoDB LLMTopic row is missing (run topic seeding)
     500 - EXTRACTION_FAILED: Failed to extract results from session
 """
 
@@ -365,10 +366,15 @@ async def start_session(
             "coaching_sessions.start_session.invalid_topic",
             topic_id=request.topic_id,
             tenant_id=context.tenant_id,
+            error_code=e.error_code,
         )
         raise HTTPException(
             status_code=422,
-            detail={"code": "INVALID_TOPIC", "message": str(e)},
+            detail={
+                "code": e.error_code,
+                "message": str(e),
+                "topic_id": e.topic_id,
+            },
         ) from e
 
     except TopicNotActiveError as e:
