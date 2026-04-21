@@ -48,12 +48,41 @@ class TestTopicSeedingService:
         assert result.failure_count == 1
         assert not result.is_successful
 
+        result2 = SeedingResult()
+        result2.missing_seed_topics = ["orphan_registry_topic"]
+        assert result2.is_successful
+
     def test_validation_report_properties(self) -> None:
         report = ValidationReport()
         assert report.is_valid
 
         report.missing_topics = ["topic1"]
         assert not report.is_valid
+
+    @pytest.mark.asyncio
+    async def test_seed_all_topics_missing_seed_data_not_counted_as_error(
+        self, service: TopicSeedingService, mock_topic_repo: Mock, mock_s3_storage: Mock
+    ) -> None:
+        """Registry topics without TopicSeedData should not fail the seeding run."""
+        with (
+            patch(
+                "coaching.src.services.topic_seeding_service.list_all_topics"
+            ) as mock_list_topics,
+            patch(
+                "coaching.src.services.topic_seeding_service.get_seed_data_for_topic"
+            ) as mock_get_seed,
+        ):
+            ep = Mock()
+            ep.topic_id = "registry_only_topic"
+            mock_list_topics.return_value = [ep]
+            mock_get_seed.return_value = None
+
+            result = await service.seed_all_topics(force_update=False)
+
+        assert result.missing_seed_topics == ["registry_only_topic"]
+        assert result.errors == []
+        assert result.is_successful
+        assert not mock_topic_repo.create.called
 
     @pytest.mark.asyncio
     async def test_seed_all_topics_creates_new(
@@ -65,7 +94,7 @@ class TestTopicSeedingService:
 
         with (
             patch(
-                "coaching.src.services.topic_seeding_service.list_all_endpoints"
+                "coaching.src.services.topic_seeding_service.list_all_topics"
             ) as mock_list_endpoints,
             patch(
                 "coaching.src.services.topic_seeding_service.get_seed_data_for_topic"
@@ -112,7 +141,7 @@ class TestTopicSeedingService:
 
         with (
             patch(
-                "coaching.src.services.topic_seeding_service.list_all_endpoints"
+                "coaching.src.services.topic_seeding_service.list_all_topics"
             ) as mock_list_endpoints,
             patch(
                 "coaching.src.services.topic_seeding_service.get_seed_data_for_topic"
@@ -148,7 +177,7 @@ class TestTopicSeedingService:
 
         with (
             patch(
-                "coaching.src.services.topic_seeding_service.list_all_endpoints"
+                "coaching.src.services.topic_seeding_service.list_all_topics"
             ) as mock_list_endpoints,
             patch(
                 "coaching.src.services.topic_seeding_service.get_seed_data_for_topic"
@@ -192,7 +221,7 @@ class TestTopicSeedingService:
 
         with (
             patch(
-                "coaching.src.services.topic_seeding_service.list_all_endpoints"
+                "coaching.src.services.topic_seeding_service.list_all_topics"
             ) as mock_list_endpoints,
             patch(
                 "coaching.src.services.topic_seeding_service.get_seed_data_for_topic"

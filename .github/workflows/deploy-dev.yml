@@ -146,6 +146,8 @@ jobs:
           export PYTHONPATH="coaching:shared:."
           export STAGE=dev
           export AWS_REGION=us-east-1
+          # Must match infrastructure/pulumi S3 bucket (purposepath-coaching-prompts-<account>-<stack>)
+          export PROMPTS_BUCKET="purposepath-coaching-prompts-380276784420-${STAGE}"
           python -m coaching.src.scripts.seed_topics
 
       - name: Get API Gateway URL
