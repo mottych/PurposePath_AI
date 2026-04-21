@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import time
 from datetime import UTC, datetime
-from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
@@ -33,31 +32,10 @@ from coaching.src.domain.entities.ai_job import AIJob, AIJobErrorCode, AIJobStat
 from coaching.src.infrastructure.external.business_api_client import BusinessApiClient
 from coaching.src.infrastructure.repositories.dynamodb_job_repository import DynamoDBJobRepository
 from coaching.src.services.template_parameter_processor import TemplateParameterProcessor
+from shared.services.dynamodb_serialization import convert_floats_to_decimal
 from shared.services.eventbridge_client import EventBridgePublisher, EventBridgePublishError
 
 logger = structlog.get_logger()
-
-
-def convert_floats_to_decimal(obj: Any) -> Any:
-    """Convert float values to Decimal for DynamoDB compatibility.
-
-    DynamoDB does not support float types and requires Decimal instead.
-    This function recursively converts all float values in nested structures.
-
-    Args:
-        obj: Object to convert (can be dict, list, float, or any other type)
-
-    Returns:
-        Object with all floats converted to Decimal
-    """
-    if isinstance(obj, float):
-        return Decimal(str(obj))
-    elif isinstance(obj, dict):
-        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_floats_to_decimal(item) for item in obj]
-    else:
-        return obj
 
 
 class AsyncAIExecutionError(Exception):
