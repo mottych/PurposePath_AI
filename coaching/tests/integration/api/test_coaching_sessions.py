@@ -290,6 +290,26 @@ class TestStartSession:
         assert response.status_code == 422
         data = response.json()
         assert data["detail"]["code"] == "INVALID_TOPIC"
+        assert data["detail"]["topic_id"] == "invalid_topic"
+
+    def test_start_session_topic_not_configured(self, client, mock_coaching_session_service):
+        """Missing LLMTopic row returns TOPIC_NOT_CONFIGURED for actionable client copy."""
+        mock_coaching_session_service.get_or_create_session.side_effect = InvalidTopicError(
+            topic_id="issue_root_cause_coaching",
+            reason="LLMTopic configuration not found in database",
+            error_code="TOPIC_NOT_CONFIGURED",
+        )
+
+        response = client.post(
+            "/api/v1/ai/coaching/start",
+            json={"topic_id": "issue_root_cause_coaching", "context": {"issue_id": "i1"}},
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["detail"]["code"] == "TOPIC_NOT_CONFIGURED"
+        assert data["detail"]["topic_id"] == "issue_root_cause_coaching"
 
 
 class TestSendMessage:

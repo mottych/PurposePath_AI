@@ -279,6 +279,29 @@ class TestCoachingSessionService:
 
         assert exc_info.value.topic_id == "nonexistent_topic"
         assert "not found" in exc_info.value.reason.lower()
+        assert exc_info.value.error_code == "INVALID_TOPIC"
+
+    @pytest.mark.asyncio
+    async def test_initiate_missing_llm_topic_row_raises_topic_not_configured(
+        self,
+        service: CoachingSessionService,
+        mock_topic_repository: AsyncMock,
+        sample_endpoint_definition: TopicDefinition,
+    ) -> None:
+        """Missing DynamoDB LLMTopic row should surface TOPIC_NOT_CONFIGURED."""
+        service._topic_index["core_values"] = sample_endpoint_definition
+        mock_topic_repository.get.return_value = None
+
+        with pytest.raises(InvalidTopicError) as exc_info:
+            await service.get_or_create_session(
+                topic_id="core_values",
+                tenant_id="tenant-123",
+                user_id="user-123",
+            )
+
+        assert exc_info.value.topic_id == "core_values"
+        assert exc_info.value.error_code == "TOPIC_NOT_CONFIGURED"
+        assert "database" in exc_info.value.reason.lower()
 
     @pytest.mark.asyncio
     async def test_initiate_inactive_topic_raises_error(

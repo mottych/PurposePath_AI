@@ -157,6 +157,22 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
 
+      - name: Set up uv (topic seeding)
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Seed topic registry (DynamoDB + S3 prompts)
+        shell: bash
+        run: |
+          uv venv .venv-seed
+          source .venv-seed/bin/activate
+          uv pip install -r coaching/requirements.txt
+          export PYTHONPATH="coaching:shared:."
+          export STAGE=staging
+          export AWS_REGION=us-east-1
+          python -m coaching.src.scripts.seed_topics
+
       - name: Get API Gateway URL
         id: api-url
         working-directory: coaching/pulumi

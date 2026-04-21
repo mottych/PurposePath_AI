@@ -64,9 +64,16 @@ logger = structlog.get_logger()
 class InvalidTopicError(Exception):
     """Raised when topic is not found or not valid for coaching."""
 
-    def __init__(self, topic_id: str, reason: str = "Topic not found") -> None:
+    def __init__(
+        self,
+        topic_id: str,
+        reason: str = "Topic not found",
+        *,
+        error_code: str = "INVALID_TOPIC",
+    ) -> None:
         self.topic_id = topic_id
         self.reason = reason
+        self.error_code = error_code
         super().__init__(f"Invalid topic '{topic_id}': {reason}")
 
 
@@ -304,6 +311,7 @@ class CoachingSessionService:
             raise InvalidTopicError(
                 topic_id=topic_id,
                 reason="Topic not found in ENDPOINT_REGISTRY for CONVERSATION_COACHING",
+                error_code="INVALID_TOPIC",
             )
         return endpoint
 
@@ -325,6 +333,7 @@ class CoachingSessionService:
             raise InvalidTopicError(
                 topic_id=topic_id,
                 reason="LLMTopic configuration not found in database",
+                error_code="TOPIC_NOT_CONFIGURED",
             )
         if not llm_topic.is_active:
             raise TopicNotActiveError(topic_id=topic_id)
