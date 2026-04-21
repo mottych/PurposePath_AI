@@ -6,7 +6,7 @@ and topic-based session enforcement.
 """
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from boto3.dynamodb.conditions import Attr, Key
@@ -18,6 +18,7 @@ from coaching.src.domain.entities.coaching_session import (
     CoachingSession,
 )
 from coaching.src.domain.exceptions.session_exceptions import SessionConflictError
+from shared.services.dynamodb_serialization import convert_floats_to_decimal
 
 logger = structlog.get_logger()
 
@@ -822,7 +823,7 @@ class DynamoDBCoachingSessionRepository:
         if session.extraction_model is not None:
             item["extraction_model"] = session.extraction_model
 
-        return item
+        return cast(dict[str, Any], convert_floats_to_decimal(item))
 
     def _from_dynamodb_item(self, item: dict[str, Any]) -> CoachingSession:
         """Convert DynamoDB item to CoachingSession entity.
