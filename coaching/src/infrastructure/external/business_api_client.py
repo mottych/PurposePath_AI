@@ -763,8 +763,7 @@ class BusinessApiClient:
         """
         Get open operations issues from Traction Service.
 
-        Updated endpoint path: /api/issues (not /operations/issues).
-        Uses statusCategory=open filter for open issues.
+        Uses GET {traction_base}/issues with statusCategory=open (Traction API, not Account base).
 
         Args:
             tenant_id: Tenant identifier
@@ -787,9 +786,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching operations issues", tenant_id=tenant_id, limit=limit)
 
-            # Updated endpoint: /api/issues with statusCategory filter
+            traction = self._traction_api_base()
             response = await self.client.get(
-                "/api/issues",
+                f"{traction}/issues",
                 headers=self._get_headers(tenant_id),
                 params={"limit": limit, "statusCategory": "open"},
             )
@@ -837,7 +836,7 @@ class BusinessApiClient:
         """
         Get issues from Traction Service.
 
-        Endpoint: GET /api/issues
+        Endpoint: GET {traction_base}/issues
 
         Args:
             tenant_id: Tenant identifier
@@ -849,8 +848,9 @@ class BusinessApiClient:
         try:
             logger.info("Fetching issues", tenant_id=tenant_id)
 
+            traction = self._traction_api_base()
             response = await self.client.get(
-                "/api/issues",
+                f"{traction}/issues",
                 headers=self._get_headers(tenant_id),
                 params=params or None,
             )
@@ -883,13 +883,14 @@ class BusinessApiClient:
     async def get_issue_by_id(self, issue_id: str, tenant_id: str) -> dict[str, Any]:
         """Get single issue by ID.
 
-        Endpoint: GET /api/issues/{issueId}
+        Endpoint: GET {traction_base}/issues/{issueId}
         """
         try:
             logger.info("Fetching issue", issue_id=issue_id, tenant_id=tenant_id)
 
+            traction = self._traction_api_base()
             response = await self.client.get(
-                f"/api/issues/{issue_id}",
+                f"{traction}/issues/{issue_id}",
                 headers=self._get_headers(tenant_id),
             )
             response.raise_for_status()

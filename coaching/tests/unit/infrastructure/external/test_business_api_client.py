@@ -166,7 +166,7 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "i1"
         mock_http_client.get.assert_called_with(
-            "/api/issues",
+            "https://api.test.com/traction/api/v1/issues",
             headers=business_client._get_headers("t1"),
             params={"limit": 20, "statusCategory": "open"},
         )
@@ -436,7 +436,7 @@ class TestBusinessApiClient:
         assert len(result) == 1
         assert result[0]["id"] == "i1"
         mock_http_client.get.assert_called_with(
-            "/api/issues",
+            "https://api.test.com/traction/api/v1/issues",
             headers=business_client._get_headers("t1"),
             params=None,
         )
@@ -452,7 +452,7 @@ class TestBusinessApiClient:
         assert result["id"] == "i1"
         assert result["title"] == "Issue 1"
         mock_http_client.get.assert_called_with(
-            "/api/issues/i1",
+            "https://api.test.com/traction/api/v1/issues/i1",
             headers=business_client._get_headers("t1"),
         )
 
