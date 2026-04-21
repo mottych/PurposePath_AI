@@ -351,7 +351,7 @@ Examples:
 1. All repos use `dev` as the source branch for non-hotfix issues and the branch deployed to the dev environment.
 2. All repos use feature branches following the pattern `issueFlow {issue number} - {issue short desc}`.
 3. API uses:
-   1. `preview` for staging,
+   1. `staging` for staging,
    2. `main` for production,
    3. `main` as the source for hotfix branches.
 4. Web, AI, and Admin use:

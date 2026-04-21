@@ -16,7 +16,7 @@ The model is designed to be implementation-ready and auditable. It standardizes 
 3. Human Gate 1 rejection loops until approval.
 4. After design approval, failures route to implementation by defaul
 5. Human Gate 2 occurs after QA deployment and is skippable, including production issues.
-6. Production path is deploy production, then merge-down to preview, then dev.
+6. Production path is deploy production, then merge-down to staging, then dev.
 7. Unrecoverable failure requires blocked signal plus actionable human comment.
 8.  Waiting-human states are excluded from stall monitoring.
 
