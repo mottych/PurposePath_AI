@@ -407,6 +407,7 @@ security-reports/
 vulnerability-reports/
 .snyk
 .artifacts/*
+.artifacts-download/
 .artifacts-downloaded/
 !.artifacts/security/
 .artifacts/security/*
