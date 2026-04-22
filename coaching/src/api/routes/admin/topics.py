@@ -50,6 +50,7 @@ from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocat
 from coaching.src.application.llm_usage.llm_usage_summary import summarize_usage_rows
 from coaching.src.core.constants import TopicType
 from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
+from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.response_model_registry import get_response_model
 from coaching.src.core.topic_registry import (
     TOPIC_REGISTRY,
@@ -193,13 +194,15 @@ def _map_topic_to_detail(
     if topic.topic_type == "conversation_coaching":
         # Get from additional_config or use defaults
         config_data = topic.additional_config or {}
-        # Support both 'max_turns' (new) and 'estimated_messages' (legacy) for backward compatibility
-        max_turns_value = config_data.get("max_turns") or config_data.get("estimated_messages") or 0
+        max_turns_value = resolve_max_turns_from_additional_config(
+            config_data,
+            default_when_unset=0,
+        )
         conversation_config = ConversationConfig(
             max_messages_to_llm=config_data.get("max_messages_to_llm", 30),
             inactivity_timeout_minutes=config_data.get("inactivity_timeout_minutes", 30),
             session_ttl_days=config_data.get("session_ttl_days", 14),
-            max_turns=int(max_turns_value),
+            max_turns=max_turns_value,
             extraction_model_code=config_data.get("extraction_model_code"),
         )
 

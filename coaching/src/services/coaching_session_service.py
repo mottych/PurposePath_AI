@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
+from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.llm_models import MODEL_REGISTRY, resolve_active_model_code
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
@@ -358,17 +359,17 @@ class CoachingSessionService:
         endpoint_def = self._get_endpoint_definition(topic_id)
         llm_topic = await self._get_llm_topic_config(topic_id)
 
+        resolved_max_turns = resolve_max_turns_from_additional_config(
+            llm_topic.additional_config,
+            default_when_unset=10,
+        )
         logger.debug(
             "coaching_service.topic_config_loaded",
             topic_id=topic_id,
             tier_level=llm_topic.tier_level.value,
             basic_model=llm_topic.basic_model_code,
             premium_model=llm_topic.premium_model_code,
-            max_turns=(
-                llm_topic.additional_config.get("max_turns")
-                or llm_topic.additional_config.get("estimated_messages")
-                or 10
-            ),
+            max_turns=resolved_max_turns,
         )
 
         return endpoint_def, llm_topic
@@ -595,11 +596,9 @@ class CoachingSessionService:
 
         # Create session entity
         # Get conversation settings from additional_config (stored in DynamoDB)
-        # Support both 'max_turns' and 'estimated_messages' as aliases
-        max_turns = (
-            llm_topic.additional_config.get("max_turns")
-            or llm_topic.additional_config.get("estimated_messages")
-            or 10
+        max_turns = resolve_max_turns_from_additional_config(
+            llm_topic.additional_config,
+            default_when_unset=10,
         )
         idle_timeout_minutes = (
             llm_topic.additional_config.get("idle_timeout_minutes")
