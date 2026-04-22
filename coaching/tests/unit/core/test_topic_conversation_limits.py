@@ -15,7 +15,9 @@ from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_a
         ({"estimated_messages": 8}, 10, 8),
         ({"max_turns": 15}, 10, 15),
         ({"max_turns": None, "estimated_messages": 5}, 10, 5),
+        ({"max_turns": None}, 0, 0),
         ({}, 0, 0),
+        (None, 0, 0),
     ],
 )
 def test_resolve_max_turns_from_additional_config(

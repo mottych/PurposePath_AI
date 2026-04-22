@@ -355,8 +355,6 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         max_turns = state.get("model_config", {}).get("max_turns", 0)
         if max_turns == 0:
             max_turns = self.config.custom_config.get("max_turns", 0)
-        # If unlimited (0), use a high number for comparison
-        effective_max_turns = max_turns if max_turns > 0 else 999
 
         state["step_data"]["conversation_metrics"] = {
             "user_messages": conversation_count,
@@ -364,7 +362,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             "decision_factors": {
                 "sufficient_depth": conversation_count >= 3,
                 "meaningful_insights": insights_count >= 2,
-                "max_turns_reached": conversation_count >= effective_max_turns,
+                "max_turns_reached": max_turns > 0 and conversation_count >= max_turns,
             },
         }
 

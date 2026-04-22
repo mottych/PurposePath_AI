@@ -219,6 +219,71 @@ class TestCoachingSessionService:
         mock_session_repository.create.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_initiate_preserves_explicit_zero_max_turns_as_unlimited(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: TopicDefinition,
+        sample_llm_topic: LLMTopic,
+    ) -> None:
+        """Explicit 0 from topic config must be stored on the session as unlimited."""
+        service._topic_index["core_values"] = sample_endpoint_definition
+        sample_llm_topic.additional_config["max_turns"] = 0
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are a coaching assistant.",
+            "Let's begin the coaching session.",
+        ]
+        mock_session_repository.get_active_for_user_topic.return_value = None
+
+        response = await service.get_or_create_session(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            context={},
+        )
+
+        assert response.max_turns == 0
+        created_session = mock_session_repository.create.call_args.args[0]
+        assert created_session.max_turns == 0
+
+    @pytest.mark.asyncio
+    async def test_initiate_defaults_missing_max_turns_to_zero(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        sample_endpoint_definition: TopicDefinition,
+        sample_llm_topic: LLMTopic,
+    ) -> None:
+        """Undefined max_turns should default to 0 (unlimited)."""
+        service._topic_index["core_values"] = sample_endpoint_definition
+        sample_llm_topic.additional_config = {
+            "idle_timeout_minutes": 30,
+            "session_ttl_hours": 336,
+        }
+        mock_topic_repository.get.return_value = sample_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are a coaching assistant.",
+            "Let's begin the coaching session.",
+        ]
+        mock_session_repository.get_active_for_user_topic.return_value = None
+
+        response = await service.get_or_create_session(
+            topic_id="core_values",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            context={},
+        )
+
+        assert response.max_turns == 0
+        created_session = mock_session_repository.create.call_args.args[0]
+        assert created_session.max_turns == 0
+
+    @pytest.mark.asyncio
     async def test_initiate_cancels_existing_and_creates_new(
         self,
         service: CoachingSessionService,

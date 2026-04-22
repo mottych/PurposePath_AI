@@ -361,7 +361,7 @@ class CoachingSessionService:
 
         resolved_max_turns = resolve_max_turns_from_additional_config(
             llm_topic.additional_config,
-            default_when_unset=10,
+            default_when_unset=0,
         )
         logger.debug(
             "coaching_service.topic_config_loaded",
@@ -598,7 +598,7 @@ class CoachingSessionService:
         # Get conversation settings from additional_config (stored in DynamoDB)
         max_turns = resolve_max_turns_from_additional_config(
             llm_topic.additional_config,
-            default_when_unset=10,
+            default_when_unset=0,
         )
         idle_timeout_minutes = (
             llm_topic.additional_config.get("idle_timeout_minutes")

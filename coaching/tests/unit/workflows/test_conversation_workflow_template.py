@@ -127,6 +127,20 @@ class TestConversationWorkflowTemplate:
         assert metrics["user_messages"] == 3
         assert metrics["insights_collected"] == 2
         assert metrics["decision_factors"]["sufficient_depth"] is True
+        assert metrics["decision_factors"]["max_turns_reached"] is False
+
+    @pytest.mark.asyncio
+    async def test_follow_up_decision_node_unlimited_turns_never_mark_limit(
+        self, conversation_workflow, base_state
+    ):
+        base_state["messages"] = [{"role": "user", "content": str(i)} for i in range(25)]
+        base_state["results"]["accumulated_insights"] = ["Insight 1", "Insight 2"]
+        base_state["model_config"] = {"max_turns": 0}
+
+        result = await conversation_workflow.follow_up_decision_node(base_state)
+
+        metrics = result["step_data"]["conversation_metrics"]
+        assert metrics["decision_factors"]["max_turns_reached"] is False
 
     @pytest.mark.asyncio
     async def test_completion_node(self, conversation_workflow, base_state):
