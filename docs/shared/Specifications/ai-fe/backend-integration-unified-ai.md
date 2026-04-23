@@ -162,6 +162,9 @@ Source membership and retrieval behavior are implementation-level concerns; endp
 - Treat OpenAPI and AsyncAPI as authoritative contracts.
 - Treat this document as narrative/behavioral guidance only.
 - Prefer generated clients or runtime schema resolution where possible.
+- For `GET /ai/coaching/session/check`, scoped conversation topics must send the same
+  required identifying request parameters they use on session start (for example
+  `issue_id`) so the backend can match the correct active session.
 
 ---
 

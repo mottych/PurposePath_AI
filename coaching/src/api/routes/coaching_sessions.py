@@ -41,7 +41,7 @@ Error Responses:
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from coaching.src.api.auth import get_current_context
@@ -49,6 +49,7 @@ from coaching.src.api.dependencies.ai_engine import create_template_processor
 from coaching.src.api.multitenant_dependencies import (
     get_dynamodb_client,
 )
+from coaching.src.core.coaching_session_scope import build_session_scope
 from coaching.src.core.config_multitenant import settings
 from coaching.src.core.types import ConversationId, TenantId, UserId
 from coaching.src.domain.entities.ai_job import AIJobStatus
@@ -1001,6 +1002,7 @@ async def cancel_session(
 
 @router.get("/session/check", response_model=ApiResponse[dict[str, Any]])
 async def check_session_exists(
+    request: Request,
     topic_id: str = Query(..., description="Coaching topic ID to check"),
     context: RequestContext = Depends(get_current_context),
     repo: DynamoDBCoachingSessionRepository = Depends(get_coaching_session_repository),
@@ -1018,6 +1020,11 @@ async def check_session_exists(
     - Returns "active" if session is ACTIVE and NOT idle
 
     This allows frontend to show "Resume or Start New?" dialog appropriately.
+
+    For scoped coaching topics, the frontend should include the same required
+    request parameters it uses on session start as additional query params
+    (for example `issue_id`). This allows the backend to distinguish separate
+    active sessions under the same topic.
 
     Args:
         topic_id: Coaching topic ID to check
@@ -1054,17 +1061,24 @@ async def check_session_exists(
     )
 
     try:
+        query_scope_source = {
+            key: value for key, value in request.query_params.items() if key != "topic_id"
+        }
+        session_scope = build_session_scope(topic_id, query_scope_source)
+
         # Check for user's own session
         user_session = await repo.get_active_for_user_topic(
             user_id=context.user_id,
             topic_id=topic_id,
             tenant_id=context.tenant_id,
+            session_scope=session_scope,
         )
 
         # Check for any active session for this tenant+topic
         tenant_session = await repo.get_active_by_tenant_topic(
             tenant_id=context.tenant_id,
             topic_id=topic_id,
+            session_scope=session_scope,
         )
 
         # Compute status for frontend: "paused" if explicitly paused OR idle

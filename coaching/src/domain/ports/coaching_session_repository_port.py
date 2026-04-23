@@ -108,7 +108,11 @@ class CoachingSessionRepositoryPort(Protocol):
         ...
 
     async def get_active_for_user_topic(
-        self, user_id: UserId, topic_id: str, tenant_id: TenantId
+        self,
+        user_id: UserId,
+        topic_id: str,
+        tenant_id: TenantId,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """
         Get active session for user+topic combination.
@@ -122,6 +126,8 @@ class CoachingSessionRepositoryPort(Protocol):
             user_id: User identifier
             topic_id: Coaching topic identifier (e.g., "core_values")
             tenant_id: Tenant ID for multi-tenant isolation
+            session_scope: Optional normalized request scope used to distinguish
+                separate sessions under the same topic (for example issue_id)
 
         Returns:
             Active CoachingSession if found, None otherwise
@@ -134,7 +140,10 @@ class CoachingSessionRepositoryPort(Protocol):
         ...
 
     async def get_active_by_tenant_topic(
-        self, tenant_id: str, topic_id: str
+        self,
+        tenant_id: str,
+        topic_id: str,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """
         Get any active session for a topic within a tenant (string parameters).
@@ -145,6 +154,8 @@ class CoachingSessionRepositoryPort(Protocol):
         Args:
             tenant_id: Tenant ID for multi-tenant isolation (string)
             topic_id: Coaching topic identifier
+            session_scope: Optional normalized request scope used to distinguish
+                separate sessions under the same topic
 
         Returns:
             Active CoachingSession for the topic if any exists, None otherwise
@@ -156,7 +167,10 @@ class CoachingSessionRepositoryPort(Protocol):
         ...
 
     async def get_active_for_topic(
-        self, topic_id: str, tenant_id: TenantId
+        self,
+        topic_id: str,
+        tenant_id: TenantId,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """
         Get any active session for a topic within a tenant (typed parameters).
@@ -167,6 +181,8 @@ class CoachingSessionRepositoryPort(Protocol):
         Args:
             topic_id: Coaching topic identifier
             tenant_id: Tenant ID for multi-tenant isolation
+            session_scope: Optional normalized request scope used to distinguish
+                separate sessions under the same topic
 
         Returns:
             Active CoachingSession for the topic if any exists, None otherwise

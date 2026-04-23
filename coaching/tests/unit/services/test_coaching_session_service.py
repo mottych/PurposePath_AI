@@ -17,8 +17,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from coaching.src.core.constants import ConversationStatus, TopicCategory, TopicType
+from coaching.src.core.constants import (
+    ConversationStatus,
+    ParameterSource,
+    TopicCategory,
+    TopicType,
+)
 from coaching.src.core.topic_registry import (
+    ParameterRef,
     TemplateType,
     TopicDefinition,
 )
@@ -132,6 +138,51 @@ class TestCoachingSessionService:
         )
 
     @pytest.fixture
+    def issue_endpoint_definition(self) -> TopicDefinition:
+        """Create an issue-scoped endpoint definition."""
+        return TopicDefinition(
+            topic_id="issue_root_cause_coaching",
+            description="Help the user resolve one issue",
+            topic_type=TopicType.CONVERSATION_COACHING,
+            category=TopicCategory.STRATEGIC_PLANNING,
+            templates={
+                TemplateType.SYSTEM: "system.md",
+                TemplateType.INITIATION: "initiation.md",
+                TemplateType.RESUME: "resume.md",
+            },
+            parameter_refs=(
+                ParameterRef(
+                    name="issue_id",
+                    source=ParameterSource.REQUEST,
+                    source_path="issue_id",
+                    required=True,
+                ),
+            ),
+            result_model="IssueRootCauseCoachingResult",
+            is_active=True,
+        )
+
+    @pytest.fixture
+    def issue_llm_topic(self) -> LLMTopic:
+        """Create an issue-scoped LLM topic configuration."""
+        return LLMTopic(
+            topic_id="issue_root_cause_coaching",
+            topic_name="Issue Root Cause Coaching",
+            topic_type="conversation_coaching",
+            category="strategic_planning",
+            basic_model_code="claude-haiku",
+            premium_model_code="claude-haiku",
+            is_active=True,
+            max_tokens=2000,
+            temperature=0.7,
+            additional_config={
+                "max_turns": 10,
+                "idle_timeout_minutes": 30,
+                "session_ttl_hours": 336,
+            },
+        )
+
+    @pytest.fixture
     def sample_session(self) -> CoachingSession:
         """Create a sample coaching session."""
         session = CoachingSession(
@@ -217,6 +268,50 @@ class TestCoachingSessionService:
 
         # Verify repository was called to create
         mock_session_repository.create.assert_called_once()
+        mock_session_repository.get_active_for_user_topic.assert_called_once_with(
+            user_id=UserId("user-123"),
+            topic_id="core_values",
+            tenant_id=TenantId("tenant-123"),
+            session_scope={},
+        )
+        created_session = mock_session_repository.create.call_args.args[0]
+        assert created_session.session_scope == {}
+
+    @pytest.mark.asyncio
+    async def test_initiate_uses_required_request_scope_for_scoped_topics(
+        self,
+        service: CoachingSessionService,
+        mock_session_repository: AsyncMock,
+        mock_topic_repository: AsyncMock,
+        mock_s3_prompt_storage: AsyncMock,
+        issue_endpoint_definition: TopicDefinition,
+        issue_llm_topic: LLMTopic,
+    ) -> None:
+        """Scoped topics should match active sessions by required request parameters."""
+        service._topic_index["issue_root_cause_coaching"] = issue_endpoint_definition
+        mock_topic_repository.get.return_value = issue_llm_topic
+        mock_s3_prompt_storage.get_prompt.side_effect = [
+            "You are an issue coach.",
+            "Let's work on the selected issue.",
+        ]
+        mock_session_repository.get_active_for_user_topic.return_value = None
+
+        response = await service.get_or_create_session(
+            topic_id="issue_root_cause_coaching",
+            tenant_id="tenant-123",
+            user_id="user-123",
+            context={"issue_id": "issue-123"},
+        )
+
+        assert isinstance(response, SessionResponse)
+        mock_session_repository.get_active_for_user_topic.assert_called_once_with(
+            user_id=UserId("user-123"),
+            topic_id="issue_root_cause_coaching",
+            tenant_id=TenantId("tenant-123"),
+            session_scope={"issue_id": "issue-123"},
+        )
+        created_session = mock_session_repository.create.call_args.args[0]
+        assert created_session.session_scope == {"issue_id": "issue-123"}
 
     @pytest.mark.asyncio
     async def test_initiate_preserves_explicit_zero_max_turns_as_unlimited(
