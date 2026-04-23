@@ -23,13 +23,14 @@ from pydantic import BaseModel, Field
 
 from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocationContext
 from coaching.src.application.llm_usage.llm_usage_recording_service import LlmUsageRecordingService
+from coaching.src.core.coaching_session_scope import build_session_scope
 from coaching.src.core.constants import ConversationStatus, MessageRole, TierLevel, TopicType
-from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.llm_models import MODEL_REGISTRY, resolve_active_model_code
 from coaching.src.core.structured_output import (
     EXTRACTION_PROMPT_TEMPLATE,
     get_structured_output_instructions,
 )
+from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.topic_registry import (
     TemplateType,
     TopicDefinition,
@@ -483,12 +484,14 @@ class CoachingSessionService:
 
         # Load configuration
         endpoint_def, llm_topic = await self._load_topic_config(topic_id)
+        session_scope = build_session_scope(topic_id, context or {})
 
         # Check for existing active session - /start ALWAYS creates NEW session
         existing = await self.session_repository.get_active_for_user_topic(
             user_id=UserId(user_id),
             topic_id=topic_id,
             tenant_id=TenantId(tenant_id),
+            session_scope=session_scope,
         )
 
         if existing is not None:
@@ -519,6 +522,7 @@ class CoachingSessionService:
             tenant_id=tenant_id,
             user_id=user_id,
             parameters=context or {},
+            session_scope=session_scope,
             endpoint_def=endpoint_def,
             llm_topic=llm_topic,
         )
@@ -530,6 +534,7 @@ class CoachingSessionService:
         tenant_id: str,
         user_id: str,
         parameters: dict[str, Any],
+        session_scope: dict[str, str],
         endpoint_def: TopicDefinition,
         llm_topic: LLMTopic,
     ) -> SessionResponse:
@@ -621,6 +626,7 @@ class CoachingSessionService:
             idle_timeout_minutes=idle_timeout_minutes,
             expires_at=expires_at,
             context=resolved_params,
+            session_scope=session_scope,
         )
 
         # Render initiation template with resolved params

@@ -1336,6 +1336,26 @@ def get_required_parameter_names_for_topic(topic_id: str) -> set[str]:
     return required_names
 
 
+def get_required_request_parameter_names_for_topic(topic_id: str) -> set[str]:
+    """Get required request-sourced parameter names for a topic.
+
+    These parameters are provided directly by the caller when starting a topic
+    and define the request scope that can be reproduced by the frontend when it
+    asks whether a matching session already exists.
+    """
+    param_refs = get_parameter_refs_for_topic(topic_id)
+    required_request_names: set[str] = set()
+
+    for ref in param_refs:
+        is_required = ref.required is True or (
+            ref.required is None and ref.source == ParameterSource.REQUEST
+        )
+        if ref.source == ParameterSource.REQUEST and is_required:
+            required_request_names.add(ref.name)
+
+    return required_request_names
+
+
 def get_parameters_for_topic(
     topic_id: str, *, include_enrichment_keys: bool = False
 ) -> list[ParameterInfo]:
@@ -1533,6 +1553,7 @@ __all__: list[str] = [
     "get_parameters_for_topic",
     "get_registry_statistics",
     "get_required_parameter_names_for_topic",
+    "get_required_request_parameter_names_for_topic",
     "get_response_model_name_for_topic",
     "get_topic_by_topic_id",
     "get_topic_for_endpoint",

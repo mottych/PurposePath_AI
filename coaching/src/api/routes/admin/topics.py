@@ -50,8 +50,8 @@ from coaching.src.application.llm_usage.llm_invocation_context import LlmInvocat
 from coaching.src.application.llm_usage.llm_usage_summary import summarize_usage_rows
 from coaching.src.core.constants import TopicType
 from coaching.src.core.llm_models import DEFAULT_MODEL_CODE
-from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.response_model_registry import get_response_model
+from coaching.src.core.topic_conversation_limits import resolve_max_turns_from_additional_config
 from coaching.src.core.topic_registry import (
     TOPIC_REGISTRY,
     get_parameters_for_topic,

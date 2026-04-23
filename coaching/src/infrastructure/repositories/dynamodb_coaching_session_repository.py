@@ -92,6 +92,7 @@ class DynamoDBCoachingSessionRepository:
         existing = await self.get_active_by_tenant_topic(
             tenant_id=str(session.tenant_id),
             topic_id=session.topic_id,
+            session_scope=session.session_scope,
         )
 
         if existing is not None:
@@ -314,6 +315,7 @@ class DynamoDBCoachingSessionRepository:
         self,
         topic_id: str,
         tenant_id: TenantId,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """Get any active session for a topic within a tenant (typed parameters).
 
@@ -327,12 +329,15 @@ class DynamoDBCoachingSessionRepository:
         Returns:
             Active CoachingSession for the topic if any exists, None otherwise
         """
-        return await self.get_active_by_tenant_topic(str(tenant_id), topic_id)
+        return await self.get_active_by_tenant_topic(
+            str(tenant_id), topic_id, session_scope=session_scope
+        )
 
     async def get_active_by_tenant_topic(
         self,
         tenant_id: str,
         topic_id: str,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """Get the active session for a tenant and topic.
 
@@ -361,12 +366,13 @@ class DynamoDBCoachingSessionRepository:
                 if session.status in (
                     ConversationStatus.ACTIVE,
                     ConversationStatus.PAUSED,
-                ):
+                ) and self._scope_matches(session, session_scope):
                     logger.debug(
                         "coaching_session.active_found",
                         session_id=session.session_id,
                         tenant_id=tenant_id,
                         topic_id=topic_id,
+                        session_scope=session_scope or {},
                         status=session.status.value,
                     )
                     return session
@@ -524,6 +530,7 @@ class DynamoDBCoachingSessionRepository:
         user_id: str,
         topic_id: str,
         tenant_id: str,
+        session_scope: dict[str, str] | None = None,
     ) -> CoachingSession | None:
         """Get active session for user+topic combination (Issue #157).
 
@@ -554,13 +561,14 @@ class DynamoDBCoachingSessionRepository:
                 if session.status in (
                     ConversationStatus.ACTIVE,
                     ConversationStatus.PAUSED,
-                ):
+                ) and self._scope_matches(session, session_scope):
                     logger.debug(
                         "coaching_session.user_topic_active_found",
                         session_id=session.session_id,
                         user_id=user_id,
                         topic_id=topic_id,
                         tenant_id=tenant_id,
+                        session_scope=session_scope or {},
                         status=session.status.value,
                     )
                     return session
@@ -801,6 +809,7 @@ class DynamoDBCoachingSessionRepository:
             "status": session.status.value,
             "messages": [self._message_to_dict(m) for m in session.messages],
             "context": session.context,
+            "session_scope": session.session_scope,
             "created_at": session.created_at.isoformat(),
             "updated_at": session.updated_at.isoformat(),
             "last_activity_at": session.last_activity_at.isoformat(),
@@ -842,6 +851,7 @@ class DynamoDBCoachingSessionRepository:
             status=ConversationStatus(item["status"]),
             messages=[self._dict_to_message(m) for m in item.get("messages", [])],
             context=item.get("context", {}),
+            session_scope=item.get("session_scope", {}),
             created_at=datetime.fromisoformat(item["created_at"]),
             updated_at=datetime.fromisoformat(item["updated_at"]),
             last_activity_at=datetime.fromisoformat(item["last_activity_at"]),
@@ -858,6 +868,11 @@ class DynamoDBCoachingSessionRepository:
             extracted_result=item.get("extracted_result"),
             extraction_model=item.get("extraction_model"),
         )
+
+    @staticmethod
+    def _scope_matches(session: CoachingSession, session_scope: dict[str, str] | None) -> bool:
+        """Return True when the stored session scope matches the requested scope."""
+        return session.session_scope == (session_scope or {})
 
     def _message_to_dict(self, message: CoachingMessage) -> dict[str, Any]:
         """Convert CoachingMessage to dict for storage.

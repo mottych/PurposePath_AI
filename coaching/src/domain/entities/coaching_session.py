@@ -103,6 +103,10 @@ class CoachingSession(BaseModel):
         default_factory=dict,
         description="Session context (enriched parameters, etc.)",
     )
+    session_scope: dict[str, str] = Field(
+        default_factory=dict,
+        description="Normalized request-scope values used to identify matching sessions",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp",
@@ -161,6 +165,7 @@ class CoachingSession(BaseModel):
         topic_id: str,
         user_id: str,
         context: dict[str, Any] | None = None,
+        session_scope: dict[str, str] | None = None,
         max_turns: int = 0,
         idle_timeout_minutes: int = 30,
         expires_at: datetime | None = None,
@@ -184,6 +189,7 @@ class CoachingSession(BaseModel):
             topic_id=topic_id,
             user_id=UserId(user_id),
             context=context or {},
+            session_scope=session_scope or {},
             max_turns=max_turns,
             idle_timeout_minutes=idle_timeout_minutes,
             expires_at=expires_at,

@@ -11,11 +11,13 @@ from fastapi.testclient import TestClient
 
 from coaching.src.api.main import app
 from coaching.src.api.routes.coaching_sessions import (
+    get_coaching_message_job_service,
     get_coaching_session_repository,
     get_coaching_session_service,
 )
 from coaching.src.core.constants import ConversationStatus, MessageRole
 from coaching.src.domain.entities.coaching_session import CoachingSession
+from coaching.src.services.coaching_message_job_service import MessageJobValidationError
 from coaching.src.services.coaching_session_service import (
     CoachingSessionService,
     InvalidTopicError,
@@ -196,14 +198,36 @@ def mock_session_repository(mock_session):
     """Create mock session repository."""
     repo = AsyncMock()
     repo.list_by_tenant_user = AsyncMock(return_value=[mock_session])
+    repo.get_active_for_user_topic = AsyncMock(return_value=None)
+    repo.get_active_by_tenant_topic = AsyncMock(return_value=None)
     return repo
 
 
 @pytest.fixture
-def client(mock_coaching_session_service, mock_session_repository):
+def mock_coaching_message_job_service():
+    """Create mock async message job service."""
+    service = AsyncMock()
+    job = AsyncMock()
+    job.job_id = "job_123"
+    job.status = ConversationStatus.ACTIVE
+    job.estimated_duration_ms = 45000
+    service.create_message_job = AsyncMock(return_value=job)
+    service.get_job = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def client(
+    mock_coaching_session_service,
+    mock_session_repository,
+    mock_coaching_message_job_service,
+):
     """Create test client with dependency overrides."""
     app.dependency_overrides[get_coaching_session_service] = lambda: mock_coaching_session_service
     app.dependency_overrides[get_coaching_session_repository] = lambda: mock_session_repository
+    app.dependency_overrides[get_coaching_message_job_service] = (
+        lambda: mock_coaching_message_job_service
+    )
 
     with TestClient(app) as c:
         yield c
@@ -312,10 +336,63 @@ class TestStartSession:
         assert data["detail"]["topic_id"] == "issue_root_cause_coaching"
 
 
+class TestCheckSession:
+    """Tests for GET /ai/coaching/session/check endpoint."""
+
+    def test_check_session_success_for_unscoped_topic(self, client, mock_session_repository):
+        """Unscoped topics should continue to check by topic only."""
+        response = client.get(
+            "/api/v1/ai/coaching/session/check",
+            params={"topic_id": "core_values"},
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        mock_session_repository.get_active_for_user_topic.assert_called_once_with(
+            user_id="user123",
+            topic_id="core_values",
+            tenant_id="tenant123",
+            session_scope={},
+        )
+        mock_session_repository.get_active_by_tenant_topic.assert_called_once_with(
+            tenant_id="tenant123",
+            topic_id="core_values",
+            session_scope={},
+        )
+
+    def test_check_session_uses_scoped_query_parameters(self, client, mock_session_repository):
+        """Scoped topics should pass required request params into session matching."""
+        response = client.get(
+            "/api/v1/ai/coaching/session/check",
+            params={
+                "topic_id": "issue_root_cause_coaching",
+                "issue_id": "issue-123",
+            },
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        mock_session_repository.get_active_for_user_topic.assert_called_once_with(
+            user_id="user123",
+            topic_id="issue_root_cause_coaching",
+            tenant_id="tenant123",
+            session_scope={"issue_id": "issue-123"},
+        )
+        mock_session_repository.get_active_by_tenant_topic.assert_called_once_with(
+            tenant_id="tenant123",
+            topic_id="issue_root_cause_coaching",
+            session_scope={"issue_id": "issue-123"},
+        )
+
+
 class TestSendMessage:
     """Tests for POST /ai/coaching/message endpoint."""
 
-    def test_send_message_success(self, client, mock_message_response):
+    def test_send_message_success(self, client):
         """Test successful message send."""
         response = client.post(
             "/api/v1/ai/coaching/message",
@@ -326,18 +403,16 @@ class TestSendMessage:
             headers={"Authorization": "Bearer test_token"},
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 202
         data = response.json()
         assert data["success"] is True
-        assert "coach_message" in data["data"]
+        assert data["data"]["job_id"] == "job_123"
         assert data["data"]["session_id"] == "session_123"
 
-    def test_send_message_session_not_found(self, client, mock_coaching_session_service):
-        """Test message to non-existent session returns 422."""
-        from coaching.src.domain.exceptions.session_exceptions import SessionNotFoundError
-
-        mock_coaching_session_service.send_message.side_effect = SessionNotFoundError(
-            session_id="invalid_id"
+    def test_send_message_validation_error(self, client, mock_coaching_message_job_service):
+        """Validation errors in async job creation return 422."""
+        mock_coaching_message_job_service.create_message_job.side_effect = (
+            MessageJobValidationError("Session not found")
         )
 
         response = client.post(
@@ -351,7 +426,7 @@ class TestSendMessage:
 
         assert response.status_code == 422
         data = response.json()
-        assert data["detail"]["code"] == "SESSION_NOT_FOUND"
+        assert data["detail"]["code"] == "JOB_VALIDATION_ERROR"
 
     def test_send_message_empty_message_rejected(self, client):
         """Test that empty message is rejected by validation."""

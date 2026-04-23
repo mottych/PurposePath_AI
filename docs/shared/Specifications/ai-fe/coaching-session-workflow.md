@@ -13,6 +13,7 @@
 This guide explains the coaching journey in human terms: how a session starts, pauses, resumes, and completes from a user experience perspective.
 
 **Technical API and payload contracts live in one place only:**
+
 - `docs/shared/Specifications/ai-user/backend-integration-unified-ai.md`
 - `docs/shared/Specifications/eventbridge/async-coaching-message-events.md`
 
@@ -29,6 +30,7 @@ Coaching sessions move through these states:
 - **ABANDONED**: Older session replaced by a fresh start
 
 The main lifecycle principle:
+
 - **Start means new conversation**
 - **Resume means continue existing conversation**
 
@@ -43,6 +45,9 @@ The frontend checks if there is an existing session and whether there is a confl
 - If no session exists, user starts fresh.
 - If a resumable session exists, user chooses to resume or start new.
 - If there is a conflict, the UI blocks entry and shows guidance.
+- For scoped coaching topics (for example issue- or goal-specific conversations), the
+  session-check request must include the same required identifying request parameters
+  used for session start so the backend can find the correct in-flight session.
 
 ### 2) User sends a message
 
