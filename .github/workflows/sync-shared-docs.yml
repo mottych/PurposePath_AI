@@ -154,12 +154,14 @@ jobs:
           echo "=========================================="
           
       - name: Summary
+        env:
+          SOURCE_MESSAGE: ${{ steps.commit-info.outputs.message }}
         run: |
           echo "## Documentation Sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Source Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.event.inputs.target_branch || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ steps.commit-info.outputs.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Message:** $(echo '${{ steps.commit-info.outputs.message }}' | head -c 50)" >> $GITHUB_STEP_SUMMARY
+          printf '%s\n' "- **Message:** ${SOURCE_MESSAGE}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Documentation in docs/shared/ has been synced to all PurposePath repositories." >> $GITHUB_STEP_SUMMARY
