@@ -7,6 +7,8 @@ The CoachingSession is the core entity for the generic coaching engine,
 tracking conversation state, messages, and enforcing session lifecycle rules.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 

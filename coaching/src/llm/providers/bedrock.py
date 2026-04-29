@@ -116,7 +116,7 @@ class BedrockProvider(BaseProvider):
             # Guard against langchain versions that removed the global verbose attr
             import langchain  # local import to keep provider optional
 
-            if not hasattr(langchain, "verbose"):
+            if "verbose" not in vars(langchain):
                 langchain.verbose = False
 
             # Create LangChain Bedrock Converse client

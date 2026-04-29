@@ -37,6 +37,7 @@ from coaching.src.domain.exceptions import (
     SessionNotActiveError,
     SessionNotFoundError,
 )
+from coaching.src.models.coaching_results import get_coaching_result_model
 from coaching.src.services.coaching_session_service import (
     CoachingSessionService,
     InvalidTopicError,
@@ -1343,3 +1344,59 @@ class TestLLMResponseParsing:
             == "It has been a privilege to walk through this discovery process with you, Tamatha. Your values paint a picture of someone who has fought hard to reclaim their voice and independence."
         )
         assert is_final is True
+
+    # =========================================================================
+    # _parse_extraction_result Tests
+    # =========================================================================
+
+    def test_parse_extraction_result_markdown_wrapped_json(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test extraction parsing accepts markdown-wrapped JSON output."""
+        result_model = get_coaching_result_model("CoreValuesResult")
+        response = """```json
+{
+  "values": [
+    {
+      "name": "Integrity",
+      "description": "Doing the right thing even when it is difficult.",
+      "importance": "This value keeps the team aligned around trust, accountability, and dependable follow-through."
+    }
+  ],
+  "summary": "Integrity emerged as the clearest shared value because the conversation consistently emphasized trust, accountability, and dependable follow-through in daily decisions."
+}
+```"""
+
+        result = service._parse_extraction_result(response, result_model)
+
+        assert result["values"][0]["name"] == "Integrity"
+        assert "summary" in result
+        assert "parse_error" not in result
+
+    def test_parse_extraction_result_embedded_fenced_json_block(
+        self, service: CoachingSessionService
+    ) -> None:
+        """Test extraction parsing handles extra text around a fenced JSON block."""
+        result_model = get_coaching_result_model("CoreValuesResult")
+        response = (
+            "Here is the final structured extraction.\n\n"
+            "```json\n"
+            "{\n"
+            '  "values": [\n'
+            "    {\n"
+            '      "name": "Reliability",\n'
+            '      "description": "Showing up consistently and keeping commitments.",\n'
+            '      "importance": "Reliability matters because it builds trust across the team and creates confidence that work will be completed well."\n'
+            "    }\n"
+            "  ],\n"
+            '  "summary": "Reliability stood out because the conversation repeatedly linked steady follow-through with trust, teamwork, and consistent execution across important responsibilities."\n'
+            "}\n"
+            "```\n\n"
+            "Let me know if you need anything else."
+        )
+
+        result = service._parse_extraction_result(response, result_model)
+
+        assert result["values"][0]["name"] == "Reliability"
+        assert result["summary"].startswith("Reliability stood out")
+        assert "parse_error" not in result

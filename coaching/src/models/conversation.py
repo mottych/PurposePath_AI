@@ -40,7 +40,7 @@ class ConversationSession(BaseModel):
     status: str = "active"
     context: dict[str, Any]
     message_count: int = 0
-    last_activity: datetime = Field(default_factory=datetime.utcnow)
+    last_activity: datetime = Field(default_factory=lambda: datetime.now(UTC))
     memory_summary: str | None = None
 
 

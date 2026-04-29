@@ -325,7 +325,7 @@ class TestBusinessApiIntegration:
             # If it succeeds, the endpoint is very fast or timeout handling works differently
             logger.info("Request completed despite very short timeout")
 
-        except (httpx.TimeoutException, httpx.ConnectTimeout, httpx.ReadTimeout):
+        except httpx.TimeoutException, httpx.ConnectTimeout, httpx.ReadTimeout:
             logger.info("✅ Timeout handling test passed")
 
         finally:

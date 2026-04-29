@@ -11,7 +11,7 @@ Implements a LangGraph-based linear analysis flow with:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -91,7 +91,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
                 {
                     "role": "user",
                     "content": content,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "analysis_type": analysis_type,
                 }
             ],
@@ -101,8 +101,8 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
                 "analysis_type": analysis_type,
                 "analysis_focus": user_input.get("analysis_focus", []),
             },
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
         )
 
     async def validate_state(self, state: WorkflowState) -> bool:
@@ -164,7 +164,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["analysis_focus"] = analysis_focuses.get(analysis_type, analysis_focuses["general"])
         state["step_data"] = {"validation": validation_result}
         state["current_step"] = "input_validation"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         # If validation failed, skip to completion
         if not validation_result["is_valid"]:
@@ -235,7 +235,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
                 "analysis_type": analysis_type,
                 "analysis_result": analysis_result,
                 "analysis_focus": analysis_focus,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
             state["current_step"] = "analysis_execution"
@@ -248,7 +248,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
                 "analysis_type": analysis_type,
             }
 
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     async def insight_extraction_node(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -283,11 +283,11 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["step_data"]["insight_extraction"] = {
             "insights_count": len(insights),
             "extraction_method": f"{analysis_type}_based",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         state["current_step"] = "insight_extraction"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     async def response_formatting_node(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -299,7 +299,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             error_message = {
                 "role": "assistant",
                 "content": "I'm sorry, but I wasn't able to complete the analysis. Please try again with different input.",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
             # Safely append to messages list
             if "messages" not in state:
@@ -318,7 +318,7 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         response_message = {
             "role": "assistant",
             "content": formatted_response,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "analysis_metadata": {
                 "insights_count": len(insights),
                 "analysis_type": analysis_type,
@@ -333,11 +333,11 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
         state["step_data"]["response_formatting"] = {
             "response_length": len(formatted_response),
             "format_type": f"{analysis_type}_format",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         state["current_step"] = "response_formatting"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     async def completion_node(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -349,8 +349,8 @@ class AnalysisWorkflowTemplate(BaseWorkflow):
             state["status"] = "completed"
 
         state["current_step"] = "completion"
-        state["completed_at"] = datetime.utcnow().isoformat()
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["completed_at"] = datetime.now(UTC).isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         # Add final results summary
         if "results" not in state:

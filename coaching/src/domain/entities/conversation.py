@@ -4,6 +4,8 @@ This module defines the Conversation entity as an aggregate root that enforces
 business rules for coaching conversations.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Any
 

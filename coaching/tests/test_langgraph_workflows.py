@@ -9,8 +9,9 @@ Tests all acceptance criteria:
 - State persistence interface
 """
 
+import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,23 +31,22 @@ class MockProvider:
     def __init__(self):
         self.provider_type = "mock"
 
-    async def generate_response(self, messages, system_prompt, **kwargs):
-        """Mock response generation."""
-        mock_response = MagicMock()
-        mock_response.content = "This is a mock response for testing."
-        return mock_response
+    async def invoke(self, messages, **kwargs):
+        """Return either a follow-up question or structured JSON analysis."""
+        last_message = messages[-1].content if messages else ""
 
-    async def analyze_text(self, text, analysis_prompt, **kwargs):
-        """Mock text analysis."""
-        mock_analysis = MagicMock()
-        mock_analysis.model_dump.return_value = {
-            "values": ["authenticity", "growth"],
-            "emotions": ["curious", "motivated"],
-            "goals": ["career development"],
-            "challenges": [],
-            "themes": ["self-discovery", "purpose"],
-        }
-        return mock_analysis
+        if "generate 1-2 thoughtful follow-up questions" in last_message:
+            return "What feels most important to you about that right now?"
+
+        return json.dumps(
+            {
+                "values": ["authenticity", "growth"],
+                "emotions": ["curious", "motivated"],
+                "goals": ["career development"],
+                "challenges": [],
+                "themes": ["self-discovery", "purpose"],
+            }
+        )
 
 
 class MockCacheService:
@@ -233,7 +233,7 @@ class TestLangGraphWorkflowOrchestrator:
             user_id="test_user",
             current_step="greeting",
             conversation_history=[{"role": "user", "content": "Hello"}],
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
 
         # Test state saving
@@ -295,7 +295,7 @@ class TestLangGraphWorkflowOrchestrator:
             workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
             user_id="test_user",
             status=WorkflowStatus.COMPLETED,
-            completed_at=(datetime.utcnow().timestamp() - 25 * 3600).__str__(),  # 25 hours ago
+            completed_at=(datetime.now(UTC).timestamp() - 25 * 3600).__str__(),  # 25 hours ago
         )
 
         # Create recent state
@@ -304,7 +304,7 @@ class TestLangGraphWorkflowOrchestrator:
             workflow_type=WorkflowType.CONVERSATIONAL_COACHING,
             user_id="test_user",
             status=WorkflowStatus.RUNNING,
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
 
         # Save states

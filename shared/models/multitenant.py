@@ -2,13 +2,13 @@
 
 import uuid
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class TenantStatus(str, Enum):
+class TenantStatus(StrEnum):
     """Status of a tenant."""
 
     ACTIVE = "active"
@@ -17,7 +17,7 @@ class TenantStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     """User roles within a tenant."""
 
     OWNER = "owner"
@@ -27,7 +27,7 @@ class UserRole(str, Enum):
     VIEWER = "viewer"
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     """Status of a user."""
 
     ACTIVE = "active"
@@ -36,7 +36,7 @@ class UserStatus(str, Enum):
     PENDING = "pending"
 
 
-class InvitationStatus(str, Enum):
+class InvitationStatus(StrEnum):
     """Status of an invitation."""
 
     PENDING = "pending"
@@ -45,7 +45,7 @@ class InvitationStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class SubscriptionTier(str, Enum):
+class SubscriptionTier(StrEnum):
     """Available subscription tiers."""
 
     STARTER = "starter"
@@ -53,7 +53,7 @@ class SubscriptionTier(str, Enum):
     ENTERPRISE = "enterprise"
 
 
-class CoachingTopic(str, Enum):
+class CoachingTopic(StrEnum):
     """Available coaching topics."""
 
     CORE_VALUES = "core_values"
@@ -62,7 +62,7 @@ class CoachingTopic(str, Enum):
     GOALS = "goals"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """Available permissions for multitenant access control."""
 
     START_COACHING = "start_coaching"

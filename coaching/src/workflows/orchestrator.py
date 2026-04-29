@@ -5,7 +5,7 @@ Handles workflow lifecycle, state persistence, and coordination.
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -91,7 +91,7 @@ class WorkflowOrchestrator:
             "workflow_id": workflow_id,
             "user_id": user_id,
             "session_id": session_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         try:
@@ -158,7 +158,7 @@ class WorkflowOrchestrator:
             # Add timestamp to input
             timestamped_input = {
                 **user_input,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
             # Resume workflow
@@ -211,7 +211,7 @@ class WorkflowOrchestrator:
         if workflow_id in self._workflow_states:
             state = self._workflow_states[workflow_id]
             state.status = WorkflowStatus.CANCELLED
-            state.completed_at = datetime.utcnow().isoformat()
+            state.completed_at = datetime.now(UTC).isoformat()
 
         # Remove from active workflows
         self._active_workflows.pop(workflow_id, None)
@@ -228,7 +228,7 @@ class WorkflowOrchestrator:
         Returns:
             Number of workflows cleaned up
         """
-        cutoff_time = datetime.utcnow().timestamp() - (max_age_hours * 3600)
+        cutoff_time = datetime.now(UTC).timestamp() - (max_age_hours * 3600)
         cleaned_count = 0
 
         workflows_to_remove = []

@@ -6,7 +6,7 @@ integrated with domain entities and application services.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -148,8 +148,8 @@ class CoachingWorkflow(BaseWorkflow):
             session_id=workflow_input.session_id,
             conversation_history=[],  # Managed by conversation entity
             current_step="start",
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
             workflow_context={
                 "conversation_id": conversation.conversation_id,
                 "topic": workflow_input.topic.value,
@@ -184,7 +184,7 @@ class CoachingWorkflow(BaseWorkflow):
         # Conversation already initialized in create_initial_state
         state["current_step"] = "initial_assessment"
         state["status"] = WorkflowStatus.WAITING_INPUT.value
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state
 
@@ -243,7 +243,7 @@ Do not give advice yet - focus on understanding first."""
 
             state["current_step"] = "goal_exploration"
             state["step_data"]["initial_focus"] = latest_message.content
-            state["updated_at"] = datetime.utcnow().isoformat()
+            state["updated_at"] = datetime.now(UTC).isoformat()
 
         except Exception as e:
             logger.error(
@@ -317,7 +317,7 @@ Do not give advice yet - focus on understanding first."""
             logger.error("Error completing workflow", error=str(e))
 
         state["status"] = WorkflowStatus.COMPLETED.value
-        state["completed_at"] = datetime.utcnow().isoformat()
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["completed_at"] = datetime.now(UTC).isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state

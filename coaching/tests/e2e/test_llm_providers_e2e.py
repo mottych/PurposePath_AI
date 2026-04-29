@@ -1,7 +1,7 @@
 """End-to-end tests for LLM provider implementations with real models.
 
 Tests direct provider calls to validate:
-- Claude 3.5 Sonnet v2 (Bedrock)
+- Claude Haiku 4.5 (Bedrock)
 - Claude Sonnet 4.5 (Bedrock)
 - GPT-5 series (OpenAI)
 - Gemini 2.5 Pro (Google Vertex AI)
@@ -16,12 +16,15 @@ from coaching.src.infrastructure.llm.bedrock_provider import BedrockLLMProvider
 from coaching.src.infrastructure.llm.google_vertex_provider import GoogleVertexLLMProvider
 from coaching.src.infrastructure.llm.openai_provider import OpenAILLMProvider
 
+CLAUDE_HAIKU_45 = "anthropic.claude-haiku-4-5-20251001-v1:0"
+CLAUDE_SONNET_45 = "anthropic.claude-sonnet-4-5-20250929-v1:0"
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_claude_35_sonnet_v2_real_generation(check_aws_credentials: None) -> None:
+async def test_claude_haiku_45_real_generation(check_aws_credentials: None) -> None:
     """
-    Test Claude 3.5 Sonnet v2 real generation via Bedrock.
+    Test Claude Haiku 4.5 real generation via Bedrock.
 
     Validates:
     - Provider connects successfully
@@ -39,14 +42,14 @@ async def test_claude_35_sonnet_v2_real_generation(check_aws_credentials: None) 
 
     response = await provider.generate(
         messages=messages,
-        model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        model=CLAUDE_HAIKU_45,
         temperature=0.7,
         max_tokens=100,
     )
 
     assert response.content
     assert len(response.content) > 50
-    assert response.model == "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    assert response.model == CLAUDE_HAIKU_45
     assert response.provider == "bedrock"
     assert response.usage["total_tokens"] > 0
     assert response.finish_reason in ["stop", "end_turn"]
@@ -77,14 +80,14 @@ async def test_claude_sonnet_45_real_generation(check_aws_credentials: None) -> 
 
     response = await provider.generate(
         messages=messages,
-        model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        model=CLAUDE_SONNET_45,
         temperature=0.8,
         max_tokens=500,
     )
 
     assert response.content
     assert len(response.content) > 200  # Should be thorough
-    assert response.model == "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    assert response.model == CLAUDE_SONNET_45
     assert response.usage["total_tokens"] > 0
 
 
@@ -217,7 +220,7 @@ async def test_streaming_generation_real_llm(check_aws_credentials: None) -> Non
     chunks = []
     async for chunk in provider.generate_stream(
         messages=messages,
-        model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        model=CLAUDE_HAIKU_45,
         temperature=0.9,
         max_tokens=100,
     ):
@@ -246,7 +249,7 @@ async def test_token_counting_real_providers(check_aws_credentials: None) -> Non
     provider = BedrockLLMProvider(bedrock_client=bedrock_client)
 
     text = "This is a test sentence for token counting validation."
-    model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    model = CLAUDE_SONNET_45
 
     token_count = await provider.count_tokens(text, model)
 
@@ -270,8 +273,8 @@ async def test_model_validation_real_providers() -> None:
     bedrock_provider = BedrockLLMProvider(bedrock_client=bedrock_client)
 
     # Valid models
-    assert await bedrock_provider.validate_model("anthropic.claude-3-5-sonnet-20240620-v1:0")
-    assert await bedrock_provider.validate_model("anthropic.claude-sonnet-4-6")
+    assert await bedrock_provider.validate_model(CLAUDE_HAIKU_45)
+    assert await bedrock_provider.validate_model(CLAUDE_SONNET_45)
 
     # Invalid model
     assert not await bedrock_provider.validate_model("invalid-model-id")
@@ -299,7 +302,7 @@ async def test_error_handling_real_llm(check_aws_credentials: None) -> None:
     with pytest.raises(ValueError, match="Temperature"):
         await provider.generate(
             messages=messages,
-            model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            model=CLAUDE_SONNET_45,
             temperature=2.5,  # Invalid
         )
 

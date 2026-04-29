@@ -23,6 +23,7 @@ Context Caching:
 Reference: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
 """
 
+import warnings
 from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
@@ -31,6 +32,10 @@ import structlog
 from coaching.src.domain.ports.llm_provider_port import LLMMessage, LLMResponse
 
 logger = structlog.get_logger()
+
+_GOOGLE_GENAI_PY314_WARNING = (
+    r"'_UnionGenericAlias' is deprecated and slated for removal in Python 3\.17"
+)
 
 # Minimum tokens required for Gemini context caching
 # Gemini requires 32,000+ tokens for caching to be beneficial
@@ -49,6 +54,25 @@ CACHE_SUPPORTED_MODELS_GEMINI: set[str] = {
     "gemini-1.5-pro",
     "gemini-1.5-flash",
 }
+
+
+def _import_google_genai_modules() -> tuple[Any, Any]:
+    """Import Google GenAI modules while suppressing known Python 3.14 SDK warnings.
+
+    The current google-genai package still touches deprecated typing internals during import
+    on Python 3.14. Filter that upstream warning at the import boundary so runtime and tests
+    can enforce warnings as errors everywhere else.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=_GOOGLE_GENAI_PY314_WARNING,
+            category=DeprecationWarning,
+        )
+        from google import genai
+        from google.genai import types
+
+    return genai, types
 
 
 class GoogleVertexLLMProvider:
@@ -136,8 +160,7 @@ class GoogleVertexLLMProvider:
         """
         if self._client is None:
             try:
-                from google import genai
-                from google.genai import types
+                genai, types = _import_google_genai_modules()
             except ImportError as e:
                 raise ImportError(
                     "Google Gen AI SDK not installed. "
@@ -246,13 +269,13 @@ class GoogleVertexLLMProvider:
             raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
-            from google.genai import types
+            _, types = _import_google_genai_modules()
 
             client = await self._get_client()
 
             # Build contents from messages
             # google-genai uses types.Content for multi-turn conversations
-            contents: list[types.Content] = []
+            contents: list[Any] = []
 
             for msg in messages:
                 # Map roles: user -> user, assistant/system -> model
@@ -407,12 +430,12 @@ class GoogleVertexLLMProvider:
             raise ValueError(f"Model {model} not supported. Supported: {self.SUPPORTED_MODELS}")
 
         try:
-            from google.genai import types
+            _, types = _import_google_genai_modules()
 
             client = await self._get_client()
 
             # Build contents from messages
-            contents: list[types.Content] = []
+            contents: list[Any] = []
 
             for msg in messages:
                 role = "user" if msg.role == "user" else "model"

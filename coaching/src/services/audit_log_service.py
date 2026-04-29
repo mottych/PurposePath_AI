@@ -1,7 +1,7 @@
 """Audit logging service for tracking admin actions."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 logger = structlog.get_logger()
 
 
-class AuditAction(str, Enum):
+class AuditAction(StrEnum):
     """Types of auditable actions."""
 
     TEMPLATE_CREATED = "template_created"

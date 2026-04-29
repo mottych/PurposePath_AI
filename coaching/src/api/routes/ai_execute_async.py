@@ -142,7 +142,7 @@ async def execute_async(
         if "not found" in error_msg.lower():
             status_code = status.HTTP_404_NOT_FOUND
         elif "missing required parameters" in error_msg.lower():
-            status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+            status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         else:
             status_code = status.HTTP_400_BAD_REQUEST
 

@@ -1162,12 +1162,12 @@ async def get_prompt_content(
             endpoint_def = get_topic_by_topic_id(topic_id)
             if endpoint_def:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=f"Topic '{topic_id}' exists in registry but has no prompts saved yet. "
                     "Create a prompt first using POST.",
                 )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
@@ -1230,7 +1230,7 @@ async def update_prompt_content(
         valid_types = {pt.value for pt in PromptType}
         if prompt_type not in valid_types:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Invalid prompt type '{prompt_type}'. Valid types: {', '.join(sorted(valid_types))}",
             )
 
@@ -1238,7 +1238,7 @@ async def update_prompt_content(
         allowed_types = _get_allowed_prompt_types(topic_id)
         if prompt_type not in allowed_types:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Prompt type '{prompt_type}' is not allowed for topic '{topic_id}'. "
                 f"Allowed types: {', '.join(allowed_types)}",
             )
@@ -1251,7 +1251,7 @@ async def update_prompt_content(
         )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
@@ -1349,7 +1349,7 @@ async def create_prompt(
         )
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Topic '{topic_id}' not found in database or registry",
             )
 
@@ -1357,7 +1357,7 @@ async def create_prompt(
         allowed_types = _get_allowed_prompt_types(topic_id)
         if request.prompt_type not in allowed_types:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Prompt type '{request.prompt_type}' is not allowed for topic '{topic_id}'. "
                 f"Allowed types: {', '.join(allowed_types)}",
             )
@@ -1442,7 +1442,7 @@ async def delete_prompt(
         topic = await repository.get(topic_id=topic_id)
         if not topic:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Topic '{topic_id}' not found in database",
             )
 
@@ -1684,7 +1684,7 @@ async def test_topic(
         ) from e
     except ParameterValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Missing required parameters: {', '.join(e.missing_params)}",
         ) from e
     except PromptRenderError as e:

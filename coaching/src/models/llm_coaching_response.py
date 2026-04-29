@@ -115,7 +115,7 @@ def parse_llm_coaching_response(raw_response: str) -> LLMCoachingResponse:
         data = json.loads(cleaned)
         if isinstance(data, dict):
             return LLMCoachingResponse.model_validate(data)
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError, ValueError:
         pass
 
     # Fallback: treat entire response as message

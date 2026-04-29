@@ -345,7 +345,7 @@ class TestExecuteAIEndpoint:
             json={"topic_id": "test_topic", "parameters": {}},
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "missing required parameters" in response.json()["detail"].lower()
 
     @patch("coaching.src.api.routes.ai_execute.get_response_model")

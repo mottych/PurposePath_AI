@@ -4,7 +4,7 @@ This repository handles persistence and retrieval of template metadata that
 tracks prompt templates stored in S3.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -73,7 +73,7 @@ class TemplateMetadataRepository:
                 metadata.template_id = f"tmpl_{uuid4().hex[:16]}"
 
             # Set timestamps
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             metadata.created_at = now
             metadata.updated_at = now
 
@@ -325,7 +325,7 @@ class TemplateMetadataRepository:
             metadata.template_id = template_id
 
             # Update timestamp
-            metadata.updated_at = datetime.utcnow()
+            metadata.updated_at = datetime.now(UTC)
 
             # Convert to DynamoDB item
             item = self._to_dynamodb_item(metadata)
@@ -366,7 +366,7 @@ class TemplateMetadataRepository:
                 UpdateExpression="SET is_active = :inactive, updated_at = :now",
                 ExpressionAttributeValues={
                     ":inactive": False,
-                    ":now": datetime.utcnow().isoformat(),
+                    ":now": datetime.now(UTC).isoformat(),
                 },
                 ConditionExpression=Attr("template_id").exists(),
             )
@@ -400,7 +400,7 @@ class TemplateMetadataRepository:
                 UpdateExpression="SET is_active = :active, updated_at = :now",
                 ExpressionAttributeValues={
                     ":active": True,
-                    ":now": datetime.utcnow().isoformat(),
+                    ":now": datetime.now(UTC).isoformat(),
                 },
                 ConditionExpression=Attr("template_id").exists(),
             )

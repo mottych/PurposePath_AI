@@ -168,7 +168,7 @@ class ConversationApplicationService:
 
             return conversation
 
-        except (ConversationNotFound, ConversationNotActive):
+        except ConversationNotFound, ConversationNotActive:
             raise
         except Exception as e:
             logger.error(

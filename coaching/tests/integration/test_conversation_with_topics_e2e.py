@@ -115,7 +115,12 @@ class TestConversationInitiation:
     async def test_conversation_uses_topic_model_config(self, coaching_topic):
         """Verify conversation would use topic's model configuration."""
         # In a real scenario, the LLM service would use the topic's model config
-        assert coaching_topic.model_code == "claude-3-5-sonnet-20241022"
+        assert coaching_topic.basic_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
+        assert coaching_topic.premium_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
         assert coaching_topic.temperature == 0.7
         assert coaching_topic.max_tokens == 2000
 
@@ -209,7 +214,9 @@ class TestMultipleTopicTypes:
 
         assert conversation.topic == "core_values_coaching"
         # Coaching topics typically use Sonnet for deeper conversations
-        assert coaching_topic.model_code == "claude-3-5-sonnet-20241022"
+        assert coaching_topic.basic_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
 
     @pytest.mark.asyncio
     async def test_assessment_topic_conversation(self, assessment_topic):
@@ -222,7 +229,9 @@ class TestMultipleTopicTypes:
 
         assert conversation.topic == "values_assessment"
         # Assessment topics typically use Haiku for faster responses
-        assert assessment_topic.model_code == "claude-3-5-haiku-20241022"
+        assert assessment_topic.basic_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-haiku-20241022"
+        )
 
     @pytest.mark.asyncio
     async def test_different_topics_different_configs(self, coaching_topic, assessment_topic):
@@ -369,7 +378,8 @@ class TestTopicAsSourceOfTruth:
     async def test_topic_owns_model_config(self, coaching_topic):
         """Verify topic owns model configuration."""
         # Topic has all model config
-        assert coaching_topic.model_code
+        assert coaching_topic.basic_model_code
+        assert coaching_topic.premium_model_code
         assert coaching_topic.temperature
         assert coaching_topic.max_tokens
         assert coaching_topic.top_p

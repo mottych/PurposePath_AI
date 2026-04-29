@@ -36,6 +36,7 @@ class ApiResponse(BaseModel, Generic[T]):
     "/business-data",
     response_model=ApiResponse[BusinessMetricsResponse],
     status_code=status.HTTP_200_OK,
+    operation_id="get_business_data_summary_topic_driven",
 )
 async def get_business_data_summary(
     context: UserContext = Depends(get_current_user),

@@ -9,7 +9,7 @@ Tests all acceptance criteria:
 - Service-level error handling
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -59,7 +59,7 @@ class MockProviderManager:
         """Check if provider is available."""
         return provider_name in self.providers
 
-    async def get_provider(self, provider_name: str):
+    def get_provider(self, provider_name: str):
         """Get provider by name."""
         if provider_name not in self.providers:
             raise ValueError(f"Provider {provider_name} not found")
@@ -87,7 +87,7 @@ class MockWorkflowOrchestrator:
         # Check if provider should fail
         provider_name = initial_input.get("provider", "bedrock")
         if self.provider_manager:
-            provider = await self.provider_manager.get_provider(provider_name)
+            provider = self.provider_manager.get_provider(provider_name)
             if provider.should_fail:
                 raise Exception(f"{provider_name} provider failed")
 
@@ -98,8 +98,8 @@ class MockWorkflowOrchestrator:
             user_id=user_id,
             status=WorkflowStatus.COMPLETED,
             current_step="completed",
-            created_at=datetime.utcnow().isoformat(),
-            completed_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
+            completed_at=datetime.now(UTC).isoformat(),
             results={
                 "response": f"Mock response for {workflow_type.value}",
                 "insights": ["Mock insight 1", "Mock insight 2"],

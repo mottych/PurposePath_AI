@@ -6,6 +6,7 @@ All models use snake_case fields and ISO 8601 datetime strings.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
@@ -13,7 +14,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 if TYPE_CHECKING:
     pass  # Forward references will be resolved at runtime
 import uuid
-from enum import Enum
 
 # Generic type for ApiResponse
 T = TypeVar("T")
@@ -30,7 +30,7 @@ class BaseModelWithDatetime(BaseModel):
         return value
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """Standardized error codes for all API responses."""
 
     # Authentication errors
