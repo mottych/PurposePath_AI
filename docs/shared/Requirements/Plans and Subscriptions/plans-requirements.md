@@ -205,9 +205,11 @@ All billing cycles are monthly, starting on the 1st and ending on the last day o
 ### 5.3 First-Time Enrollment
 Users can enroll in a paid plan at any time during the month. On first enrollment:
 1. The system calculates the prorated charge from the enrollment date through the end of the current billing cycle (last day of the month, UTC).
-2. The user is charged the prorated amount immediately.
-3. The subscription termination date is set to the end of the billing cycle covered by the payment schedule (e.g., for monthly: end of the current month; for quarterly: end of the month 3 months out).
-4. Starting the next billing cycle, normal full-period billing applies on the 1st of the month.
+2. The system creates a payment record for that prorated amount, tied to the covered period and the target paid-through termination date for the selected schedule.
+3. The user is charged that locked prorated amount immediately.
+4. On success, the subscription termination date is set to the end of the billing cycle covered by the payment schedule (e.g., for monthly: end of the current month; for quarterly: end of the month 3 months out).
+5. If the first payment fails, retries remain tied to the same payment record, amount, covered period, and target paid-through termination date; the amount is not recalculated from the retry date.
+6. Starting the next billing cycle, normal full-period billing applies on the 1st of the month.
 If the selected paid plan has Paid Trial Duration configured, first-time enrollment uses paid-plan trial mode instead:
 1. No charge is made at enrollment.
 2. The trial end date is set to enrollment date + paid trial duration.
@@ -221,11 +223,13 @@ For the designated registration trial plan, if trial duration is not defined, th
 > On February 1, the system charges the full $100 for February.
 ### 5.4 Recurring Payment Flow
 On the billing date (1st of each applicable month), the system performs the following:
-1. Attempt to charge the credit card on file for the plan price plus any active extensions.
-2. On success: extend the subscription termination date by the payment schedule duration, record the payment, and send a receipt to the tenant owner via email.
-3. On first failure: send a notification to the tenant owner immediately. Schedule a retry after a configurable number of days (admin system setting; default: 3 days).
-4. On second failure: send a notification to the tenant owner. The subscription enters the grace period once the termination date passes. The status becomes Inactive, but the plan's features remain available during the grace period.
-5. Grace period expiration: if a fallback (free) plan is defined, the subscription switches to it. If no fallback is defined, access is blocked. The tenant owner is notified.
+1. Create a payment record for the billing period due on that billing date, including the locked amount, covered period, and target paid-through termination date.
+2. Attempt to charge the credit card on file for the amount stored on that payment record.
+3. On success: mark the payment as succeeded, extend the subscription termination date by the payment schedule duration, record the payment outcome, and send a receipt to the tenant owner via email.
+4. On first failure: mark the payment attempt as failed, send a notification to the tenant owner immediately, and schedule a retry after a configurable number of days (admin system setting; default: 3 days).
+5. On retry, the system retries the existing payment using the locked amount and target paid-through termination date created at the original due timestamp. A price change that becomes effective after the original due timestamp does not change the amount of that existing payment.
+6. On second failure: send a notification to the tenant owner. The subscription enters the grace period once the termination date passes. The status becomes Inactive, but the plan's features remain available during the grace period.
+7. Grace period expiration: if a fallback (free) plan is defined, the subscription switches to it. If no fallback is defined, access is blocked. The tenant owner is notified.
 Grace period is a payment-failure protection for paid subscriptions. Trial expiration or trial cancellation does not by itself trigger grace period.
 > **Design Note: Retry Configuration** The retry delay (days between first and second attempt) is a system-level setting managed by the admin. Default value: 3 days. The admin can update this at any time via the admin portal. Only two automatic attempts are made per billing cycle. Additional retries are not performed.
 ### 5.5 Refund Policy

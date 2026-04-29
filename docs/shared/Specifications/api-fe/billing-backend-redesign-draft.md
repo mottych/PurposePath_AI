@@ -541,6 +541,7 @@ Deterministic due-subscription selector:
 Retry and grace timeline policy:
 - Attempt 1 at due timestamp.
 - Attempt 2 at `attempt1 + retryDelayDays`.
+- Each due charge creates a persisted payment record that owns the locked amount, covered period, target paid-through termination date, provider references, retry counters, and continuation state for that payment lifecycle.
 - If attempt 2 fails:
   - when `now >= terminationDateUtc`, transition to `inactiveGrace`.
   - compute `gracePeriodEndDate = terminationDateUtc + graceDays`.
@@ -551,7 +552,8 @@ Retry and grace timeline policy:
 Price-version activation policy:
 - Base plan prices, extension prices, and price-tier prices are stored as effective-dated versions.
 - A price increase cannot become active unless a compliant notice has been scheduled and emitted at least `priceChangeNoticeMinimumDays` before the effective date.
-- Existing preview and renewal calculations resolve prices based on the target transaction date, not the request date.
+- Price resolution happens when the system creates a payment record, using the payment due timestamp.
+- Retries and provider continuations for an existing payment reuse the locked amount stored on that payment record and do not re-resolve pricing from the retry date.
 
 ### 5.3 Proration and change logic
 
@@ -570,19 +572,21 @@ Price-version activation policy:
 - Trial-to-paid conversion:
   - treated as a first-time paid enrollment with immediate proration through month end.
 - Discount application:
-  - price selection runs before proration; proration always uses the resolved effective price.
+  - price selection runs before payment creation; proration always uses the resolved effective price for that payment's due timestamp.
 
 Proration formula:
 - `proratedAmount = fullPeriodPrice * (remainingDaysInCycle / totalDaysInCycle)`
 - `deltaDueNow = max(0, proratedTarget + proratedExtensions - proratedCreditCurrent)`
 - Downgrade where `proratedCreditCurrent > proratedTarget` never creates refund; credit is consumed by deferred effective date.
+- When an immediate payment is created from this proration result, retries reuse the stored `deltaDueNow`, `periodStartUtc`, `periodEndUtc`, and `targetTerminationDateUtc` instead of recalculating them from the retry date.
 
 Price selection policy:
-- Resolve applicable tenant price-tier assignment for the tenant and transaction date.
+- Resolve applicable tenant price-tier assignment for the tenant and payment due timestamp.
 - Evaluate discount code eligibility for the requested line items, schedule, tenant, and renewal/new-purchase context.
 - If an eligible discount code yields a price tier, that tier replaces tenant-tier pricing for the affected line items only.
 - If a resolved tier does not define a price for a line item, fall back to the base plan or extension price.
 - Supported adjustment modes are percent discount, fixed amount discount, and override price.
+- Automatic retries reuse the price already locked onto the payment record and do not re-run price-tier or discount resolution.
 - Combination rules are explicit on the discount definition. When an active applied discount blocks additional discounts, preview must reject incompatible combinations with `BILLING_DISCOUNT_COMBINATION_BLOCKED`.
 
 ### 5.4 Downgrade enforcement outcomes
