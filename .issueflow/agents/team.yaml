@@ -1,0 +1,25 @@
+agents:
+  joseph:
+    kind: llm
+    openCodeAgent: build
+  bezzalel:
+    kind: llm
+    openCodeAgent: build
+  joshua:
+    kind: llm
+    openCodeAgent: build
+  validator:
+    kind: llm
+    openCodeAgent: build
+  qa:
+    kind: llm
+    openCodeAgent: build
+  deployer:
+    kind: llm
+    openCodeAgent: build
+  cleanup:
+    kind: llm
+    openCodeAgent: build
+  e2e:
+    kind: llm
+    openCodeAgent: build

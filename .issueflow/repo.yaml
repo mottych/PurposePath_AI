@@ -1,0 +1,39 @@
+repo: mottych/PurposePath_AI
+solutionId: purpose-path
+name: PurposePath AI Coaching Service
+primaryLanguage: python
+appRoot: .
+defaultBranch: dev
+commands:
+  install: python -m pip install -r coaching/requirements.txt && python -m pip install -r coaching/requirements-dev.txt
+  validate: python -m ruff check coaching/ shared/ && python -m ruff format --check coaching/ shared/ && python -m mypy coaching/src shared/ --explicit-package-bases
+  test: python -m pytest coaching/tests/unit -v --tb=short
+  build: python -m ruff check coaching/ shared/ && python -m pytest coaching/tests/unit -v --tb=short
+deployment:
+  dev:
+    workflow: deploy-dev.yml
+    ref: dev
+  staging:
+    workflow: deploy-staging.yml
+    ref: staging
+  preprod:
+    workflow: deploy-preprod.yml
+    ref: preprod
+  prod:
+    workflow: deploy-production.yml
+    ref: master
+ownershipDomains:
+  - ai-coaching
+  - fastapi
+  - amazon-bedrock
+  - conversations
+  - insights
+  - business-data-analysis
+  - dynamodb
+  - s3
+  - lambda
+  - api-gateway
+  - pulumi
+  - shared-types
+notes: >-
+  Serverless FastAPI AI coaching service using AWS Lambda, Bedrock, DynamoDB, S3, shared typed models, and Pulumi. Keep changes aligned with coaching/ and shared/ package boundaries.
