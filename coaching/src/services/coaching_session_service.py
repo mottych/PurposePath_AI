@@ -1426,8 +1426,9 @@ class CoachingSessionService:
             Extracted result as dictionary
         """
         try:
-            # Try to parse JSON
-            extracted: dict[str, Any] = json.loads(response)
+            # Normalize fenced or mixed-content outputs before parsing.
+            json_content = self._extract_json_from_response(response)
+            extracted: dict[str, Any] = json.loads(json_content)
 
             # Validate against model if provided
             if result_model is not None:

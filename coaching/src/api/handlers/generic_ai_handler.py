@@ -150,7 +150,7 @@ class GenericAIHandler:
         except TopicNotFoundError as e:
             self.logger.error("Topic not found", topic_id=e.topic_id)
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Topic configuration not found: {e.topic_id}. Please check the topic ID and ensure it is properly configured.",
             ) from e
 

@@ -145,8 +145,8 @@ def client(mock_conversation_service, mock_generic_handler, mock_conversation_re
     """Create test client with dependency overrides."""
     app.dependency_overrides[get_conversation_service] = lambda: mock_conversation_service
     app.dependency_overrides[get_generic_handler] = lambda: mock_generic_handler
-    app.dependency_overrides[get_multitenant_conversation_service] = (
-        lambda: mock_conversation_service
+    app.dependency_overrides[get_multitenant_conversation_service] = lambda: (
+        mock_conversation_service
     )
     app.dependency_overrides[get_conversation_repository] = lambda: mock_conversation_repository
 

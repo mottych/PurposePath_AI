@@ -7,7 +7,7 @@ Defines the abstract base class and common types for all workflows.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import StateGraph
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from coaching.src.llm.providers.manager import ProviderManager
 
 
-class WorkflowType(str, Enum):
+class WorkflowType(StrEnum):
     """Supported workflow types."""
 
     CONVERSATIONAL_COACHING = "conversational_coaching"
@@ -27,7 +27,7 @@ class WorkflowType(str, Enum):
     PROGRESS_TRACKING = "progress_tracking"
 
 
-class WorkflowStatus(str, Enum):
+class WorkflowStatus(StrEnum):
     """Workflow execution status."""
 
     CREATED = "created"

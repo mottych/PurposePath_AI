@@ -9,7 +9,7 @@ Extends the base WorkflowOrchestrator with advanced LangGraph features:
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, TypedDict
 
 import structlog
@@ -84,7 +84,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
 
         workflow_class = self._workflow_registry[workflow_type]
         workflow_config = config or WorkflowConfig(workflow_type=workflow_type)
-        workflow = workflow_class(workflow_config)
+        workflow = workflow_class(workflow_config, self.provider_manager)
 
         graph: Any = await workflow.build_graph()
         return graph
@@ -128,7 +128,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
         try:
             # Create workflow instance
             workflow_class = self._workflow_registry[workflow_type]
-            workflow = workflow_class(config)
+            workflow = workflow_class(config, self.provider_manager)
 
             # Store workflow
             self._active_workflows[workflow_id] = workflow
@@ -220,7 +220,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
                 {
                     "role": "user",
                     "content": user_input.get("content", ""),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -280,7 +280,7 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
                 {
                     "role": "user",
                     "content": initial_input.get("content", ""),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             ],
             "analysis_type": analysis_type,  # Add analysis_type for analysis workflows
@@ -298,8 +298,8 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
                 "workflow_type": workflow_type.value,
                 "config": config.model_dump(),
             },
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
     def _workflow_state_to_graph_state(self, state: WorkflowState) -> dict[str, Any]:
@@ -317,8 +317,8 @@ class LangGraphWorkflowOrchestrator(WorkflowOrchestrator):
             "status": state.status.value,
             "results": state.results,
             "metadata": state.metadata,
-            "created_at": state.created_at or datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": state.created_at or datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
     def _graph_state_to_workflow_state(self, graph_state: dict[str, Any]) -> WorkflowState:
@@ -365,7 +365,7 @@ class GraphUtilities:
         state["messages"].append(
             {"role": "assistant", "content": "Hello! How can I help you today?"}
         )
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     @staticmethod
@@ -382,7 +382,7 @@ class GraphUtilities:
 
         state["current_step"] = "question_generation"
         state["messages"].append({"role": "assistant", "content": response.content})
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     @staticmethod
@@ -412,7 +412,7 @@ class GraphUtilities:
         state["step_data"]["analysis"] = (
             analysis.model_dump() if hasattr(analysis, "model_dump") else str(analysis)
         )
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     @staticmethod
@@ -434,7 +434,7 @@ class GraphUtilities:
         state["current_step"] = "insight_extraction"
         state["step_data"]["insights"] = insights
         state["results"]["extracted_insights"] = insights
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     @staticmethod
@@ -449,7 +449,7 @@ class GraphUtilities:
             state["status"] = WorkflowStatus.COMPLETED.value
 
         state["current_step"] = "follow_up"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     @staticmethod
@@ -457,7 +457,7 @@ class GraphUtilities:
         """Complete the workflow."""
         state["current_step"] = "completion"
         state["status"] = WorkflowStatus.COMPLETED.value
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         # Add completion message
         state["messages"].append(
@@ -539,7 +539,7 @@ class AdvancedStateManager:
         Returns:
             Number of states cleaned up
         """
-        cutoff_time = datetime.utcnow().timestamp() - (max_age_hours * 3600)
+        cutoff_time = datetime.now(UTC).timestamp() - (max_age_hours * 3600)
         cleaned_count = 0
 
         states_to_remove = []
@@ -549,11 +549,11 @@ class AdvancedStateManager:
                 try:
                     # Try parsing as timestamp float first
                     completed_time = float(state.completed_at)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     # Fall back to ISO format parsing
                     try:
                         completed_time = datetime.fromisoformat(state.completed_at).timestamp()
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         logger.warning(
                             "Invalid completed_at format",
                             workflow_id=workflow_id,

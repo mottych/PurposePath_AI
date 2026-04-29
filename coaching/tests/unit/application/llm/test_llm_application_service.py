@@ -24,8 +24,8 @@ def messages():
     return [LLMMessage(role="user", content="Hello")]
 
 
-@pytest.mark.asyncio
 class TestLLMApplicationService:
+    @pytest.mark.asyncio
     async def test_generate_coaching_response_success(self, service, mock_provider, messages):
         # Arrange
         mock_provider.validate_model.return_value = True
@@ -47,6 +47,7 @@ class TestLLMApplicationService:
         mock_provider.validate_model.assert_called_with("model-v1")
         mock_provider.generate.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_generate_coaching_response_default_model(self, service, mock_provider, messages):
         # Arrange
         mock_provider.validate_model.return_value = True
@@ -64,6 +65,7 @@ class TestLLMApplicationService:
         # Assert
         mock_provider.validate_model.assert_called_with("model-v1")
 
+    @pytest.mark.asyncio
     async def test_generate_coaching_response_invalid_model(self, service, mock_provider, messages):
         # Arrange
         mock_provider.validate_model.return_value = False
@@ -74,6 +76,7 @@ class TestLLMApplicationService:
                 conversation_history=messages, model="invalid-model"
             )
 
+    @pytest.mark.asyncio
     async def test_generate_analysis_success(self, service, mock_provider):
         # Arrange
         mock_provider.generate.return_value = LLMResponse(
@@ -95,6 +98,7 @@ class TestLLMApplicationService:
         call_args = mock_provider.generate.call_args
         assert "Analysis Context:\nkey: value" in call_args.kwargs["system_prompt"]
 
+    @pytest.mark.asyncio
     async def test_generate_streaming_response(self, service, mock_provider, messages):
         # Arrange
         async def stream_generator(*args, **kwargs):
@@ -112,6 +116,7 @@ class TestLLMApplicationService:
         assert chunks == ["chunk1", "chunk2"]
         mock_provider.generate_stream.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_count_message_tokens(self, service, mock_provider, messages):
         # Arrange
         mock_provider.count_tokens.return_value = 5
@@ -123,6 +128,7 @@ class TestLLMApplicationService:
         assert count == 5
         mock_provider.count_tokens.assert_called_with("Hello", "model-v1")
 
+    @pytest.mark.asyncio
     async def test_validate_model_availability(self, service, mock_provider):
         # Arrange
         mock_provider.validate_model.return_value = True

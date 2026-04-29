@@ -101,7 +101,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
             )
             return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 content={
                     "error": "validation_error",
                     "message": "Request validation failed",

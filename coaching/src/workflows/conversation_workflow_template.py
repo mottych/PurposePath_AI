@@ -11,7 +11,7 @@ Implements a LangGraph-based conversational flow with:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -108,7 +108,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
                 {
                     "role": "user",
                     "content": content,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             ],
             current_step="greeting",
@@ -117,8 +117,8 @@ class ConversationWorkflowTemplate(BaseWorkflow):
                 "conversation_count": 0,
                 "insights_collected": [],
             },
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
         )
 
     async def validate_state(self, state: WorkflowState) -> bool:
@@ -132,13 +132,13 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         logger.info("Executing greeting node", workflow_id=state.get("workflow_id"))
 
         state["current_step"] = "greeting"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         # Add greeting message
         greeting_message = {
             "role": "assistant",
             "content": "Hello! I'm here to help you explore your thoughts and values. What would you like to discuss today?",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         if "messages" not in state:
@@ -204,7 +204,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             question_message = {
                 "role": "assistant",
                 "content": response_content,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
             state["messages"].append(question_message)
@@ -217,12 +217,12 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             fallback_message = {
                 "role": "assistant",
                 "content": "Can you tell me more about what's important to you in this situation?",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
             state["messages"].append(fallback_message)
 
         state["current_step"] = "question_generation"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     async def response_analysis_node(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -292,7 +292,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             state["step_data"]["analysis"] = {
                 "user_response": latest_response,
                 "analysis_result": analysis_result,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -305,7 +305,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
             }
 
         state["current_step"] = "response_analysis"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
         return state
 
     async def insight_extraction_node(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -337,7 +337,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         # Store current insights
         state["step_data"]["current_insights"] = insights
         state["current_step"] = "insight_extraction"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state
 
@@ -367,7 +367,7 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         }
 
         state["current_step"] = "follow_up_decision"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state
 
@@ -383,14 +383,14 @@ class ConversationWorkflowTemplate(BaseWorkflow):
         completion_message = {
             "role": "assistant",
             "content": summary_message,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         state["messages"].append(completion_message)
         state["current_step"] = "completion"
         state["status"] = WorkflowStatus.COMPLETED
-        state["completed_at"] = datetime.utcnow().isoformat()
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["completed_at"] = datetime.now(UTC).isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         # Get the last assistant message for the response
         assistant_messages = [

@@ -5,8 +5,9 @@ import time
 from typing import Any
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
+from coaching.src.api.main import app
 from shared.observability.performance import measure_time
 
 
@@ -16,21 +17,14 @@ class TestAPIPerformance:
     """Performance tests for API endpoints."""
 
     @pytest.fixture
-    def api_base_url(self) -> str:
-        """Get API base URL for testing."""
-        return "http://localhost:8000"  # Update for actual testing
-
-    @pytest.fixture
-    async def async_client(self, api_base_url: str) -> AsyncClient:
-        """Create async HTTP client."""
-        async with AsyncClient(base_url=api_base_url, timeout=30.0) as client:
-            # Check if API is running and is NOT DynamoDB Local
-            try:
-                response = await client.get("/api/v1/health")
-                if response.status_code == 400 and "MissingAuthenticationToken" in response.text:
-                    pytest.skip("Port 8000 is running DynamoDB Local, not the API server")
-            except Exception:
-                pass  # Let the test fail or handle connection error
+    async def async_client(self) -> AsyncClient:
+        """Create in-process async HTTP client for API performance testing."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+            timeout=30.0,
+        ) as client:
             yield client
 
     async def test_health_endpoint_latency(self, async_client: AsyncClient) -> None:

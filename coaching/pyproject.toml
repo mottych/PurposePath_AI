@@ -202,4 +202,9 @@ markers = [
     "unit: marks tests as unit tests (fast, isolated)",
     "integration: marks tests as integration tests (slower, external dependencies)",
     "e2e: marks tests as end-to-end tests",
+    "performance: marks tests as performance-focused checks",
+]
+filterwarnings = [
+    "error::DeprecationWarning",
+    "ignore:'asyncio\\.iscoroutinefunction' is deprecated and slated for removal in Python 3\\.16; use inspect\\.iscoroutinefunction\\(\\) instead:DeprecationWarning",
 ]

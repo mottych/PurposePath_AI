@@ -3,6 +3,7 @@
 from coaching.src.api.routes import (
     admin,
     ai_execute,
+    analysis,
     business_data,
     coaching_sessions,
     health,
@@ -13,6 +14,7 @@ from coaching.src.api.routes import (
 __all__ = [
     "admin",
     "ai_execute",
+    "analysis",
     "business_data",
     "coaching_sessions",
     "health",

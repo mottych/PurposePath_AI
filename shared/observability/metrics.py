@@ -1,7 +1,7 @@
 """CloudWatch metrics collection for production observability."""
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import boto3
 import structlog
@@ -114,7 +114,7 @@ class CloudWatchMetrics(MetricsCollector):
                         "MetricName": metric_name,
                         "Value": value,
                         "Unit": unit,
-                        "Timestamp": datetime.utcnow(),
+                        "Timestamp": datetime.now(UTC),
                         "Dimensions": metric_dimensions,
                     }
                 ],

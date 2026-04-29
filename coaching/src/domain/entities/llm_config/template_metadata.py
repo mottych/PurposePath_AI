@@ -4,7 +4,7 @@ Represents metadata for LLM prompt templates stored in S3.
 Template content is stored externally, this entity tracks location and metadata.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -41,9 +41,11 @@ class TemplateMetadata(BaseModel):
     s3_key: str = Field(..., min_length=1, max_length=1024, description="S3 object key")
     version: str = Field(..., min_length=1, max_length=50, description="Template version")
     is_active: bool = Field(True, description="Whether template is active")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
+    )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Last update timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
     )
     created_by: str = Field(..., description="User ID who created the template")
 

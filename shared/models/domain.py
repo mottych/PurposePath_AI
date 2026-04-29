@@ -1,7 +1,7 @@
 """Business domain models for PurposePath."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import Field, field_validator
@@ -10,7 +10,7 @@ from .base import BaseDomainModel, IdentifiedMixin, TenantScopedMixin
 
 
 # Enums for domain entities
-class ActionStatus(str, Enum):
+class ActionStatus(StrEnum):
     """Status values for actions, goals, and strategies."""
 
     NOT_STARTED = "not_started"
@@ -20,7 +20,7 @@ class ActionStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     """Priority levels for issues and tasks."""
 
     LOW = "low"
@@ -29,7 +29,7 @@ class Priority(str, Enum):
     CRITICAL = "critical"
 
 
-class TimeHorizon(str, Enum):
+class TimeHorizon(StrEnum):
     """Time horizons for goals and strategies."""
 
     ANNUAL = "annual"
@@ -39,7 +39,7 @@ class TimeHorizon(str, Enum):
     LONG_TERM = "long_term"
 
 
-class ReviewType(str, Enum):
+class ReviewType(StrEnum):
     """Types of reviews."""
 
     WEEKLY = "weekly"
@@ -48,7 +48,7 @@ class ReviewType(str, Enum):
     ANNUAL = "annual"
 
 
-class IssueType(str, Enum):
+class IssueType(StrEnum):
     """Types of issues."""
 
     BUG = "bug"
@@ -58,7 +58,7 @@ class IssueType(str, Enum):
     BLOCKER = "blocker"
 
 
-class DecisionType(str, Enum):
+class DecisionType(StrEnum):
     """Types of decisions."""
 
     STRATEGIC = "strategic"

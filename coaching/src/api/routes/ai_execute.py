@@ -187,7 +187,7 @@ async def execute_ai(
             missing=missing,
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Missing required parameters for topic {request.topic_id}: {missing}",
         )
 
@@ -224,7 +224,7 @@ async def execute_ai(
             missing_params=e.missing_params,
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Parameter validation failed: {e.reason}",
         ) from e
     except PromptRenderError as e:

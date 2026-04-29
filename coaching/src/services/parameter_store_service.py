@@ -4,7 +4,7 @@ This service provides access to SSM Parameter Store for retrieving and updating
 runtime configuration values like default model codes.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import boto3
 import structlog
@@ -49,14 +49,14 @@ class ParameterStoreService:
         if (
             self._cache is not None
             and self._cache_time is not None
-            and datetime.utcnow() - self._cache_time < timedelta(seconds=self._cache_ttl_seconds)
+            and datetime.now(UTC) - self._cache_time < timedelta(seconds=self._cache_ttl_seconds)
         ):
             return self._cache
 
         # Cache miss or expired - fetch from Parameter Store
         result = self._fetch_default_models()
         self._cache = result
-        self._cache_time = datetime.utcnow()
+        self._cache_time = datetime.now(UTC)
         return result
 
     def _fetch_default_models(self) -> tuple[str, str]:

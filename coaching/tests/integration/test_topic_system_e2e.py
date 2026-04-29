@@ -90,7 +90,12 @@ class TestTopicCreationAndRetrieval:
         assert retrieved is not None
         assert retrieved.topic_id == "test_coaching_e2e"
         assert retrieved.topic_name == "Test Coaching E2E"
-        assert retrieved.model_code == "claude-3-5-sonnet-20241022"
+        assert retrieved.basic_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
+        assert retrieved.premium_model_code == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
         assert retrieved.temperature == 0.7
         assert len(retrieved.prompts) == 1
         # allowed_parameters now comes from registry, not stored on entity
@@ -108,7 +113,8 @@ class TestTopicCreationAndRetrieval:
     async def test_topic_has_all_required_fields(self, test_topic):
         """Verify topic has all required fields for conversation flow."""
         # Model configuration
-        assert test_topic.model_code
+        assert test_topic.basic_model_code
+        assert test_topic.premium_model_code
         assert test_topic.temperature >= 0.0
         assert test_topic.max_tokens > 0
 
@@ -376,7 +382,7 @@ class TestMultipleTopics:
 
         assert len(coaching_topics) == 1
         assert len(assessment_topics) == 1
-        assert coaching_topics[0].model_code != assessment_topics[0].model_code
+        assert coaching_topics[0].basic_model_code != assessment_topics[0].basic_model_code
 
 
 class TestErrorHandling:
@@ -458,7 +464,12 @@ class TestBackwardCompatibility:
         topic_dict = test_topic.to_dict()
 
         assert topic_dict["topic_id"] == "test_coaching_e2e"
-        assert topic_dict["model_code"] == "claude-3-5-sonnet-20241022"
+        assert topic_dict["basic_model_code"] == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
+        assert topic_dict["premium_model_code"] == LLMTopic.normalize_model_code(
+            "claude-3-5-sonnet-20241022"
+        )
         assert "prompts" in topic_dict
         # allowed_parameters no longer stored on entity
 
@@ -468,5 +479,6 @@ class TestBackwardCompatibility:
         reconstructed = LLMTopic.from_dict(topic_dict)
 
         assert reconstructed.topic_id == test_topic.topic_id
-        assert reconstructed.model_code == test_topic.model_code
+        assert reconstructed.basic_model_code == test_topic.basic_model_code
+        assert reconstructed.premium_model_code == test_topic.premium_model_code
         assert len(reconstructed.prompts) == len(test_topic.prompts)

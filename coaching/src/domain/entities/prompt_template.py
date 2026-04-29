@@ -7,9 +7,7 @@ DEPRECATED: This entity is deprecated and will be removed in version 2.0.0.
 Use LLMTopic and TopicRepository instead for all prompt management.
 """
 
-import warnings
 from datetime import UTC, datetime
-from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -82,16 +80,6 @@ class PromptTemplate(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
-
-    def __init__(self, **data: Any) -> None:
-        """Initialize PromptTemplate with deprecation warning."""
-        warnings.warn(
-            "PromptTemplate is deprecated and will be removed in version 2.0.0. "
-            "Use LLMTopic and TopicRepository instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(**data)
 
     @field_validator("name")
     @classmethod

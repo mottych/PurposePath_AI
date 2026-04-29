@@ -23,6 +23,7 @@ from coaching.src.api.routes import (
     admin,
     ai_execute,
     ai_execute_async,
+    analysis,
     business_data,
     coaching_sessions,
     health,
@@ -149,6 +150,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     # Include routers
     application.include_router(health.router, prefix=f"{cfg.api_prefix}/health", tags=["health"])
     application.include_router(admin.router, prefix=f"{cfg.api_prefix}")
+    application.include_router(analysis.router, prefix=f"{cfg.api_prefix}")
     application.include_router(
         insights.router, prefix=f"{cfg.api_prefix}/insights", tags=["insights"]
     )

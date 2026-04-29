@@ -7,7 +7,7 @@ integrated with analysis services and domain models.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -101,8 +101,8 @@ class AnalysisWorkflow(BaseWorkflow):
             session_id=workflow_input.session_id,
             conversation_history=[],
             current_step="start",
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
+            updated_at=datetime.now(UTC).isoformat(),
             workflow_context={
                 "analysis_type": workflow_input.analysis_type.value,
                 "text_to_analyze": workflow_input.text_to_analyze,
@@ -129,7 +129,7 @@ class AnalysisWorkflow(BaseWorkflow):
         logger.info("Starting analysis workflow", workflow_id=state["workflow_id"])
 
         state["current_step"] = "analysis"
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state
 
@@ -156,11 +156,11 @@ class AnalysisWorkflow(BaseWorkflow):
                 "analysis": result,
                 "analysis_type": state["workflow_context"]["analysis_type"],
                 "input_text": text_to_analyze,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
             state["current_step"] = "completion"
-            state["updated_at"] = datetime.utcnow().isoformat()
+            state["updated_at"] = datetime.now(UTC).isoformat()
 
             logger.info(
                 "Analysis completed",
@@ -180,7 +180,7 @@ class AnalysisWorkflow(BaseWorkflow):
         logger.info("Completing analysis workflow", workflow_id=state["workflow_id"])
 
         state["status"] = WorkflowStatus.COMPLETED.value
-        state["completed_at"] = datetime.utcnow().isoformat()
-        state["updated_at"] = datetime.utcnow().isoformat()
+        state["completed_at"] = datetime.now(UTC).isoformat()
+        state["updated_at"] = datetime.now(UTC).isoformat()
 
         return state

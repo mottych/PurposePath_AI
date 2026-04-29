@@ -225,8 +225,8 @@ def client(
     """Create test client with dependency overrides."""
     app.dependency_overrides[get_coaching_session_service] = lambda: mock_coaching_session_service
     app.dependency_overrides[get_coaching_session_repository] = lambda: mock_session_repository
-    app.dependency_overrides[get_coaching_message_job_service] = (
-        lambda: mock_coaching_message_job_service
+    app.dependency_overrides[get_coaching_message_job_service] = lambda: (
+        mock_coaching_message_job_service
     )
 
     with TestClient(app) as c:

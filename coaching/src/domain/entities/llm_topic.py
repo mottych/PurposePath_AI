@@ -4,8 +4,10 @@ This module defines the unified topic entity for all LLM prompts across
 conversation coaching, single-shot analysis, and Measure system templates.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, ClassVar
 
@@ -199,8 +201,8 @@ class LLMTopic:
     prompts: list[PromptInfo] = field(default_factory=list)
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     description: str | None = None
     display_order: int = 100
     created_by: str | None = None

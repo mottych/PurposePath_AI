@@ -8,6 +8,8 @@ These utilities are generic and work with any result model - the extraction
 prompt is dynamically generated from the Pydantic model's JSON schema.
 """
 
+from __future__ import annotations
+
 import json
 from typing import TYPE_CHECKING, Any
 

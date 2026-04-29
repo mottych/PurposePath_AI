@@ -1,13 +1,13 @@
 """Data models for insights feature."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class InsightCategory(str, Enum):
+class InsightCategory(StrEnum):
     """Categories for business insights."""
 
     STRATEGY = "strategy"
@@ -18,7 +18,7 @@ class InsightCategory(str, Enum):
     TECHNOLOGY = "technology"
 
 
-class KISSCategory(str, Enum):
+class KISSCategory(StrEnum):
     """KISS framework categories for actionable insights."""
 
     KEEP = "keep"  # What's working well, continue doing
@@ -27,7 +27,7 @@ class KISSCategory(str, Enum):
     STOP = "stop"  # What's misaligned or counterproductive
 
 
-class InsightPriority(str, Enum):
+class InsightPriority(StrEnum):
     """Priority levels for insights."""
 
     CRITICAL = "critical"
@@ -36,7 +36,7 @@ class InsightPriority(str, Enum):
     LOW = "low"
 
 
-class InsightStatus(str, Enum):
+class InsightStatus(StrEnum):
     """Status of an insight."""
 
     ACTIVE = "active"

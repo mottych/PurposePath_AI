@@ -7,7 +7,7 @@ Defines the abstract base class and common types for all AI providers.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -15,7 +15,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProviderType(str, Enum):
+class ProviderType(StrEnum):
     """Supported AI provider types."""
 
     BEDROCK = "bedrock"

@@ -710,13 +710,16 @@ class InvitationRepository(BaseRepository[Invitation]):
         accepted_user_id_val = item.get("accepted_user_id")
         accepted_user_id = str(accepted_user_id_val) if accepted_user_id_val is not None else None
 
+        role_value = item.get("role", UserRole.MEMBER.value)
+        status_value = item.get("status", InvitationStatus.PENDING.value)
+
         return Invitation(
             invitation_id=str(item.get("invitation_id", "")),
             tenant_id=str(item.get("tenant_id", "")),
             email=str(item.get("email", "")),
             invited_by_user_id=str(item.get("invited_by_user_id", "")),
-            role=UserRole(item.get("role", UserRole.MEMBER.value)),
-            status=InvitationStatus(item.get("status", InvitationStatus.PENDING.value)),
+            role=UserRole(str(role_value)),
+            status=InvitationStatus(str(status_value)),
             expires_at=datetime.fromisoformat(expires_at_str),
             accepted_at=accepted_at,
             message=message,
