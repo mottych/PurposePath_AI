@@ -207,4 +207,5 @@ markers = [
 filterwarnings = [
     "error::DeprecationWarning",
     "ignore:'asyncio\\.iscoroutinefunction' is deprecated and slated for removal in Python 3\\.16; use inspect\\.iscoroutinefunction\\(\\) instead:DeprecationWarning",
+    "ignore:ForwardRef\\._evaluate is a private API and is retained for compatibility, but will be removed in Python 3\\.16\\. Use ForwardRef\\.evaluate\\(\\) or typing\\.evaluate_forward_ref\\(\\) instead\\.:DeprecationWarning",
 ]
