@@ -4,6 +4,8 @@ Before making changes:
 - Read .issueflow/repo.yaml for commands, app root, deployment workflows, and ownership domains.
 - Inspect the issue context and gather concrete evidence from code, tests, docs, or workflow logs before deciding scope.
 - Use existing project commands rather than inventing new tooling.
+- Before publishing `.issueflow/result.json`, reconcile the full issue history: read the latest GitHub issue comments, compare them with earlier IssueFlow summaries, and inspect current `git status`, `git log`, and relevant diffs/commits.
+- Treat previous run summaries as context, not truth. If an earlier attempt was superseded by newer human direction, code, or commits, say so explicitly and summarize the current state instead of repeating stale conclusions.
 
 Repository facts:
 - Repository: mottych/PurposePath_AI
