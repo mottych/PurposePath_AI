@@ -21,6 +21,7 @@ jobs:
         with:
           script: |
             const labels = [
+              ["IssueFlow", "1D76DB", "Trigger IssueFlow triage for this issue"],
               ["bug", "D73A4A", "IssueFlow workflow type: bug"],
               ["enhancement", "A2EEEF", "IssueFlow workflow type: enhancement"],
               ["feature", "7057FF", "IssueFlow workflow type: feature"],
