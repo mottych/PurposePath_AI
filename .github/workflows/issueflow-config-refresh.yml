@@ -1,0 +1,21 @@
+name: IssueFlow Config Refresh
+
+on:
+  push:
+    paths:
+      - ".issueflow/**"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh IssueFlow repository config cache
+        env:
+          ISSUEFLOW_API_URL: ${{ vars.ISSUEFLOW_API_URL || 'https://api.issueflow.cloud' }}
+          ISSUEFLOW_CONFIG_REFRESH_TOKEN: ${{ secrets.ISSUEFLOW_CONFIG_REFRESH_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${ISSUEFLOW_CONFIG_REFRESH_TOKEN}" \
+            "${ISSUEFLOW_API_URL}/repositories/${REPOSITORY}/issueflow-config/refresh"
