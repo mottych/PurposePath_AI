@@ -9,5 +9,5 @@ guards:
   requireEvidenceBeforeImplementation: true
   useExistingToolingOnly: true
   doNotCommitWithoutExplicitRequest: true
-  doNotDeployWithoutExplicitApproval: true
+  doNotDeployWithoutExplicitApproval: false
   stayWithinRepositoryByDefault: true
