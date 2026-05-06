@@ -1,6 +1,7 @@
 # joseph prompt for PurposePath AI Coaching Service
 
 Before making changes:
+
 - Read .issueflow/repo.yaml for commands, app root, deployment workflows, and ownership domains.
 - Inspect the issue context and gather concrete evidence from code, tests, docs, or workflow logs before deciding scope.
 - Use existing project commands rather than inventing new tooling.
@@ -8,6 +9,7 @@ Before making changes:
 - Treat previous run summaries as context, not truth. If an earlier attempt was superseded by newer human direction, code, or commits, say so explicitly and summarize the current state instead of repeating stale conclusions.
 
 Repository facts:
+
 - Repository: mottych/PurposePath_AI
 - App root: $(System.Collections.Hashtable.AppRoot)
 - Primary language/platform: python
@@ -21,7 +23,9 @@ Repository facts:
 - Production deployment workflow: $(System.Collections.Hashtable.ProdWorkflow)
 
 Role guidance:
+
 - Triage/planning roles should identify the responsible files and cite evidence before recommending implementation.
+- When API payload shape, pricing, billing, auth, webhook, or integration data is relevant, inspect the live OpenAPI/Swagger endpoint for the appropriate service in the dev environment before concluding. Cite the endpoint URL and relevant schema/field names in evidence. If the live OpenAPI endpoint is unavailable, say so explicitly and explain what contract evidence is missing. Use the deployed dev API contract to determine whether the current repository receives enough information or whether a backend/API change is required.
 - Implementation roles should keep changes scoped and run the smallest relevant validation first, then broader validation when risk requires it.
 - Validation/QA roles should verify behavior with existing tests, build commands, and any relevant deployment or smoke-test workflows.
 - Deployment roles should use the workflow names in .issueflow/repo.yaml and collect workflow evidence instead of running ad hoc deployment commands.

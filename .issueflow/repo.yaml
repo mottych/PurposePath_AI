@@ -4,6 +4,7 @@ name: PurposePath AI Coaching Service
 primaryLanguage: python
 appRoot: .
 defaultBranch: dev
+workflowDefinition: .issueflow/workflow.yaml
 commands:
   install: python -m pip install -r coaching/requirements.txt && python -m pip install -r coaching/requirements-dev.txt
   validate: python -m ruff check coaching/ shared/ && python -m ruff format --check coaching/ shared/ && python -m mypy coaching/src shared/ --explicit-package-bases
