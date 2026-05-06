@@ -1,6 +1,6 @@
-name: e2e
-stage: e2e
-role: e2e
+name: production-deploy
+stage: production-deploy
+role: deployer
 kind: worker
 issueTypes:
 - bug
@@ -10,7 +10,7 @@ interactive: false
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: merge-down
   failed:
     default: implementation
     when:

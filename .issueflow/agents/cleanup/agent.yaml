@@ -1,5 +1,25 @@
 name: cleanup
-kind: llm
+stage: cleanup
+role: cleanup
+kind: worker
+issueTypes:
+- bug
+- enhancement
+- feature
+interactive: false
+staleRetryLimit: 3
+routes:
+  passed:
+    default: done
+  failed:
+    default: same
+  needs-info:
+    default: wait
+  blocked:
+    default: wait-blocked
+execution:
+  backend: opencode
+  openCodeAgent: build
 openCodeAgent: build
 charterPath: charter.md
 promptPath: prompt.md

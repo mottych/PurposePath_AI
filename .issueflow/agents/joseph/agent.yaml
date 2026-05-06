@@ -1,6 +1,0 @@
-name: joseph
-kind: llm
-openCodeAgent: build
-charterPath: charter.md
-promptPath: prompt.md
-permissionsPath: permissions.yaml

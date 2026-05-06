@@ -1,24 +1,20 @@
-name: e2e
-stage: e2e
-role: e2e
+name: design
+stage: design
+role: bezzalel
 kind: worker
 issueTypes:
 - bug
 - enhancement
 - feature
-interactive: false
+interactive: true
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: human-gate-1
   failed:
-    default: implementation
-    when:
-    - labels:
-      - requires_design_change
-      target: design
+    default: same
   needs-info:
-    default: implementation
+    default: wait
   blocked:
     default: wait-blocked
 execution:

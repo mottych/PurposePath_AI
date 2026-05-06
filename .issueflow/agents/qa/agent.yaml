@@ -1,5 +1,32 @@
 name: qa
-kind: llm
+stage: qa
+role: qa
+kind: worker
+issueTypes:
+- bug
+- enhancement
+- feature
+interactive: false
+staleRetryLimit: 3
+routes:
+  passed:
+    default: production-deploy
+    when:
+    - fixRoute: dev
+      target: cleanup
+  failed:
+    default: implementation
+    when:
+    - labels:
+      - requires_design_change
+      target: design
+  needs-info:
+    default: wait
+  blocked:
+    default: wait-blocked
+execution:
+  backend: opencode
+  openCodeAgent: build
 openCodeAgent: build
 charterPath: charter.md
 promptPath: prompt.md

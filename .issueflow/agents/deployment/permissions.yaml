@@ -1,0 +1,13 @@
+allowedTools:
+  - read-files
+  - edit-files
+  - run-existing-project-commands
+  - git-status
+  - github-cli
+  - issueflow-reporting
+guards:
+  requireEvidenceBeforeImplementation: true
+  useExistingToolingOnly: true
+  doNotCommitWithoutExplicitRequest: true
+  doNotDeployWithoutExplicitApproval: false
+  stayWithinRepositoryByDefault: true

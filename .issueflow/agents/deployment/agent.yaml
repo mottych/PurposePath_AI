@@ -1,16 +1,14 @@
-name: e2e
-stage: e2e
-role: e2e
+name: deployment
+stage: deployment
+role: deployer
 kind: worker
 issueTypes:
-- bug
-- enhancement
 - feature
 interactive: false
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: e2e
   failed:
     default: implementation
     when:

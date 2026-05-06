@@ -1,16 +1,15 @@
-name: e2e
-stage: e2e
-role: e2e
+name: validation
+stage: validation
+role: validator
 kind: worker
 issueTypes:
 - bug
 - enhancement
-- feature
 interactive: false
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: deploy
   failed:
     default: implementation
     when:
@@ -18,7 +17,7 @@ routes:
       - requires_design_change
       target: design
   needs-info:
-    default: implementation
+    default: wait
   blocked:
     default: wait-blocked
 execution:

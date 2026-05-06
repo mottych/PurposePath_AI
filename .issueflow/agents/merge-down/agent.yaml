@@ -1,6 +1,6 @@
-name: e2e
-stage: e2e
-role: e2e
+name: merge-down
+stage: merge-down
+role: deployer
 kind: worker
 issueTypes:
 - bug
@@ -10,7 +10,7 @@ interactive: false
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: cleanup
   failed:
     default: implementation
     when:
@@ -18,7 +18,7 @@ routes:
       - requires_design_change
       target: design
   needs-info:
-    default: implementation
+    default: wait
   blocked:
     default: wait-blocked
 execution:

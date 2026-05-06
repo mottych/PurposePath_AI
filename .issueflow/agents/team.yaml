@@ -1,25 +1,401 @@
 agents:
-  joseph:
-    kind: llm
+  triage:
+    name: triage
+    stage: triage
+    role: joseph
+    kind: worker
+    issueTypes:
+    - bug
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: design
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  bezzalel:
-    kind: llm
+  suggestion:
+    name: suggestion
+    stage: suggestion
+    role: joseph
+    kind: worker
+    issueTypes:
+    - enhancement
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: design
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  joshua:
-    kind: llm
+  requirement:
+    name: requirement
+    stage: requirement
+    role: joseph
+    kind: worker
+    issueTypes:
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: design
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  validator:
-    kind: llm
+  design:
+    name: design
+    stage: design
+    role: bezzalel
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: true
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: human-gate-1
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  qa:
-    kind: llm
+  human-gate-1:
+    name: human-gate-1
+    stage: human-gate-1
+    role: human
+    kind: human
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: implementation
+        when:
+        - issueType: feature
+          target: epic-creation
+      failed:
+        default: design
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+  implementation:
+    name: implementation
+    stage: implementation
+    role: joshua
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    interactive: true
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: validation
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  deployer:
-    kind: llm
+    maxAttempts: 5
+  validation:
+    name: validation
+    stage: validation
+    role: validator
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: deploy
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
-  cleanup:
-    kind: llm
+  deploy:
+    name: deploy
+    stage: deploy
+    role: deployer
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: e2e
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: implementation
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  epic-creation:
+    name: epic-creation
+    stage: epic-creation
+    role: joshua
+    kind: worker
+    issueTypes:
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: sub-issues
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  sub-issues:
+    name: sub-issues
+    stage: sub-issues
+    role: joshua
+    kind: worker
+    issueTypes:
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: deployment
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  deployment:
+    name: deployment
+    stage: deployment
+    role: deployer
+    kind: worker
+    issueTypes:
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: e2e
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: implementation
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build
   e2e:
-    kind: llm
+    name: e2e
+    stage: e2e
+    role: e2e
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: qa
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: implementation
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  qa:
+    name: qa
+    stage: qa
+    role: qa
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: production-deploy
+        when:
+        - fixRoute: dev
+          target: cleanup
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  production-deploy:
+    name: production-deploy
+    stage: production-deploy
+    role: deployer
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: merge-down
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: implementation
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  merge-down:
+    name: merge-down
+    stage: merge-down
+    role: deployer
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: cleanup
+      failed:
+        default: implementation
+        when:
+        - labels:
+          - requires_design_change
+          target: design
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
+    openCodeAgent: build
+  cleanup:
+    name: cleanup
+    stage: cleanup
+    role: cleanup
+    kind: worker
+    issueTypes:
+    - bug
+    - enhancement
+    - feature
+    interactive: false
+    staleRetryLimit: 3
+    routes:
+      passed:
+        default: done
+      failed:
+        default: same
+      needs-info:
+        default: wait
+      blocked:
+        default: wait-blocked
+    execution:
+      backend: opencode
+      openCodeAgent: build
     openCodeAgent: build

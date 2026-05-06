@@ -1,24 +1,18 @@
-name: e2e
-stage: e2e
-role: e2e
+name: requirement
+stage: requirement
+role: joseph
 kind: worker
 issueTypes:
-- bug
-- enhancement
 - feature
 interactive: false
 staleRetryLimit: 3
 routes:
   passed:
-    default: qa
+    default: design
   failed:
-    default: implementation
-    when:
-    - labels:
-      - requires_design_change
-      target: design
+    default: same
   needs-info:
-    default: implementation
+    default: wait
   blocked:
     default: wait-blocked
 execution:
