@@ -33,6 +33,7 @@ jobs:
               ["if-outcome:failed", "B60205", "IssueFlow outcome: failed"],
               ["if-outcome:needs-info", "D93F0B", "IssueFlow outcome: needs info"],
               ["if-outcome:blocked", "B60205", "IssueFlow outcome: blocked"],
+              ["if-mode:interactive", "5319E7", "IssueFlow interactive IDE mode"],
               ["human-pending", "F9D0C4", "IssueFlow is waiting for human input"],
               ["aborted", "000000", "IssueFlow work was aborted"],
               ["hotfix", "D93F0B", "Marks issue for production-lane handling"],
