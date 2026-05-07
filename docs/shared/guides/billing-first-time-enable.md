@@ -29,8 +29,9 @@ Complete these checks before enabling billing outside local development.
 2. The solution builds clean with no warnings or errors.
 3. The billing validation matrix in [billing-rollout-validation-matrix.md](../../validation/billing-rollout-validation-matrix.md) is current.
 4. API contracts remain aligned with:
-   - `docs/shared/Specifications/api-fe/billing-backend-redesign-draft.md`
-   - `docs/shared/Specifications/api-admin/billing-admin-api-specification.md`
+   - the deployed Account runtime OpenAPI endpoint for owner billing flows
+   - the deployed Admin runtime OpenAPI endpoint for billing administration flows
+   - [README.md](../../shared/Specifications/README.md) for the canonical contract-source and thin-spec workflow
 
 ### Environment and Secret Readiness
 

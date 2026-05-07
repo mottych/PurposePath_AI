@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "data": {
+    "lambda": "notification",
+    "format": "json",
+    "document": {
+      "asyncapi": "2.6.0",
+      "info": {
+        "title": "PurposePath Async Contracts",
+        "version": "1.0.0",
+        "description": "Code-first async contracts generated from runtime metadata in the Admin service."
+      },
+      "channels": {
+        "notification.enqueued": {
+          "publish": {
+            "operationId": "notificationEnqueued",
+            "description": "Notification request queued for delivery"
+          }
+        },
+        "ai.job.requested": {
+          "publish": {
+            "operationId": "aiJobRequested",
+            "description": "AI insight generation requested for notifications"
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "error": null,
+  "code": null,
+  "details": null
+}

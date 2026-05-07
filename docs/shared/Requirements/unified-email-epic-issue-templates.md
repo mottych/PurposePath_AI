@@ -105,7 +105,7 @@ Expose a read endpoint for admin UI to list all registry notifications with temp
 - UES-022
 
 ## Deliverables
-- Admin endpoint returning notification catalog from registry perspective (`GET /notifications/catalog` — see `docs/shared/Specifications/api-admin/admin-api-specification.md` v2.4)
+- Admin endpoint returning notification catalog from registry perspective (`GET /notifications/catalog`, documented in the deployed Admin runtime OpenAPI contract)
 - Response includes: notification_id, name, description, category, template_id, template_exists, effective_active_state
 - API documentation and response schema examples
 

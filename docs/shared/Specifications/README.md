@@ -11,6 +11,19 @@ Deployed runtime contract endpoints are now the canonical contract source of tru
 - AI coaching (PurposePath_AI) dev-only: `https://{api-host}/coaching/api/v1/openapi/v1.json`, Swagger UI at `https://{api-host}/coaching/api/v1/swagger`, AsyncAPI at `https://{api-host}/coaching/api/v1/contracts/asyncapi` (optional `?lambda=coaching`). The coaching OpenAPI document includes **`x-purposepath-topic-contracts`**, per-topic `components.schemas` (`PurposePathExecuteParameters__*`, `PurposePathExecuteAsyncActivityData__*`, `PurposePathModel__*`), and **named request examples** on `POST …/ai/execute` and `POST …/ai/execute-async` for single-shot topics.
 - Thin docs in this folder remain synchronized for workflow, semantics, state, and operational context only.
 
+## Generated Baseline Exports
+
+Issue 960 establishes a tracked baseline export workflow for the currently approved runtime contract endpoints.
+
+- Baseline export root: `docs/shared/Specifications/generated/runtime-contract-baseline/`
+- Inventory manifest: `docs/shared/Specifications/generated/runtime-contract-baseline/inventory.manifest.json`
+- Default export command: `npm run contracts:export`
+- Custom export command: `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/contracts/Export-ContractBaseline.ps1 -BaseUrl "https://api.staging.purposepath.app"`
+
+Current issue-960 baseline scope is limited to the runtime contract surfaces owned by this repository (`account`, `admin`, `integration`, `traction`, and Admin-published async contracts). Coaching runtime contracts remain canonical in PurposePath_AI and are intentionally not mirrored into this baseline folder.
+
+These generated files are version-controlled baseline mirrors for verification and review. They are not the canonical contract source of truth.
+
 ## How to Add or Modify Specifications
 
 Use the canonical workflow guide:

@@ -1,0 +1,79 @@
+{
+  "baselineVersion": 1,
+  "sourceOfTruth": "runtime-contract-endpoints",
+  "artifactLocation": "docs/shared/Specifications/generated/runtime-contract-baseline",
+  "artifacts": [
+    {
+      "id": "openapi-account-v1",
+      "type": "openapi",
+      "surface": "account",
+      "endpointPath": "/account/api/v1/openapi/v1.json",
+      "artifactPath": "openapi/account-v1.json"
+    },
+    {
+      "id": "openapi-admin-v1",
+      "type": "openapi",
+      "surface": "admin",
+      "endpointPath": "/admin/api/v1/openapi/v1.json",
+      "artifactPath": "openapi/admin-v1.json"
+    },
+    {
+      "id": "openapi-integration-v1",
+      "type": "openapi",
+      "surface": "integration",
+      "endpointPath": "/integration/api/v1/openapi/v1.json",
+      "artifactPath": "openapi/integration-v1.json"
+    },
+    {
+      "id": "openapi-traction-v1",
+      "type": "openapi",
+      "surface": "traction",
+      "endpointPath": "/traction/api/v1/openapi/v1.json",
+      "artifactPath": "openapi/traction-v1.json"
+    },
+    {
+      "id": "asyncapi-all",
+      "type": "asyncapi",
+      "surface": "all",
+      "publishedBy": "admin",
+      "endpointPath": "/admin/api/v1/contracts/asyncapi?lambda=all",
+      "artifactPath": "asyncapi/all.json"
+    },
+    {
+      "id": "asyncapi-integration",
+      "type": "asyncapi",
+      "surface": "integration",
+      "publishedBy": "admin",
+      "endpointPath": "/admin/api/v1/contracts/asyncapi?lambda=integration",
+      "artifactPath": "asyncapi/integration.json"
+    },
+    {
+      "id": "asyncapi-billing",
+      "type": "asyncapi",
+      "surface": "billing",
+      "publishedBy": "admin",
+      "endpointPath": "/admin/api/v1/contracts/asyncapi?lambda=billing",
+      "artifactPath": "asyncapi/billing.json"
+    },
+    {
+      "id": "asyncapi-notification",
+      "type": "asyncapi",
+      "surface": "notification",
+      "publishedBy": "admin",
+      "endpointPath": "/admin/api/v1/contracts/asyncapi?lambda=notification",
+      "artifactPath": "asyncapi/notification.json"
+    }
+  ],
+  "excludedSurfaces": [
+    {
+      "surface": "coaching-runtime-contracts",
+      "classification": "cross-repository",
+      "reason": "Coaching runtime OpenAPI and AsyncAPI contracts are owned by PurposePath_AI and remain canonical in that repository rather than this baseline export workflow."
+    },
+    {
+      "surface": "realtime-websocket",
+      "classification": "websocket",
+      "reason": "Current runtime contract baseline is intentionally limited to the existing OpenAPI and Admin-generated AsyncAPI endpoints."
+    }
+  ]
+}

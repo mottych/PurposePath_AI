@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "data": {
+    "lambda": "integration",
+    "format": "json",
+    "document": {
+      "asyncapi": "2.6.0",
+      "info": {
+        "title": "PurposePath Async Contracts",
+        "version": "1.0.0",
+        "description": "Code-first async contracts generated from runtime metadata in the Admin service."
+      },
+      "channels": {
+        "integration.sql-template.requested": {
+          "publish": {
+            "operationId": "integrationSqlTemplateRequested",
+            "description": "Requests SQL template generation"
+          }
+        },
+        "integration.sql-template.completed": {
+          "publish": {
+            "operationId": "integrationSqlTemplateCompleted",
+            "description": "Signals SQL template generation completion"
+          }
+        },
+        "integration.sql-template.failed": {
+          "publish": {
+            "operationId": "integrationSqlTemplateFailed",
+            "description": "Signals SQL template generation failure"
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "error": null,
+  "code": null,
+  "details": null
+}

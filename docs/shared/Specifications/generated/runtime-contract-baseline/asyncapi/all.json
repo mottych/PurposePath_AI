@@ -1,0 +1,57 @@
+{
+  "success": true,
+  "data": {
+    "lambda": "all",
+    "format": "json",
+    "document": {
+      "asyncapi": "2.6.0",
+      "info": {
+        "title": "PurposePath Async Contracts",
+        "version": "1.0.0",
+        "description": "Code-first async contracts generated from runtime metadata in the Admin service."
+      },
+      "channels": {
+        "integration.sql-template.requested": {
+          "publish": {
+            "operationId": "integrationSqlTemplateRequested",
+            "description": "Requests SQL template generation"
+          }
+        },
+        "integration.sql-template.completed": {
+          "publish": {
+            "operationId": "integrationSqlTemplateCompleted",
+            "description": "Signals SQL template generation completion"
+          }
+        },
+        "integration.sql-template.failed": {
+          "publish": {
+            "operationId": "integrationSqlTemplateFailed",
+            "description": "Signals SQL template generation failure"
+          }
+        },
+        "billing.subscription.renewal.requested": {
+          "publish": {
+            "operationId": "billingSubscriptionRenewalRequested",
+            "description": "Requests subscription renewal processing"
+          }
+        },
+        "notification.enqueued": {
+          "publish": {
+            "operationId": "notificationEnqueued",
+            "description": "Notification request queued for delivery"
+          }
+        },
+        "ai.job.requested": {
+          "publish": {
+            "operationId": "aiJobRequested",
+            "description": "AI insight generation requested for notifications"
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "error": null,
+  "code": null,
+  "details": null
+}
