@@ -293,9 +293,9 @@ If you run Squad in GitHub Actions or another CI/CD system, update your workflow
 ### After (v0.8.18)
 
 ```yaml
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v5
   with:
-    node-version: '18'
+    node-version: '22'
 
 - name: Install Squad
   run: npm install -g @bradygaster/squad-cli@0.8.18
