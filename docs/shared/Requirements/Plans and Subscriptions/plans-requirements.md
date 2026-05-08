@@ -30,7 +30,7 @@
 | Feature Set | A named collection of features, options, and numerical limits that defines what a plan provides. Each plan is linked to exactly one feature set. Feature set components are pre-defined in the system; the admin assigns values to create specific feature sets. |
 | Extension / Add-on | An optional rider attached to a specific plan that modifies features or limits for an additional cost. Extensions cannot be purchased independently. Each extension is independent of other extensions on the same plan. |
 | Subscription | The binding between a tenant and a plan, with an effective date and optionally a termination date. A tenant cannot have overlapping active subscriptions for the same period. |
-| Billing Cycle | A monthly period starting on the 1st and ending on the last day of the month (UTC). All billing activity is aligned to this cycle. |
+| Billing Cycle | A period anchored to the tenant's enrollment date. The cycle starts on the enrollment day-of-month and ends the day before the same day-of-month in the following period (UTC). All billing activity is aligned to this anchor. |
 | Payment Schedule | The billing frequency chosen by the tenant owner (e.g., monthly, quarterly, annually). Determines the number of months covered per payment and affects pricing. |
 | Grace Period | A plan-defined period (in days) after subscription termination during which the plan remains in effect. The intent is to avoid blocking access due to an occasional late payment. Applies to the entire subscription including extensions. |
 | Fallback Plan | An admin-designated free plan that a subscription transitions to after the grace period elapses without payment resolution. If no fallback plan is defined, access is blocked. |
@@ -39,7 +39,7 @@
 | Admin Override | A tenant-specific modification that adds features or increases limits beyond what the plan's feature set provides. Overrides can only expand capabilities, never restrict them. An override can have a termination date or persist for the life of the subscription. |
 
 ### 1.1 Time & Timezone Policy
-All dates and times in the system are stored and maintained in UTC. Billing cycle boundaries (1st of the month) are calculated in UTC. Display of dates to the user may be converted to the tenant's local timezone for readability, but all system calculations use UTC.
+All dates and times in the system are stored and maintained in UTC. Billing cycle boundaries are anchored to the tenant's enrollment date (the day-of-month they first activated a paid subscription). Display of dates to the user may be converted to the tenant's local timezone for readability, but all system calculations use UTC.
 * * *
 ## 2\. Feature Sets
 ### 2.1 Overview
@@ -171,7 +171,7 @@ The following table defines every valid state transition in the subscription lif
 | ---| ---| ---| --- |
 | (New Registration) | Active (trial) | User completes registration | Create subscription with trial plan, set effective date to today, set termination per trial plan duration (or 14-day fallback if undefined) |
 | Active (trial) | Inactive (expired) | Trial termination date passes without paid plan selection | End trial; do not enter grace; switch to fallback plan (if defined) or block access |
-| Active (trial) | Active (paid) | User selects a paid plan and payment succeeds | Create new subscription with selected plan; charge prorated amount for remainder of billing cycle |
+| Active (trial) | Active (paid) | User selects a paid plan and payment succeeds | Create new subscription anchored to enrollment date; charge full period for selected schedule |
 | Active (paid trial mode) | Active (paid) | Paid-plan trial ends and initial charge succeeds | Clear trial flag; set/extend paid termination date; record payment; send receipt (paid trial uses 14-day fallback when duration is undefined) |
 | Active (paid trial mode) | Inactive (grace) | Paid-plan trial ends, charge attempts fail, and termination date passes | Set status to Inactive; grace period in effect; notify tenant owner |
 | Active (paid trial mode) | Inactive (expired) | Tenant owner cancels before trial ends | End subscription at trial end; do not charge; do not enter grace; switch to fallback/block |
@@ -183,7 +183,7 @@ The following table defines every valid state transition in the subscription lif
 | Inactive (grace) | Active (paid) | Successful payment received during grace period | Restore to Active, extend termination date, clear grace period |
 | Inactive (grace) | Inactive (expired) | Grace period elapses without payment | Switch to fallback plan (if defined) or block access |
 | Inactive (expired) | Active (paid) | User selects and pays for a new plan | Create new subscription; same enrollment workflow as new subscriber, regain access to old data |
-| Any Active | Active (new plan) | Tenant owner changes plan (upgrade or same-tier) | Calculate proration; if upgrade, charge difference and apply immediately; if downgrade, schedule for next cycle |
+| Any Active | Active (new plan) | Tenant owner changes plan (upgrade or same-tier) | Calculate proration based on anchor-day period; if upgrade, charge difference and apply immediately; if downgrade, schedule for next anchor boundary |
 
 ### 4.4 Admin Overrides
 An admin can apply overrides to a specific tenant's subscription. Overrides are strictly additive:
@@ -201,15 +201,18 @@ An admin can apply overrides to a specific tenant's subscription. Overrides are 
 ### 5.1 Payment Provider
 The system currently supports credit card payments via Stripe. The architecture uses a provider abstraction layer to support additional billing providers in the future. Stripe handles all credit card storage and tokenization; the system never stores raw card numbers. The system should follow Stripe's integration best practices for PCI compliance.
 ### 5.2 Billing Cycle
-All billing cycles are monthly, starting on the 1st and ending on the last day of the month, calculated in UTC. The billing cycle determines when automatic charges are attempted and when subscription periods are calculated.
+Billing cycles are anchored to the tenant's enrollment date. The **anchor day** is the day-of-month of the first paid activation (capped to the last day of the month for months with fewer days). For example, a tenant who enrolls on the 15th of any month will always have their cycle run from the 15th to the 14th of the following month.
+
+This anchor is preserved through plan changes, schedule changes, and reactivations. The anchor day is never reset after first activation.
+
 ### 5.3 First-Time Enrollment
-Users can enroll in a paid plan at any time during the month. On first enrollment:
-1. The system calculates the prorated charge from the enrollment date through the end of the current billing cycle (last day of the month, UTC).
-2. The system creates a payment record for that prorated amount, tied to the covered period and the target paid-through termination date for the selected schedule.
-3. The user is charged that locked prorated amount immediately.
-4. On success, the subscription termination date is set to the end of the billing cycle covered by the payment schedule (e.g., for monthly: end of the current month; for quarterly: end of the month 3 months out).
+Users can enroll in a paid plan at any time. On first enrollment:
+1. The system records the **enrollment date** (UTC) and derives the **anchor day** from the enrollment day-of-month.
+2. No prorated charge is calculated. The tenant is charged the full period price for the selected schedule.
+3. The subscription termination date is set to one day before the same anchor day in the next period (e.g., for monthly: anchor day in the following month minus one day).
+4. On success, the subscription is active and billed on the anchor day of each subsequent period.
 5. If the first payment fails, retries remain tied to the same payment record, amount, covered period, and target paid-through termination date; the amount is not recalculated from the retry date.
-6. Starting the next billing cycle, normal full-period billing applies on the 1st of the month.
+6. Subsequent renewals charge the full period price on the anchor day.
 If the selected paid plan has Paid Trial Duration configured, first-time enrollment uses paid-plan trial mode instead:
 1. No charge is made at enrollment.
 2. The trial end date is set to enrollment date + paid trial duration.
@@ -217,12 +220,13 @@ If the selected paid plan has Paid Trial Duration configured, first-time enrollm
 4. If payment fails, the standard retry + grace flow applies for paid subscriptions.
 If tenant owner explicitly starts paid-plan trial mode on a paid plan that does not define Paid Trial Duration, the system applies a fallback trial length of 14 days.
 For the designated registration trial plan, if trial duration is not defined, the same 14-day fallback applies.
-> **Example: Mid-Month Enrollment**  
+> **Example: Enrollment on the 15th**  
 > User enrolls in Premium Plan ($100/mo, monthly schedule) on January 15.  
-> Prorated charge: $100 × (17 days / 31 days) = $54.84 for Jan 15–31.  
-> On February 1, the system charges the full $100 for February.
+> Charge: $100 for the period January 15 – February 14.  
+> On February 15, the system charges the full $100 for February 15 – March 14.  
+> The anchor day is 15 for the life of the subscription.
 ### 5.4 Recurring Payment Flow
-On the billing date (1st of each applicable month), the system performs the following:
+On the billing date (the anchor day of each applicable period), the system performs the following:
 1. Create a payment record for the billing period due on that billing date, including the locked amount, covered period, and target paid-through termination date.
 2. Attempt to charge the credit card on file for the amount stored on that payment record.
 3. On success: mark the payment as succeeded, extend the subscription termination date by the payment schedule duration, record the payment outcome, and send a receipt to the tenant owner via email.
@@ -248,19 +252,19 @@ Receipts and invoices are the same document. The tenant owner can download a rec
 Users can enroll in or switch plans at any time. The system calculates prorated charges and credits based on the remaining days in the current billing cycle. No refunds are issued; instead, the system uses credits and deferred effective dates to handle transitions fairly.
 ### 6.2 Upgrade (New Plan Cost ≥ Remaining Balance)
 When the prorated cost of the new plan for the remainder of the selected billing period is equal to or greater than the unused credit from the current plan:
-1. Calculate the unused portion of the current plan for the remainder of the billing period (credit).
-2. Calculate the prorated cost of the new plan for the remainder of the newly selected billing period (charge).
+1. Calculate the unused portion of the current plan for the remainder of the anchor-day period (credit).
+2. Calculate the prorated cost of the new plan for the remainder of the anchor-day period (charge).
 3. Charge the difference (new plan prorated amount minus credit).
 4. The new plan takes effect immediately.
 5. Any extensions on the old plan are removed. The user may add new extensions available on the new plan during the change workflow.
 ### 6.3 Downgrade (Remaining Balance > New Plan Cost)
 When the unused balance from the current plan exceeds the prorated cost of the new plan:
 1. No charge is made today.
-2. The new plan takes effect at the end of the current billing period.
+2. The new plan takes effect at the next anchor-day boundary (end of the current billing period).
 3. The current plan remains fully active until then.
-4. At the start of the next billing cycle, the new plan and its billing apply.
+4. At the next anchor day, the new plan and its billing apply.
 ### 6.4 Payment Schedule Changes
-When a tenant owner changes only the payment schedule (e.g., from monthly to annual) without changing the plan, the change takes effect at the next billing cycle. The current period continues under the existing schedule. The new schedule's pricing applies starting with the next charge.
+When a tenant owner changes only the payment schedule (e.g., from monthly to annual) without changing the plan, the change takes effect at the next anchor-day boundary. The current period continues under the existing schedule. The new schedule's pricing applies starting with the next charge.
 ### 6.5 Cost Summary Display
 Before confirming any plan or extension change, the system displays a clear cost summary to the tenant owner showing all line items:
 > **Example: Plan Change Cost Summary**  
