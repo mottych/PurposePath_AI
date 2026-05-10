@@ -157,10 +157,8 @@ Shared conventions:
   - updated subscription state (`autoRenew=false`)
 
 #### POST `/billing/subscription/reactivate`
-- Purpose: Re-enable auto-renew before termination date or recover during grace (if payment succeeds).
+- Purpose: Re-enable auto-renew and resume the subscription lifecycle as currently implemented.
 - Auth: Tenant owner only.
-- Request:
-  - `paymentMethodToken` (optional unless needed for immediate payment)
 - Response:
   - updated subscription state
 

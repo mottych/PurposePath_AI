@@ -1460,25 +1460,6 @@
         "tags": [
           "BillingOwner"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReactivateSubscriptionRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReactivateSubscriptionRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReactivateSubscriptionRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -17226,16 +17207,6 @@
             "nullable": true
           },
           "details": {
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ReactivateSubscriptionRequest": {
-        "type": "object",
-        "properties": {
-          "paymentMethodToken": {
-            "type": "string",
             "nullable": true
           }
         },
