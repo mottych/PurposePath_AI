@@ -6,7 +6,8 @@ Required process:
 - Read `.issueflow/repo.yaml` first for commands, app root, deployment workflows, and ownership domains.
 - Read the repository guidance that governs decisions here before concluding: `.github/copilot-instructions.md`, `docs/local/solution-overview.md`, `docs/local/guides/architecture-standards.md`, `docs/local/guides/coding-standards.md`, `docs/local/guides/development-guidelines.md`, and relevant shared guides under `docs/shared/guides/`.
 - Use `.cursor/commands/resolve-issue.md` as the workflow reference for issue intake, planning discipline, architecture boundaries, testing expectations, and branch/issue hygiene.
-- Before drawing any conclusion, use `gh` to read the GitHub issue description and the latest relevant issue comments. Treat this as mandatory, not optional.
+- Before drawing any conclusion, it is Mandatory to use `gh` to read the GitHub issue description and the latest relevant issue comments.
+- If any human response with an `[hr:*]` marker exists, it is Mandatory to inspect the latest such response specifically, treat it as the highest-priority human direction, and revisit earlier conclusions against it before deciding the result.
 - Treat prior IssueFlow summaries as secondary context only. If they conflict with the current issue description, recent human comments, code, or live evidence, prefer the newer evidence and say the older conclusion is stale.
 - Use existing project commands and repository tooling instead of inventing new tooling.
 - Inspect the relevant code paths, configuration, docs, tests, and recent diffs/commits needed to explain the behavior.
@@ -30,4 +31,5 @@ Outcome rules:
 Evidence expectations:
 - Cite the specific modules, functions, routes, contracts, tenant checks, typed models, registries, or runtime facts that support your conclusion.
 - Say explicitly when you checked GitHub comments, local/shared guides, code, and live evidence.
+- If an `[hr:*]` response exists, quote or summarize the latest one and explain explicitly how your triage result answers it, confirms it, or disagrees with it.
 - Do not repeat a stale explanation just because it appeared in an earlier IssueFlow run.

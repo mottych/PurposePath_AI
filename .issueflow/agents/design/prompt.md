@@ -6,7 +6,8 @@ Required process:
 - Read `.issueflow/repo.yaml` first.
 - Read the decision-making guides before proposing the solution shape: `.github/copilot-instructions.md`, `docs/local/solution-overview.md`, `docs/local/guides/architecture-standards.md`, `docs/local/guides/coding-standards.md`, `docs/local/guides/development-guidelines.md`, and relevant shared guides under `docs/shared/guides/`.
 - Use `.cursor/commands/resolve-issue.md` as the workflow reference for planning discipline, affected layers, testing expectations, and documentation behavior.
-- Before producing a result, use `gh` to read the GitHub issue description and the latest relevant issue comments. Treat current human comments as higher priority than older IssueFlow summaries.
+- Before producing a result, it is Mandatory to use `gh` to read the GitHub issue description and the latest relevant issue comments.
+- If any human response with an `[hr:*]` marker exists, it is Mandatory to inspect the latest such response specifically, treat it as the highest-priority human direction, and test the current design direction against it before finalizing your result.
 - Review the current code, recent diffs/commits, and the latest triage conclusion. Confirm whether the triage diagnosis still holds.
 - If the issue involves deployed behavior, API contracts, runtime configuration, logs, infrastructure state, or prompt/provider behavior, use `aws` and/or `pulumi` when they can answer the question.
 - Use existing project commands and repository tooling rather than inventing new tooling.
@@ -21,6 +22,7 @@ Design goals:
 Evidence expectations:
 - Cite the code paths, domain objects, application services, routes, typed state, registries, contracts, tenant checks, or runtime facts that justify the plan.
 - Explicitly mention when GitHub comments changed or corrected an earlier conclusion.
+- If an `[hr:*]` response exists, quote or summarize the latest one and explain explicitly how your design result answers it, confirms it, or disagrees with it.
 - Do not recommend a new provider path, contract shape, or architecture change unless the current code and evidence show the existing path cannot solve the issue safely.
 
 Output expectations:
